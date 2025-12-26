@@ -2,10 +2,8 @@
 
 import { useResumeStore } from '@/store/resume-store';
 import { Button } from '@/components/ui/button';
-import { Download, FileJson } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { useRef, useCallback } from 'react';
+import { Download, FileJson, Loader2 } from 'lucide-react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { ResumeRenderer } from '@/components/resume/resume-renderer';
 
 interface ExportButtonsProps {
@@ -14,11 +12,18 @@ interface ExportButtonsProps {
 
 export function ExportButtons({ resumeId }: ExportButtonsProps) {
   const { exportToJSON, resumes } = useResumeStore();
+  const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  const resume = resumes.find((r) => r.id === resumeId);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleExportJSON = () => {
     const json = exportToJSON(resumeId);
-    const resume = resumes.find((r) => r.id === resumeId);
     
     if (!json || !resume) return;
 
@@ -34,80 +39,47 @@ export function ExportButtons({ resumeId }: ExportButtonsProps) {
   };
 
   const handleExportPDF = useCallback(async () => {
-    const resume = resumes.find((r) => r.id === resumeId);
     if (!resume || !printRef.current) return;
-
+    
+    setIsExporting(true);
     try {
-      // Clone the print element and append to body for rendering
-      const clone = printRef.current.cloneNode(true) as HTMLDivElement;
-      clone.style.display = 'block';
-      clone.style.position = 'fixed';
-      clone.style.left = '0';
-      clone.style.top = '0';
-      clone.style.zIndex = '-9999';
-      clone.style.width = '794px';
-      clone.style.backgroundColor = '#ffffff';
-      // Force consistent font rendering
-      clone.style.fontKerning = 'normal';
-      clone.style.textRendering = 'optimizeLegibility';
-      // Use setAttribute for vendor-prefixed properties
-      clone.style.setProperty('-webkit-font-smoothing', 'antialiased');
-      document.body.appendChild(clone);
-      
-      // Wait for fonts and render to complete
-      await document.fonts.ready;
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Get the rendered HTML from the hidden div
+      const html = printRef.current.innerHTML;
+      const filename = resume.name.replace(/\s+/g, '-').toLowerCase();
+      const fontFamily = resume.metadata.settings?.fontFamily || 'Inter';
 
-      // Convert HTML to canvas with high quality
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: 794, // A4 width at 96 DPI
-        windowWidth: 794,
+      // Call the API route to generate PDF with Puppeteer
+      const response = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ html, filename, fontFamily }),
       });
 
-      // Remove the clone
-      document.body.removeChild(clone);
-
-      // A4 dimensions in mm
-      const a4Width = 210;
-      const a4Height = 297;
-      
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png');
-      
-      const imgWidth = a4Width;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      // Handle multi-page
-      if (imgHeight > a4Height) {
-        let heightLeft = imgHeight;
-        let position = 0;
-        
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= a4Height;
-        
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= a4Height;
-        }
-      } else {
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Failed to generate PDF');
       }
-      
-      pdf.save(`${resume.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
-    } catch (error) {
-      console.error('Failed to export PDF:', error);
-      alert('Failed to export PDF. Please try again.');
-    }
-  }, [resumeId, resumes]);
 
-  const resume = resumes.find((r) => r.id === resumeId);
+      // Download the PDF
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [resume]);
+
   if (!resume) return null;
 
   return (
@@ -117,18 +89,31 @@ export function ExportButtons({ resumeId }: ExportButtonsProps) {
           <FileJson className="mr-2 w-4 h-4" />
           JSON
         </Button>
-        <Button onClick={handleExportPDF}>
-          <Download className="mr-2 w-4 h-4" />
+        <Button onClick={handleExportPDF} disabled={isExporting}>
+          {isExporting ? (
+            <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="mr-2 w-4 h-4" />
+          )}
           PDF
         </Button>
       </div>
-
-      {/* Hidden print-ready resume */}
-      <div style={{ display: 'none' }}>
-        <div ref={printRef}>
-          <ResumeRenderer resume={resume} forExport={true} />
+      
+      {/* Hidden render container for PDF export - same ResumeRenderer */}
+      {isClient && (
+        <div style={{ position: 'absolute', left: '-9999px', top: 0, visibility: 'hidden' }}>
+          <div 
+            ref={printRef}
+            style={{ 
+              width: '8.5in',
+              minHeight: '11in',
+              background: 'white',
+            }}
+          >
+            <ResumeRenderer resume={resume} darkMode={false} />
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

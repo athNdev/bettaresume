@@ -27,42 +27,7 @@ interface ResumeRendererProps {
   forExport?: boolean;
 }
 
-// Common styles for consistent rendering across screen and PDF export
-const commonStyles = {
-  // Base reset for consistent rendering
-  reset: {
-    boxSizing: 'border-box' as const,
-    margin: 0,
-    padding: 0,
-  },
-  // Pill/badge styles with proper alignment for PDF export
-  pill: (bgColor: string, textColor: string): React.CSSProperties => ({
-    display: 'inline-block',
-    fontSize: '10px',
-    lineHeight: '16px',
-    padding: '2px 8px',
-    backgroundColor: bgColor,
-    borderRadius: '3px',
-    color: textColor,
-    verticalAlign: 'middle',
-    boxSizing: 'border-box' as const,
-    fontWeight: 400,
-  }),
-  // Tag container with proper wrapping
-  tagContainer: {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: '6px',
-    alignItems: 'center',
-  },
-  // Inline list of items
-  inlineList: {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: '16px',
-    alignItems: 'baseline',
-  },
-};
+
 
 interface ResumeRendererProps {
   resume: Resume;
@@ -151,6 +116,9 @@ const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
     const sections = resume.sections.filter(s => s.visible && s.type !== 'personal-info').sort((a, b) => a.order - b.order);
     const pi = resume.metadata.personalInfo;
 
+    // Contact items with separator
+    const contactItems = [pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean);
+
     return (
       <div ref={ref} style={{ backgroundColor: colors.bg, color: colors.text, padding: '40px 48px', minHeight: '100%', boxSizing: 'border-box' }}>
         {/* Header */}
@@ -161,13 +129,14 @@ const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
           {pi.professionalTitle && (
             <p style={{ fontSize: '14px', color: colors.muted, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px', fontSize: '12px', color: colors.muted, lineHeight: 1.4, alignItems: 'baseline' }}>
-            {pi.email && <span>{pi.email}</span>}
-            {pi.phone && <span>{pi.phone}</span>}
-            {pi.location && <span>{pi.location}</span>}
-            {pi.linkedin && <span>{pi.linkedin}</span>}
-            {pi.github && <span>{pi.github}</span>}
-            {pi.website && <span>{pi.website}</span>}
+          {/* Use inline spans with separators instead of flex gap */}
+          <div style={{ marginTop: '12px', fontSize: '12px', color: colors.muted, lineHeight: 1.6 }}>
+            {contactItems.map((item, idx) => (
+              <span key={idx}>
+                {item}
+                {idx < contactItems.length - 1 && <span style={{ margin: '0 8px' }}>•</span>}
+              </span>
+            ))}
           </div>
         </header>
 
@@ -214,15 +183,16 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
           {pi.professionalTitle && (
             <p style={{ fontSize: '16px', opacity: 0.9, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '16px', fontSize: '13px', opacity: 0.85, lineHeight: 1.4, alignItems: 'baseline' }}>
-            {pi.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>✉ {pi.email}</span>}
-            {pi.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>☎ {pi.phone}</span>}
-            {pi.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📍 {pi.location}</span>}
+          {/* Contact info using margin spacing instead of gap */}
+          <div style={{ marginTop: '16px', fontSize: '13px', opacity: 0.85, lineHeight: 1.8 }}>
+            {pi.email && <span style={{ marginRight: '20px' }}>✉ {pi.email}</span>}
+            {pi.phone && <span style={{ marginRight: '20px' }}>☎ {pi.phone}</span>}
+            {pi.location && <span>📍 {pi.location}</span>}
           </div>
           {(pi.linkedin || pi.github || pi.website) && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '8px', fontSize: '12px', opacity: 0.8, lineHeight: 1.4, alignItems: 'baseline' }}>
-              {pi.linkedin && <span>{pi.linkedin}</span>}
-              {pi.github && <span>{pi.github}</span>}
+            <div style={{ marginTop: '8px', fontSize: '12px', opacity: 0.8, lineHeight: 1.6 }}>
+              {pi.linkedin && <span style={{ marginRight: '20px' }}>{pi.linkedin}</span>}
+              {pi.github && <span style={{ marginRight: '20px' }}>{pi.github}</span>}
               {pi.website && <span>{pi.website}</span>}
             </div>
           )}
@@ -236,18 +206,17 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
                 fontSize: '14px', 
                 fontWeight: '700', 
                 color: colors.primary,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
                 marginBottom: '14px',
                 lineHeight: 1.4
               }}>
                 <span style={{ 
+                  display: 'inline-block',
                   width: '4px', 
-                  height: '20px', 
+                  height: '16px', 
                   backgroundColor: colors.accent,
                   borderRadius: '2px',
-                  flexShrink: 0
+                  marginRight: '12px',
+                  verticalAlign: 'middle'
                 }}></span>
                 {section.content.title || SECTION_LABELS[section.type]}
               </h2>
@@ -430,7 +399,7 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
             </div>
           </div>
           {(pi.linkedin || pi.github || pi.website) && (
-            <div style={{ display: 'flex', gap: '24px', marginTop: '12px', fontSize: '12px', alignItems: 'center' }}>
+            <div style={{ marginTop: '12px', fontSize: '12px' }}>
               {pi.github && (
                 <span style={{ 
                   display: 'inline-block',
@@ -439,7 +408,7 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
                   backgroundColor: darkMode ? '#374151' : '#f1f5f9',
                   borderRadius: '4px',
                   color: colors.primary,
-                  boxSizing: 'border-box' as const,
+                  marginRight: '12px',
                 }}>
                   {pi.github}
                 </span>
@@ -452,7 +421,7 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
                   backgroundColor: darkMode ? '#374151' : '#f1f5f9',
                   borderRadius: '4px',
                   color: colors.primary,
-                  boxSizing: 'border-box' as const,
+                  marginRight: '12px',
                 }}>
                   {pi.linkedin}
                 </span>
@@ -465,7 +434,6 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
                   backgroundColor: darkMode ? '#374151' : '#f1f5f9',
                   borderRadius: '4px',
                   color: colors.primary,
-                  boxSizing: 'border-box' as const,
                 }}>
                   {pi.website}
                 </span>
@@ -489,16 +457,16 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
                 fontWeight: '700', 
                 color: colors.primary,
                 marginBottom: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
+                lineHeight: 1.4
               }}>
                 <span style={{ 
                   display: 'inline-block',
                   width: '8px',
                   height: '8px',
                   backgroundColor: colors.accent,
-                  borderRadius: '50%'
+                  borderRadius: '50%',
+                  marginRight: '8px',
+                  verticalAlign: 'middle'
                 }}></span>
                 {section.content.title || SECTION_LABELS[section.type]}
               </h2>
@@ -521,14 +489,11 @@ interface SectionContentProps {
   compact?: boolean;
 }
 
+
+
 function SectionContent({ section, colors, dateFormat, template: _template, compact }: SectionContentProps) {
   const data = section.content.data;
   const smallFontSize = compact ? '9px' : '11px';
-
-  // Consistent pill style for PDF export compatibility
-  const pillStyle: React.CSSProperties = {
-    ...commonStyles.pill(colors.divider, colors.muted),
-  };
 
   switch (section.type) {
     case 'experience':
@@ -556,11 +521,9 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
                 </ul>
               )}
               {exp.technologies && exp.technologies.length > 0 && (
-                <div style={{ ...commonStyles.tagContainer, marginTop: '8px' }}>
-                  {exp.technologies.map((tech, i) => (
-                    <span key={i} style={pillStyle}>{tech}</span>
-                  ))}
-                </div>
+                <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '6px 0 0 0', fontStyle: 'italic' }}>
+                  {exp.technologies.join(' • ')}
+                </p>
               )}
             </div>
           ))}
@@ -609,14 +572,22 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
           </div>
         );
       }
+      // Use table-like layout for skills (better html2canvas support than grid with gap)
       return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px 24px' }}>
-          {(Array.isArray(data) ? data as SkillCategory[] : []).map((cat) => (
-            <div key={cat.id}>
-              <h4 style={{ fontSize: smallFontSize, fontWeight: '600', color: colors.text, marginBottom: '4px' }}>{cat.name}</h4>
-              <p style={{ fontSize: smallFontSize, color: colors.muted, margin: 0, lineHeight: 1.5 }}>
-                {cat.skills.map(s => s.name).join(', ')}
-              </p>
+        <div style={{ display: 'table', width: '100%', borderSpacing: '0 12px', marginTop: '-12px' }}>
+          {(Array.isArray(data) ? data as SkillCategory[] : []).reduce<SkillCategory[][]>((rows, cat, idx, arr) => {
+            if (idx % 2 === 0) rows.push(arr.slice(idx, idx + 2));
+            return rows;
+          }, []).map((row, rowIdx) => (
+            <div key={rowIdx} style={{ display: 'table-row' }}>
+              {row.map((cat) => (
+                <div key={cat.id} style={{ display: 'table-cell', width: '50%', paddingRight: '24px', verticalAlign: 'top' }}>
+                  <h4 style={{ fontSize: smallFontSize, fontWeight: '600', color: colors.text, marginBottom: '4px' }}>{cat.name}</h4>
+                  <p style={{ fontSize: smallFontSize, color: colors.muted, margin: 0, lineHeight: 1.5 }}>
+                    {cat.skills.map(s => s.name).join(', ')}
+                  </p>
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -637,11 +608,9 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
                 <p style={{ fontSize: smallFontSize, color: colors.text, margin: '4px 0 0 0', lineHeight: 1.5 }}>{proj.description}</p>
               )}
               {proj.technologies && proj.technologies.length > 0 && (
-                <div style={{ ...commonStyles.tagContainer, marginTop: '6px' }}>
-                  {proj.technologies.map((tech, i) => (
-                    <span key={i} style={pillStyle}>{tech}</span>
-                  ))}
-                </div>
+                <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '4px 0 0 0', fontStyle: 'italic' }}>
+                  {proj.technologies.join(' • ')}
+                </p>
               )}
             </div>
           ))}
@@ -716,11 +685,12 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
         );
       }
       return (
-        <div style={{ ...commonStyles.inlineList, fontSize: smallFontSize }}>
-          {(Array.isArray(data) ? data as Language[] : []).map((lang) => (
-            <span key={lang.id} style={{ lineHeight: 1.5 }}>
+        <div style={{ fontSize: smallFontSize }}>
+          {(Array.isArray(data) ? data as Language[] : []).map((lang, idx, arr) => (
+            <span key={lang.id}>
               <span style={{ fontWeight: '600', color: colors.text }}>{lang.name}</span>
               <span style={{ color: colors.muted }}> ({lang.proficiency})</span>
+              {idx < arr.length - 1 && <span style={{ color: colors.muted }}> • </span>}
             </span>
           ))}
         </div>
@@ -766,16 +736,31 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
       if (refs.length === 0) {
         return <p style={{ fontSize: smallFontSize, color: colors.muted, fontStyle: 'italic' }}>Available upon request</p>;
       }
+      // Use table layout for references (better html2canvas support)
       return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-          {refs.map((ref) => (
-            <div key={ref.id} style={{ fontSize: smallFontSize }}>
-              <div style={{ fontWeight: '600', color: colors.text }}>{ref.name}</div>
-              {ref.title && <div style={{ color: colors.muted }}>{ref.title}</div>}
-              {ref.company && <div style={{ color: colors.muted }}>{ref.company}</div>}
-              {ref.email && <div style={{ color: colors.muted, marginTop: '4px' }}>{ref.email}</div>}
+        <div style={{ display: 'table', width: '100%', borderSpacing: '16px 0', marginLeft: '-16px' }}>
+          <div style={{ display: 'table-row' }}>
+            {refs.slice(0, 2).map((ref) => (
+              <div key={ref.id} style={{ display: 'table-cell', width: '50%', fontSize: smallFontSize, verticalAlign: 'top' }}>
+                <div style={{ fontWeight: '600', color: colors.text }}>{ref.name}</div>
+                {ref.title && <div style={{ color: colors.muted }}>{ref.title}</div>}
+                {ref.company && <div style={{ color: colors.muted }}>{ref.company}</div>}
+                {ref.email && <div style={{ color: colors.muted, marginTop: '4px' }}>{ref.email}</div>}
+              </div>
+            ))}
+          </div>
+          {refs.length > 2 && (
+            <div style={{ display: 'table-row' }}>
+              {refs.slice(2, 4).map((ref) => (
+                <div key={ref.id} style={{ display: 'table-cell', width: '50%', fontSize: smallFontSize, verticalAlign: 'top', paddingTop: '16px' }}>
+                  <div style={{ fontWeight: '600', color: colors.text }}>{ref.name}</div>
+                  {ref.title && <div style={{ color: colors.muted }}>{ref.title}</div>}
+                  {ref.company && <div style={{ color: colors.muted }}>{ref.company}</div>}
+                  {ref.email && <div style={{ color: colors.muted, marginTop: '4px' }}>{ref.email}</div>}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       );
 
