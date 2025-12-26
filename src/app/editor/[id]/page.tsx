@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense, memo, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useResumeStore } from '@/store/resume-store';
 import { Button } from '@/components/ui/button';
@@ -27,28 +27,33 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { ExportButtons } from '@/components/export/export-buttons';
-import { VersionManager } from '@/components/version-manager';
-import { VariationManager } from '@/components/variation-manager';
-import { TemplateSelector } from '@/components/template-selector';
-import { InlineSettingsToolbar } from '@/components/inline-settings-toolbar';
-import { VersionFlowTree } from '@/components/version-flow-tree';
-import { ResumeBreadcrumb } from '@/components/resume-breadcrumb';
-import { ResumeRenderer } from '@/components/resume/resume-renderer';
-import { 
-  PersonalInfoForm, 
-  ExperienceForm, 
-  EducationForm, 
-  SkillsForm,
-  ProjectsForm,
-  CertificationsForm,
-  AwardsForm,
-  LanguagesForm,
-  VolunteerForm,
-  PublicationsForm,
-  ReferencesForm
-} from '@/components/sections';
-import { AdvancedEditor } from '@/components/editor/advanced-editor';
+import { Loader2 } from 'lucide-react';
+
+// Lazy load heavy components
+const ExportButtons = lazy(() => import('@/components/export/export-buttons').then(m => ({ default: m.ExportButtons })));
+const VersionManager = lazy(() => import('@/components/version-manager').then(m => ({ default: m.VersionManager })));
+const VariationManager = lazy(() => import('@/components/variation-manager').then(m => ({ default: m.VariationManager })));
+const TemplateSelector = lazy(() => import('@/components/template-selector').then(m => ({ default: m.TemplateSelector })));
+const InlineSettingsToolbar = lazy(() => import('@/components/inline-settings-toolbar').then(m => ({ default: m.InlineSettingsToolbar })));
+const VersionFlowTree = lazy(() => import('@/components/version-flow-tree').then(m => ({ default: m.VersionFlowTree })));
+const ResumeBreadcrumb = lazy(() => import('@/components/resume-breadcrumb').then(m => ({ default: m.ResumeBreadcrumb })));
+const ResumeRenderer = lazy(() => import('@/components/resume/resume-renderer'));
+const PageManager = lazy(() => import('@/components/page-manager').then(m => ({ default: m.PageManager })));
+const AdvancedEditor = lazy(() => import('@/components/editor/advanced-editor').then(m => ({ default: m.AdvancedEditor })));
+
+// Import section forms (lazy loaded)
+const PersonalInfoForm = lazy(() => import('@/components/sections').then(m => ({ default: m.PersonalInfoForm })));
+const ExperienceForm = lazy(() => import('@/components/sections').then(m => ({ default: m.ExperienceForm })));
+const EducationForm = lazy(() => import('@/components/sections').then(m => ({ default: m.EducationForm })));
+const SkillsForm = lazy(() => import('@/components/sections').then(m => ({ default: m.SkillsForm })));
+const ProjectsForm = lazy(() => import('@/components/sections').then(m => ({ default: m.ProjectsForm })));
+const CertificationsForm = lazy(() => import('@/components/sections').then(m => ({ default: m.CertificationsForm })));
+const AwardsForm = lazy(() => import('@/components/sections').then(m => ({ default: m.AwardsForm })));
+const LanguagesForm = lazy(() => import('@/components/sections').then(m => ({ default: m.LanguagesForm })));
+const VolunteerForm = lazy(() => import('@/components/sections').then(m => ({ default: m.VolunteerForm })));
+const PublicationsForm = lazy(() => import('@/components/sections').then(m => ({ default: m.PublicationsForm })));
+const ReferencesForm = lazy(() => import('@/components/sections').then(m => ({ default: m.ReferencesForm })));
+
 import { 
   ArrowLeft, 
   Plus, 
@@ -100,6 +105,15 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
+
+// Loading fallback component
+const LoadingFallback = memo(function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center p-4">
+      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+    </div>
+  );
+});
 
 // Custom styled resize handle for panels
 function ResizeHandle({ className = '' }: { className?: string }) {
@@ -400,7 +414,7 @@ export default function EditorPage() {
       case 'personal-info': 
         return (
           <PersonalInfoForm 
-            data={activeResume.metadata.personalInfo} 
+            data={activeResume.metadata?.personalInfo || { fullName: '', email: '' }} 
             onChange={handleUpdatePersonalInfo} 
           />
         );
@@ -528,7 +542,9 @@ export default function EditorPage() {
             <Separator orientation="vertical" className="h-6" />
             
             {/* Resume Breadcrumb - shows base/variation state */}
-            <ResumeBreadcrumb resumeId={resumeId} />
+            <Suspense fallback={<LoadingFallback />}>
+              <ResumeBreadcrumb resumeId={resumeId} />
+            </Suspense>
 
             <Separator orientation="vertical" className="h-6" />
 
@@ -573,10 +589,12 @@ export default function EditorPage() {
           </div>
           
           <div className="flex items-center gap-2">
-            <VersionManager resumeId={resumeId} />
-            <VariationManager resumeId={resumeId} />
-            <VersionFlowTree resumeId={resumeId} />
-            <TemplateSelector resumeId={resumeId} />
+            <Suspense fallback={<LoadingFallback />}>
+              <VersionManager resumeId={resumeId} />
+              <VariationManager resumeId={resumeId} />
+              <VersionFlowTree resumeId={resumeId} />
+              <TemplateSelector resumeId={resumeId} />
+            </Suspense>
             
             <Separator orientation="vertical" className="h-6" />
             
@@ -589,7 +607,9 @@ export default function EditorPage() {
               <TooltipContent>{showPreview ? 'Hide Preview' : 'Show Preview'}</TooltipContent>
             </Tooltip>
             
-            <ExportButtons resumeId={resumeId} />
+            <Suspense fallback={<LoadingFallback />}>
+              <ExportButtons resumeId={resumeId} />
+            </Suspense>
             <ThemeToggle />
           </div>
         </header>
@@ -628,7 +648,7 @@ export default function EditorPage() {
                   </div>
                 </ScrollArea>
                 
-                <div className="p-3 border-t">
+                <div className="p-3 border-t space-y-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full">
@@ -645,6 +665,7 @@ export default function EditorPage() {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  <PageManager resumeId={resumeId} variant="panel" />
                 </div>
               </aside>
             </Panel>
@@ -681,7 +702,9 @@ export default function EditorPage() {
                 <ScrollArea className="flex-1">
                   <div className="p-6">
                     <div className="max-w-4xl mx-auto">
-                      {renderSectionEditor()}
+                      <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+                        {renderSectionEditor()}
+                      </Suspense>
                     </div>
                   </div>
                 </ScrollArea>
@@ -698,9 +721,13 @@ export default function EditorPage() {
                     <div className="p-2 border-b bg-card flex-shrink-0 space-y-2">
                       {/* Row 1: Template and Settings */}
                       <div className="flex items-center gap-2">
-                        <TemplateSelector resumeId={resumeId} compact />
+                        <Suspense fallback={<LoadingFallback />}>
+                          <TemplateSelector resumeId={resumeId} compact />
+                        </Suspense>
                         <Separator orientation="vertical" className="h-5" />
-                        <InlineSettingsToolbar resumeId={resumeId} />
+                        <Suspense fallback={<LoadingFallback />}>
+                          <InlineSettingsToolbar resumeId={resumeId} />
+                        </Suspense>
                       </div>
                       {/* Row 2: Zoom and Preview Controls */}
                       <div className="flex items-center justify-end gap-1">
@@ -755,10 +782,12 @@ export default function EditorPage() {
                             minHeight: '1123px',
                           }}
                         >
-                          <ResumeRenderer 
-                            resume={activeResume} 
-                            darkMode={previewDarkMode}
-                          />
+                          <Suspense fallback={<div className="w-[794px] min-h-[1123px] bg-white flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+                            <ResumeRenderer 
+                              resume={activeResume} 
+                              darkMode={previewDarkMode}
+                            />
+                          </Suspense>
                         </div>
                       </div>
                     </ScrollArea>

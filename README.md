@@ -1,4 +1,4 @@
-# Better Resume
+# Betta Resume
 
 A modern, professional resume builder SPA built with Next.js 14+, TypeScript, and shadcn/ui. Create, customize, and export beautiful resumes with a VSCode-like editing experience.
 
@@ -78,7 +78,7 @@ A modern, professional resume builder SPA built with Next.js 14+, TypeScript, an
 1. Clone the repository:
 \`\`\`bash
 git clone <repository-url>
-cd better-resume
+cd betta-resume
 \`\`\`
 
 2. Install dependencies:
@@ -103,7 +103,7 @@ npm start
 ## Project Structure
 
 \`\`\`
-better-resume/
+betta-resume/
 ├── src/
 │   ├── app/                    # Next.js app router pages
 │   │   ├── dashboard/         # Resume dashboard

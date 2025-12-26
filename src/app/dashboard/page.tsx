@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import { useResumeStore } from '@/store/resume-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ImportResume } from '@/components/import/import-resume';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ResumeThumbnail } from '@/components/resume/resume-thumbnail';
 import { 
   FileText, 
   Plus, 
@@ -43,7 +44,8 @@ import {
   Download,
   Upload,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
@@ -75,6 +77,8 @@ export default function Dashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resumeToDelete, setResumeToDelete] = useState<string | null>(null);
   const [expandedResumes, setExpandedResumes] = useState<Set<string>>(new Set());
+  const [loadingResumeId, setLoadingResumeId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   // Get base resumes (not variations)
   const baseResumes = useMemo(() => 
@@ -159,8 +163,11 @@ export default function Dashboard() {
   };
 
   const handleOpenResume = (id: string) => {
+    setLoadingResumeId(id);
     setActiveResume(id);
-    router.push(`/editor/${id}`);
+    startTransition(() => {
+      router.push(`/editor/${id}`);
+    });
   };
 
   const handleDuplicate = (id: string) => {
@@ -219,57 +226,72 @@ export default function Dashboard() {
     input.click();
   };
 
-  // Resume Card with nested variations
+  // Resume Card with nested variations and thumbnail preview
   const ResumeCard = ({ resume }: { resume: Resume }) => {
     const templateConfig = TEMPLATE_CONFIGS[resume.template as TemplateType];
     const variations = variationsByBase.get(resume.id) || [];
     const hasVariations = variations.length > 0;
     const isExpanded = expandedResumes.has(resume.id);
+    const isLoading = loadingResumeId === resume.id && isPending;
     
     return (
       <div className="space-y-1">
         <Card
-          className={`group hover:shadow-md transition-all cursor-pointer ${
+          className={`group hover:shadow-lg transition-all cursor-pointer relative overflow-hidden ${
             resume.isArchived ? 'opacity-60' : ''
-          }`}
+          } ${isLoading ? 'pointer-events-none' : ''}`}
           onClick={() => handleOpenResume(resume.id)}
         >
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
+          
+          {/* Thumbnail Preview */}
+          <div className="relative h-48 bg-white overflow-hidden border-b">
+            <ResumeThumbnail resume={resume} className="h-full" />
+            {/* Gradient overlay for better text readability */}
+            <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background/80 to-transparent" />
+            
+            {/* Template badge on thumbnail */}
+            <Badge 
+              variant="secondary" 
+              className="absolute top-2 right-2 text-xs capitalize opacity-90"
+            >
+              {resume.template}
+            </Badge>
+            
+            {/* Variations indicator */}
+            {hasVariations && (
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleExpanded(resume.id); }}
+                className="absolute top-2 left-2 flex items-center gap-1 bg-background/90 hover:bg-background px-2 py-1 rounded-md text-xs"
+              >
+                {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                <GitBranch className="w-3 h-3" />
+                <span>{variations.length}</span>
+              </button>
+            )}
+          </div>
+          
+          {/* Card Content */}
           <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              {/* Expand button for variations */}
-              {hasVariations && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleExpanded(resume.id); }}
-                  className="p-0.5 hover:bg-muted rounded"
-                >
-                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </button>
-              )}
-              
-              {/* Color indicator */}
-              <div 
-                className="w-1 h-10 rounded-full flex-shrink-0" 
-                style={{ backgroundColor: templateConfig?.defaultColors?.primary || '#3b82f6' }}
-              />
-              
-              {/* Main content */}
+            <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="font-medium truncate">{resume.name}</span>
-                  {hasVariations && (
-                    <Badge variant="secondary" className="text-xs">
-                      <GitBranch className="w-3 h-3 mr-1" />
-                      {variations.length}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="text-xs capitalize ml-auto">
-                    {resume.template}
-                  </Badge>
+                  <div 
+                    className="w-1 h-5 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: templateConfig?.defaultColors?.primary || '#3b82f6' }}
+                  />
+                  <span className="font-medium truncate text-sm">{resume.name}</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 ml-3">
                   <span>v{resume.version}</span>
+                  <span>·</span>
                   <span>{resume.sections.filter(s => s.visible).length} sections</span>
+                  <span>·</span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {formatDistanceToNow(new Date(resume.updatedAt), { addSuffix: true })}
@@ -280,7 +302,7 @@ export default function Dashboard() {
               {/* Actions */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0">
+                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0 -mt-1">
                     <MoreVertical className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -322,12 +344,19 @@ export default function Dashboard() {
         {/* Nested variations */}
         {hasVariations && isExpanded && (
           <div className="ml-6 space-y-1 border-l-2 border-muted pl-3">
-            {variations.map(variation => (
+            {variations.map(variation => {
+              const isVariationLoading = loadingResumeId === variation.id && isPending;
+              return (
               <Card
                 key={variation.id}
-                className="group hover:shadow-sm transition-all cursor-pointer bg-muted/30"
+                className={`group hover:shadow-sm transition-all cursor-pointer bg-muted/30 relative ${isVariationLoading ? 'pointer-events-none' : ''}`}
                 onClick={() => handleOpenResume(variation.id)}
               >
+                {isVariationLoading && (
+                  <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg z-10">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                )}
                 <CardContent className="p-2.5">
                   <div className="flex items-center gap-3">
                     <GitBranch className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
@@ -372,7 +401,7 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -385,15 +414,22 @@ export default function Dashboard() {
     const variations = variationsByBase.get(resume.id) || [];
     const hasVariations = variations.length > 0;
     const isExpanded = expandedResumes.has(resume.id);
+    const isLoading = loadingResumeId === resume.id && isPending;
     
     return (
       <div className="space-y-0.5">
         <div
-          className={`group flex items-center gap-3 p-2.5 border rounded-lg hover:shadow-sm transition-all cursor-pointer ${
+          className={`group flex items-center gap-3 p-2.5 border rounded-lg hover:shadow-sm transition-all cursor-pointer relative ${
             resume.isArchived ? 'opacity-60' : ''
-          }`}
+          } ${isLoading ? 'pointer-events-none' : ''}`}
           onClick={() => handleOpenResume(resume.id)}
         >
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg z-10">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            </div>
+          )}
           {hasVariations && (
             <button
               onClick={(e) => { e.stopPropagation(); toggleExpanded(resume.id); }}
@@ -460,12 +496,19 @@ export default function Dashboard() {
         {/* Nested variations in list view */}
         {hasVariations && isExpanded && (
           <div className="ml-8 space-y-0.5 border-l-2 border-muted pl-3">
-            {variations.map(variation => (
+            {variations.map(variation => {
+              const isVariationLoading = loadingResumeId === variation.id && isPending;
+              return (
               <div
                 key={variation.id}
-                className="group flex items-center gap-3 p-2 border rounded-lg hover:shadow-sm transition-all cursor-pointer bg-muted/30"
+                className={`group flex items-center gap-3 p-2 border rounded-lg hover:shadow-sm transition-all cursor-pointer bg-muted/30 relative ${isVariationLoading ? 'pointer-events-none' : ''}`}
                 onClick={() => handleOpenResume(variation.id)}
               >
+                {isVariationLoading && (
+                  <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg z-10">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                )}
                 <GitBranch className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-sm font-medium truncate flex-1">{variation.name}</span>
                 {variation.domain && (
@@ -494,7 +537,7 @@ export default function Dashboard() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -508,7 +551,7 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold">Better Resume</h1>
+              <h1 className="text-xl font-semibold">Betta Resume</h1>
               <span className="text-sm text-muted-foreground">
                 {stats.total} resume{stats.total !== 1 ? 's' : ''}
                 {stats.variations > 0 && ` · ${stats.variations} variation${stats.variations !== 1 ? 's' : ''}`}
@@ -627,7 +670,7 @@ export default function Dashboard() {
             </div>
           </Card>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredResumes.map((resume) => (
               <ResumeCard key={resume.id} resume={resume} />
             ))}

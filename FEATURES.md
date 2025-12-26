@@ -1,4 +1,4 @@
-# Better Resume - Complete Feature Summary
+# Betta Resume - Complete Feature Summary
 
 ## ✅ ALL FEATURES IMPLEMENTED
 

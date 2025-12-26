@@ -25,7 +25,7 @@ async function testPdfExport() {
   
   // Inject sample data into localStorage
   await page.evaluate((data) => {
-    localStorage.setItem('better-resume-storage', JSON.stringify(data));
+    localStorage.setItem('betta-resume-storage', JSON.stringify(data));
   }, sampleData);
   
   // Reload to apply data

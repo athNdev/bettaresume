@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 
-const STORAGE_KEY = 'better-resume-storage';
+const STORAGE_KEY = 'betta-resume-storage';
 const SAMPLE_DATA_PATH = path.join(__dirname, '../public/sample-data/all-resumes-localStorage.json');
 const DEV_URL = 'http://localhost:3000';
 

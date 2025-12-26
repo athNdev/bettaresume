@@ -5,6 +5,7 @@ export interface Resume {
   baseResumeId?: string;
   createdFromVersion?: number; // Which version of the base this variation was created from
   version: number;
+  currentVersionId?: string; // ID of the saved version currently being viewed (for version switching)
   variationType: 'base' | 'variation';
   domain?: string;
   createdAt: string;
@@ -15,6 +16,15 @@ export interface Resume {
   tags?: string[];
   isArchived?: boolean;
   lastExportedAt?: string;
+  pages?: ResumePage[]; // Multi-page support
+}
+
+// Multi-page support
+export interface ResumePage {
+  id: string;
+  name: string;
+  order: number;
+  sectionIds: string[]; // Which sections appear on this page
 }
 
 export interface ResumeSection {
@@ -24,6 +34,7 @@ export interface ResumeSection {
   visible: boolean;
   content: SectionContent;
   layout?: SectionLayout;
+  pageId?: string; // Which page this section belongs to (optional for backward compatibility)
 }
 
 export type SectionType =
@@ -299,7 +310,7 @@ export interface ActivityLog {
   metadata?: Record<string, unknown>;
 }
 
-export type ActivityAction = 'created' | 'updated' | 'deleted' | 'exported' | 'imported' | 'duplicated' | 'variation_created' | 'version_restored' | 'section_added' | 'section_removed' | 'template_changed';
+export type ActivityAction = 'created' | 'updated' | 'deleted' | 'exported' | 'imported' | 'duplicated' | 'variation_created' | 'version_restored' | 'version_created' | 'version_deleted' | 'section_added' | 'section_removed' | 'template_changed';
 
 export interface ResumeStore {
   resumes: Resume[];
@@ -325,7 +336,9 @@ export interface ResumeStore {
   createVersion: (resumeId: string, description?: string) => void;
   getVersions: (resumeId: string) => ResumeVersion[];
   restoreVersion: (resumeId: string, versionId: string) => void;
+  switchToVersion: (resumeId: string, versionId: string) => string | null;
   deleteVersion: (versionId: string) => void;
+  deleteVersionWithVariations: (versionId: string) => void;
   
   createVariation: (baseResumeId: string, domain: string, name: string) => string;
   getVariations: (baseResumeId: string) => Resume[];
@@ -333,6 +346,13 @@ export interface ResumeStore {
   
   updateSettings: (resumeId: string, settings: PartialResumeSettings) => void;
   updateTemplate: (resumeId: string, template: TemplateType) => void;
+  
+  // Page management
+  addPage: (resumeId: string, name?: string) => string;
+  deletePage: (resumeId: string, pageId: string) => void;
+  reorderPages: (resumeId: string, pageIds: string[]) => void;
+  updatePage: (resumeId: string, pageId: string, updates: Partial<ResumePage>) => void;
+  moveSectionToPage: (resumeId: string, sectionId: string, pageId: string) => void;
   
   exportToJSON: (resumeId: string) => string;
   importFromJSON: (json: string) => string | null;

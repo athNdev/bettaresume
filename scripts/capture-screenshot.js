@@ -89,7 +89,7 @@ async function captureVersionTree() {
     
     // Set localStorage with correct key
     await page.evaluate((data) => {
-      localStorage.setItem('better-resume-storage', JSON.stringify(data));
+      localStorage.setItem('betta-resume-storage', JSON.stringify(data));
     }, TEST_DATA);
     
     // Hard reload to let zustand hydrate with new data

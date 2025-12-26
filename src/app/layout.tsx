@@ -10,6 +10,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "react-hot-toast";
 
 // Load all fonts
 const inter = Inter({ 
@@ -58,7 +59,7 @@ const ptSerif = PT_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Better Resume - Professional Resume Builder",
+  title: "Betta Resume - Professional Resume Builder",
   description: "Create professional, customizable resumes with ease",
 };
 
@@ -77,6 +78,28 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster 
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
+                border: '1px solid hsl(var(--border))',
+              },
+              success: {
+                iconTheme: {
+                  primary: 'hsl(var(--primary))',
+                  secondary: 'hsl(var(--primary-foreground))',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: 'hsl(var(--destructive))',
+                  secondary: 'white',
+                },
+              },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

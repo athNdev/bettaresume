@@ -1,4 +1,4 @@
-# Better Resume - Project Instructions
+# Betta Resume - Project Instructions
 
 ## Project Overview
 A professional, feature-rich resume builder SPA using Next.js 15+, shadcn/ui, and TypeScript with a VSCode-like editing interface.

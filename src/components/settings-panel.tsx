@@ -40,7 +40,7 @@ const DATE_FORMATS = [
 export function SettingsPanel({ resumeId }: SettingsPanelProps) {
   const { activeResume, updateSettings } = useResumeStore();
   const [open, setOpen] = useState(false);
-  const settings = activeResume?.metadata.settings;
+  const settings = activeResume?.metadata?.settings;
 
   if (!settings) return null;
 

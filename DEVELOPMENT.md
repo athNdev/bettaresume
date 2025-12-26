@@ -1,4 +1,4 @@
-# Better Resume - Development Guide
+# Betta Resume - Development Guide
 
 ## Quick Start
 
@@ -191,10 +191,10 @@ export type TemplateType = 'minimal' | 'modern' | 'classic' | 'professional' | '
 
 ## Storage & Persistence
 
-- **localStorage** key: `better-resume-storage`
+- **localStorage** key: `betta-resume-storage`
 - Automatic persistence via Zustand middleware
 - Data persists across browser sessions
-- Clear data: `localStorage.removeItem('better-resume-storage')`
+- Clear data: `localStorage.removeItem('betta-resume-storage')`
 
 ## Troubleshooting
 

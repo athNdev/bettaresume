@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Resume, ResumeSection, ResumeStore, ResumeVersion, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction } from '@/types/resume';
+import type { Resume, ResumeSection, ResumeStore, ResumeVersion, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage } from '@/types/resume';
 import { TEMPLATE_CONFIGS, SECTION_CONFIGS } from '@/types/resume';
 
 const createDefaultSettings = (template: TemplateType): ResumeSettings => ({
@@ -141,7 +141,7 @@ export const useResumeStore = create<ResumeStore>()(
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const newSection: ResumeSection = { ...section, id: crypto.randomUUID(), order: r.sections.length };
-            return { ...r, sections: [...r.sections, newSection], updatedAt: new Date().toISOString() };
+            return { ...r, sections: [...r.sections, newSection], currentVersionId: undefined, updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           const activity = logActivity(resumeId, 'section_added', `Added ${section.type} section`);
@@ -156,6 +156,7 @@ export const useResumeStore = create<ResumeStore>()(
             return {
               ...r,
               sections: r.sections.map((s) => s.id === sectionId ? { ...s, ...updates } : s),
+              currentVersionId: undefined, // Clear when content is edited
               updatedAt: new Date().toISOString(),
             };
           });
@@ -169,7 +170,7 @@ export const useResumeStore = create<ResumeStore>()(
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const sections = r.sections.filter((s) => s.id !== sectionId).map((s, index) => ({ ...s, order: index }));
-            return { ...r, sections, updatedAt: new Date().toISOString() };
+            return { ...r, sections, currentVersionId: undefined, updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           const activity = logActivity(resumeId, 'section_removed', `Removed section`);
@@ -243,8 +244,81 @@ export const useResumeStore = create<ResumeStore>()(
         });
       },
 
+      switchToVersion: (resumeId: string, versionId: string) => {
+        const version = get().versions.find((v) => v.id === versionId);
+        if (!version || !version.snapshot) return null;
+        
+        // Check if snapshot has actual data (not just empty object)
+        const snapshotCopy = JSON.parse(JSON.stringify(version.snapshot));
+        if (!snapshotCopy.sections || snapshotCopy.sections.length === 0) {
+          console.warn('Version snapshot is empty or has no sections');
+          return null;
+        }
+        
+        // Restore this version's content to the BASE resume (keeps all history)
+        const baseResumeId = version.resumeId;
+        const baseResume = get().resumes.find((r) => r.id === baseResumeId);
+        if (!baseResume) return null;
+        
+        const now = new Date().toISOString();
+        
+        // Use snapshot sections directly (they already have IDs)
+        const sections = snapshotCopy.sections;
+        
+        // Ensure metadata and settings exist
+        const template = snapshotCopy.template || baseResume.template || 'modern';
+        const defaultSettings = createDefaultSettings(template as TemplateType);
+        const metadata = {
+          personalInfo: snapshotCopy.metadata?.personalInfo || baseResume.metadata?.personalInfo || { fullName: '', email: '' },
+          settings: snapshotCopy.metadata?.settings 
+            ? { ...defaultSettings, ...snapshotCopy.metadata.settings }
+            : baseResume.metadata?.settings || defaultSettings,
+        };
+        
+        // Restore version content to the existing resume (preserves history!)
+        // Set currentVersionId to track which saved version we're viewing
+        const restoredResume: Resume = {
+          ...baseResume, // Keep the base resume's identity (id, name, version number, etc.)
+          sections,
+          metadata,
+          template,
+          currentVersionId: versionId, // Track which saved version is being viewed
+          updatedAt: now,
+        };
+        
+        const activity = logActivity(baseResumeId, 'version_restored', `Switched to version ${version.version}`);
+        set((state) => ({
+          resumes: state.resumes.map((r) => r.id === baseResumeId ? restoredResume : r),
+          activeResumeId: baseResumeId,
+          activeResume: restoredResume,
+          activityLog: [...state.activityLog, activity],
+        }));
+        
+        return baseResumeId;
+      },
+
       deleteVersion: (versionId: string) => {
         set((state) => ({ versions: state.versions.filter((v) => v.id !== versionId) }));
+      },
+
+      deleteVersionWithVariations: (versionId: string) => {
+        const version = get().versions.find((v) => v.id === versionId);
+        if (!version) return;
+        
+        // Find and delete all variations created from this version
+        const variationsToDelete = get().resumes.filter(
+          r => r.baseResumeId === version.resumeId && r.createdFromVersion === version.version
+        );
+        
+        const activity = logActivity(version.resumeId, 'version_deleted', 
+          `Deleted version ${version.version}${variationsToDelete.length > 0 ? ` and ${variationsToDelete.length} variation(s)` : ''}`
+        );
+        
+        set((state) => ({
+          versions: state.versions.filter((v) => v.id !== versionId),
+          resumes: state.resumes.filter((r) => !variationsToDelete.some(v => v.id === r.id)),
+          activityLog: [...state.activityLog, activity],
+        }));
       },
 
       createVariation: (baseResumeId: string, domain: string, name: string) => {
@@ -299,20 +373,26 @@ export const useResumeStore = create<ResumeStore>()(
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
+            // Ensure metadata and settings exist with defaults
+            const currentSettings = r.metadata?.settings || createDefaultSettings(r.template || 'modern');
             // Deep merge colors and margins if provided
             const mergedColors = settings.colors 
-              ? { ...r.metadata.settings.colors, ...settings.colors }
-              : r.metadata.settings.colors;
+              ? { ...currentSettings.colors, ...settings.colors }
+              : currentSettings.colors;
             const mergedMargins = settings.margins
-              ? { ...r.metadata.settings.margins, ...settings.margins }
-              : r.metadata.settings.margins;
+              ? { ...currentSettings.margins, ...settings.margins }
+              : currentSettings.margins;
             const newSettings = { 
-              ...r.metadata.settings, 
+              ...currentSettings, 
               ...settings, 
               colors: mergedColors,
               margins: mergedMargins
             };
-            return { ...r, metadata: { ...r.metadata, settings: newSettings as ResumeSettings }, updatedAt: new Date().toISOString() };
+            const metadata = {
+              personalInfo: r.metadata?.personalInfo || { fullName: '', email: '' },
+              settings: newSettings as ResumeSettings,
+            };
+            return { ...r, metadata, updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
@@ -324,15 +404,109 @@ export const useResumeStore = create<ResumeStore>()(
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
+            const currentSettings = r.metadata?.settings || createDefaultSettings(template);
+            const metadata = {
+              personalInfo: r.metadata?.personalInfo || { fullName: '', email: '' },
+              settings: { ...currentSettings, colors: TEMPLATE_CONFIGS[template].defaultColors },
+            };
             return {
               ...r,
               template,
-              metadata: { ...r.metadata, settings: { ...r.metadata.settings, colors: TEMPLATE_CONFIGS[template].defaultColors } },
+              metadata,
               updatedAt: new Date().toISOString(),
             };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
+        });
+      },
+
+      // Page management
+      addPage: (resumeId: string, name?: string) => {
+        const pageId = crypto.randomUUID();
+        set((state) => {
+          const resumes = state.resumes.map((r) => {
+            if (r.id !== resumeId) return r;
+            const existingPages = r.pages || [];
+            const newPage: ResumePage = {
+              id: pageId,
+              name: name || `Page ${existingPages.length + 1}`,
+              order: existingPages.length,
+              sectionIds: [],
+            };
+            return { 
+              ...r, 
+              pages: [...existingPages, newPage],
+              updatedAt: new Date().toISOString() 
+            };
+          });
+          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
+          return { resumes, activeResume };
+        });
+        return pageId;
+      },
+
+      deletePage: (resumeId: string, pageId: string) => {
+        set((state) => {
+          const resumes = state.resumes.map((r) => {
+            if (r.id !== resumeId) return r;
+            const pages = (r.pages || []).filter(p => p.id !== pageId);
+            // Move sections from deleted page to no page (main)
+            const sections = r.sections.map(s => 
+              s.pageId === pageId ? { ...s, pageId: undefined } : s
+            );
+            return { 
+              ...r, 
+              pages: pages.map((p, i) => ({ ...p, order: i })),
+              sections,
+              updatedAt: new Date().toISOString() 
+            };
+          });
+          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
+          return { resumes, activeResume };
+        });
+      },
+
+      reorderPages: (resumeId: string, pageIds: string[]) => {
+        set((state) => {
+          const resumes = state.resumes.map((r) => {
+            if (r.id !== resumeId) return r;
+            const pages = pageIds.map((id, index) => {
+              const page = (r.pages || []).find(p => p.id === id);
+              return page ? { ...page, order: index } : null;
+            }).filter(Boolean) as ResumePage[];
+            return { ...r, pages, updatedAt: new Date().toISOString() };
+          });
+          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
+          return { resumes, activeResume };
+        });
+      },
+
+      updatePage: (resumeId: string, pageId: string, updates: Partial<ResumePage>) => {
+        set((state) => {
+          const resumes = state.resumes.map((r) => {
+            if (r.id !== resumeId) return r;
+            const pages = (r.pages || []).map(p => 
+              p.id === pageId ? { ...p, ...updates } : p
+            );
+            return { ...r, pages, updatedAt: new Date().toISOString() };
+          });
+          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
+          return { resumes, activeResume };
+        });
+      },
+
+      moveSectionToPage: (resumeId: string, sectionId: string, pageId: string) => {
+        set((state) => {
+          const resumes = state.resumes.map((r) => {
+            if (r.id !== resumeId) return r;
+            const sections = r.sections.map(s => 
+              s.id === sectionId ? { ...s, pageId: pageId || undefined } : s
+            );
+            return { ...r, sections, updatedAt: new Date().toISOString() };
+          });
+          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
+          return { resumes, activeResume };
         });
       },
 
@@ -411,7 +585,7 @@ export const useResumeStore = create<ResumeStore>()(
           !r.isArchived && (
             r.name.toLowerCase().includes(q) ||
             r.domain?.toLowerCase().includes(q) ||
-            r.metadata.personalInfo.fullName.toLowerCase().includes(q) ||
+            r.metadata?.personalInfo?.fullName?.toLowerCase().includes(q) ||
             r.tags?.some((t) => t.toLowerCase().includes(q))
           )
         );
@@ -423,6 +597,6 @@ export const useResumeStore = create<ResumeStore>()(
       loadFromLocalStorage: () => {},
       saveToLocalStorage: () => {},
     }),
-    { name: 'better-resume-storage' }
+    { name: 'betta-resume-storage' }
   )
 );

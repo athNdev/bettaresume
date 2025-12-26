@@ -49,7 +49,7 @@ const QUICK_COLORS = [
 
 export function InlineSettingsToolbar({ resumeId }: InlineSettingsToolbarProps) {
   const { activeResume, updateSettings } = useResumeStore();
-  const settings = activeResume?.metadata.settings;
+  const settings = activeResume?.metadata?.settings;
 
   if (!settings) return null;
 

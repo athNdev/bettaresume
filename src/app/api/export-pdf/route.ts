@@ -53,10 +53,15 @@ export async function POST(request: NextRequest) {
               padding: 0;
               box-sizing: border-box;
             }
-            body {
+            html, body {
+              width: 8.5in;
+              min-height: 11in;
               font-family: '${fontFamily || 'Inter'}', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
               -webkit-font-smoothing: antialiased;
               -moz-osx-font-smoothing: grayscale;
+            }
+            body > div {
+              min-height: 11in;
             }
             @page {
               size: letter;

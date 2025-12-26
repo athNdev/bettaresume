@@ -46,7 +46,7 @@ export function ExportButtons({ resumeId }: ExportButtonsProps) {
       // Get the rendered HTML from the hidden div
       const html = printRef.current.innerHTML;
       const filename = resume.name.replace(/\s+/g, '-').toLowerCase();
-      const fontFamily = resume.metadata.settings?.fontFamily || 'Inter';
+      const fontFamily = resume.metadata?.settings?.fontFamily || 'Inter';
 
       // Call the API route to generate PDF with Puppeteer
       const response = await fetch('/api/export-pdf', {
