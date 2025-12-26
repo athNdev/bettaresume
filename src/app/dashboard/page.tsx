@@ -28,6 +28,7 @@ import {
 import { ImportResume } from '@/components/import/import-resume';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ResumeThumbnail } from '@/components/resume/resume-thumbnail';
+import { ProtectedRoute, UserMenu } from '@/components/auth';
 import { 
   FileText, 
   Plus, 
@@ -545,6 +546,7 @@ export default function Dashboard() {
   };
 
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-background">
       {/* Minimal Header */}
       <header className="border-b bg-background sticky top-0 z-50">
@@ -569,6 +571,9 @@ export default function Dashboard() {
                 <Plus className="w-4 h-4 mr-1" />
                 New
               </Button>
+              <div className="ml-2 pl-2 border-l">
+                <UserMenu />
+              </div>
             </div>
           </div>
         </div>
@@ -702,5 +707,6 @@ export default function Dashboard() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </ProtectedRoute>
   );
 }

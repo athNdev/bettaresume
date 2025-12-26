@@ -5,6 +5,49 @@
 The application is fully set up and ready to use. Access it at:
 **http://localhost:3000**
 
+### Development Mode (Default)
+In development mode, the app auto-logs in with a demo account:
+- Email: `demo@bettaresume.com`
+- No password required - automatic login
+
+### Production Mode
+To use AWS Cognito authentication:
+1. Copy `.env.example` to `.env.local`
+2. Set `NEXT_PUBLIC_AUTH_MODE=production`
+3. Configure your Cognito credentials
+
+## Authentication System
+
+### Modes
+- **Development Mode**: Auto-login with demo account, no real auth required
+- **Production Mode**: Full AWS Cognito authentication
+
+### Auth Pages
+- `/login` - User login
+- `/register` - New user registration  
+- `/forgot-password` - Password reset request
+- `/reset-password` - Set new password
+- `/verify-email` - Email verification
+- `/account` - Account settings (profile, subscription, security)
+
+### Environment Variables
+```bash
+# Auth mode: 'development' or 'production'
+NEXT_PUBLIC_AUTH_MODE=development
+
+# Cognito settings (production only)
+NEXT_PUBLIC_COGNITO_REGION=us-east-1
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
+NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### Key Auth Files
+- `src/config/auth.config.ts` - Auth configuration
+- `src/store/auth-store.ts` - Auth state management
+- `src/lib/cognito.ts` - AWS Cognito API
+- `src/components/auth/` - Auth components (ProtectedRoute, UserMenu, AuthProvider)
+- `src/types/auth.ts` - Auth type definitions
+
 ## Current Status
 
 ✅ **All core features implemented and working:**
@@ -16,6 +59,8 @@ The application is fully set up and ready to use. Access it at:
 - WYSIWYG editor (Tiptap)
 - PDF export capability
 - JSON export/import
+- User authentication (dev/prod modes)
+- Account management
 
 ## Architecture Overview
 
@@ -23,6 +68,7 @@ The application is fully set up and ready to use. Access it at:
 - **Zustand** store with persistence
 - Auto-saves to localStorage
 - Supports multiple resumes, versions, and variations
+- Separate auth store for user state
 
 ### Data Structure
 ```typescript
@@ -38,21 +84,35 @@ Resume {
   }
   template: 'minimal' | 'modern' | 'classic' | 'professional'
 }
+
+User {
+  id: string
+  email: string
+  name: string
+  subscription: { plan, status }
+  preferences: { theme, emailNotifications, autoSave }
+}
 ```
 
 ### Key Files
 
 **Core Logic:**
-- `src/store/resume-store.ts` - Zustand state management
-- `src/types/resume.ts` - TypeScript type definitions
+- `src/store/resume-store.ts` - Zustand resume state management
+- `src/store/auth-store.ts` - Zustand auth state management
+- `src/types/resume.ts` - Resume type definitions
+- `src/types/auth.ts` - Auth type definitions
 
 **Pages:**
-- `src/app/page.tsx` - Home (redirects to dashboard)
-- `src/app/dashboard/page.tsx` - Resume listing
-- `src/app/editor/[id]/page.tsx` - Resume editor
+- `src/app/page.tsx` - Home (redirects based on auth)
+- `src/app/dashboard/page.tsx` - Resume listing (protected)
+- `src/app/editor/[id]/page.tsx` - Resume editor (protected)
+- `src/app/login/page.tsx` - Login page
+- `src/app/register/page.tsx` - Registration page
+- `src/app/account/page.tsx` - Account settings
 
 **Components:**
 - `src/components/ui/` - shadcn/ui components
+- `src/components/auth/` - Auth components
 - `src/components/editor/rich-text-editor.tsx` - WYSIWYG editor
 - `src/components/export/export-buttons.tsx` - Export functionality
 - `src/components/import/import-resume.tsx` - Import functionality

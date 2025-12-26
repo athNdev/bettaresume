@@ -10,6 +10,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/auth";
 import { Toaster } from "react-hot-toast";
 
 // Load all fonts
@@ -77,7 +78,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
           <Toaster 
             position="bottom-right"
             toastOptions={{

@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ProtectedRoute, UserMenu } from '@/components/auth';
 import { Loader2 } from 'lucide-react';
 
 // Lazy load heavy components
@@ -528,6 +529,7 @@ export default function EditorPage() {
   ];
 
   return (
+    <ProtectedRoute>
     <TooltipProvider>
       <div className="h-screen flex flex-col bg-background">
         {/* Header */}
@@ -611,6 +613,9 @@ export default function EditorPage() {
               <ExportButtons resumeId={resumeId} />
             </Suspense>
             <ThemeToggle />
+            <div className="ml-1 pl-2 border-l">
+              <UserMenu />
+            </div>
           </div>
         </header>
 
@@ -817,5 +822,6 @@ export default function EditorPage() {
         </AlertDialogContent>
       </AlertDialog>
     </TooltipProvider>
+    </ProtectedRoute>
   );
 }
