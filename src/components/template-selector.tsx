@@ -12,9 +12,10 @@ import { TEMPLATE_CONFIGS, type TemplateType } from '@/types/resume';
 
 interface TemplateSelectorProps {
   resumeId: string;
+  compact?: boolean;
 }
 
-export function TemplateSelector({ resumeId }: TemplateSelectorProps) {
+export function TemplateSelector({ resumeId, compact = false }: TemplateSelectorProps) {
   const { activeResume, updateTemplate } = useResumeStore();
   const [open, setOpen] = useState(false);
 
@@ -28,9 +29,9 @@ export function TemplateSelector({ resumeId }: TemplateSelectorProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Layout className="h-4 w-4" />
-          <span className="hidden sm:inline capitalize">{currentTemplate}</span>
+        <Button variant="outline" size="sm" className={compact ? "gap-1.5 h-7 text-xs" : "gap-2"}>
+          <Layout className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+          <span className="capitalize">{currentTemplate}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl">

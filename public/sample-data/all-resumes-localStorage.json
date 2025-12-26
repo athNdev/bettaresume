@@ -1,0 +1,2068 @@
+{
+  "state": {
+    "resumes": [
+      {
+        "id": "resume-software-engineer-001",
+        "name": "Alex Chen - Senior Software Engineer",
+        "version": 3,
+        "variationType": "base",
+        "createdAt": "2025-10-15T08:30:00.000Z",
+        "updatedAt": "2025-12-20T14:25:00.000Z",
+        "template": "modern",
+        "tags": ["software", "engineering", "full-stack", "react", "node"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-001",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-001",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p>Innovative <strong>Senior Software Engineer</strong> with 8+ years of experience building scalable web applications and leading cross-functional teams. Expert in React, Node.js, and cloud architecture with a proven track record of delivering high-impact projects that increased user engagement by 40% and reduced infrastructure costs by 35%. Passionate about clean code, mentoring junior developers, and staying current with emerging technologies.</p>"
+            }
+          },
+          {
+            "id": "sec-experience-001",
+            "type": "experience",
+            "order": 2,
+            "visible": true,
+            "content": {
+              "title": "Professional Experience",
+              "data": [
+                {
+                  "id": "exp-001",
+                  "company": "TechCorp Global",
+                  "position": "Senior Software Engineer",
+                  "startDate": "2022-03",
+                  "current": true,
+                  "location": "San Francisco, CA",
+                  "locationType": "hybrid",
+                  "employmentType": "full-time",
+                  "description": "Lead engineer for the platform team responsible for core infrastructure serving 10M+ users",
+                  "highlights": [
+                    "Architected and implemented a microservices migration that improved system reliability from 99.5% to 99.99% uptime",
+                    "Led a team of 5 engineers to deliver a real-time collaboration feature that increased user engagement by 40%",
+                    "Reduced deployment time from 45 minutes to 5 minutes by implementing CI/CD pipelines with GitHub Actions",
+                    "Mentored 8 junior developers through code reviews, pair programming, and technical talks"
+                  ],
+                  "technologies": ["React", "TypeScript", "Node.js", "PostgreSQL", "Redis", "AWS", "Kubernetes", "GraphQL"]
+                },
+                {
+                  "id": "exp-002",
+                  "company": "StartupXYZ",
+                  "position": "Full Stack Developer",
+                  "startDate": "2019-06",
+                  "endDate": "2022-02",
+                  "current": false,
+                  "location": "Austin, TX",
+                  "locationType": "onsite",
+                  "employmentType": "full-time",
+                  "description": "Core developer for B2B SaaS platform in the fintech space",
+                  "highlights": [
+                    "Built a payment processing system handling $50M+ in annual transactions",
+                    "Developed a custom analytics dashboard that reduced customer support tickets by 30%",
+                    "Implemented automated testing suite achieving 95% code coverage"
+                  ],
+                  "technologies": ["Vue.js", "Python", "Django", "PostgreSQL", "Stripe", "Docker", "GCP"]
+                },
+                {
+                  "id": "exp-003",
+                  "company": "Digital Agency Co",
+                  "position": "Junior Developer",
+                  "startDate": "2017-01",
+                  "endDate": "2019-05",
+                  "current": false,
+                  "location": "Remote",
+                  "locationType": "remote",
+                  "employmentType": "full-time",
+                  "description": "Developed custom web applications for enterprise clients",
+                  "highlights": [
+                    "Built 15+ responsive websites for Fortune 500 clients using modern JavaScript frameworks",
+                    "Created reusable component library that reduced development time by 25%"
+                  ],
+                  "technologies": ["JavaScript", "React", "PHP", "MySQL", "WordPress", "AWS"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-education-001",
+            "type": "education",
+            "order": 3,
+            "visible": true,
+            "content": {
+              "title": "Education",
+              "data": [
+                {
+                  "id": "edu-001",
+                  "institution": "University of California, Berkeley",
+                  "degree": "Bachelor of Science",
+                  "field": "Computer Science",
+                  "startDate": "2013-08",
+                  "endDate": "2017-05",
+                  "current": false,
+                  "gpa": "3.8",
+                  "maxGpa": "4.0",
+                  "location": "Berkeley, CA",
+                  "achievements": ["Dean's List - 6 semesters", "Undergraduate Research Assistant - Machine Learning Lab"],
+                  "coursework": ["Data Structures & Algorithms", "Operating Systems", "Database Systems", "Machine Learning"],
+                  "honors": ["Cum Laude", "Phi Beta Kappa"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-skills-001",
+            "type": "skills",
+            "order": 4,
+            "visible": true,
+            "content": {
+              "title": "Technical Skills",
+              "data": [
+                {
+                  "id": "skill-cat-001",
+                  "name": "Frontend",
+                  "order": 0,
+                  "skills": [
+                    { "id": "sk-001", "name": "React", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-002", "name": "TypeScript", "level": "expert", "yearsOfExperience": 5 },
+                    { "id": "sk-003", "name": "Next.js", "level": "advanced", "yearsOfExperience": 3 }
+                  ]
+                },
+                {
+                  "id": "skill-cat-002",
+                  "name": "Backend",
+                  "order": 1,
+                  "skills": [
+                    { "id": "sk-006", "name": "Node.js", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-007", "name": "Python", "level": "advanced", "yearsOfExperience": 4 },
+                    { "id": "sk-009", "name": "PostgreSQL", "level": "expert", "yearsOfExperience": 6 }
+                  ]
+                },
+                {
+                  "id": "skill-cat-003",
+                  "name": "DevOps & Cloud",
+                  "order": 2,
+                  "skills": [
+                    { "id": "sk-011", "name": "AWS", "level": "advanced", "yearsOfExperience": 5 },
+                    { "id": "sk-012", "name": "Docker", "level": "advanced", "yearsOfExperience": 4 },
+                    { "id": "sk-013", "name": "Kubernetes", "level": "intermediate", "yearsOfExperience": 2 }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-projects-001",
+            "type": "projects",
+            "order": 5,
+            "visible": true,
+            "content": {
+              "title": "Notable Projects",
+              "data": [
+                {
+                  "id": "proj-001",
+                  "name": "OpenSource Analytics Platform",
+                  "description": "Built an open-source web analytics platform as an alternative to Google Analytics",
+                  "role": "Creator & Lead Developer",
+                  "technologies": ["React", "Node.js", "ClickHouse", "Redis", "Docker"],
+                  "githubUrl": "https://github.com/alexchen/analytics-platform",
+                  "startDate": "2023-01",
+                  "current": true,
+                  "highlights": ["15,000+ GitHub stars and 2,000+ active deployments", "Featured in JavaScript Weekly"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-certs-001",
+            "type": "certifications",
+            "order": 6,
+            "visible": true,
+            "content": {
+              "title": "Certifications",
+              "data": [
+                {
+                  "id": "cert-001",
+                  "name": "AWS Solutions Architect - Professional",
+                  "issuer": "Amazon Web Services",
+                  "issueDate": "2023-06",
+                  "expiryDate": "2026-06",
+                  "credentialId": "AWS-SAP-2023-12345"
+                },
+                {
+                  "id": "cert-002",
+                  "name": "Certified Kubernetes Administrator (CKA)",
+                  "issuer": "Cloud Native Computing Foundation",
+                  "issueDate": "2023-01",
+                  "expiryDate": "2026-01",
+                  "credentialId": "CKA-2023-54321"
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-languages-001",
+            "type": "languages",
+            "order": 7,
+            "visible": true,
+            "content": {
+              "title": "Languages",
+              "data": [
+                { "id": "lang-001", "name": "English", "proficiency": "native" },
+                { "id": "lang-002", "name": "Mandarin Chinese", "proficiency": "native" },
+                { "id": "lang-003", "name": "Spanish", "proficiency": "intermediate" }
+              ]
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Alex Chen",
+            "email": "alex.chen@email.com",
+            "phone": "(555) 123-4567",
+            "location": "San Francisco, CA",
+            "linkedin": "linkedin.com/in/alexchen",
+            "github": "github.com/alexchen",
+            "website": "alexchen.dev",
+            "professionalTitle": "Senior Software Engineer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Inter",
+            "colors": {
+              "primary": "#2563eb",
+              "secondary": "#64748b",
+              "text": "#1f2937",
+              "heading": "#2563eb",
+              "accent": "#3b82f6",
+              "background": "#ffffff",
+              "divider": "#e5e7eb"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      },
+      {
+        "id": "resume-data-scientist-001",
+        "name": "Dr. Sarah Martinez - Data Scientist",
+        "version": 2,
+        "variationType": "base",
+        "createdAt": "2025-09-01T10:00:00.000Z",
+        "updatedAt": "2025-12-18T16:45:00.000Z",
+        "template": "professional",
+        "tags": ["data-science", "machine-learning", "python", "analytics", "AI"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-ds-001",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-ds-001",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p>Results-driven <strong>Data Scientist</strong> with a Ph.D. in Statistics and 6+ years of experience transforming complex data into actionable business insights. Expertise in machine learning, deep learning, and statistical modeling with a focus on NLP and computer vision applications. Published researcher with 12+ peer-reviewed papers and a track record of deploying ML models that generated $20M+ in annual revenue impact.</p>"
+            }
+          },
+          {
+            "id": "sec-experience-ds-001",
+            "type": "experience",
+            "order": 2,
+            "visible": true,
+            "content": {
+              "title": "Professional Experience",
+              "data": [
+                {
+                  "id": "exp-ds-001",
+                  "company": "AI Solutions Inc",
+                  "position": "Senior Data Scientist",
+                  "startDate": "2021-08",
+                  "current": true,
+                  "location": "New York, NY",
+                  "locationType": "hybrid",
+                  "employmentType": "full-time",
+                  "description": "Lead data scientist for the recommendation systems team serving 50M+ users",
+                  "highlights": [
+                    "Designed and deployed a transformer-based recommendation engine that increased user engagement by 35%",
+                    "Built an A/B testing framework used across 15+ product teams",
+                    "Led a team of 4 data scientists and 2 ML engineers"
+                  ],
+                  "technologies": ["Python", "PyTorch", "TensorFlow", "Spark", "Airflow", "MLflow", "AWS SageMaker"]
+                },
+                {
+                  "id": "exp-ds-002",
+                  "company": "HealthTech Analytics",
+                  "position": "Data Scientist",
+                  "startDate": "2019-03",
+                  "endDate": "2021-07",
+                  "current": false,
+                  "location": "Boston, MA",
+                  "locationType": "onsite",
+                  "employmentType": "full-time",
+                  "description": "Core data scientist for predictive healthcare analytics platform",
+                  "highlights": [
+                    "Developed patient readmission prediction model achieving 0.89 AUC",
+                    "Built NLP pipeline for extracting insights from 10M+ clinical notes using BERT-based models"
+                  ],
+                  "technologies": ["Python", "scikit-learn", "BERT", "Hugging Face", "PostgreSQL", "Tableau"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-education-ds-001",
+            "type": "education",
+            "order": 3,
+            "visible": true,
+            "content": {
+              "title": "Education",
+              "data": [
+                {
+                  "id": "edu-ds-001",
+                  "institution": "Massachusetts Institute of Technology",
+                  "degree": "Doctor of Philosophy",
+                  "field": "Statistics",
+                  "startDate": "2012-09",
+                  "endDate": "2016-06",
+                  "current": false,
+                  "location": "Cambridge, MA",
+                  "achievements": ["Dissertation: 'Bayesian Methods for High-Dimensional Causal Inference'"],
+                  "honors": ["NSF Graduate Research Fellowship"]
+                },
+                {
+                  "id": "edu-ds-002",
+                  "institution": "Stanford University",
+                  "degree": "Bachelor of Science",
+                  "field": "Mathematics & Computer Science",
+                  "startDate": "2008-09",
+                  "endDate": "2012-06",
+                  "current": false,
+                  "gpa": "3.95",
+                  "maxGpa": "4.0",
+                  "location": "Stanford, CA",
+                  "honors": ["Phi Beta Kappa", "Tau Beta Pi"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-skills-ds-001",
+            "type": "skills",
+            "order": 4,
+            "visible": true,
+            "content": {
+              "title": "Technical Skills",
+              "data": [
+                {
+                  "id": "skill-cat-ds-001",
+                  "name": "Machine Learning & AI",
+                  "order": 0,
+                  "skills": [
+                    { "id": "sk-ds-001", "name": "Deep Learning (PyTorch/TensorFlow)", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-ds-002", "name": "Natural Language Processing", "level": "expert", "yearsOfExperience": 5 },
+                    { "id": "sk-ds-003", "name": "Recommendation Systems", "level": "expert", "yearsOfExperience": 4 }
+                  ]
+                },
+                {
+                  "id": "skill-cat-ds-002",
+                  "name": "Programming & Tools",
+                  "order": 1,
+                  "skills": [
+                    { "id": "sk-ds-006", "name": "Python", "level": "expert", "yearsOfExperience": 8 },
+                    { "id": "sk-ds-007", "name": "SQL", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-ds-008", "name": "R", "level": "advanced", "yearsOfExperience": 5 }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-publications-ds-001",
+            "type": "publications",
+            "order": 5,
+            "visible": true,
+            "content": {
+              "title": "Selected Publications",
+              "data": [
+                {
+                  "id": "pub-001",
+                  "title": "Causal Transformers: Attention Mechanisms for Causal Inference",
+                  "publisher": "NeurIPS 2024",
+                  "date": "2024-12",
+                  "url": "https://arxiv.org/example/causal-transformers",
+                  "coAuthors": ["J. Smith", "M. Johnson"]
+                },
+                {
+                  "id": "pub-002",
+                  "title": "Fair Recommendation Systems: A Multi-Stakeholder Approach",
+                  "publisher": "ICML 2023",
+                  "date": "2023-07",
+                  "coAuthors": ["R. Williams", "A. Brown"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-languages-ds-001",
+            "type": "languages",
+            "order": 6,
+            "visible": true,
+            "content": {
+              "title": "Languages",
+              "data": [
+                { "id": "lang-ds-001", "name": "English", "proficiency": "native" },
+                { "id": "lang-ds-002", "name": "Spanish", "proficiency": "native" },
+                { "id": "lang-ds-003", "name": "Portuguese", "proficiency": "fluent" }
+              ]
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Dr. Sarah Martinez",
+            "email": "sarah.martinez@email.com",
+            "phone": "(555) 987-6543",
+            "location": "New York, NY",
+            "linkedin": "linkedin.com/in/sarahmartinezphd",
+            "github": "github.com/smartinez",
+            "website": "sarahmartinez.ai",
+            "professionalTitle": "Senior Data Scientist & ML Researcher"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+            "fontSize": 11,
+            "lineHeight": 1.4,
+            "fontFamily": "Georgia",
+            "colors": {
+              "primary": "#1e3a5f",
+              "secondary": "#4a6fa5",
+              "text": "#333333",
+              "heading": "#1e3a5f",
+              "accent": "#2ecc71",
+              "background": "#ffffff",
+              "divider": "#d0d0d0"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "border"
+          }
+        }
+      },
+      {
+        "id": "resume-product-manager-001",
+        "name": "Michael Thompson - Product Manager",
+        "version": 4,
+        "variationType": "base",
+        "createdAt": "2025-08-10T09:15:00.000Z",
+        "updatedAt": "2025-12-22T11:30:00.000Z",
+        "template": "executive",
+        "tags": ["product", "management", "strategy", "agile", "leadership"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-pm-001",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-pm-001",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Executive Summary",
+              "data": {},
+              "html": "<p>Strategic <strong>Product Manager</strong> with 10+ years of experience driving product vision and execution at high-growth technology companies. Proven track record of launching products that generated $100M+ in revenue and achieved 200%+ user growth. Expert in customer discovery, data-driven decision making, and cross-functional leadership.</p>"
+            }
+          },
+          {
+            "id": "sec-experience-pm-001",
+            "type": "experience",
+            "order": 2,
+            "visible": true,
+            "content": {
+              "title": "Professional Experience",
+              "data": [
+                {
+                  "id": "exp-pm-001",
+                  "company": "MegaTech Corporation",
+                  "position": "Senior Director of Product",
+                  "startDate": "2021-01",
+                  "current": true,
+                  "location": "Seattle, WA",
+                  "locationType": "hybrid",
+                  "employmentType": "full-time",
+                  "description": "Leading product strategy for enterprise collaboration suite with 5M+ users",
+                  "highlights": [
+                    "Drove product vision and roadmap achieving 45% YoY revenue growth to $150M ARR",
+                    "Built and mentored team of 8 product managers across 3 product lines",
+                    "Launched AI-powered features that increased user engagement by 60%"
+                  ],
+                  "technologies": ["Jira", "Amplitude", "Mixpanel", "Figma", "SQL", "Tableau"]
+                },
+                {
+                  "id": "exp-pm-002",
+                  "company": "GrowthStartup Inc",
+                  "position": "Product Manager",
+                  "startDate": "2018-03",
+                  "endDate": "2020-12",
+                  "current": false,
+                  "location": "San Francisco, CA",
+                  "locationType": "onsite",
+                  "employmentType": "full-time",
+                  "description": "Product owner for mobile app and growth team at Series B fintech startup",
+                  "highlights": [
+                    "Led product development for mobile banking app from 50K to 2M users in 2 years",
+                    "Conducted 200+ customer interviews to identify pain points"
+                  ],
+                  "technologies": ["Productboard", "FullStory", "Segment", "Looker"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-education-pm-001",
+            "type": "education",
+            "order": 3,
+            "visible": true,
+            "content": {
+              "title": "Education",
+              "data": [
+                {
+                  "id": "edu-pm-001",
+                  "institution": "Harvard Business School",
+                  "degree": "Master of Business Administration",
+                  "field": "General Management",
+                  "startDate": "2019-08",
+                  "endDate": "2021-05",
+                  "current": false,
+                  "location": "Boston, MA",
+                  "achievements": ["Rock Summer Fellow - Entrepreneurship"],
+                  "honors": ["Dean's List", "Baker Scholar"]
+                },
+                {
+                  "id": "edu-pm-002",
+                  "institution": "Northwestern University",
+                  "degree": "Bachelor of Science",
+                  "field": "Industrial Engineering & Economics",
+                  "startDate": "2009-09",
+                  "endDate": "2013-06",
+                  "current": false,
+                  "gpa": "3.7",
+                  "maxGpa": "4.0",
+                  "location": "Evanston, IL",
+                  "honors": ["Magna Cum Laude"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-skills-pm-001",
+            "type": "skills",
+            "order": 4,
+            "visible": true,
+            "content": {
+              "title": "Skills & Competencies",
+              "data": [
+                {
+                  "id": "skill-cat-pm-001",
+                  "name": "Product Strategy",
+                  "order": 0,
+                  "skills": [
+                    { "id": "sk-pm-001", "name": "Product Vision & Roadmapping", "level": "expert" },
+                    { "id": "sk-pm-002", "name": "Market Analysis", "level": "expert" },
+                    { "id": "sk-pm-003", "name": "Go-to-Market Strategy", "level": "advanced" }
+                  ]
+                },
+                {
+                  "id": "skill-cat-pm-002",
+                  "name": "Execution & Delivery",
+                  "order": 1,
+                  "skills": [
+                    { "id": "sk-pm-006", "name": "Agile/Scrum Methodology", "level": "expert" },
+                    { "id": "sk-pm-007", "name": "User Story Writing", "level": "expert" },
+                    { "id": "sk-pm-008", "name": "Cross-functional Leadership", "level": "advanced" }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-volunteer-pm-001",
+            "type": "volunteer",
+            "order": 5,
+            "visible": true,
+            "content": {
+              "title": "Leadership & Volunteering",
+              "data": [
+                {
+                  "id": "vol-pm-001",
+                  "organization": "Product Management Community",
+                  "role": "Mentor",
+                  "startDate": "2022-01",
+                  "current": true,
+                  "description": "Mentor aspiring product managers through career transitions",
+                  "highlights": ["Mentored 25+ individuals transitioning into product management"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-languages-pm-001",
+            "type": "languages",
+            "order": 6,
+            "visible": true,
+            "content": {
+              "title": "Languages",
+              "data": [
+                { "id": "lang-pm-001", "name": "English", "proficiency": "native" },
+                { "id": "lang-pm-002", "name": "German", "proficiency": "fluent" }
+              ]
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Michael Thompson",
+            "email": "michael.thompson@email.com",
+            "phone": "(555) 456-7890",
+            "location": "Seattle, WA",
+            "linkedin": "linkedin.com/in/michaelthompson",
+            "website": "michaelthompson.com",
+            "professionalTitle": "Senior Director of Product"
+          },
+          "settings": {
+            "pageSize": "Letter",
+            "margins": { "top": 30, "right": 30, "bottom": 30, "left": 30 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Playfair Display",
+            "colors": {
+              "primary": "#2d2d2d",
+              "secondary": "#555555",
+              "text": "#333333",
+              "heading": "#2d2d2d",
+              "accent": "#b8860b",
+              "background": "#ffffff",
+              "divider": "#c0c0c0"
+            },
+            "sectionSpacing": "spacious",
+            "showIcons": false,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "none"
+          }
+        }
+      },
+      {
+        "id": "resume-ux-designer-001",
+        "name": "Emma Rodriguez - UX Designer",
+        "version": 2,
+        "variationType": "base",
+        "createdAt": "2025-11-05T14:20:00.000Z",
+        "updatedAt": "2025-12-19T09:45:00.000Z",
+        "template": "creative",
+        "tags": ["design", "UX", "UI", "product-design", "figma"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-ux-001",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-ux-001",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "About Me",
+              "data": {},
+              "html": "<p>Creative and user-centered <strong>UX Designer</strong> with 7 years of experience crafting delightful digital experiences. Passionate about accessibility, inclusive design, and bridging the gap between user needs and business goals. Led design for products used by 20M+ users, with expertise in design systems, user research, and prototyping.</p>"
+            }
+          },
+          {
+            "id": "sec-experience-ux-001",
+            "type": "experience",
+            "order": 2,
+            "visible": true,
+            "content": {
+              "title": "Experience",
+              "data": [
+                {
+                  "id": "exp-ux-001",
+                  "company": "DesignForward Agency",
+                  "position": "Lead UX Designer",
+                  "startDate": "2022-04",
+                  "current": true,
+                  "location": "Los Angeles, CA",
+                  "locationType": "hybrid",
+                  "employmentType": "full-time",
+                  "description": "Leading design for major brand clients in e-commerce and fintech",
+                  "highlights": [
+                    "Led end-to-end design for e-commerce platform redesign, resulting in 55% increase in conversion rate",
+                    "Established and maintained design system used across 12+ products",
+                    "Mentored team of 5 junior designers"
+                  ],
+                  "technologies": ["Figma", "Framer", "Maze", "Hotjar", "Zeplin"]
+                },
+                {
+                  "id": "exp-ux-002",
+                  "company": "TechStartup XYZ",
+                  "position": "Senior UX Designer",
+                  "startDate": "2019-08",
+                  "endDate": "2022-03",
+                  "current": false,
+                  "location": "San Francisco, CA",
+                  "locationType": "onsite",
+                  "employmentType": "full-time",
+                  "description": "First design hire at Series A startup",
+                  "highlights": [
+                    "Designed mobile app from 0 to 1, achieving 4.8-star rating and 500K downloads",
+                    "Created user journey maps and personas based on 100+ customer interviews"
+                  ],
+                  "technologies": ["Figma", "Sketch", "InVision", "UserTesting"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-education-ux-001",
+            "type": "education",
+            "order": 3,
+            "visible": true,
+            "content": {
+              "title": "Education",
+              "data": [
+                {
+                  "id": "edu-ux-001",
+                  "institution": "Rhode Island School of Design",
+                  "degree": "Master of Fine Arts",
+                  "field": "Graphic Design",
+                  "startDate": "2015-09",
+                  "endDate": "2017-05",
+                  "current": false,
+                  "location": "Providence, RI",
+                  "achievements": ["Thesis: 'Designing for Emotional Connection in Digital Interfaces'"],
+                  "honors": ["Merit Scholarship Recipient"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-skills-ux-001",
+            "type": "skills",
+            "order": 4,
+            "visible": true,
+            "content": {
+              "title": "Skills",
+              "data": [
+                {
+                  "id": "skill-cat-ux-001",
+                  "name": "Design Tools",
+                  "order": 0,
+                  "skills": [
+                    { "id": "sk-ux-001", "name": "Figma", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-ux-002", "name": "Framer", "level": "advanced", "yearsOfExperience": 3 },
+                    { "id": "sk-ux-003", "name": "Adobe Creative Suite", "level": "expert", "yearsOfExperience": 8 }
+                  ]
+                },
+                {
+                  "id": "skill-cat-ux-002",
+                  "name": "UX Research",
+                  "order": 1,
+                  "skills": [
+                    { "id": "sk-ux-006", "name": "User Interviews", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-ux-007", "name": "Usability Testing", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-ux-008", "name": "Journey Mapping", "level": "expert", "yearsOfExperience": 5 }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-awards-ux-001",
+            "type": "awards",
+            "order": 5,
+            "visible": true,
+            "content": {
+              "title": "Awards & Recognition",
+              "data": [
+                {
+                  "id": "award-ux-001",
+                  "title": "Red Dot Design Award - Interface Design",
+                  "issuer": "Red Dot",
+                  "date": "2024-04",
+                  "description": "Recognized for exceptional interface design on HealthConnect project"
+                },
+                {
+                  "id": "award-ux-002",
+                  "title": "Forbes 30 Under 30 - Design",
+                  "issuer": "Forbes",
+                  "date": "2021-12",
+                  "description": "Recognized as one of the most impactful young designers"
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-languages-ux-001",
+            "type": "languages",
+            "order": 6,
+            "visible": true,
+            "content": {
+              "title": "Languages",
+              "data": [
+                { "id": "lang-ux-001", "name": "English", "proficiency": "native" },
+                { "id": "lang-ux-002", "name": "Spanish", "proficiency": "native" },
+                { "id": "lang-ux-003", "name": "Italian", "proficiency": "intermediate" }
+              ]
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Emma Rodriguez",
+            "email": "emma@emmadesigns.com",
+            "phone": "(555) 234-5678",
+            "location": "Los Angeles, CA",
+            "linkedin": "linkedin.com/in/emmarodriguezux",
+            "website": "emmadesigns.com",
+            "portfolio": "dribbble.com/emmarodriguez",
+            "professionalTitle": "Lead UX Designer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 24, "right": 24, "bottom": 24, "left": 24 },
+            "fontSize": 10.5,
+            "lineHeight": 1.6,
+            "fontFamily": "Montserrat",
+            "colors": {
+              "primary": "#6c5ce7",
+              "secondary": "#a29bfe",
+              "text": "#2d3436",
+              "heading": "#6c5ce7",
+              "accent": "#fd79a8",
+              "background": "#ffffff",
+              "divider": "#dfe6e9"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "background"
+          }
+        }
+      },
+      {
+        "id": "resume-devops-engineer-001",
+        "name": "James Wilson - DevOps Engineer",
+        "version": 1,
+        "variationType": "base",
+        "createdAt": "2025-12-01T08:00:00.000Z",
+        "updatedAt": "2025-12-24T15:30:00.000Z",
+        "template": "tech",
+        "tags": ["devops", "cloud", "kubernetes", "aws", "infrastructure"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-do-001",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-do-001",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p>Experienced <strong>DevOps Engineer</strong> with 6+ years specializing in cloud infrastructure, automation, and CI/CD pipelines. Expert in AWS, Kubernetes, and Infrastructure as Code with a track record of improving deployment frequency by 10x and reducing infrastructure costs by 40%.</p>"
+            }
+          },
+          {
+            "id": "sec-experience-do-001",
+            "type": "experience",
+            "order": 2,
+            "visible": true,
+            "content": {
+              "title": "Professional Experience",
+              "data": [
+                {
+                  "id": "exp-do-001",
+                  "company": "CloudScale Technologies",
+                  "position": "Senior DevOps Engineer",
+                  "startDate": "2022-06",
+                  "current": true,
+                  "location": "Denver, CO",
+                  "locationType": "remote",
+                  "employmentType": "full-time",
+                  "description": "Lead infrastructure engineer for multi-cloud platform",
+                  "highlights": [
+                    "Architected Kubernetes-based platform handling 50K+ requests/second",
+                    "Reduced deployment time from 2 hours to 5 minutes by implementing GitOps",
+                    "Decreased AWS costs by 40% ($2M annually)"
+                  ],
+                  "technologies": ["AWS", "Kubernetes", "Terraform", "ArgoCD", "Prometheus", "Grafana", "Python", "Go"]
+                },
+                {
+                  "id": "exp-do-002",
+                  "company": "FinanceApp Corp",
+                  "position": "DevOps Engineer",
+                  "startDate": "2020-01",
+                  "endDate": "2022-05",
+                  "current": false,
+                  "location": "Chicago, IL",
+                  "locationType": "hybrid",
+                  "employmentType": "full-time",
+                  "description": "Infrastructure engineer for financial services platform",
+                  "highlights": [
+                    "Migrated legacy on-premise infrastructure to AWS, reducing operational overhead by 60%",
+                    "Implemented SOC 2 and PCI-DSS compliant CI/CD pipelines"
+                  ],
+                  "technologies": ["AWS", "Terraform", "Jenkins", "Docker", "ELK Stack", "Ansible"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-education-do-001",
+            "type": "education",
+            "order": 3,
+            "visible": true,
+            "content": {
+              "title": "Education",
+              "data": [
+                {
+                  "id": "edu-do-001",
+                  "institution": "University of Colorado Boulder",
+                  "degree": "Bachelor of Science",
+                  "field": "Computer Science",
+                  "startDate": "2014-08",
+                  "endDate": "2018-05",
+                  "current": false,
+                  "gpa": "3.6",
+                  "maxGpa": "4.0",
+                  "location": "Boulder, CO",
+                  "coursework": ["Operating Systems", "Computer Networks", "Distributed Systems", "Cloud Computing"]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-skills-do-001",
+            "type": "skills",
+            "order": 4,
+            "visible": true,
+            "content": {
+              "title": "Technical Skills",
+              "data": [
+                {
+                  "id": "skill-cat-do-001",
+                  "name": "Cloud Platforms",
+                  "order": 0,
+                  "skills": [
+                    { "id": "sk-do-001", "name": "AWS (EC2, EKS, Lambda, RDS)", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-do-002", "name": "Google Cloud Platform", "level": "advanced", "yearsOfExperience": 3 },
+                    { "id": "sk-do-003", "name": "Azure", "level": "intermediate", "yearsOfExperience": 2 }
+                  ]
+                },
+                {
+                  "id": "skill-cat-do-002",
+                  "name": "Container & Orchestration",
+                  "order": 1,
+                  "skills": [
+                    { "id": "sk-do-004", "name": "Kubernetes", "level": "expert", "yearsOfExperience": 5 },
+                    { "id": "sk-do-005", "name": "Docker", "level": "expert", "yearsOfExperience": 6 },
+                    { "id": "sk-do-006", "name": "Helm", "level": "advanced", "yearsOfExperience": 4 }
+                  ]
+                },
+                {
+                  "id": "skill-cat-do-003",
+                  "name": "Infrastructure as Code",
+                  "order": 2,
+                  "skills": [
+                    { "id": "sk-do-008", "name": "Terraform", "level": "expert", "yearsOfExperience": 5 },
+                    { "id": "sk-do-009", "name": "Ansible", "level": "advanced", "yearsOfExperience": 4 }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-certs-do-001",
+            "type": "certifications",
+            "order": 5,
+            "visible": true,
+            "content": {
+              "title": "Certifications",
+              "data": [
+                {
+                  "id": "cert-do-001",
+                  "name": "AWS Solutions Architect - Professional",
+                  "issuer": "Amazon Web Services",
+                  "issueDate": "2023-03",
+                  "expiryDate": "2026-03",
+                  "credentialId": "AWS-SAP-54321"
+                },
+                {
+                  "id": "cert-do-002",
+                  "name": "Certified Kubernetes Administrator (CKA)",
+                  "issuer": "Cloud Native Computing Foundation",
+                  "issueDate": "2022-08",
+                  "expiryDate": "2025-08",
+                  "credentialId": "CKA-2022-78901"
+                },
+                {
+                  "id": "cert-do-003",
+                  "name": "Certified Kubernetes Security Specialist (CKS)",
+                  "issuer": "Cloud Native Computing Foundation",
+                  "issueDate": "2023-06",
+                  "expiryDate": "2026-06",
+                  "credentialId": "CKS-2023-12345"
+                }
+              ]
+            }
+          },
+          {
+            "id": "sec-languages-do-001",
+            "type": "languages",
+            "order": 6,
+            "visible": true,
+            "content": {
+              "title": "Languages",
+              "data": [
+                { "id": "lang-do-001", "name": "English", "proficiency": "native" }
+              ]
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "James Wilson",
+            "email": "james.wilson@email.com",
+            "phone": "(555) 345-6789",
+            "location": "Denver, CO",
+            "linkedin": "linkedin.com/in/jameswilsondevops",
+            "github": "github.com/jwilson-devops",
+            "website": "jameswilson.dev",
+            "professionalTitle": "Senior DevOps Engineer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+            "fontSize": 10.5,
+            "lineHeight": 1.5,
+            "fontFamily": "Roboto",
+            "colors": {
+              "primary": "#0891b2",
+              "secondary": "#06b6d4",
+              "text": "#1f2937",
+              "heading": "#0891b2",
+              "accent": "#00ff88",
+              "background": "#ffffff",
+              "divider": "#e5e7eb"
+            },
+            "sectionSpacing": "compact",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      },
+      {
+        "id": "resume-archived-marketing-001",
+        "name": "Lisa Chen - Marketing Manager (Archived)",
+        "version": 1,
+        "variationType": "base",
+        "createdAt": "2025-06-15T10:00:00.000Z",
+        "updatedAt": "2025-08-01T14:00:00.000Z",
+        "template": "minimal",
+        "tags": ["marketing", "digital", "content"],
+        "isArchived": true,
+        "sections": [
+          {
+            "id": "sec-personal-mkt-001",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-mkt-001",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p>Results-oriented <strong>Marketing Manager</strong> with 5 years of experience in digital marketing and brand strategy. Expertise in content marketing, SEO, and paid advertising.</p>"
+            }
+          },
+          {
+            "id": "sec-experience-mkt-001",
+            "type": "experience",
+            "order": 2,
+            "visible": true,
+            "content": {
+              "title": "Experience",
+              "data": [
+                {
+                  "id": "exp-mkt-001",
+                  "company": "BrandCo Marketing",
+                  "position": "Marketing Manager",
+                  "startDate": "2020-05",
+                  "current": true,
+                  "location": "Chicago, IL",
+                  "locationType": "hybrid",
+                  "employmentType": "full-time",
+                  "description": "Managing digital marketing strategy for B2B SaaS clients",
+                  "highlights": [
+                    "Increased organic traffic by 150% through SEO optimization",
+                    "Managed $500K annual advertising budget across Google, LinkedIn, and Facebook"
+                  ],
+                  "technologies": ["Google Analytics", "HubSpot", "SEMrush", "Hootsuite"]
+                }
+              ]
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Lisa Chen",
+            "email": "lisa.chen@email.com",
+            "phone": "(555) 678-9012",
+            "location": "Chicago, IL",
+            "linkedin": "linkedin.com/in/lisachenmarketing",
+            "professionalTitle": "Marketing Manager"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Inter",
+            "colors": {
+              "primary": "#000000",
+              "secondary": "#666666",
+              "text": "#333333",
+              "heading": "#000000",
+              "accent": "#0066cc",
+              "background": "#ffffff",
+              "divider": "#e5e5e5"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      },
+      {
+        "id": "variation-swe-faang",
+        "name": "Alex Chen - FAANG Focus",
+        "baseResumeId": "resume-software-engineer-001",
+        "createdFromVersion": 2,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "FAANG",
+        "createdAt": "2025-11-25T10:00:00.000Z",
+        "updatedAt": "2025-12-15T14:30:00.000Z",
+        "template": "modern",
+        "tags": ["faang", "big-tech", "system-design"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-faang",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-faang",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p><strong>Staff-level Software Engineer</strong> targeting FAANG opportunities. 8+ years building distributed systems at scale (10M+ users). Deep expertise in system design, performance optimization, and technical leadership. Proven track record of delivering 99.99% uptime systems and mentoring engineering teams.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Alex Chen",
+            "email": "alex.chen@email.com",
+            "phone": "(555) 123-4567",
+            "location": "San Francisco, CA",
+            "linkedin": "linkedin.com/in/alexchen",
+            "github": "github.com/alexchen",
+            "professionalTitle": "Staff Software Engineer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Inter",
+            "colors": {
+              "primary": "#1a73e8",
+              "secondary": "#5f6368",
+              "text": "#202124",
+              "heading": "#1a73e8",
+              "accent": "#34a853",
+              "background": "#ffffff",
+              "divider": "#dadce0"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      },
+      {
+        "id": "variation-swe-startup",
+        "name": "Alex Chen - Startup CTO Track",
+        "baseResumeId": "resume-software-engineer-001",
+        "createdFromVersion": 3,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "Startup",
+        "createdAt": "2025-12-10T09:00:00.000Z",
+        "updatedAt": "2025-12-20T11:00:00.000Z",
+        "template": "tech",
+        "tags": ["startup", "cto", "leadership", "founding-engineer"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-startup",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-startup",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p><strong>Technical Co-founder / CTO</strong> with full-stack expertise and 8+ years shipping products from 0→1. Built and scaled platforms to 10M+ users. Experience building engineering teams, defining technical architecture, and driving product strategy. Open source contributor with 15K+ GitHub stars.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Alex Chen",
+            "email": "alex.chen@email.com",
+            "phone": "(555) 123-4567",
+            "location": "San Francisco, CA",
+            "linkedin": "linkedin.com/in/alexchen",
+            "github": "github.com/alexchen",
+            "website": "alexchen.dev",
+            "professionalTitle": "Technical Co-founder / CTO"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 18, "right": 18, "bottom": 18, "left": 18 },
+            "fontSize": 10.5,
+            "lineHeight": 1.4,
+            "fontFamily": "JetBrains Mono",
+            "colors": {
+              "primary": "#00ff88",
+              "secondary": "#06b6d4",
+              "text": "#e2e8f0",
+              "heading": "#00ff88",
+              "accent": "#f472b6",
+              "background": "#0f172a",
+              "divider": "#334155"
+            },
+            "sectionSpacing": "compact",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "background"
+          }
+        }
+      },
+      {
+        "id": "variation-swe-fintech",
+        "name": "Alex Chen - FinTech Engineer",
+        "baseResumeId": "resume-software-engineer-001",
+        "createdFromVersion": 2,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "FinTech",
+        "createdAt": "2025-11-28T15:00:00.000Z",
+        "updatedAt": "2025-12-12T10:00:00.000Z",
+        "template": "professional",
+        "tags": ["fintech", "payments", "banking", "compliance"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-fintech",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-fintech",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p><strong>Senior FinTech Engineer</strong> with expertise in payment systems, regulatory compliance, and financial data processing. Built payment infrastructure handling $50M+ annually. Experience with PCI-DSS, SOC 2 compliance, and real-time transaction processing at scale.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Alex Chen",
+            "email": "alex.chen@email.com",
+            "phone": "(555) 123-4567",
+            "location": "San Francisco, CA",
+            "linkedin": "linkedin.com/in/alexchen",
+            "professionalTitle": "Senior FinTech Engineer"
+          },
+          "settings": {
+            "pageSize": "Letter",
+            "margins": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Georgia",
+            "colors": {
+              "primary": "#1e3a5f",
+              "secondary": "#4a6fa5",
+              "text": "#333333",
+              "heading": "#1e3a5f",
+              "accent": "#2ecc71",
+              "background": "#ffffff",
+              "divider": "#d0d0d0"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": false,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "border"
+          }
+        }
+      },
+      {
+        "id": "variation-pm-bigtech",
+        "name": "Michael Thompson - Big Tech PM",
+        "baseResumeId": "resume-product-manager-001",
+        "createdFromVersion": 3,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "Big Tech",
+        "createdAt": "2025-11-15T13:00:00.000Z",
+        "updatedAt": "2025-12-18T16:00:00.000Z",
+        "template": "modern",
+        "tags": ["google", "meta", "amazon", "product-strategy"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-pm-bigtech",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-pm-bigtech",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Executive Summary",
+              "data": {},
+              "html": "<p><strong>Group Product Manager</strong> targeting L7+ roles at top-tier tech companies. 10+ years driving product strategy for enterprise platforms. Managed $150M+ P&L, launched products with 200%+ user growth, and built high-performing PM organizations.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Michael Thompson",
+            "email": "michael.thompson@email.com",
+            "phone": "(555) 456-7890",
+            "location": "Seattle, WA",
+            "linkedin": "linkedin.com/in/michaelthompson",
+            "professionalTitle": "Group Product Manager"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 22, "right": 22, "bottom": 22, "left": 22 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Inter",
+            "colors": {
+              "primary": "#4285f4",
+              "secondary": "#5f6368",
+              "text": "#202124",
+              "heading": "#4285f4",
+              "accent": "#ea4335",
+              "background": "#ffffff",
+              "divider": "#dadce0"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      },
+      {
+        "id": "variation-pm-ai",
+        "name": "Michael Thompson - AI/ML PM",
+        "baseResumeId": "resume-product-manager-001",
+        "createdFromVersion": 4,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "AI/ML",
+        "createdAt": "2025-12-20T10:00:00.000Z",
+        "updatedAt": "2025-12-24T14:00:00.000Z",
+        "template": "tech",
+        "tags": ["ai", "ml", "llm", "generative-ai"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-pm-ai",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-pm-ai",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Executive Summary",
+              "data": {},
+              "html": "<p><strong>AI Product Leader</strong> bridging the gap between cutting-edge ML research and market-ready products. Led launch of AI-powered features driving 60% engagement lift. Deep understanding of LLMs, recommendation systems, and responsible AI practices.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Michael Thompson",
+            "email": "michael.thompson@email.com",
+            "phone": "(555) 456-7890",
+            "location": "Seattle, WA",
+            "linkedin": "linkedin.com/in/michaelthompson",
+            "professionalTitle": "AI Product Leader"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+            "fontSize": 10.5,
+            "lineHeight": 1.4,
+            "fontFamily": "Roboto",
+            "colors": {
+              "primary": "#8b5cf6",
+              "secondary": "#a78bfa",
+              "text": "#1f2937",
+              "heading": "#8b5cf6",
+              "accent": "#06b6d4",
+              "background": "#ffffff",
+              "divider": "#e5e7eb"
+            },
+            "sectionSpacing": "compact",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "background"
+          }
+        }
+      },
+      {
+        "id": "variation-ds-mlops",
+        "name": "Dr. Sarah Martinez - MLOps Engineer",
+        "baseResumeId": "resume-data-scientist-001",
+        "createdFromVersion": 1,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "MLOps",
+        "createdAt": "2025-10-20T11:00:00.000Z",
+        "updatedAt": "2025-11-30T09:00:00.000Z",
+        "template": "tech",
+        "tags": ["mlops", "infrastructure", "deployment", "kubernetes"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-ds-mlops",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-ds-mlops",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p><strong>Senior MLOps Engineer</strong> specializing in productionizing machine learning systems. Expert in ML pipelines, model deployment, and infrastructure automation. Reduced model deployment time from weeks to hours while maintaining 99.9% model serving reliability.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Dr. Sarah Martinez",
+            "email": "sarah.martinez@email.com",
+            "phone": "(555) 987-6543",
+            "location": "New York, NY",
+            "linkedin": "linkedin.com/in/sarahmartinezphd",
+            "github": "github.com/smartinez",
+            "professionalTitle": "Senior MLOps Engineer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+            "fontSize": 10.5,
+            "lineHeight": 1.5,
+            "fontFamily": "Roboto",
+            "colors": {
+              "primary": "#0891b2",
+              "secondary": "#06b6d4",
+              "text": "#1f2937",
+              "heading": "#0891b2",
+              "accent": "#00ff88",
+              "background": "#ffffff",
+              "divider": "#e5e7eb"
+            },
+            "sectionSpacing": "compact",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      },
+      {
+        "id": "variation-ds-research",
+        "name": "Dr. Sarah Martinez - Research Scientist",
+        "baseResumeId": "resume-data-scientist-001",
+        "createdFromVersion": 2,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "Research",
+        "createdAt": "2025-12-01T14:00:00.000Z",
+        "updatedAt": "2025-12-20T10:00:00.000Z",
+        "template": "classic",
+        "tags": ["research", "publications", "academia", "phd"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-ds-research",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-ds-research",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Research Profile",
+              "data": {},
+              "html": "<p><strong>Research Scientist</strong> with Ph.D. in Statistics from MIT. 12+ peer-reviewed publications in top venues (NeurIPS, ICML, JMLR). Focus on causal inference, Bayesian methods, and fair ML. Seeking research positions at top AI labs.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Dr. Sarah Martinez",
+            "email": "sarah.martinez@email.com",
+            "phone": "(555) 987-6543",
+            "location": "New York, NY",
+            "linkedin": "linkedin.com/in/sarahmartinezphd",
+            "website": "sarahmartinez.ai",
+            "professionalTitle": "Research Scientist"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+            "fontSize": 11,
+            "lineHeight": 1.6,
+            "fontFamily": "Times New Roman",
+            "colors": {
+              "primary": "#1e3a5f",
+              "secondary": "#4a6fa5",
+              "text": "#333333",
+              "heading": "#1e3a5f",
+              "accent": "#8b0000",
+              "background": "#ffffff",
+              "divider": "#cccccc"
+            },
+            "sectionSpacing": "spacious",
+            "showIcons": false,
+            "dateFormat": "MMMM YYYY",
+            "accentStyle": "none"
+          }
+        }
+      },
+      {
+        "id": "variation-ux-product",
+        "name": "Emma Rodriguez - Product Designer",
+        "baseResumeId": "resume-ux-designer-001",
+        "createdFromVersion": 1,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "Product Design",
+        "createdAt": "2025-11-20T16:00:00.000Z",
+        "updatedAt": "2025-12-10T12:00:00.000Z",
+        "template": "modern",
+        "tags": ["product-design", "systems-design", "strategy"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-ux-product",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-ux-product",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "About Me",
+              "data": {},
+              "html": "<p><strong>Senior Product Designer</strong> focused on end-to-end product thinking. 7 years creating cohesive design systems and driving business outcomes. Expertise in design ops, cross-functional collaboration, and scaling design practices.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Emma Rodriguez",
+            "email": "emma@emmadesigns.com",
+            "phone": "(555) 234-5678",
+            "location": "Los Angeles, CA",
+            "linkedin": "linkedin.com/in/emmarodriguezux",
+            "website": "emmadesigns.com",
+            "portfolio": "dribbble.com/emmarodriguez",
+            "professionalTitle": "Senior Product Designer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 22, "right": 22, "bottom": 22, "left": 22 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Inter",
+            "colors": {
+              "primary": "#2563eb",
+              "secondary": "#64748b",
+              "text": "#1f2937",
+              "heading": "#2563eb",
+              "accent": "#3b82f6",
+              "background": "#ffffff",
+              "divider": "#e5e7eb"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      },
+      {
+        "id": "variation-ux-agency",
+        "name": "Emma Rodriguez - Design Agency",
+        "baseResumeId": "resume-ux-designer-001",
+        "createdFromVersion": 2,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "Agency",
+        "createdAt": "2025-12-15T11:00:00.000Z",
+        "updatedAt": "2025-12-22T15:00:00.000Z",
+        "template": "creative",
+        "tags": ["agency", "client-work", "branding", "creative-direction"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-ux-agency",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-ux-agency",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Creative Profile",
+              "data": {},
+              "html": "<p><strong>Creative Director / Lead Designer</strong> with agency experience delivering award-winning digital experiences. Red Dot Design Award winner. Led design for Fortune 500 brands including Nike, Spotify, and Airbnb. Portfolio includes 50+ successful client projects.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "Emma Rodriguez",
+            "email": "emma@emmadesigns.com",
+            "phone": "(555) 234-5678",
+            "location": "Los Angeles, CA",
+            "linkedin": "linkedin.com/in/emmarodriguezux",
+            "website": "emmadesigns.com",
+            "portfolio": "dribbble.com/emmarodriguez",
+            "professionalTitle": "Creative Director"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 24, "right": 24, "bottom": 24, "left": 24 },
+            "fontSize": 10.5,
+            "lineHeight": 1.6,
+            "fontFamily": "Montserrat",
+            "colors": {
+              "primary": "#e11d48",
+              "secondary": "#fb7185",
+              "text": "#1f2937",
+              "heading": "#e11d48",
+              "accent": "#fbbf24",
+              "background": "#ffffff",
+              "divider": "#fecdd3"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "background"
+          }
+        }
+      },
+      {
+        "id": "variation-devops-sre",
+        "name": "James Wilson - Site Reliability Engineer",
+        "baseResumeId": "resume-devops-engineer-001",
+        "createdFromVersion": 1,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "SRE",
+        "createdAt": "2025-12-05T09:00:00.000Z",
+        "updatedAt": "2025-12-18T14:00:00.000Z",
+        "template": "professional",
+        "tags": ["sre", "reliability", "observability", "incident-management"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-devops-sre",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-devops-sre",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p><strong>Senior Site Reliability Engineer</strong> focused on building and maintaining highly available systems. Expert in observability, incident response, and SLO-driven development. Achieved 99.99% uptime for platforms serving 50K+ requests/second.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "James Wilson",
+            "email": "james.wilson@email.com",
+            "phone": "(555) 345-6789",
+            "location": "Denver, CO",
+            "linkedin": "linkedin.com/in/jameswilsondevops",
+            "github": "github.com/jwilson-devops",
+            "professionalTitle": "Senior Site Reliability Engineer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+            "fontSize": 11,
+            "lineHeight": 1.5,
+            "fontFamily": "Georgia",
+            "colors": {
+              "primary": "#1e3a5f",
+              "secondary": "#4a6fa5",
+              "text": "#333333",
+              "heading": "#1e3a5f",
+              "accent": "#2ecc71",
+              "background": "#ffffff",
+              "divider": "#d0d0d0"
+            },
+            "sectionSpacing": "normal",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "border"
+          }
+        }
+      },
+      {
+        "id": "variation-devops-platform",
+        "name": "James Wilson - Platform Engineer",
+        "baseResumeId": "resume-devops-engineer-001",
+        "createdFromVersion": 1,
+        "version": 1,
+        "variationType": "variation",
+        "domain": "Platform",
+        "createdAt": "2025-12-08T10:00:00.000Z",
+        "updatedAt": "2025-12-21T11:00:00.000Z",
+        "template": "tech",
+        "tags": ["platform", "internal-tools", "developer-experience"],
+        "isArchived": false,
+        "sections": [
+          {
+            "id": "sec-personal-devops-platform",
+            "type": "personal-info",
+            "order": 0,
+            "visible": true,
+            "content": { "title": "Personal Information", "data": {} }
+          },
+          {
+            "id": "sec-summary-devops-platform",
+            "type": "summary",
+            "order": 1,
+            "visible": true,
+            "content": {
+              "title": "Professional Summary",
+              "data": {},
+              "html": "<p><strong>Senior Platform Engineer</strong> building internal developer platforms that accelerate engineering velocity. Expert in Kubernetes, service mesh, and developer tooling. Reduced developer onboarding time by 80% and deployment friction by 90%.</p>"
+            }
+          }
+        ],
+        "metadata": {
+          "personalInfo": {
+            "fullName": "James Wilson",
+            "email": "james.wilson@email.com",
+            "phone": "(555) 345-6789",
+            "location": "Denver, CO",
+            "linkedin": "linkedin.com/in/jameswilsondevops",
+            "github": "github.com/jwilson-devops",
+            "website": "jameswilson.dev",
+            "professionalTitle": "Senior Platform Engineer"
+          },
+          "settings": {
+            "pageSize": "A4",
+            "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+            "fontSize": 10.5,
+            "lineHeight": 1.5,
+            "fontFamily": "Roboto",
+            "colors": {
+              "primary": "#0891b2",
+              "secondary": "#06b6d4",
+              "text": "#1f2937",
+              "heading": "#0891b2",
+              "accent": "#00ff88",
+              "background": "#ffffff",
+              "divider": "#e5e7eb"
+            },
+            "sectionSpacing": "compact",
+            "showIcons": true,
+            "dateFormat": "MMM YYYY",
+            "accentStyle": "underline"
+          }
+        }
+      }
+    ],
+    "activeResumeId": null,
+    "activeResume": null,
+    "versions": [
+      {
+        "id": "version-001",
+        "resumeId": "resume-software-engineer-001",
+        "version": 1,
+        "changeDescription": "Initial Draft - First version with basic information",
+        "createdAt": "2025-10-15T08:30:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-002",
+        "resumeId": "resume-software-engineer-001",
+        "version": 2,
+        "changeDescription": "Added Projects - Open source projects and certifications",
+        "createdAt": "2025-11-20T10:15:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-003",
+        "resumeId": "resume-software-engineer-001",
+        "version": 3,
+        "changeDescription": "Updated experience with latest achievements",
+        "createdAt": "2025-12-20T14:25:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-pm-001",
+        "resumeId": "resume-product-manager-001",
+        "version": 1,
+        "changeDescription": "Initial resume draft",
+        "createdAt": "2025-08-10T09:15:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-pm-002",
+        "resumeId": "resume-product-manager-001",
+        "version": 2,
+        "changeDescription": "Added MBA and certifications",
+        "createdAt": "2025-09-15T11:30:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-pm-003",
+        "resumeId": "resume-product-manager-001",
+        "version": 3,
+        "changeDescription": "Updated MegaTech achievements with latest metrics",
+        "createdAt": "2025-11-01T14:00:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-pm-004",
+        "resumeId": "resume-product-manager-001",
+        "version": 4,
+        "changeDescription": "Final polish - ready for executive roles",
+        "createdAt": "2025-12-22T11:30:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-ds-001",
+        "resumeId": "resume-data-scientist-001",
+        "version": 1,
+        "changeDescription": "Initial data science resume",
+        "createdAt": "2025-09-01T10:00:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-ds-002",
+        "resumeId": "resume-data-scientist-001",
+        "version": 2,
+        "changeDescription": "Added publications and updated skills",
+        "createdAt": "2025-12-18T16:45:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-ux-001",
+        "resumeId": "resume-ux-designer-001",
+        "version": 1,
+        "changeDescription": "Initial portfolio resume",
+        "createdAt": "2025-11-05T14:20:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-ux-002",
+        "resumeId": "resume-ux-designer-001",
+        "version": 2,
+        "changeDescription": "Added awards and updated portfolio links",
+        "createdAt": "2025-12-19T09:45:00.000Z",
+        "snapshot": {}
+      },
+      {
+        "id": "version-do-001",
+        "resumeId": "resume-devops-engineer-001",
+        "version": 1,
+        "changeDescription": "Initial DevOps resume with AWS focus",
+        "createdAt": "2025-12-01T08:00:00.000Z",
+        "snapshot": {}
+      }
+    ],
+    "activityLog": [
+      {
+        "id": "activity-001",
+        "resumeId": "resume-software-engineer-001",
+        "action": "created",
+        "description": "Created resume \"Alex Chen - Senior Software Engineer\"",
+        "timestamp": "2025-10-15T08:30:00.000Z"
+      },
+      {
+        "id": "activity-002",
+        "resumeId": "resume-data-scientist-001",
+        "action": "created",
+        "description": "Created resume \"Dr. Sarah Martinez - Data Scientist\"",
+        "timestamp": "2025-09-01T10:00:00.000Z"
+      },
+      {
+        "id": "activity-003",
+        "resumeId": "resume-product-manager-001",
+        "action": "created",
+        "description": "Created resume \"Michael Thompson - Product Manager\"",
+        "timestamp": "2025-08-10T09:15:00.000Z"
+      },
+      {
+        "id": "activity-004",
+        "resumeId": "resume-ux-designer-001",
+        "action": "created",
+        "description": "Created resume \"Emma Rodriguez - UX Designer\"",
+        "timestamp": "2025-11-05T14:20:00.000Z"
+      },
+      {
+        "id": "activity-005",
+        "resumeId": "resume-devops-engineer-001",
+        "action": "created",
+        "description": "Created resume \"James Wilson - DevOps Engineer\"",
+        "timestamp": "2025-12-01T08:00:00.000Z"
+      },
+      {
+        "id": "activity-006",
+        "resumeId": "resume-software-engineer-001",
+        "action": "version_saved",
+        "description": "Saved version 2: Added Projects",
+        "timestamp": "2025-11-20T10:15:00.000Z"
+      },
+      {
+        "id": "activity-007",
+        "resumeId": "resume-software-engineer-001",
+        "action": "exported",
+        "description": "Exported to PDF",
+        "timestamp": "2025-12-15T16:00:00.000Z"
+      },
+      {
+        "id": "activity-008",
+        "resumeId": "resume-archived-marketing-001",
+        "action": "archived",
+        "description": "Archived resume \"Lisa Chen - Marketing Manager\"",
+        "timestamp": "2025-08-01T14:00:00.000Z"
+      }
+    ]
+  },
+  "version": 0
+}

@@ -3,6 +3,7 @@ export interface Resume {
   id: string;
   name: string;
   baseResumeId?: string;
+  createdFromVersion?: number; // Which version of the base this variation was created from
   version: number;
   variationType: 'base' | 'variation';
   domain?: string;
@@ -85,6 +86,20 @@ export interface ResumeSettings {
   showIcons: boolean;
   dateFormat: 'MM/YYYY' | 'MMM YYYY' | 'MMMM YYYY' | 'YYYY';
   accentStyle: 'underline' | 'background' | 'border' | 'none';
+}
+
+// Partial settings type for updates - allows partial colors
+export interface PartialResumeSettings {
+  pageSize?: 'A4' | 'Letter';
+  margins?: Partial<{ top: number; right: number; bottom: number; left: number }>;
+  fontSize?: number;
+  lineHeight?: number;
+  fontFamily?: FontFamily;
+  colors?: Partial<ResumeColors>;
+  sectionSpacing?: 'compact' | 'normal' | 'spacious';
+  showIcons?: boolean;
+  dateFormat?: 'MM/YYYY' | 'MMM YYYY' | 'MMMM YYYY' | 'YYYY';
+  accentStyle?: 'underline' | 'background' | 'border' | 'none';
 }
 
 export type FontFamily = 'Inter' | 'Roboto' | 'Open Sans' | 'Lato' | 'Montserrat' | 'Playfair Display' | 'Georgia' | 'Times New Roman' | 'Arial';
@@ -316,7 +331,7 @@ export interface ResumeStore {
   getVariations: (baseResumeId: string) => Resume[];
   syncWithBase: (variationId: string) => void;
   
-  updateSettings: (resumeId: string, settings: Partial<ResumeSettings>) => void;
+  updateSettings: (resumeId: string, settings: PartialResumeSettings) => void;
   updateTemplate: (resumeId: string, template: TemplateType) => void;
   
   exportToJSON: (resumeId: string) => string;

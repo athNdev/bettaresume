@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Resume, ResumeSection, ResumeStore, ResumeVersion, ActivityLog, TemplateType, ResumeSettings, ActivityAction } from '@/types/resume';
+import type { Resume, ResumeSection, ResumeStore, ResumeVersion, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction } from '@/types/resume';
 import { TEMPLATE_CONFIGS, SECTION_CONFIGS } from '@/types/resume';
 
 const createDefaultSettings = (template: TemplateType): ResumeSettings => ({
@@ -261,6 +261,7 @@ export const useResumeStore = create<ResumeStore>()(
           version: 1,
           createdAt: now,
           updatedAt: now,
+          createdFromVersion: baseResume.version, // Track which version this variation was created from
           tags: [...(baseResume.tags || []), domain],
         };
         variation.sections = variation.sections.map((s: ResumeSection) => ({ ...s, id: crypto.randomUUID() }));
@@ -294,11 +295,24 @@ export const useResumeStore = create<ResumeStore>()(
         });
       },
 
-      updateSettings: (resumeId: string, settings: Partial<ResumeSettings>) => {
+      updateSettings: (resumeId: string, settings: PartialResumeSettings) => {
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            return { ...r, metadata: { ...r.metadata, settings: { ...r.metadata.settings, ...settings } }, updatedAt: new Date().toISOString() };
+            // Deep merge colors and margins if provided
+            const mergedColors = settings.colors 
+              ? { ...r.metadata.settings.colors, ...settings.colors }
+              : r.metadata.settings.colors;
+            const mergedMargins = settings.margins
+              ? { ...r.metadata.settings.margins, ...settings.margins }
+              : r.metadata.settings.margins;
+            const newSettings = { 
+              ...r.metadata.settings, 
+              ...settings, 
+              colors: mergedColors,
+              margins: mergedMargins
+            };
+            return { ...r, metadata: { ...r.metadata, settings: newSettings as ResumeSettings }, updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };

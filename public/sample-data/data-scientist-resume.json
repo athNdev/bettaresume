@@ -1,0 +1,347 @@
+{
+  "id": "resume-data-scientist-001",
+  "name": "Dr. Sarah Martinez - Data Scientist",
+  "version": 2,
+  "variationType": "base",
+  "createdAt": "2025-09-01T10:00:00.000Z",
+  "updatedAt": "2025-12-18T16:45:00.000Z",
+  "template": "professional",
+  "tags": ["data-science", "machine-learning", "python", "analytics", "AI"],
+  "isArchived": false,
+  "sections": [
+    {
+      "id": "sec-personal-ds-001",
+      "type": "personal-info",
+      "order": 0,
+      "visible": true,
+      "content": { "title": "Personal Information", "data": {} }
+    },
+    {
+      "id": "sec-summary-ds-001",
+      "type": "summary",
+      "order": 1,
+      "visible": true,
+      "content": {
+        "title": "Professional Summary",
+        "data": {},
+        "html": "<p>Results-driven <strong>Data Scientist</strong> with a Ph.D. in Statistics and 6+ years of experience transforming complex data into actionable business insights. Expertise in machine learning, deep learning, and statistical modeling with a focus on NLP and computer vision applications. Published researcher with 12+ peer-reviewed papers and a track record of deploying ML models that generated $20M+ in annual revenue impact.</p>"
+      }
+    },
+    {
+      "id": "sec-experience-ds-001",
+      "type": "experience",
+      "order": 2,
+      "visible": true,
+      "content": {
+        "title": "Professional Experience",
+        "data": [
+          {
+            "id": "exp-ds-001",
+            "company": "AI Solutions Inc",
+            "position": "Senior Data Scientist",
+            "startDate": "2021-08",
+            "current": true,
+            "location": "New York, NY",
+            "locationType": "hybrid",
+            "employmentType": "full-time",
+            "description": "Lead data scientist for the recommendation systems team serving 50M+ users",
+            "highlights": [
+              "Designed and deployed a transformer-based recommendation engine that increased user engagement by 35% and CTR by 22%",
+              "Built an A/B testing framework used across 15+ product teams, reducing experiment cycle time from 4 weeks to 1 week",
+              "Led a team of 4 data scientists and 2 ML engineers to deliver real-time fraud detection system saving $15M annually",
+              "Established MLOps best practices including model versioning, monitoring, and automated retraining pipelines"
+            ],
+            "technologies": ["Python", "PyTorch", "TensorFlow", "Spark", "Airflow", "MLflow", "Kubernetes", "AWS SageMaker"]
+          },
+          {
+            "id": "exp-ds-002",
+            "company": "HealthTech Analytics",
+            "position": "Data Scientist",
+            "startDate": "2019-03",
+            "endDate": "2021-07",
+            "current": false,
+            "location": "Boston, MA",
+            "locationType": "onsite",
+            "employmentType": "full-time",
+            "description": "Core data scientist for predictive healthcare analytics platform",
+            "highlights": [
+              "Developed patient readmission prediction model achieving 0.89 AUC, reducing 30-day readmissions by 18%",
+              "Built NLP pipeline for extracting insights from 10M+ clinical notes using BERT-based models",
+              "Created interactive dashboards for healthcare executives using Tableau and Python visualization libraries",
+              "Collaborated with medical professionals to ensure model interpretability and clinical relevance"
+            ],
+            "technologies": ["Python", "scikit-learn", "BERT", "Hugging Face", "PostgreSQL", "Tableau", "Docker"]
+          },
+          {
+            "id": "exp-ds-003",
+            "company": "University Research Lab",
+            "position": "Research Scientist",
+            "startDate": "2016-09",
+            "endDate": "2019-02",
+            "current": false,
+            "location": "Cambridge, MA",
+            "locationType": "onsite",
+            "employmentType": "full-time",
+            "description": "Conducted research in computational statistics and machine learning",
+            "highlights": [
+              "Published 8 papers in top-tier venues (NeurIPS, ICML, JMLR) with 500+ citations",
+              "Secured $500K in research grants for projects on causal inference and fairness in ML",
+              "Supervised 5 graduate students and taught Introduction to Machine Learning course"
+            ],
+            "technologies": ["Python", "R", "Julia", "Stan", "PyTorch", "JAX"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-education-ds-001",
+      "type": "education",
+      "order": 3,
+      "visible": true,
+      "content": {
+        "title": "Education",
+        "data": [
+          {
+            "id": "edu-ds-001",
+            "institution": "Massachusetts Institute of Technology",
+            "degree": "Doctor of Philosophy",
+            "field": "Statistics",
+            "startDate": "2012-09",
+            "endDate": "2016-06",
+            "current": false,
+            "location": "Cambridge, MA",
+            "achievements": [
+              "Dissertation: 'Bayesian Methods for High-Dimensional Causal Inference'",
+              "NSF Graduate Research Fellowship recipient"
+            ],
+            "honors": ["Summa Cum Laude"]
+          },
+          {
+            "id": "edu-ds-002",
+            "institution": "Stanford University",
+            "degree": "Bachelor of Science",
+            "field": "Mathematics & Computer Science",
+            "startDate": "2008-09",
+            "endDate": "2012-06",
+            "current": false,
+            "gpa": "3.95",
+            "maxGpa": "4.0",
+            "location": "Stanford, CA",
+            "achievements": [
+              "Undergraduate Research Award",
+              "Math Olympiad Bronze Medalist"
+            ],
+            "honors": ["Phi Beta Kappa", "Tau Beta Pi"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-skills-ds-001",
+      "type": "skills",
+      "order": 4,
+      "visible": true,
+      "content": {
+        "title": "Technical Skills",
+        "data": [
+          {
+            "id": "skill-cat-ds-001",
+            "name": "Machine Learning & AI",
+            "order": 0,
+            "skills": [
+              { "id": "sk-ds-001", "name": "Deep Learning (PyTorch/TensorFlow)", "level": "expert", "yearsOfExperience": 6 },
+              { "id": "sk-ds-002", "name": "Natural Language Processing", "level": "expert", "yearsOfExperience": 5 },
+              { "id": "sk-ds-003", "name": "Computer Vision", "level": "advanced", "yearsOfExperience": 4 },
+              { "id": "sk-ds-004", "name": "Recommendation Systems", "level": "expert", "yearsOfExperience": 4 },
+              { "id": "sk-ds-005", "name": "Time Series Analysis", "level": "expert", "yearsOfExperience": 6 }
+            ]
+          },
+          {
+            "id": "skill-cat-ds-002",
+            "name": "Programming & Tools",
+            "order": 1,
+            "skills": [
+              { "id": "sk-ds-006", "name": "Python", "level": "expert", "yearsOfExperience": 8 },
+              { "id": "sk-ds-007", "name": "SQL", "level": "expert", "yearsOfExperience": 6 },
+              { "id": "sk-ds-008", "name": "R", "level": "advanced", "yearsOfExperience": 5 },
+              { "id": "sk-ds-009", "name": "Spark/PySpark", "level": "advanced", "yearsOfExperience": 4 },
+              { "id": "sk-ds-010", "name": "Git", "level": "expert", "yearsOfExperience": 7 }
+            ]
+          },
+          {
+            "id": "skill-cat-ds-003",
+            "name": "MLOps & Cloud",
+            "order": 2,
+            "skills": [
+              { "id": "sk-ds-011", "name": "AWS (SageMaker, EMR)", "level": "advanced", "yearsOfExperience": 4 },
+              { "id": "sk-ds-012", "name": "MLflow", "level": "advanced", "yearsOfExperience": 3 },
+              { "id": "sk-ds-013", "name": "Airflow", "level": "intermediate", "yearsOfExperience": 3 },
+              { "id": "sk-ds-014", "name": "Docker", "level": "advanced", "yearsOfExperience": 4 },
+              { "id": "sk-ds-015", "name": "Kubernetes", "level": "intermediate", "yearsOfExperience": 2 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-publications-ds-001",
+      "type": "publications",
+      "order": 5,
+      "visible": true,
+      "content": {
+        "title": "Selected Publications",
+        "data": [
+          {
+            "id": "pub-001",
+            "title": "Causal Transformers: Attention Mechanisms for Causal Inference",
+            "publisher": "NeurIPS 2024",
+            "date": "2024-12",
+            "url": "https://arxiv.org/example/causal-transformers",
+            "coAuthors": ["J. Smith", "M. Johnson"],
+            "description": "Novel architecture combining transformer attention with causal inference frameworks"
+          },
+          {
+            "id": "pub-002",
+            "title": "Fair Recommendation Systems: A Multi-Stakeholder Approach",
+            "publisher": "ICML 2023",
+            "date": "2023-07",
+            "url": "https://arxiv.org/example/fair-recsys",
+            "coAuthors": ["R. Williams", "A. Brown"],
+            "description": "Framework for balancing recommendation quality with fairness constraints"
+          },
+          {
+            "id": "pub-003",
+            "title": "Bayesian Neural Networks for Healthcare Prediction",
+            "publisher": "Journal of Machine Learning Research",
+            "date": "2022-03",
+            "url": "https://jmlr.org/example/bnn-healthcare",
+            "coAuthors": ["L. Chen"],
+            "description": "Uncertainty quantification in healthcare ML models using Bayesian methods"
+          },
+          {
+            "id": "pub-004",
+            "title": "High-Dimensional Causal Discovery with Hidden Confounders",
+            "publisher": "NeurIPS 2020",
+            "date": "2020-12",
+            "coAuthors": ["K. Anderson", "P. Davis"],
+            "description": "Method for identifying causal relationships in observational data with unmeasured confounding"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-certs-ds-001",
+      "type": "certifications",
+      "order": 6,
+      "visible": true,
+      "content": {
+        "title": "Certifications",
+        "data": [
+          {
+            "id": "cert-ds-001",
+            "name": "AWS Machine Learning Specialty",
+            "issuer": "Amazon Web Services",
+            "issueDate": "2023-03",
+            "expiryDate": "2026-03",
+            "credentialId": "AWS-MLS-2023-67890"
+          },
+          {
+            "id": "cert-ds-002",
+            "name": "Google Professional Machine Learning Engineer",
+            "issuer": "Google Cloud",
+            "issueDate": "2022-11",
+            "expiryDate": "2024-11",
+            "credentialId": "GCP-PMLE-45678"
+          },
+          {
+            "id": "cert-ds-003",
+            "name": "Deep Learning Specialization",
+            "issuer": "Coursera (deeplearning.ai)",
+            "issueDate": "2020-06",
+            "noExpiry": true,
+            "credentialId": "DLS-2020-11111"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-awards-ds-001",
+      "type": "awards",
+      "order": 7,
+      "visible": true,
+      "content": {
+        "title": "Awards & Recognition",
+        "data": [
+          {
+            "id": "award-ds-001",
+            "title": "Best Paper Award",
+            "issuer": "ICML 2023",
+            "date": "2023-07",
+            "description": "Recognized for outstanding contribution to fairness in machine learning"
+          },
+          {
+            "id": "award-ds-002",
+            "title": "Rising Star in Data Science",
+            "issuer": "Women in Data Science Conference",
+            "date": "2022-03",
+            "description": "One of 25 early-career researchers recognized for exceptional achievements"
+          },
+          {
+            "id": "award-ds-003",
+            "title": "NSF CAREER Award",
+            "issuer": "National Science Foundation",
+            "date": "2018-01",
+            "description": "5-year grant for research in causal machine learning"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-languages-ds-001",
+      "type": "languages",
+      "order": 8,
+      "visible": true,
+      "content": {
+        "title": "Languages",
+        "data": [
+          { "id": "lang-ds-001", "name": "English", "proficiency": "native" },
+          { "id": "lang-ds-002", "name": "Spanish", "proficiency": "native" },
+          { "id": "lang-ds-003", "name": "Portuguese", "proficiency": "fluent" },
+          { "id": "lang-ds-004", "name": "French", "proficiency": "intermediate" }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "personalInfo": {
+      "fullName": "Dr. Sarah Martinez",
+      "email": "sarah.martinez@email.com",
+      "phone": "(555) 987-6543",
+      "location": "New York, NY",
+      "linkedin": "linkedin.com/in/sarahmartinezphd",
+      "github": "github.com/smartinez",
+      "website": "sarahmartinez.ai",
+      "professionalTitle": "Senior Data Scientist & ML Researcher"
+    },
+    "settings": {
+      "pageSize": "A4",
+      "margins": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+      "fontSize": 11,
+      "lineHeight": 1.4,
+      "fontFamily": "Georgia",
+      "colors": {
+        "primary": "#1e3a5f",
+        "secondary": "#4a6fa5",
+        "text": "#333333",
+        "heading": "#1e3a5f",
+        "accent": "#2ecc71",
+        "background": "#ffffff",
+        "divider": "#d0d0d0"
+      },
+      "sectionSpacing": "normal",
+      "showIcons": true,
+      "dateFormat": "MMM YYYY",
+      "accentStyle": "border"
+    }
+  }
+}

@@ -31,7 +31,9 @@ import { ExportButtons } from '@/components/export/export-buttons';
 import { VersionManager } from '@/components/version-manager';
 import { VariationManager } from '@/components/variation-manager';
 import { TemplateSelector } from '@/components/template-selector';
-import { SettingsPanel } from '@/components/settings-panel';
+import { InlineSettingsToolbar } from '@/components/inline-settings-toolbar';
+import { VersionFlowTree } from '@/components/version-flow-tree';
+import { ResumeBreadcrumb } from '@/components/resume-breadcrumb';
 import { ResumeRenderer } from '@/components/resume/resume-renderer';
 import { 
   PersonalInfoForm, 
@@ -46,7 +48,7 @@ import {
   PublicationsForm,
   ReferencesForm
 } from '@/components/sections';
-import { RichTextEditor } from '@/components/editor/rich-text-editor';
+import { AdvancedEditor } from '@/components/editor/advanced-editor';
 import { 
   ArrowLeft, 
   Plus, 
@@ -60,12 +62,23 @@ import {
   PanelRightOpen,
   Check,
   Pencil,
-  GitBranch,
   Copy,
   Moon,
   Sun,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  User,
+  Briefcase,
+  GraduationCap,
+  Zap,
+  FolderKanban,
+  Award as AwardIcon,
+  Trophy,
+  Globe,
+  BookOpen,
+  Heart,
+  Users,
+  FilePlus
 } from 'lucide-react';
 import Link from 'next/link';
 import type { 
@@ -104,22 +117,28 @@ function ResizeHandle({ className = '' }: { className?: string }) {
   );
 }
 
-// Section icon mapping
-const SECTION_ICONS: Record<SectionType, string> = {
-  'personal-info': '👤',
-  'summary': '📝',
-  'experience': '💼',
-  'education': '🎓',
-  'skills': '⚡',
-  'projects': '🚀',
-  'certifications': '📜',
-  'awards': '🏆',
-  'languages': '🌍',
-  'publications': '📚',
-  'volunteer': '🤝',
-  'references': '📇',
-  'custom': '📄'
+// Section icon components mapping
+const SECTION_ICON_COMPONENTS: Record<SectionType, React.ComponentType<{ className?: string }>> = {
+  'personal-info': User,
+  'summary': FileText,
+  'experience': Briefcase,
+  'education': GraduationCap,
+  'skills': Zap,
+  'projects': FolderKanban,
+  'certifications': AwardIcon,
+  'awards': Trophy,
+  'languages': Globe,
+  'publications': BookOpen,
+  'volunteer': Heart,
+  'references': Users,
+  'custom': FilePlus
 };
+
+// Helper to render section icon
+function SectionIcon({ type, className = 'h-4 w-4' }: { type: SectionType; className?: string }) {
+  const IconComponent = SECTION_ICON_COMPONENTS[type] || FilePlus;
+  return <IconComponent className={className} />;
+}
 
 // Section labels
 const SECTION_LABELS: Record<SectionType, string> = {
@@ -170,7 +189,7 @@ function SortableSection({ section, isActive, onClick, onToggleVisibility, onDel
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
       <button onClick={onClick} className="flex-1 flex items-center gap-2 text-left min-w-0">
-        <span className="flex-shrink-0">{SECTION_ICONS[section.type] || '📄'}</span>
+        <SectionIcon type={section.type} className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
         <span className="text-sm truncate">
           {section.content.title || SECTION_LABELS[section.type]}
         </span>
@@ -469,11 +488,13 @@ export default function EditorPage() {
       case 'summary':
       case 'custom': 
         return (
-          <RichTextEditor 
+          <AdvancedEditor 
             content={activeSection.content.html || ''} 
             onChange={(html) => updateSection(resumeId, activeSectionId!, { 
               content: { ...activeSection.content, html } 
-            })} 
+            })}
+            placeholder="Write your professional summary here..."
+            minHeight="250px"
           />
         );
       
@@ -506,8 +527,13 @@ export default function EditorPage() {
             </Link>
             <Separator orientation="vertical" className="h-6" />
             
+            {/* Resume Breadcrumb - shows base/variation state */}
+            <ResumeBreadcrumb resumeId={resumeId} />
+
+            <Separator orientation="vertical" className="h-6" />
+
+            {/* Editable Name */}
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
               {isEditingName ? (
                 <div className="flex items-center gap-1">
                   <Input
@@ -523,20 +549,18 @@ export default function EditorPage() {
                   </Button>
                 </div>
               ) : (
-                <button 
-                  className="flex items-center gap-1 hover:bg-accent px-2 py-1 rounded group"
-                  onClick={() => setIsEditingName(true)}
-                >
-                  <span className="font-semibold">{activeResume.name}</span>
-                  <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              )}
-              
-              {activeResume.variationType === 'variation' && (
-                <Badge variant="secondary" className="text-xs">
-                  <GitBranch className="h-3 w-3 mr-1" />
-                  {activeResume.domain || 'Variation'}
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button 
+                      className="flex items-center gap-1 hover:bg-accent px-2 py-1 rounded group text-muted-foreground hover:text-foreground"
+                      onClick={() => setIsEditingName(true)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      <span className="text-xs">Rename</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Click to rename</TooltipContent>
+                </Tooltip>
               )}
             </div>
 
@@ -551,8 +575,8 @@ export default function EditorPage() {
           <div className="flex items-center gap-2">
             <VersionManager resumeId={resumeId} />
             <VariationManager resumeId={resumeId} />
+            <VersionFlowTree resumeId={resumeId} />
             <TemplateSelector resumeId={resumeId} />
-            <SettingsPanel resumeId={resumeId} />
             
             <Separator orientation="vertical" className="h-6" />
             
@@ -615,7 +639,7 @@ export default function EditorPage() {
                     <DropdownMenuContent align="start" className="w-48">
                       {availableSections.map(type => (
                         <DropdownMenuItem key={type} onClick={() => handleAddSection(type)}>
-                          <span className="mr-2">{SECTION_ICONS[type]}</span>
+                          <SectionIcon type={type} className="h-4 w-4 mr-2 text-muted-foreground" />
                           {SECTION_LABELS[type]}
                         </DropdownMenuItem>
                       ))}
@@ -633,7 +657,7 @@ export default function EditorPage() {
                 {activeSection && (
                   <div className="px-6 py-3 border-b bg-card flex items-center justify-between flex-shrink-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{SECTION_ICONS[activeSection.type]}</span>
+                      <SectionIcon type={activeSection.type} className="h-5 w-5 text-muted-foreground" />
                       <h2 className="font-semibold">
                         {activeSection.content.title || SECTION_LABELS[activeSection.type]}
                       </h2>
@@ -670,28 +694,32 @@ export default function EditorPage() {
                 <ResizeHandle />
                 <Panel id="preview" defaultSize={40} minSize={25} maxSize={60}>
                   <aside className="h-full bg-muted/20 flex flex-col">
-                    {/* Preview Controls */}
-                    <div className="p-2 border-b bg-card flex items-center justify-between gap-2 flex-shrink-0">
-                      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Preview
-                      </h2>
-                      <div className="flex items-center gap-1">
+                    {/* Inline Settings Toolbar */}
+                    <div className="p-2 border-b bg-card flex-shrink-0 space-y-2">
+                      {/* Row 1: Template and Settings */}
+                      <div className="flex items-center gap-2">
+                        <TemplateSelector resumeId={resumeId} compact />
+                        <Separator orientation="vertical" className="h-5" />
+                        <InlineSettingsToolbar resumeId={resumeId} />
+                      </div>
+                      {/* Row 2: Zoom and Preview Controls */}
+                      <div className="flex items-center justify-end gap-1">
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-7 w-7 p-0"
+                          className="h-6 w-6 p-0"
                           onClick={() => setPreviewScale(Math.max(30, previewScale - 10))}
                         >
-                          <ZoomOut className="h-3.5 w-3.5" />
+                          <ZoomOut className="h-3 w-3" />
                         </Button>
-                        <span className="text-xs text-muted-foreground w-10 text-center">{previewScale}%</span>
+                        <span className="text-xs text-muted-foreground w-8 text-center">{previewScale}%</span>
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-7 w-7 p-0"
+                          className="h-6 w-6 p-0"
                           onClick={() => setPreviewScale(Math.min(150, previewScale + 10))}
                         >
-                          <ZoomIn className="h-3.5 w-3.5" />
+                          <ZoomIn className="h-3 w-3" />
                         </Button>
                         <Separator orientation="vertical" className="h-4 mx-1" />
                         <Tooltip>
@@ -699,19 +727,16 @@ export default function EditorPage() {
                             <Button 
                               variant={previewDarkMode ? "secondary" : "ghost"} 
                               size="sm" 
-                              className="h-7 w-7 p-0"
+                              className="h-6 w-6 p-0"
                               onClick={() => setPreviewDarkMode(!previewDarkMode)}
                             >
-                              {previewDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                              {previewDarkMode ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{previewDarkMode ? 'Light preview' : 'Dark preview (editing only)'}</p>
+                            <p>{previewDarkMode ? 'Light preview' : 'Dark preview'}</p>
                           </TooltipContent>
                         </Tooltip>
-                        <Badge variant="outline" className="text-xs capitalize ml-1">
-                          {activeResume.template}
-                        </Badge>
                       </div>
                     </div>
                     

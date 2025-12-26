@@ -1,0 +1,339 @@
+{
+  "id": "resume-software-engineer-001",
+  "name": "Alex Chen - Senior Software Engineer",
+  "version": 3,
+  "variationType": "base",
+  "createdAt": "2025-10-15T08:30:00.000Z",
+  "updatedAt": "2025-12-20T14:25:00.000Z",
+  "template": "modern",
+  "tags": ["software", "engineering", "full-stack", "react", "node"],
+  "isArchived": false,
+  "sections": [
+    {
+      "id": "sec-personal-001",
+      "type": "personal-info",
+      "order": 0,
+      "visible": true,
+      "content": {
+        "title": "Personal Information",
+        "data": {}
+      }
+    },
+    {
+      "id": "sec-summary-001",
+      "type": "summary",
+      "order": 1,
+      "visible": true,
+      "content": {
+        "title": "Professional Summary",
+        "data": {},
+        "html": "<p>Innovative <strong>Senior Software Engineer</strong> with 8+ years of experience building scalable web applications and leading cross-functional teams. Expert in React, Node.js, and cloud architecture with a proven track record of delivering high-impact projects that increased user engagement by 40% and reduced infrastructure costs by 35%. Passionate about clean code, mentoring junior developers, and staying current with emerging technologies.</p>"
+      }
+    },
+    {
+      "id": "sec-experience-001",
+      "type": "experience",
+      "order": 2,
+      "visible": true,
+      "content": {
+        "title": "Professional Experience",
+        "data": [
+          {
+            "id": "exp-001",
+            "company": "TechCorp Global",
+            "position": "Senior Software Engineer",
+            "startDate": "2022-03",
+            "current": true,
+            "location": "San Francisco, CA",
+            "locationType": "hybrid",
+            "employmentType": "full-time",
+            "description": "Lead engineer for the platform team responsible for core infrastructure serving 10M+ users",
+            "highlights": [
+              "Architected and implemented a microservices migration that improved system reliability from 99.5% to 99.99% uptime",
+              "Led a team of 5 engineers to deliver a real-time collaboration feature that increased user engagement by 40%",
+              "Reduced deployment time from 45 minutes to 5 minutes by implementing CI/CD pipelines with GitHub Actions",
+              "Mentored 8 junior developers through code reviews, pair programming, and technical talks"
+            ],
+            "technologies": ["React", "TypeScript", "Node.js", "PostgreSQL", "Redis", "AWS", "Kubernetes", "GraphQL"]
+          },
+          {
+            "id": "exp-002",
+            "company": "StartupXYZ",
+            "position": "Full Stack Developer",
+            "startDate": "2019-06",
+            "endDate": "2022-02",
+            "current": false,
+            "location": "Austin, TX",
+            "locationType": "onsite",
+            "employmentType": "full-time",
+            "description": "Core developer for B2B SaaS platform in the fintech space",
+            "highlights": [
+              "Built a payment processing system handling $50M+ in annual transactions",
+              "Developed a custom analytics dashboard that reduced customer support tickets by 30%",
+              "Implemented automated testing suite achieving 95% code coverage",
+              "Collaborated with product team to define and prioritize features based on customer feedback"
+            ],
+            "technologies": ["Vue.js", "Python", "Django", "PostgreSQL", "Stripe", "Docker", "GCP"]
+          },
+          {
+            "id": "exp-003",
+            "company": "Digital Agency Co",
+            "position": "Junior Developer",
+            "startDate": "2017-01",
+            "endDate": "2019-05",
+            "current": false,
+            "location": "Remote",
+            "locationType": "remote",
+            "employmentType": "full-time",
+            "description": "Developed custom web applications for enterprise clients",
+            "highlights": [
+              "Built 15+ responsive websites for Fortune 500 clients using modern JavaScript frameworks",
+              "Created reusable component library that reduced development time by 25%",
+              "Maintained legacy applications and performed database migrations"
+            ],
+            "technologies": ["JavaScript", "React", "PHP", "MySQL", "WordPress", "AWS"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-education-001",
+      "type": "education",
+      "order": 3,
+      "visible": true,
+      "content": {
+        "title": "Education",
+        "data": [
+          {
+            "id": "edu-001",
+            "institution": "University of California, Berkeley",
+            "degree": "Bachelor of Science",
+            "field": "Computer Science",
+            "startDate": "2013-08",
+            "endDate": "2017-05",
+            "current": false,
+            "gpa": "3.8",
+            "maxGpa": "4.0",
+            "location": "Berkeley, CA",
+            "achievements": [
+              "Dean's List - 6 semesters",
+              "Undergraduate Research Assistant - Machine Learning Lab"
+            ],
+            "coursework": [
+              "Data Structures & Algorithms",
+              "Operating Systems",
+              "Database Systems",
+              "Machine Learning",
+              "Computer Networks",
+              "Software Engineering"
+            ],
+            "honors": ["Cum Laude", "Phi Beta Kappa"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-skills-001",
+      "type": "skills",
+      "order": 4,
+      "visible": true,
+      "content": {
+        "title": "Technical Skills",
+        "data": [
+          {
+            "id": "skill-cat-001",
+            "name": "Frontend",
+            "order": 0,
+            "skills": [
+              { "id": "sk-001", "name": "React", "level": "expert", "yearsOfExperience": 6 },
+              { "id": "sk-002", "name": "TypeScript", "level": "expert", "yearsOfExperience": 5 },
+              { "id": "sk-003", "name": "Next.js", "level": "advanced", "yearsOfExperience": 3 },
+              { "id": "sk-004", "name": "Vue.js", "level": "advanced", "yearsOfExperience": 3 },
+              { "id": "sk-005", "name": "CSS/Tailwind", "level": "expert", "yearsOfExperience": 7 }
+            ]
+          },
+          {
+            "id": "skill-cat-002",
+            "name": "Backend",
+            "order": 1,
+            "skills": [
+              { "id": "sk-006", "name": "Node.js", "level": "expert", "yearsOfExperience": 6 },
+              { "id": "sk-007", "name": "Python", "level": "advanced", "yearsOfExperience": 4 },
+              { "id": "sk-008", "name": "GraphQL", "level": "advanced", "yearsOfExperience": 3 },
+              { "id": "sk-009", "name": "PostgreSQL", "level": "expert", "yearsOfExperience": 6 },
+              { "id": "sk-010", "name": "Redis", "level": "intermediate", "yearsOfExperience": 3 }
+            ]
+          },
+          {
+            "id": "skill-cat-003",
+            "name": "DevOps & Cloud",
+            "order": 2,
+            "skills": [
+              { "id": "sk-011", "name": "AWS", "level": "advanced", "yearsOfExperience": 5 },
+              { "id": "sk-012", "name": "Docker", "level": "advanced", "yearsOfExperience": 4 },
+              { "id": "sk-013", "name": "Kubernetes", "level": "intermediate", "yearsOfExperience": 2 },
+              { "id": "sk-014", "name": "CI/CD", "level": "advanced", "yearsOfExperience": 4 },
+              { "id": "sk-015", "name": "Terraform", "level": "intermediate", "yearsOfExperience": 2 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-projects-001",
+      "type": "projects",
+      "order": 5,
+      "visible": true,
+      "content": {
+        "title": "Notable Projects",
+        "data": [
+          {
+            "id": "proj-001",
+            "name": "OpenSource Analytics Platform",
+            "description": "Built an open-source web analytics platform as an alternative to Google Analytics, focusing on privacy and simplicity",
+            "role": "Creator & Lead Developer",
+            "technologies": ["React", "Node.js", "ClickHouse", "Redis", "Docker"],
+            "url": "https://example-analytics.io",
+            "githubUrl": "https://github.com/alexchen/analytics-platform",
+            "startDate": "2023-01",
+            "current": true,
+            "highlights": [
+              "15,000+ GitHub stars and 2,000+ active deployments",
+              "Featured in JavaScript Weekly and Hacker News front page",
+              "Built plugin system allowing community extensions"
+            ]
+          },
+          {
+            "id": "proj-002",
+            "name": "Real-time Collaboration SDK",
+            "description": "Developed a WebSocket-based SDK for adding real-time collaboration features to any web application",
+            "role": "Core Contributor",
+            "technologies": ["TypeScript", "WebSockets", "CRDT", "Y.js"],
+            "githubUrl": "https://github.com/collab-sdk/core",
+            "startDate": "2022-06",
+            "endDate": "2023-12",
+            "current": false,
+            "highlights": [
+              "Used by 50+ companies including 3 YC startups",
+              "Handles 100k+ concurrent connections with sub-50ms latency"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-certs-001",
+      "type": "certifications",
+      "order": 6,
+      "visible": true,
+      "content": {
+        "title": "Certifications",
+        "data": [
+          {
+            "id": "cert-001",
+            "name": "AWS Solutions Architect - Professional",
+            "issuer": "Amazon Web Services",
+            "issueDate": "2023-06",
+            "expiryDate": "2026-06",
+            "credentialId": "AWS-SAP-2023-12345",
+            "credentialUrl": "https://aws.amazon.com/verification/12345"
+          },
+          {
+            "id": "cert-002",
+            "name": "Google Cloud Professional Cloud Architect",
+            "issuer": "Google Cloud",
+            "issueDate": "2022-09",
+            "expiryDate": "2024-09",
+            "credentialId": "GCP-PCA-98765"
+          },
+          {
+            "id": "cert-003",
+            "name": "Certified Kubernetes Administrator (CKA)",
+            "issuer": "Cloud Native Computing Foundation",
+            "issueDate": "2023-01",
+            "expiryDate": "2026-01",
+            "credentialId": "CKA-2023-54321"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-awards-001",
+      "type": "awards",
+      "order": 7,
+      "visible": true,
+      "content": {
+        "title": "Awards & Recognition",
+        "data": [
+          {
+            "id": "award-001",
+            "title": "Employee of the Year",
+            "issuer": "TechCorp Global",
+            "date": "2024-01",
+            "description": "Recognized for exceptional technical leadership and mentorship contributions"
+          },
+          {
+            "id": "award-002",
+            "title": "Hackathon Winner - AI Innovation",
+            "issuer": "Tech Summit 2023",
+            "date": "2023-09",
+            "description": "First place for developing an AI-powered code review assistant"
+          },
+          {
+            "id": "award-003",
+            "title": "Open Source Contributor Award",
+            "issuer": "GitHub",
+            "date": "2023-05",
+            "description": "Top 1% of contributors in the React ecosystem"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-languages-001",
+      "type": "languages",
+      "order": 8,
+      "visible": true,
+      "content": {
+        "title": "Languages",
+        "data": [
+          { "id": "lang-001", "name": "English", "proficiency": "native" },
+          { "id": "lang-002", "name": "Mandarin Chinese", "proficiency": "native" },
+          { "id": "lang-003", "name": "Spanish", "proficiency": "intermediate" }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "personalInfo": {
+      "fullName": "Alex Chen",
+      "email": "alex.chen@email.com",
+      "phone": "(555) 123-4567",
+      "location": "San Francisco, CA",
+      "linkedin": "linkedin.com/in/alexchen",
+      "github": "github.com/alexchen",
+      "website": "alexchen.dev",
+      "professionalTitle": "Senior Software Engineer"
+    },
+    "settings": {
+      "pageSize": "A4",
+      "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+      "fontSize": 11,
+      "lineHeight": 1.5,
+      "fontFamily": "Inter",
+      "colors": {
+        "primary": "#2563eb",
+        "secondary": "#64748b",
+        "text": "#1f2937",
+        "heading": "#2563eb",
+        "accent": "#3b82f6",
+        "background": "#ffffff",
+        "divider": "#e5e7eb"
+      },
+      "sectionSpacing": "normal",
+      "showIcons": true,
+      "dateFormat": "MMM YYYY",
+      "accentStyle": "underline"
+    }
+  }
+}

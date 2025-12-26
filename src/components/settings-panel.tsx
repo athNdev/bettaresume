@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Settings, Type, Palette, Layout, RotateCcw } from 'lucide-react';
-import { TEMPLATE_CONFIGS, type FontFamily, type ResumeSettings, type ResumeColors } from '@/types/resume';
+import { TEMPLATE_CONFIGS, type FontFamily, type PartialResumeSettings, type ResumeSettings, type ResumeColors } from '@/types/resume';
 
 interface SettingsPanelProps {
   resumeId: string;
@@ -44,16 +44,16 @@ export function SettingsPanel({ resumeId }: SettingsPanelProps) {
 
   if (!settings) return null;
 
-  const handleUpdate = (updates: Partial<ResumeSettings>) => {
+  const handleUpdate = (updates: PartialResumeSettings) => {
     updateSettings(resumeId, updates);
   };
 
   const handleColorChange = (key: keyof ResumeColors, value: string) => {
-    updateSettings(resumeId, { colors: { ...settings.colors, [key]: value } });
+    updateSettings(resumeId, { colors: { [key]: value } });
   };
 
   const handleMarginChange = (key: keyof ResumeSettings['margins'], value: number) => {
-    updateSettings(resumeId, { margins: { ...settings.margins, [key]: value } });
+    updateSettings(resumeId, { margins: { [key]: value } });
   };
 
   const resetToDefault = () => {

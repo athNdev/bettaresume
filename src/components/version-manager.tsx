@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, RotateCcw, Trash2, Plus, Clock, FileText } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { History, RotateCcw, Trash2, Plus, Clock, FileText, AlertTriangle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface VersionManagerProps {
@@ -16,18 +17,27 @@ interface VersionManagerProps {
 }
 
 export function VersionManager({ resumeId }: VersionManagerProps) {
-  const { createVersion, getVersions, restoreVersion, deleteVersion, activeResume } = useResumeStore();
+  const { createVersion, getVersions, restoreVersion, deleteVersion, activeResume, resumes } = useResumeStore();
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState('');
-  const versions = getVersions(resumeId);
+
+  // Check if current resume is a variation
+  const isVariation = activeResume?.variationType === 'variation';
+  const baseResumeId = isVariation ? activeResume?.baseResumeId : resumeId;
+  const baseResume = isVariation ? resumes.find(r => r.id === baseResumeId) : activeResume;
+  
+  // Get versions from the BASE resume, not the variation
+  const versions = getVersions(baseResumeId || resumeId);
 
   const handleCreateVersion = () => {
-    createVersion(resumeId, description || undefined);
+    if (isVariation || !baseResumeId) return; // Don't allow version creation from variations
+    createVersion(baseResumeId, description || undefined);
     setDescription('');
   };
 
   const handleRestore = (versionId: string) => {
-    restoreVersion(resumeId, versionId);
+    if (!baseResumeId) return;
+    restoreVersion(baseResumeId, versionId);
   };
 
   return (
@@ -44,34 +54,54 @@ export function VersionManager({ resumeId }: VersionManagerProps) {
           <DialogTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
             Version History
+            {isVariation && baseResume && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                Base: {baseResume.name}
+              </Badge>
+            )}
           </DialogTitle>
           <DialogDescription>
-            Create snapshots of your resume and restore previous versions.
+            {isVariation 
+              ? "Viewing versions of the base resume. Switch to base to create new versions."
+              : "Create snapshots of your resume and restore previous versions."
+            }
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <Input 
-              placeholder="Version description (optional)" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCreateVersion()}
-            />
-            <Button onClick={handleCreateVersion}>
-              <Plus className="h-4 w-4 mr-2" />
-              Save Version
-            </Button>
-          </div>
+          {isVariation ? (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                You&apos;re editing a variation. Versions can only be created from the base resume.
+                Restoring a version will affect the base resume.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Version description (optional)" 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateVersion()}
+              />
+              <Button onClick={handleCreateVersion}>
+                <Plus className="h-4 w-4 mr-2" />
+                Save Version
+              </Button>
+            </div>
+          )}
 
           <div className="border rounded-lg">
             <div className="p-3 border-b bg-muted/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Current Version</span>
-                <Badge>v{activeResume?.version}</Badge>
+                <span className="text-sm font-medium">
+                  {isVariation ? 'Base Resume Version' : 'Current Version'}
+                </span>
+                <Badge>v{baseResume?.version || activeResume?.version}</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Last saved {formatDistanceToNow(new Date(activeResume?.updatedAt || ''), { addSuffix: true })}
+                Last saved {formatDistanceToNow(new Date(baseResume?.updatedAt || activeResume?.updatedAt || ''), { addSuffix: true })}
               </p>
             </div>
 

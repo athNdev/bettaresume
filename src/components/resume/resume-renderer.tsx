@@ -14,9 +14,55 @@ import type {
   Volunteer, 
   Reference,
   SectionType,
-  TemplateType
+  TemplateType,
+  ResumeColors
 } from '@/types/resume';
 import { format, parseISO } from 'date-fns';
+
+interface ResumeRendererProps {
+  resume: Resume;
+  darkMode?: boolean;
+  scale?: number;
+  className?: string;
+  forExport?: boolean;
+}
+
+// Common styles for consistent rendering across screen and PDF export
+const commonStyles = {
+  // Base reset for consistent rendering
+  reset: {
+    boxSizing: 'border-box' as const,
+    margin: 0,
+    padding: 0,
+  },
+  // Pill/badge styles with proper alignment for PDF export
+  pill: (bgColor: string, textColor: string): React.CSSProperties => ({
+    display: 'inline-block',
+    fontSize: '10px',
+    lineHeight: '16px',
+    padding: '2px 8px',
+    backgroundColor: bgColor,
+    borderRadius: '3px',
+    color: textColor,
+    verticalAlign: 'middle',
+    boxSizing: 'border-box' as const,
+    fontWeight: 400,
+  }),
+  // Tag container with proper wrapping
+  tagContainer: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: '6px',
+    alignItems: 'center',
+  },
+  // Inline list of items
+  inlineList: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: '16px',
+    alignItems: 'baseline',
+  },
+};
 
 interface ResumeRendererProps {
   resume: Resume;
@@ -57,8 +103,8 @@ const formatDate = (dateStr: string, dateFormat: string = 'MMM yyyy') => {
   }
 };
 
-// Template-specific styles
-const getTemplateStyles = (template: TemplateType, darkMode: boolean) => {
+// Template-specific styles - user colors always take priority
+const getTemplateStyles = (template: TemplateType, darkMode: boolean, userColors?: ResumeColors) => {
   const baseColors = {
     minimal: { primary: '#1a1a1a', accent: '#666666', divider: '#e5e5e5', text: '#333333', muted: '#666666' },
     modern: { primary: '#2563eb', accent: '#3b82f6', divider: '#dbeafe', text: '#1f2937', muted: '#6b7280' },
@@ -69,21 +115,34 @@ const getTemplateStyles = (template: TemplateType, darkMode: boolean) => {
     tech: { primary: '#0891b2', accent: '#06b6d4', divider: '#cffafe', text: '#1f2937', muted: '#6b7280' },
   };
 
-  const colors = baseColors[template] || baseColors.minimal;
+  const templateDefaults = baseColors[template] || baseColors.minimal;
   
-  if (darkMode) {
-    return {
-      primary: '#60a5fa',
-      accent: '#3b82f6',
-      divider: '#374151',
-      text: '#e5e7eb',
-      muted: '#9ca3af',
-      bg: '#1f2937',
-      cardBg: '#111827',
-    };
-  }
+  // Dark mode fallback colors (only used if no user colors set)
+  const darkDefaults = {
+    primary: '#60a5fa',
+    accent: '#3b82f6',
+    divider: '#374151',
+    text: '#e5e7eb',
+    muted: '#9ca3af',
+    bg: '#1f2937',
+    cardBg: '#111827',
+  };
 
-  return { ...colors, bg: '#ffffff', cardBg: '#f9fafb' };
+  // Check if userColors has any actual values
+  const hasUserColors = userColors && Object.values(userColors).some(v => v && v !== '');
+  
+  // Build final colors - user colors take priority when set
+  const defaults = darkMode ? darkDefaults : templateDefaults;
+  
+  return {
+    primary: (hasUserColors && userColors?.primary) || defaults.primary,
+    accent: (hasUserColors && userColors?.accent) || defaults.accent,
+    divider: (hasUserColors && userColors?.divider) || defaults.divider,
+    text: (hasUserColors && userColors?.text) || defaults.text,
+    muted: defaults.muted,
+    bg: (hasUserColors && userColors?.background) || (darkMode ? darkDefaults.bg : '#ffffff'),
+    cardBg: darkMode ? darkDefaults.cardBg : '#f9fafb',
+  };
 };
 
 // Template Layout Components
@@ -93,16 +152,16 @@ const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
     const pi = resume.metadata.personalInfo;
 
     return (
-      <div ref={ref} style={{ backgroundColor: colors.bg, color: colors.text, padding: '40px 48px', minHeight: '100%' }}>
+      <div ref={ref} style={{ backgroundColor: colors.bg, color: colors.text, padding: '40px 48px', minHeight: '100%', boxSizing: 'border-box' }}>
         {/* Header */}
         <header style={{ marginBottom: '24px', borderBottom: `1px solid ${colors.divider}`, paddingBottom: '16px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: colors.primary, margin: 0, letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', color: colors.primary, margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
             {pi.fullName || 'Your Name'}
           </h1>
           {pi.professionalTitle && (
-            <p style={{ fontSize: '14px', color: colors.muted, marginTop: '4px' }}>{pi.professionalTitle}</p>
+            <p style={{ fontSize: '14px', color: colors.muted, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px', fontSize: '12px', color: colors.muted }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px', fontSize: '12px', color: colors.muted, lineHeight: 1.4, alignItems: 'baseline' }}>
             {pi.email && <span>{pi.email}</span>}
             {pi.phone && <span>{pi.phone}</span>}
             {pi.location && <span>{pi.location}</span>}
@@ -142,26 +201,26 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
     const pi = resume.metadata.personalInfo;
 
     return (
-      <div ref={ref} style={{ backgroundColor: colors.bg, color: colors.text, minHeight: '100%' }}>
+      <div ref={ref} style={{ backgroundColor: colors.bg, color: colors.text, minHeight: '100%', boxSizing: 'border-box' }}>
         {/* Header with accent bar */}
         <header style={{ 
           background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%)`,
           color: '#ffffff',
           padding: '32px 48px'
         }}>
-          <h1 style={{ fontSize: '32px', fontWeight: '700', margin: 0, letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: '700', margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
             {pi.fullName || 'Your Name'}
           </h1>
           {pi.professionalTitle && (
-            <p style={{ fontSize: '16px', opacity: 0.9, marginTop: '4px' }}>{pi.professionalTitle}</p>
+            <p style={{ fontSize: '16px', opacity: 0.9, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '16px', fontSize: '13px', opacity: 0.85 }}>
-            {pi.email && <span>✉ {pi.email}</span>}
-            {pi.phone && <span>☎ {pi.phone}</span>}
-            {pi.location && <span>📍 {pi.location}</span>}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '16px', fontSize: '13px', opacity: 0.85, lineHeight: 1.4, alignItems: 'baseline' }}>
+            {pi.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>✉ {pi.email}</span>}
+            {pi.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>☎ {pi.phone}</span>}
+            {pi.location && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>📍 {pi.location}</span>}
           </div>
           {(pi.linkedin || pi.github || pi.website) && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '8px', fontSize: '12px', opacity: 0.8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '8px', fontSize: '12px', opacity: 0.8, lineHeight: 1.4, alignItems: 'baseline' }}>
               {pi.linkedin && <span>{pi.linkedin}</span>}
               {pi.github && <span>{pi.github}</span>}
               {pi.website && <span>{pi.website}</span>}
@@ -180,13 +239,15 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                marginBottom: '14px'
+                marginBottom: '14px',
+                lineHeight: 1.4
               }}>
                 <span style={{ 
                   width: '4px', 
                   height: '20px', 
                   backgroundColor: colors.accent,
-                  borderRadius: '2px'
+                  borderRadius: '2px',
+                  flexShrink: 0
                 }}></span>
                 {section.content.title || SECTION_LABELS[section.type]}
               </h2>
@@ -369,33 +430,42 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
             </div>
           </div>
           {(pi.linkedin || pi.github || pi.website) && (
-            <div style={{ display: 'flex', gap: '24px', marginTop: '12px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', gap: '24px', marginTop: '12px', fontSize: '12px', alignItems: 'center' }}>
               {pi.github && (
                 <span style={{ 
-                  padding: '4px 12px', 
+                  display: 'inline-block',
+                  padding: '4px 12px',
+                  lineHeight: '18px',
                   backgroundColor: darkMode ? '#374151' : '#f1f5f9',
                   borderRadius: '4px',
-                  color: colors.primary
+                  color: colors.primary,
+                  boxSizing: 'border-box' as const,
                 }}>
                   {pi.github}
                 </span>
               )}
               {pi.linkedin && (
                 <span style={{ 
-                  padding: '4px 12px', 
+                  display: 'inline-block',
+                  padding: '4px 12px',
+                  lineHeight: '18px',
                   backgroundColor: darkMode ? '#374151' : '#f1f5f9',
                   borderRadius: '4px',
-                  color: colors.primary
+                  color: colors.primary,
+                  boxSizing: 'border-box' as const,
                 }}>
                   {pi.linkedin}
                 </span>
               )}
               {pi.website && (
                 <span style={{ 
-                  padding: '4px 12px', 
+                  display: 'inline-block',
+                  padding: '4px 12px',
+                  lineHeight: '18px',
                   backgroundColor: darkMode ? '#374151' : '#f1f5f9',
                   borderRadius: '4px',
-                  color: colors.primary
+                  color: colors.primary,
+                  boxSizing: 'border-box' as const,
                 }}>
                   {pi.website}
                 </span>
@@ -455,6 +525,11 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
   const data = section.content.data;
   const smallFontSize = compact ? '9px' : '11px';
 
+  // Consistent pill style for PDF export compatibility
+  const pillStyle: React.CSSProperties = {
+    ...commonStyles.pill(colors.divider, colors.muted),
+  };
+
   switch (section.type) {
     case 'experience':
       return (
@@ -463,12 +538,12 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
             <div key={exp.id} style={{ marginBottom: idx < arr.length - 1 ? '16px' : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                 <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text }}>{exp.position}</h3>
-                  <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '2px 0 0 0' }}>
+                  <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text, lineHeight: 1.3 }}>{exp.position}</h3>
+                  <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '2px 0 0 0', lineHeight: 1.4 }}>
                     {exp.company}{exp.location ? ` • ${exp.location}` : ''}
                   </p>
                 </div>
-                <span style={{ fontSize: smallFontSize, color: colors.muted, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: smallFontSize, color: colors.muted, whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                   {formatDate(exp.startDate, dateFormat)} – {exp.current ? 'Present' : formatDate(exp.endDate || '', dateFormat)}
                 </span>
               </div>
@@ -481,15 +556,9 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
                 </ul>
               )}
               {exp.technologies && exp.technologies.length > 0 && (
-                <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <div style={{ ...commonStyles.tagContainer, marginTop: '8px' }}>
                   {exp.technologies.map((tech, i) => (
-                    <span key={i} style={{ 
-                      fontSize: '10px', 
-                      padding: '2px 8px', 
-                      backgroundColor: colors.divider,
-                      borderRadius: '3px',
-                      color: colors.muted
-                    }}>{tech}</span>
+                    <span key={i} style={pillStyle}>{tech}</span>
                   ))}
                 </div>
               )}
@@ -559,24 +628,18 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
           {(Array.isArray(data) ? data as Project[] : []).map((proj, idx, arr) => (
             <div key={proj.id} style={{ marginBottom: idx < arr.length - 1 ? '14px' : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text }}>{proj.name}</h3>
+                <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text, lineHeight: 1.3 }}>{proj.name}</h3>
                 {proj.url && (
-                  <span style={{ fontSize: '10px', color: colors.muted }}>{proj.url}</span>
+                  <span style={{ fontSize: '10px', color: colors.muted, lineHeight: 1.3 }}>{proj.url}</span>
                 )}
               </div>
               {proj.description && (
                 <p style={{ fontSize: smallFontSize, color: colors.text, margin: '4px 0 0 0', lineHeight: 1.5 }}>{proj.description}</p>
               )}
               {proj.technologies && proj.technologies.length > 0 && (
-                <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <div style={{ ...commonStyles.tagContainer, marginTop: '6px' }}>
                   {proj.technologies.map((tech, i) => (
-                    <span key={i} style={{ 
-                      fontSize: '10px', 
-                      padding: '2px 8px', 
-                      backgroundColor: colors.divider,
-                      borderRadius: '3px',
-                      color: colors.muted
-                    }}>{tech}</span>
+                    <span key={i} style={pillStyle}>{tech}</span>
                   ))}
                 </div>
               )}
@@ -653,9 +716,9 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
         );
       }
       return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: smallFontSize }}>
+        <div style={{ ...commonStyles.inlineList, fontSize: smallFontSize }}>
           {(Array.isArray(data) ? data as Language[] : []).map((lang) => (
-            <span key={lang.id}>
+            <span key={lang.id} style={{ lineHeight: 1.5 }}>
               <span style={{ fontWeight: '600', color: colors.text }}>{lang.name}</span>
               <span style={{ color: colors.muted }}> ({lang.proficiency})</span>
             </span>
@@ -736,7 +799,9 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
 // Main Resume Renderer Component
 export const ResumeRenderer = forwardRef<HTMLDivElement, ResumeRendererProps>(
   ({ resume, darkMode = false, scale = 100, className = '', forExport = false }, ref) => {
-    const colors = getTemplateStyles(resume.template, forExport ? false : darkMode);
+    // Get user colors from settings
+    const userColors = resume.metadata.settings?.colors;
+    const colors = getTemplateStyles(resume.template, forExport ? false : darkMode, userColors);
     const dateFormat = resume.metadata.settings?.dateFormat || 'MMM YYYY';
     
     const templateProps = { resume, darkMode: forExport ? false : darkMode, colors, dateFormat };
@@ -759,6 +824,22 @@ export const ResumeRenderer = forwardRef<HTMLDivElement, ResumeRendererProps>(
       }
     };
 
+    // Map font family names to CSS font stacks
+    const getFontStack = (fontFamily: string) => {
+      const fontStacks: Record<string, string> = {
+        'Inter': 'var(--font-inter), Inter, system-ui, sans-serif',
+        'Roboto': 'var(--font-roboto), Roboto, system-ui, sans-serif',
+        'Open Sans': 'var(--font-open-sans), "Open Sans", system-ui, sans-serif',
+        'Lato': 'var(--font-lato), Lato, system-ui, sans-serif',
+        'Montserrat': 'var(--font-montserrat), Montserrat, system-ui, sans-serif',
+        'Playfair Display': 'var(--font-playfair), "Playfair Display", Georgia, serif',
+        'Georgia': 'Georgia, "Times New Roman", serif',
+        'Times New Roman': '"Times New Roman", Times, serif',
+        'Arial': 'Arial, Helvetica, sans-serif',
+      };
+      return fontStacks[fontFamily] || fontStacks['Inter'];
+    };
+
     return (
       <div 
         className={className}
@@ -767,7 +848,7 @@ export const ResumeRenderer = forwardRef<HTMLDivElement, ResumeRendererProps>(
           transformOrigin: 'top center',
           width: forExport ? '794px' : '100%',
           minHeight: forExport ? '1123px' : 'auto',
-          fontFamily: resume.metadata.settings?.fontFamily || 'Inter, system-ui, sans-serif',
+          fontFamily: getFontStack(resume.metadata.settings?.fontFamily || 'Inter'),
           fontSize: `${resume.metadata.settings?.fontSize || 11}px`,
           lineHeight: resume.metadata.settings?.lineHeight || 1.5,
         }}

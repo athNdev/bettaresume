@@ -47,10 +47,16 @@ export function ExportButtons({ resumeId }: ExportButtonsProps) {
       clone.style.zIndex = '-9999';
       clone.style.width = '794px';
       clone.style.backgroundColor = '#ffffff';
+      // Force consistent font rendering
+      clone.style.fontKerning = 'normal';
+      clone.style.textRendering = 'optimizeLegibility';
+      // Use setAttribute for vendor-prefixed properties
+      clone.style.setProperty('-webkit-font-smoothing', 'antialiased');
       document.body.appendChild(clone);
       
-      // Wait for render
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Wait for fonts and render to complete
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Convert HTML to canvas with high quality
       const canvas = await html2canvas(clone, {
