@@ -262,7 +262,8 @@ export default function EditorPage() {
     reorderSections, 
     addSection, 
     updateResume,
-    duplicateSection
+    duplicateSection,
+    _hasHydrated,
   } = useResumeStore();
   
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -280,13 +281,42 @@ export default function EditorPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  // Failsafe: force hydrated state after timeout to prevent indefinite loading
+  const [forceHydrated, setForceHydrated] = useState(false);
+  useEffect(() => {
+    if (!_hasHydrated && !forceHydrated) {
+      const timer = setTimeout(() => {
+        console.warn('Hydration timeout - forcing hydrated state');
+        setForceHydrated(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [_hasHydrated, forceHydrated]);
+
+  // Track the previous resume ID to detect when we switch to a different resume
+  const [prevResumeId, setPrevResumeId] = useState<string | null>(null);
+
   useEffect(() => { 
-    if (resumeId) setActiveResume(resumeId); 
-  }, [resumeId, setActiveResume]);
+    if (resumeId) {
+      setActiveResume(resumeId);
+      
+      // Reset active section when switching to a different resume
+      if (prevResumeId && prevResumeId !== resumeId) {
+        setActiveSectionId(null);
+      }
+      setPrevResumeId(resumeId);
+    }
+  }, [resumeId, setActiveResume, prevResumeId]);
   
   useEffect(() => { 
-    if (activeResume && !activeSectionId) {
-      setActiveSectionId(activeResume.sections[0]?.id);
+    // Set the first section as active when:
+    // - We have a resume loaded
+    // - AND either no section is selected OR the selected section doesn't exist in current resume
+    if (activeResume) {
+      const sectionExists = activeSectionId && activeResume.sections.some(s => s.id === activeSectionId);
+      if (!sectionExists && activeResume.sections.length > 0) {
+        setActiveSectionId(activeResume.sections[0]?.id);
+      }
     }
   }, [activeResume, activeSectionId]);
 
@@ -306,6 +336,18 @@ export default function EditorPage() {
       return () => clearTimeout(timer);
     }
   }, [activeResumeUpdatedAt]);
+
+  // Show loading while Zustand is hydrating from localStorage
+  if (!_hasHydrated && !forceHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading resume...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!activeResume) {
     return (

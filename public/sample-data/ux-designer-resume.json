@@ -1,12 +1,12 @@
 {
   "id": "resume-ux-designer-001",
-  "name": "Emma Rodriguez - UX Designer",
+  "name": "Emily Rodriguez - UX Designer",
   "version": 2,
   "variationType": "base",
-  "createdAt": "2025-11-05T14:20:00.000Z",
-  "updatedAt": "2025-12-19T09:45:00.000Z",
+  "createdAt": "2025-07-20T14:00:00.000Z",
+  "updatedAt": "2025-12-10T09:15:00.000Z",
   "template": "creative",
-  "tags": ["design", "UX", "UI", "product-design", "figma"],
+  "tags": ["design", "ux", "ui", "figma", "research"],
   "isArchived": false,
   "sections": [
     {
@@ -22,9 +22,9 @@
       "order": 1,
       "visible": true,
       "content": {
-        "title": "About Me",
+        "title": "Professional Summary",
         "data": {},
-        "html": "<p>Creative and user-centered <strong>UX Designer</strong> with 7 years of experience crafting delightful digital experiences. Passionate about accessibility, inclusive design, and bridging the gap between user needs and business goals. Led design for products used by 20M+ users, with expertise in design systems, user research, and prototyping. Believer that great design is invisible – it just works.</p>"
+        "html": "<p><strong>UX Designer</strong> with 5+ years of experience creating intuitive digital experiences. Passionate about user research and accessibility.</p>"
       }
     },
     {
@@ -33,65 +33,23 @@
       "order": 2,
       "visible": true,
       "content": {
-        "title": "Experience",
+        "title": "Professional Experience",
         "data": [
           {
             "id": "exp-ux-001",
-            "company": "DesignForward Agency",
-            "position": "Lead UX Designer",
-            "startDate": "2022-04",
+            "company": "DesignFirst Agency",
+            "position": "Senior UX Designer",
+            "startDate": "2022-05-01",
             "current": true,
             "location": "Los Angeles, CA",
-            "locationType": "hybrid",
+            "locationType": "remote",
             "employmentType": "full-time",
-            "description": "Leading design for major brand clients in e-commerce and fintech",
+            "description": "Lead designer for enterprise clients",
             "highlights": [
-              "Led end-to-end design for e-commerce platform redesign, resulting in 55% increase in conversion rate",
-              "Established and maintained design system used across 12+ products with 200+ components",
-              "Mentored team of 5 junior designers and conducted bi-weekly design critiques",
-              "Championed accessibility initiatives, achieving WCAG 2.1 AA compliance across all client projects",
-              "Facilitated 50+ user research sessions and usability tests to validate design decisions"
+              "Redesigned onboarding increasing completion by 45%",
+              "Created design system used across 8 products"
             ],
-            "technologies": ["Figma", "Framer", "Maze", "Hotjar", "Zeplin", "Principle"]
-          },
-          {
-            "id": "exp-ux-002",
-            "company": "TechStartup XYZ",
-            "position": "Senior UX Designer",
-            "startDate": "2019-08",
-            "endDate": "2022-03",
-            "current": false,
-            "location": "San Francisco, CA",
-            "locationType": "onsite",
-            "employmentType": "full-time",
-            "description": "First design hire at Series A startup, built design practice from ground up",
-            "highlights": [
-              "Designed mobile app from 0 to 1, achieving 4.8-star rating and 500K downloads in first year",
-              "Created user journey maps and personas based on 100+ customer interviews",
-              "Implemented design sprints methodology, reducing feature development time by 30%",
-              "Collaborated with engineering to ensure pixel-perfect implementation of designs",
-              "Built company's first design system and component library"
-            ],
-            "technologies": ["Figma", "Sketch", "InVision", "UserTesting", "Dovetail", "Lottie"]
-          },
-          {
-            "id": "exp-ux-003",
-            "company": "Creative Studio Inc",
-            "position": "UX/UI Designer",
-            "startDate": "2017-05",
-            "endDate": "2019-07",
-            "current": false,
-            "location": "Portland, OR",
-            "locationType": "onsite",
-            "employmentType": "full-time",
-            "description": "Designer for boutique agency specializing in lifestyle and retail brands",
-            "highlights": [
-              "Designed responsive websites and mobile apps for 15+ clients",
-              "Created interactive prototypes and motion design for client presentations",
-              "Developed brand identities and visual design systems",
-              "Won 3 Awwwards Honorable Mentions for web design projects"
-            ],
-            "technologies": ["Sketch", "Adobe XD", "After Effects", "Illustrator", "Photoshop"]
+            "technologies": ["Figma", "Framer", "Maze", "Miro"]
           }
         ]
       }
@@ -107,34 +65,13 @@
           {
             "id": "edu-ux-001",
             "institution": "Rhode Island School of Design",
-            "degree": "Master of Fine Arts",
+            "degree": "Bachelor of Fine Arts",
             "field": "Graphic Design",
-            "startDate": "2015-09",
-            "endDate": "2017-05",
+            "startDate": "2015-09-01",
+            "endDate": "2019-05-01",
             "current": false,
             "location": "Providence, RI",
-            "achievements": [
-              "Thesis: 'Designing for Emotional Connection in Digital Interfaces'",
-              "Graduate Teaching Assistant - Typography"
-            ],
-            "honors": ["Merit Scholarship Recipient"]
-          },
-          {
-            "id": "edu-ux-002",
-            "institution": "University of California, Los Angeles",
-            "degree": "Bachelor of Arts",
-            "field": "Design | Media Arts",
-            "startDate": "2011-09",
-            "endDate": "2015-06",
-            "current": false,
-            "gpa": "3.85",
-            "maxGpa": "4.0",
-            "location": "Los Angeles, CA",
-            "achievements": [
-              "Undergraduate Research Fellowship",
-              "Student Design Association President"
-            ],
-            "honors": ["Cum Laude", "Dean's List"]
+            "honors": ["Dean's List"]
           }
         ]
       }
@@ -152,209 +89,40 @@
             "name": "Design Tools",
             "order": 0,
             "skills": [
-              { "id": "sk-ux-001", "name": "Figma", "level": "expert", "yearsOfExperience": 6 },
-              { "id": "sk-ux-002", "name": "Framer", "level": "advanced", "yearsOfExperience": 3 },
-              { "id": "sk-ux-003", "name": "Sketch", "level": "expert", "yearsOfExperience": 5 },
-              { "id": "sk-ux-004", "name": "Adobe Creative Suite", "level": "expert", "yearsOfExperience": 8 },
-              { "id": "sk-ux-005", "name": "Principle/ProtoPie", "level": "advanced", "yearsOfExperience": 4 }
+              { "id": "sk-ux-001", "name": "Figma", "level": "expert", "yearsOfExperience": 5 },
+              { "id": "sk-ux-002", "name": "Framer", "level": "advanced", "yearsOfExperience": 3 }
             ]
           },
           {
             "id": "skill-cat-ux-002",
-            "name": "UX Research",
+            "name": "UX Methods",
             "order": 1,
             "skills": [
-              { "id": "sk-ux-006", "name": "User Interviews", "level": "expert", "yearsOfExperience": 6 },
-              { "id": "sk-ux-007", "name": "Usability Testing", "level": "expert", "yearsOfExperience": 6 },
-              { "id": "sk-ux-008", "name": "Journey Mapping", "level": "expert", "yearsOfExperience": 5 },
-              { "id": "sk-ux-009", "name": "A/B Testing", "level": "advanced", "yearsOfExperience": 4 },
-              { "id": "sk-ux-010", "name": "Card Sorting", "level": "advanced", "yearsOfExperience": 4 }
-            ]
-          },
-          {
-            "id": "skill-cat-ux-003",
-            "name": "Design Thinking",
-            "order": 2,
-            "skills": [
-              { "id": "sk-ux-011", "name": "Design Systems", "level": "expert", "yearsOfExperience": 5 },
-              { "id": "sk-ux-012", "name": "Accessibility (WCAG)", "level": "advanced", "yearsOfExperience": 4 },
-              { "id": "sk-ux-013", "name": "Information Architecture", "level": "advanced", "yearsOfExperience": 5 },
-              { "id": "sk-ux-014", "name": "Interaction Design", "level": "expert", "yearsOfExperience": 6 },
-              { "id": "sk-ux-015", "name": "Visual Design", "level": "expert", "yearsOfExperience": 7 }
-            ]
-          },
-          {
-            "id": "skill-cat-ux-004",
-            "name": "Technical",
-            "order": 3,
-            "skills": [
-              { "id": "sk-ux-016", "name": "HTML/CSS", "level": "intermediate", "yearsOfExperience": 5 },
-              { "id": "sk-ux-017", "name": "JavaScript Basics", "level": "beginner", "yearsOfExperience": 2 },
-              { "id": "sk-ux-018", "name": "Webflow", "level": "advanced", "yearsOfExperience": 3 }
+              { "id": "sk-ux-003", "name": "User Research", "level": "expert" },
+              { "id": "sk-ux-004", "name": "Prototyping", "level": "expert" }
             ]
           }
-        ]
-      }
-    },
-    {
-      "id": "sec-projects-ux-001",
-      "type": "projects",
-      "order": 5,
-      "visible": true,
-      "content": {
-        "title": "Featured Projects",
-        "data": [
-          {
-            "id": "proj-ux-001",
-            "name": "HealthConnect App Redesign",
-            "description": "Complete UX overhaul of telehealth platform serving 2M+ patients",
-            "role": "Lead Designer",
-            "url": "https://portfolio.emmadesigns.com/healthconnect",
-            "startDate": "2023-06",
-            "endDate": "2024-01",
-            "current": false,
-            "highlights": [
-              "Reduced appointment booking time from 8 minutes to 2 minutes",
-              "Improved accessibility score from 65 to 95",
-              "Increased patient satisfaction from 3.2 to 4.7 stars"
-            ]
-          },
-          {
-            "id": "proj-ux-002",
-            "name": "EcoShop E-commerce Platform",
-            "description": "Designed sustainable shopping experience for eco-conscious consumers",
-            "role": "UX Designer",
-            "url": "https://portfolio.emmadesigns.com/ecoshop",
-            "startDate": "2022-09",
-            "endDate": "2023-03",
-            "current": false,
-            "highlights": [
-              "55% increase in conversion rate post-launch",
-              "Awwwards Site of the Day winner",
-              "Featured in Designspiration and Dribbble"
-            ]
-          },
-          {
-            "id": "proj-ux-003",
-            "name": "Finova Banking App",
-            "description": "Mobile banking experience for Gen Z audience",
-            "role": "Senior UX Designer",
-            "url": "https://portfolio.emmadesigns.com/finova",
-            "startDate": "2021-01",
-            "endDate": "2021-08",
-            "current": false,
-            "highlights": [
-              "500K downloads in first 6 months",
-              "4.8 star App Store rating",
-              "Red Dot Design Award winner"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": "sec-awards-ux-001",
-      "type": "awards",
-      "order": 6,
-      "visible": true,
-      "content": {
-        "title": "Awards & Recognition",
-        "data": [
-          {
-            "id": "award-ux-001",
-            "title": "Red Dot Design Award - Interface Design",
-            "issuer": "Red Dot",
-            "date": "2024-04",
-            "description": "Recognized for exceptional interface design on HealthConnect project"
-          },
-          {
-            "id": "award-ux-002",
-            "title": "Awwwards Site of the Day",
-            "issuer": "Awwwards",
-            "date": "2023-05",
-            "description": "EcoShop e-commerce platform"
-          },
-          {
-            "id": "award-ux-003",
-            "title": "UX Design Awards - Honorable Mention",
-            "issuer": "International Design Center Berlin",
-            "date": "2022-11",
-            "description": "Mobile banking app design"
-          },
-          {
-            "id": "award-ux-004",
-            "title": "Forbes 30 Under 30 - Design",
-            "issuer": "Forbes",
-            "date": "2021-12",
-            "description": "Recognized as one of the most impactful young designers"
-          }
-        ]
-      }
-    },
-    {
-      "id": "sec-certs-ux-001",
-      "type": "certifications",
-      "order": 7,
-      "visible": true,
-      "content": {
-        "title": "Certifications",
-        "data": [
-          {
-            "id": "cert-ux-001",
-            "name": "Google UX Design Professional Certificate",
-            "issuer": "Google",
-            "issueDate": "2021-03",
-            "noExpiry": true
-          },
-          {
-            "id": "cert-ux-002",
-            "name": "IAAP Certified Professional in Accessibility Core Competencies (CPACC)",
-            "issuer": "International Association of Accessibility Professionals",
-            "issueDate": "2023-06",
-            "expiryDate": "2026-06"
-          },
-          {
-            "id": "cert-ux-003",
-            "name": "Interaction Design Foundation - UX Management",
-            "issuer": "Interaction Design Foundation",
-            "issueDate": "2022-09",
-            "noExpiry": true
-          }
-        ]
-      }
-    },
-    {
-      "id": "sec-languages-ux-001",
-      "type": "languages",
-      "order": 8,
-      "visible": true,
-      "content": {
-        "title": "Languages",
-        "data": [
-          { "id": "lang-ux-001", "name": "English", "proficiency": "native" },
-          { "id": "lang-ux-002", "name": "Spanish", "proficiency": "native" },
-          { "id": "lang-ux-003", "name": "Italian", "proficiency": "intermediate" }
         ]
       }
     }
   ],
   "metadata": {
     "personalInfo": {
-      "fullName": "Emma Rodriguez",
-      "email": "emma@emmadesigns.com",
-      "phone": "(555) 234-5678",
+      "fullName": "Emily Rodriguez",
+      "email": "emily.rodriguez@email.com",
+      "phone": "(555) 456-7890",
       "location": "Los Angeles, CA",
-      "linkedin": "linkedin.com/in/emmarodriguezux",
-      "website": "emmadesigns.com",
-      "portfolio": "dribbble.com/emmarodriguez",
-      "professionalTitle": "Lead UX Designer"
+      "linkedin": "linkedin.com/in/emilyrodriguez",
+      "website": "emily.design",
+      "portfolio": "dribbble.com/emilyrodriguez",
+      "professionalTitle": "Senior UX Designer"
     },
     "settings": {
       "pageSize": "A4",
-      "margins": { "top": 24, "right": 24, "bottom": 24, "left": 24 },
-      "fontSize": 10.5,
-      "lineHeight": 1.6,
-      "fontFamily": "Montserrat",
+      "margins": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+      "fontSize": 11,
+      "lineHeight": 1.5,
+      "fontFamily": "Inter",
       "colors": {
         "primary": "#6c5ce7",
         "secondary": "#a29bfe",
@@ -367,7 +135,7 @@
       "sectionSpacing": "normal",
       "showIcons": true,
       "dateFormat": "MMM YYYY",
-      "accentStyle": "background"
+      "accentStyle": "underline"
     }
   }
 }

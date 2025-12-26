@@ -70,11 +70,6 @@ const cognitoUserToUser = (cognitoUser: Record<string, unknown>): User => {
     picture: cognitoUser.picture as string || null,
     createdAt: new Date().toISOString(),
     emailVerified: cognitoUser.email_verified as boolean || false,
-    subscription: {
-      plan: 'free',
-      status: 'active',
-      expiresAt: null,
-    },
     preferences: {
       theme: 'dark',
       emailNotifications: true,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import { useResumeStore } from '@/store/resume-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -67,7 +67,8 @@ export default function Dashboard() {
     archiveResume,
     restoreResume,
     exportAllToJSON,
-    importAllFromJSON
+    importAllFromJSON,
+    _hasHydrated,
   } = useResumeStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,6 +81,43 @@ export default function Dashboard() {
   const [expandedResumes, setExpandedResumes] = useState<Set<string>>(new Set());
   const [loadingResumeId, setLoadingResumeId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Clear loading state when transition completes or on unmount
+  useEffect(() => {
+    if (!isPending && loadingResumeId) {
+      // Small delay to allow navigation to complete
+      const timer = setTimeout(() => setLoadingResumeId(null), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isPending, loadingResumeId]);
+
+  // Failsafe: clear loading state after 10 seconds to prevent indefinite spinner
+  useEffect(() => {
+    if (loadingResumeId) {
+      const failsafeTimer = setTimeout(() => {
+        console.warn('Navigation timeout - clearing loading state');
+        setLoadingResumeId(null);
+      }, 10000);
+      return () => clearTimeout(failsafeTimer);
+    }
+  }, [loadingResumeId]);
+
+  // Clear loading state on mount (handles page refresh scenarios)
+  useEffect(() => {
+    setLoadingResumeId(null);
+  }, []);
+
+  // Failsafe: force hydrated state after timeout to prevent indefinite loading
+  const [forceHydrated, setForceHydrated] = useState(false);
+  useEffect(() => {
+    if (!_hasHydrated && !forceHydrated) {
+      const timer = setTimeout(() => {
+        console.warn('Dashboard hydration timeout - forcing hydrated state');
+        setForceHydrated(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [_hasHydrated, forceHydrated]);
 
   // Get base resumes (not variations)
   const baseResumes = useMemo(() => 
@@ -164,6 +202,9 @@ export default function Dashboard() {
   };
 
   const handleOpenResume = (id: string) => {
+    // Prevent double-clicks or clicking while loading
+    if (loadingResumeId) return;
+    
     setLoadingResumeId(id);
     setActiveResume(id);
     startTransition(() => {
@@ -544,6 +585,18 @@ export default function Dashboard() {
       </div>
     );
   };
+
+  // Show loading while Zustand is hydrating from localStorage
+  if (!_hasHydrated && !forceHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading your resumes...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ProtectedRoute>

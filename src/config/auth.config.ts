@@ -33,7 +33,7 @@ export const cognitoConfig = {
   identityPoolId: process.env.NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID || '',
 };
 
-// Development/Demo Account (used when AUTH_MODE is 'development')
+// Development/Demo Account (used when in Cloud Mode during development)
 export const devAccount = {
   id: 'dev-user-001',
   email: 'demo@bettaresume.dev',
@@ -41,11 +41,6 @@ export const devAccount = {
   picture: null,
   createdAt: new Date().toISOString(),
   emailVerified: true,
-  subscription: {
-    plan: 'pro' as const,
-    status: 'active' as const,
-    expiresAt: null,
-  },
   preferences: {
     theme: 'dark' as const,
     emailNotifications: true,

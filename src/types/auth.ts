@@ -1,8 +1,13 @@
 /**
  * Authentication Types
+ * 
+ * For Betta Resume, all features are free for self-hosted users.
+ * The hosted version supports Local Mode (no account) and Cloud Mode (with account).
  */
 
-// User Account Types
+import type { StorageMode } from '@/config/storage.config';
+
+// User Account Types (for Cloud Mode)
 export interface User {
   id: string;
   email: string;
@@ -10,26 +15,7 @@ export interface User {
   picture: string | null;
   createdAt: string;
   emailVerified: boolean;
-  subscription: UserSubscription;
   preferences: UserPreferences;
-}
-
-export interface UserSubscription {
-  plan: 'free' | 'pro' | 'enterprise';
-  status: 'active' | 'cancelled' | 'expired' | 'trialing';
-  expiresAt: string | null;
-  features?: SubscriptionFeatures;
-}
-
-export interface SubscriptionFeatures {
-  maxResumes: number;
-  maxVersionsPerResume: number;
-  maxVariationsPerResume: number;
-  aiAssistant: boolean;
-  customTemplates: boolean;
-  exportFormats: string[];
-  cloudSync: boolean;
-  prioritySupport: boolean;
 }
 
 export interface UserPreferences {
@@ -48,6 +34,7 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   sessionExpiresAt: string | null;
+  storageMode: StorageMode;
 }
 
 // Auth Action Types
@@ -58,7 +45,8 @@ export type AuthAction =
   | { type: 'AUTH_LOGOUT' }
   | { type: 'AUTH_UPDATE_USER'; payload: Partial<User> }
   | { type: 'AUTH_CLEAR_ERROR' }
-  | { type: 'AUTH_SET_LOADING'; payload: boolean };
+  | { type: 'AUTH_SET_LOADING'; payload: boolean }
+  | { type: 'AUTH_SET_STORAGE_MODE'; payload: StorageMode };
 
 // Auth Credentials
 export interface LoginCredentials {
@@ -141,43 +129,25 @@ export interface SocialLoginCredentials {
 // Account Activity Types
 export interface AccountActivity {
   id: string;
-  type: 'login' | 'logout' | 'password_change' | 'profile_update' | 'subscription_change';
+  type: 'login' | 'logout' | 'password_change' | 'profile_update' | 'mode_change';
   timestamp: string;
   ipAddress?: string;
   userAgent?: string;
   location?: string;
 }
 
-// Subscription Plan Details
-export const SUBSCRIPTION_PLANS: Record<string, SubscriptionFeatures> = {
-  free: {
-    maxResumes: 3,
-    maxVersionsPerResume: 5,
-    maxVariationsPerResume: 2,
-    aiAssistant: false,
-    customTemplates: false,
-    exportFormats: ['pdf'],
-    cloudSync: false,
-    prioritySupport: false,
-  },
-  pro: {
-    maxResumes: 20,
-    maxVersionsPerResume: 50,
-    maxVariationsPerResume: 10,
-    aiAssistant: true,
-    customTemplates: true,
-    exportFormats: ['pdf', 'docx', 'json'],
-    cloudSync: true,
-    prioritySupport: false,
-  },
-  enterprise: {
-    maxResumes: -1, // unlimited
-    maxVersionsPerResume: -1,
-    maxVariationsPerResume: -1,
-    aiAssistant: true,
-    customTemplates: true,
-    exportFormats: ['pdf', 'docx', 'json', 'html'],
-    cloudSync: true,
-    prioritySupport: true,
+// Local Mode User (for display purposes when in local mode)
+export const LOCAL_MODE_USER: User = {
+  id: 'local-user',
+  email: '',
+  name: 'Local User',
+  picture: null,
+  createdAt: new Date().toISOString(),
+  emailVerified: false,
+  preferences: {
+    theme: 'system',
+    emailNotifications: false,
+    autoSave: true,
+    defaultTemplate: 'modern',
   },
 };

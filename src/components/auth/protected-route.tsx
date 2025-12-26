@@ -3,13 +3,14 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
+import { LOCAL_MODE_USER } from '@/types/auth';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-// Routes that don't require authentication
+// Routes that don't require authentication (even in cloud mode)
 const publicRoutes = [
   '/login',
   '/register',
@@ -17,6 +18,7 @@ const publicRoutes = [
   '/reset-password',
   '/verify-email',
   '/auth/callback',
+  '/', // Home page handles mode selection
 ];
 
 // Routes that should redirect to dashboard if already authenticated
@@ -29,35 +31,46 @@ const authRoutes = [
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, isDevMode, loginAsDev } = useAuthStore();
+  const { 
+    isAuthenticated, 
+    isLoading, 
+    isLocalMode, 
+    isCloudMode,
+    storageMode,
+    switchToLocalMode,
+    user,
+  } = useAuthStore();
 
   useEffect(() => {
-    // Skip protection in dev mode - auto-login with dev account
-    if (isDevMode()) {
-      if (!isAuthenticated) {
-        loginAsDev();
+    // In local mode, always allow access - auto-authenticate with local user
+    if (isLocalMode()) {
+      if (!isAuthenticated || user?.id !== LOCAL_MODE_USER.id) {
+        switchToLocalMode();
       }
       return;
     }
 
-    // If still loading, wait
-    if (isLoading) return;
+    // In cloud mode, handle authentication
+    if (isCloudMode()) {
+      // If still loading, wait
+      if (isLoading) return;
 
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-    const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
+      const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+      const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
-    // If not authenticated and trying to access protected route
-    if (!isAuthenticated && !isPublicRoute) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-      return;
+      // If not authenticated and trying to access protected route
+      if (!isAuthenticated && !isPublicRoute) {
+        router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+        return;
+      }
+
+      // If authenticated and trying to access auth route, redirect to dashboard
+      if (isAuthenticated && isAuthRoute) {
+        router.push('/dashboard');
+        return;
+      }
     }
-
-    // If authenticated and trying to access auth route, redirect to dashboard
-    if (isAuthenticated && isAuthRoute) {
-      router.push('/dashboard');
-      return;
-    }
-  }, [isAuthenticated, isLoading, pathname, router, isDevMode, loginAsDev]);
+  }, [isAuthenticated, isLoading, pathname, router, isLocalMode, isCloudMode, switchToLocalMode, storageMode, user]);
 
   // Show loading state while checking auth
   if (isLoading) {
@@ -71,13 +84,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // In dev mode, always render children
-  if (isDevMode()) {
+  // In local mode, always render children
+  if (isLocalMode()) {
     return <>{children}</>;
   }
 
-  // Check if current route is public
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  // Cloud mode: Check if current route is public
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
 
   // If not authenticated and not a public route, show loading while redirecting
   if (!isAuthenticated && !isPublicRoute) {
@@ -94,23 +107,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   return <>{children}</>;
 }
 
-// Hook to check if user has required subscription level
-export function useRequireSubscription(requiredPlan: 'free' | 'pro' | 'enterprise' = 'free') {
-  const { user } = useAuthStore();
-  
-  const planHierarchy = { free: 0, pro: 1, enterprise: 2 };
-  const userPlanLevel = planHierarchy[user?.subscription?.plan || 'free'];
-  const requiredPlanLevel = planHierarchy[requiredPlan];
-  
-  return {
-    hasAccess: userPlanLevel >= requiredPlanLevel,
-    currentPlan: user?.subscription?.plan || 'free',
-    requiredPlan,
-  };
-}
-
 // Hook to get current user
 export function useUser() {
-  const { user, isAuthenticated } = useAuthStore();
-  return { user, isAuthenticated };
+  const { user, isAuthenticated, storageMode } = useAuthStore();
+  return { user, isAuthenticated, storageMode };
+}
+
+// Hook to check storage mode
+export function useStorageMode() {
+  const { storageMode, isLocalMode, isCloudMode, switchToLocalMode, switchToCloudMode } = useAuthStore();
+  return { storageMode, isLocalMode: isLocalMode(), isCloudMode: isCloudMode(), switchToLocalMode, switchToCloudMode };
 }

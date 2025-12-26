@@ -24,19 +24,33 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { initializeAuth } = useAuthStore();
 
   useEffect(() => {
+    // Initialize auth state - use getState() to avoid re-renders from function reference changes
     const init = async () => {
-      // Initialize auth state from persisted storage
-      await initializeAuth();
-      setIsInitialized(true);
+      try {
+        await useAuthStore.getState().initializeAuth();
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setIsInitialized(true);
+      }
     };
 
     init();
-  }, [initializeAuth]);
+    
+    // Failsafe timeout - if initialization takes too long, proceed anyway
+    const failsafeTimer = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn('Auth initialization timeout - proceeding anyway');
+        setIsInitialized(true);
+      }
+    }, 5000);
+    
+    return () => clearTimeout(failsafeTimer);
+  }, []); // No dependencies - run once on mount
 
-  // Show nothing while initializing to prevent flash of content
+  // Show loading while initializing
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

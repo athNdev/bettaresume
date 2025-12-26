@@ -2,7 +2,7 @@
  * Authentication Store
  * 
  * Manages authentication state using Zustand.
- * Supports both development (demo) mode and production (Cognito) mode.
+ * Supports Local Mode (no auth) and Cloud Mode (with auth).
  */
 
 import { create } from 'zustand';
@@ -15,6 +15,9 @@ import type {
   ChangePasswordCredentials,
   UserPreferences,
 } from '@/types/auth';
+import { LOCAL_MODE_USER } from '@/types/auth';
+import type { StorageMode } from '@/config/storage.config';
+import { getStorageMode, setStorageMode as persistStorageMode } from '@/config/storage.config';
 import { 
   IS_DEV_MODE, 
   devAccount, 
@@ -35,9 +38,16 @@ interface AuthStore extends AuthState {
   clearError: () => void;
   initializeAuth: () => Promise<void>;
   
+  // Storage mode actions
+  setStorageMode: (mode: StorageMode) => void;
+  switchToLocalMode: () => void;
+  switchToCloudMode: () => void;
+  
   // Dev mode helpers
   loginAsDev: () => void;
   isDevMode: () => boolean;
+  isLocalMode: () => boolean;
+  isCloudMode: () => boolean;
 }
 
 // Simulated delay for dev mode to mimic real auth
@@ -63,6 +73,7 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
       error: null,
       sessionExpiresAt: null,
+      storageMode: 'local' as StorageMode,
 
       // Login action
       login: async (credentials: LoginCredentials) => {
@@ -104,11 +115,6 @@ export const useAuthStore = create<AuthStore>()(
               picture: null,
               createdAt: new Date().toISOString(),
               emailVerified: true,
-              subscription: {
-                plan: 'pro',
-                status: 'active',
-                expiresAt: null,
-              },
               preferences: {
                 theme: 'dark',
                 emailNotifications: true,
@@ -184,11 +190,6 @@ export const useAuthStore = create<AuthStore>()(
               picture: null,
               createdAt: new Date().toISOString(),
               emailVerified: true, // Auto-verify in dev mode
-              subscription: {
-                plan: 'free',
-                status: 'active',
-                expiresAt: null,
-              },
               preferences: {
                 theme: 'dark',
                 emailNotifications: true,
@@ -387,21 +388,30 @@ export const useAuthStore = create<AuthStore>()(
       initializeAuth: async () => {
         const state = get();
         
-        // If in dev mode and no user is set, don't auto-login
-        // Let ProtectedRoute handle it
+        // Load storage mode from localStorage
+        const storedMode = getStorageMode();
+        set({ storageMode: storedMode });
+        
+        // If in local mode, use local user
+        if (storedMode === 'local') {
+          set({
+            user: LOCAL_MODE_USER,
+            isAuthenticated: true,
+          });
+          return;
+        }
+        
+        // If in dev mode and cloud mode, don't auto-login
         if (IS_DEV_MODE || !isCognitoConfigured()) {
-          // Just restore from persisted state (handled by zustand persist)
           return;
         }
 
-        // In production mode, check if session is still valid
+        // In production cloud mode, check if session is still valid
         if (state.isAuthenticated && state.sessionExpiresAt) {
           const expiresAt = new Date(state.sessionExpiresAt);
           if (expiresAt > new Date()) {
-            // Session still valid, try to refresh
             await get().refreshSession();
           } else {
-            // Session expired, clear auth state
             set({
               user: null,
               isAuthenticated: false,
@@ -409,6 +419,34 @@ export const useAuthStore = create<AuthStore>()(
             });
           }
         }
+      },
+
+      // Storage mode actions
+      setStorageMode: (mode: StorageMode) => {
+        persistStorageMode(mode);
+        set({ storageMode: mode });
+      },
+
+      switchToLocalMode: () => {
+        persistStorageMode('local');
+        set({
+          storageMode: 'local',
+          user: LOCAL_MODE_USER,
+          isAuthenticated: true,
+          error: null,
+          sessionExpiresAt: null,
+        });
+      },
+
+      switchToCloudMode: () => {
+        persistStorageMode('cloud');
+        set({
+          storageMode: 'cloud',
+          user: null,
+          isAuthenticated: false,
+          error: null,
+          sessionExpiresAt: null,
+        });
       },
 
       // Dev mode login helper
@@ -424,6 +462,10 @@ export const useAuthStore = create<AuthStore>()(
 
       // Check if in dev mode
       isDevMode: () => IS_DEV_MODE || !isCognitoConfigured(),
+      
+      // Check storage modes
+      isLocalMode: () => get().storageMode === 'local',
+      isCloudMode: () => get().storageMode === 'cloud',
     }),
     {
       name: 'betta-resume-auth',
@@ -431,6 +473,7 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         sessionExpiresAt: state.sessionExpiresAt,
+        storageMode: state.storageMode,
       }),
     }
   )

@@ -60,6 +60,11 @@ export const useResumeStore = create<ResumeStore>()(
       activeResume: null,
       versions: [],
       activityLog: [],
+      _hasHydrated: false,
+      
+      setHasHydrated: (state: boolean) => {
+        set({ _hasHydrated: state });
+      },
 
       createResume: (name: string, template: TemplateType, domain?: string) => {
         const newResume = createDefaultResume(name, template, domain);
@@ -597,6 +602,28 @@ export const useResumeStore = create<ResumeStore>()(
       loadFromLocalStorage: () => {},
       saveToLocalStorage: () => {},
     }),
-    { name: 'betta-resume-storage' }
+    { 
+      name: 'betta-resume-storage',
+      partialize: (state) => ({
+        // Only persist these fields (not _hasHydrated, activeResume)
+        resumes: state.resumes,
+        activeResumeId: state.activeResumeId,
+        versions: state.versions,
+        activityLog: state.activityLog,
+      }),
+    }
   )
 );
+
+// Hydration handling - must happen after store is created
+// Using setTimeout to ensure this runs after the persist middleware rehydrates
+if (typeof window !== 'undefined') {
+  const unsubFinishHydration = useResumeStore.persist.onFinishHydration(() => {
+    useResumeStore.setState({ _hasHydrated: true });
+  });
+  
+  // Also set hydrated immediately if rehydration already happened
+  if (useResumeStore.persist.hasHydrated()) {
+    useResumeStore.setState({ _hasHydrated: true });
+  }
+}

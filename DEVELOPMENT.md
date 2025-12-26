@@ -5,7 +5,21 @@
 The application is fully set up and ready to use. Access it at:
 **http://localhost:3000**
 
-### Development Mode (Default)
+### Storage Modes
+The application supports two storage modes:
+
+1. **Local Mode** (Default)
+   - All data stored in browser localStorage
+   - No account required
+   - Full feature access
+   - Data persists only in current browser
+
+2. **Cloud Mode** (Optional)
+   - Data synced to cloud server
+   - Requires AWS Cognito account
+   - Access from any device
+
+### Development Mode
 In development mode, the app auto-logs in with a demo account:
 - Email: `demo@bettaresume.com`
 - No password required - automatic login
@@ -19,16 +33,17 @@ To use AWS Cognito authentication:
 ## Authentication System
 
 ### Modes
-- **Development Mode**: Auto-login with demo account, no real auth required
-- **Production Mode**: Full AWS Cognito authentication
+- **Local Mode**: No authentication required, data stored locally
+- **Cloud Mode (Development)**: Auto-login with demo account
+- **Cloud Mode (Production)**: Full AWS Cognito authentication
 
 ### Auth Pages
-- `/login` - User login
-- `/register` - New user registration  
+- `/login` - User login (Cloud Mode only)
+- `/register` - New user registration (Cloud Mode only)
 - `/forgot-password` - Password reset request
 - `/reset-password` - Set new password
 - `/verify-email` - Email verification
-- `/account` - Account settings (profile, subscription, security)
+- `/account` - Account settings (profile, storage mode)
 
 ### Environment Variables
 ```bash
@@ -43,6 +58,7 @@ NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ### Key Auth Files
 - `src/config/auth.config.ts` - Auth configuration
+- `src/config/storage.config.ts` - Storage mode configuration
 - `src/store/auth-store.ts` - Auth state management
 - `src/lib/cognito.ts` - AWS Cognito API
 - `src/components/auth/` - Auth components (ProtectedRoute, UserMenu, AuthProvider)
@@ -61,6 +77,7 @@ NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 - JSON export/import
 - User authentication (dev/prod modes)
 - Account management
+- Storage mode selection (Local/Cloud)
 
 ## Architecture Overview
 
@@ -89,9 +106,10 @@ User {
   id: string
   email: string
   name: string
-  subscription: { plan, status }
   preferences: { theme, emailNotifications, autoSave }
 }
+
+StorageMode = 'local' | 'cloud'
 ```
 
 ### Key Files

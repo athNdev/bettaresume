@@ -25,19 +25,18 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { SUBSCRIPTION_PLANS } from '@/types/auth';
+import { STORAGE_MODE_INFO } from '@/config/storage.config';
 import { 
   ArrowLeft,
   User,
   Bell,
-  CreditCard,
+  HardDrive,
+  Cloud,
   Shield,
   Trash2,
   Loader2,
   AlertCircle,
   CheckCircle,
-  Crown,
-  Sparkles,
 } from 'lucide-react';
 
 export default function AccountPage() {
@@ -49,7 +48,10 @@ export default function AccountPage() {
     changePassword, 
     deleteAccount,
     logout,
-    isLoading 
+    isLoading,
+    storageMode,
+    switchToLocalMode,
+    switchToCloudMode,
   } = useAuthStore();
 
   const [name, setName] = useState(user?.name || '');
@@ -71,8 +73,6 @@ export default function AccountPage() {
       </div>
     );
   }
-
-  const subscriptionFeatures = SUBSCRIPTION_PLANS[user.subscription.plan];
 
   const handleSaveProfile = () => {
     updateUser({ name });
@@ -196,64 +196,93 @@ export default function AccountPage() {
             </CardContent>
           </Card>
 
-          {/* Subscription Section */}
+          {/* Storage Mode Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Subscription
+                {storageMode === 'local' ? <HardDrive className="h-5 w-5" /> : <Cloud className="h-5 w-5" />}
+                Storage Mode
               </CardTitle>
               <CardDescription>
-                Manage your subscription and billing
+                Choose where your resume data is stored
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  {user.subscription.plan === 'pro' && (
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Crown className="h-5 w-5 text-primary" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Local Mode Card */}
+                <div 
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    storageMode === 'local' 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-muted hover:border-muted-foreground/30'
+                  }`}
+                  onClick={switchToLocalMode}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      storageMode === 'local' ? 'bg-primary/10' : 'bg-muted'
+                    }`}>
+                      <HardDrive className={`h-5 w-5 ${storageMode === 'local' ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
-                  )}
-                  {user.subscription.plan === 'enterprise' && (
-                    <div className="w-10 h-10 bg-purple-500/10 rounded-full flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-purple-500" />
+                    <div>
+                      <p className="font-semibold">{STORAGE_MODE_INFO.local.name}</p>
+                      <p className="text-xs text-muted-foreground">{STORAGE_MODE_INFO.local.description}</p>
                     </div>
-                  )}
-                  {user.subscription.plan === 'free' && (
-                    <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                      <User className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-semibold capitalize">{user.subscription.plan} Plan</p>
-                    <p className="text-sm text-muted-foreground">
-                      {user.subscription.status === 'active' ? 'Active' : user.subscription.status}
-                    </p>
+                    {storageMode === 'local' && (
+                      <Badge className="ml-auto">Active</Badge>
+                    )}
                   </div>
-                </div>
-                <Badge variant={user.subscription.plan === 'free' ? 'secondary' : 'default'}>
-                  {user.subscription.plan === 'free' ? 'Upgrade' : 'Current'}
-                </Badge>
-              </div>
-
-              {subscriptionFeatures && (
-                <div className="grid gap-2 text-sm">
-                  <p className="text-muted-foreground font-medium">Plan features:</p>
-                  <ul className="grid gap-1 text-muted-foreground">
-                    <li>• {subscriptionFeatures.maxResumes === -1 ? 'Unlimited' : subscriptionFeatures.maxResumes} resumes</li>
-                    <li>• {subscriptionFeatures.maxVersionsPerResume === -1 ? 'Unlimited' : subscriptionFeatures.maxVersionsPerResume} versions per resume</li>
-                    <li>• {subscriptionFeatures.aiAssistant ? 'AI Assistant included' : 'No AI Assistant'}</li>
-                    <li>• Export: {subscriptionFeatures.exportFormats.join(', ').toUpperCase()}</li>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    {STORAGE_MODE_INFO.local.features.slice(0, 3).map((f, i) => (
+                      <li key={i} className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {f}
+                      </li>
+                    ))}
                   </ul>
                 </div>
-              )}
 
-              {user.subscription.plan === 'free' && (
-                <Button className="w-full sm:w-auto">
-                  <Crown className="h-4 w-4 mr-2" />
-                  Upgrade to Pro
-                </Button>
+                {/* Cloud Mode Card */}
+                <div 
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    storageMode === 'cloud' 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-muted hover:border-muted-foreground/30'
+                  }`}
+                  onClick={switchToCloudMode}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      storageMode === 'cloud' ? 'bg-primary/10' : 'bg-muted'
+                    }`}>
+                      <Cloud className={`h-5 w-5 ${storageMode === 'cloud' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{STORAGE_MODE_INFO.cloud.name}</p>
+                      <p className="text-xs text-muted-foreground">{STORAGE_MODE_INFO.cloud.description}</p>
+                    </div>
+                    {storageMode === 'cloud' && (
+                      <Badge className="ml-auto">Active</Badge>
+                    )}
+                  </div>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    {STORAGE_MODE_INFO.cloud.features.slice(0, 3).map((f, i) => (
+                      <li key={i} className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {storageMode === 'local' && (
+                <Alert>
+                  <HardDrive className="h-4 w-4" />
+                  <AlertDescription>
+                    Your data is stored only in this browser. Clearing browser data will delete your resumes.
+                  </AlertDescription>
+                </Alert>
               )}
             </CardContent>
           </Card>
@@ -427,7 +456,6 @@ export default function AccountPage() {
                       <ul className="list-disc list-inside text-sm space-y-1">
                         <li>All your resumes and versions</li>
                         <li>Your account settings and preferences</li>
-                        <li>Your subscription (no refunds)</li>
                       </ul>
                       <div className="pt-4">
                         <Label htmlFor="deleteConfirm" className="text-foreground">
