@@ -330,8 +330,6 @@ export default function Dashboard() {
                   <span className="font-medium truncate text-sm">{resume.name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 ml-3">
-                  <span>v{resume.version}</span>
-                  <span>·</span>
                   <span>{resume.sections.filter(s => s.visible).length} sections</span>
                   <span>·</span>
                   <span className="flex items-center gap-1">
@@ -498,7 +496,6 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="capitalize">{resume.template}</span>
-            <span>v{resume.version}</span>
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {formatDistanceToNow(new Date(resume.updatedAt), { addSuffix: true })}

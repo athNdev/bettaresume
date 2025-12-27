@@ -4,7 +4,6 @@
       {
         "id": "resume-software-engineer-001",
         "name": "Alex Chen - Senior Software Engineer",
-        "version": 3,
         "variationType": "base",
         "createdAt": "2025-10-15T08:30:00.000Z",
         "updatedAt": "2025-12-20T14:25:00.000Z",
@@ -238,7 +237,6 @@
       {
         "id": "resume-data-scientist-001",
         "name": "Dr. Sarah Martinez - Data Scientist",
-        "version": 2,
         "variationType": "base",
         "createdAt": "2025-09-01T10:00:00.000Z",
         "updatedAt": "2025-12-18T16:45:00.000Z",
@@ -448,7 +446,6 @@
       {
         "id": "resume-product-manager-001",
         "name": "Michael Johnson - Product Manager",
-        "version": 2,
         "variationType": "base",
         "createdAt": "2025-08-15T09:00:00.000Z",
         "updatedAt": "2025-12-15T11:30:00.000Z",
@@ -654,7 +651,6 @@
       {
         "id": "resume-ux-designer-001",
         "name": "Emily Rodriguez - UX Designer",
-        "version": 2,
         "variationType": "base",
         "createdAt": "2025-07-20T14:00:00.000Z",
         "updatedAt": "2025-12-10T09:15:00.000Z",
@@ -870,7 +866,6 @@
       {
         "id": "resume-devops-engineer-001",
         "name": "David Kim - DevOps Engineer",
-        "version": 2,
         "variationType": "base",
         "createdAt": "2025-06-10T11:00:00.000Z",
         "updatedAt": "2025-12-05T15:20:00.000Z",
@@ -1094,7 +1089,6 @@
       }
     ],
     "activeResumeId": null,
-    "versions": [],
     "activityLog": []
   },
   "version": 0

@@ -17,39 +17,6 @@ export interface Resume {
   pages?: ResumePage[]; // Multi-page support
 }
 
-// Sync and Conflict Resolution Types
-export interface SyncConflict {
-  id: string;
-  sectionId: string;
-  sectionType: SectionType;
-  sectionTitle: string;
-  fieldPath: string;
-  fieldName: string;
-  baseValue: unknown;
-  variationValue: unknown;
-  resolution?: 'keep-base' | 'keep-variation' | 'merged';
-  resolvedValue?: unknown;
-}
-
-export interface SyncResult {
-  success: boolean;
-  conflicts: SyncConflict[];
-  autoMergedSections: string[];
-  timestamp: string;
-}
-
-export interface SyncPreview {
-  addedSections: ResumeSection[];
-  removedSections: ResumeSection[];
-  modifiedSections: {
-    sectionId: string;
-    sectionType: SectionType;
-    sectionTitle: string;
-    conflicts: SyncConflict[];
-  }[];
-  noChanges: boolean;
-}
-
 // Multi-page support
 export interface ResumePage {
   id: string;
@@ -66,6 +33,7 @@ export interface ResumeSection {
   content: SectionContent;
   layout?: SectionLayout;
   pageId?: string; // Which page this section belongs to (optional for backward compatibility)
+  linkedToBase?: boolean; // For tailored copies: true = auto-syncs with base, false = customized locally
 }
 
 export type SectionType =
@@ -351,7 +319,6 @@ export interface ResumeStore {
   activeResumeId: string | null;
   activeResume: Resume | null;
   activityLog: ActivityLog[];
-  pendingConflicts: SyncConflict[];
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
   
@@ -369,16 +336,17 @@ export interface ResumeStore {
   reorderSections: (resumeId: string, sectionIds: string[]) => void;
   duplicateSection: (resumeId: string, sectionId: string) => void;
   
-  // Variation management
+  // Tailored copy management
   createVariation: (baseResumeId: string, domain: string, name: string) => string;
+  createVariationFromSection: (baseResumeId: string, sectionId: string, domain: string, name: string, customizedContent: Partial<ResumeSection>) => string;
   getVariations: (baseResumeId: string) => Resume[];
+  duplicateVariation: (variationId: string, newName: string) => string;
   
-  // Sync functionality
-  getSyncPreview: (variationId: string) => SyncPreview | null;
-  syncWithBase: (variationId: string, autoResolve?: boolean) => SyncResult | null;
-  resolveConflict: (conflictId: string, resolution: 'keep-base' | 'keep-variation', customValue?: unknown) => void;
-  applyResolvedConflicts: (variationId: string) => void;
-  clearPendingConflicts: () => void;
+  // Section linking (for tailored copies)
+  customizeSection: (resumeId: string, sectionId: string) => void; // Mark section as customized (unlink from base)
+  resetSectionToBase: (resumeId: string, sectionId: string) => void; // Re-link section to base
+  syncLinkedSections: (variationId: string) => void; // Update all linked sections from base
+  getSectionLinkStatus: (resumeId: string, sectionId: string) => 'linked' | 'customized' | 'base';
   
   updateSettings: (resumeId: string, settings: PartialResumeSettings) => void;
   updateTemplate: (resumeId: string, template: TemplateType) => void;

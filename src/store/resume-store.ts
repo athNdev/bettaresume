@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Resume, ResumeSection, ResumeStore, ResumeVersion, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage } from '@/types/resume';
+import type { Resume, ResumeSection, ResumeStore, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage } from '@/types/resume';
 import { TEMPLATE_CONFIGS, SECTION_CONFIGS } from '@/types/resume';
 
 const createDefaultSettings = (template: TemplateType): ResumeSettings => ({
@@ -21,7 +21,6 @@ const createDefaultResume = (name: string, template: TemplateType, domain?: stri
   return {
     id: crypto.randomUUID(),
     name,
-    version: 1,
     variationType: 'base',
     domain,
     createdAt: now,
@@ -58,7 +57,6 @@ export const useResumeStore = create<ResumeStore>()(
       resumes: [],
       activeResumeId: null,
       activeResume: null,
-      versions: [],
       activityLog: [],
       _hasHydrated: false,
       
@@ -86,14 +84,62 @@ export const useResumeStore = create<ResumeStore>()(
           const resumes = state.resumes.filter((r) => r.id !== id);
           const activeResumeId = state.activeResumeId === id ? null : state.activeResumeId;
           const activeResume = activeResumeId ? resumes.find((r) => r.id === activeResumeId) || null : null;
-          const versions = state.versions.filter((v) => v.resumeId !== id);
-          return { resumes, activeResumeId, activeResume, versions, activityLog: [...state.activityLog, activity] };
+          return { resumes, activeResumeId, activeResume, activityLog: [...state.activityLog, activity] };
         });
       },
 
       setActiveResume: (id: string) => {
         const resume = get().resumes.find((r) => r.id === id);
-        if (resume) set({ activeResumeId: id, activeResume: resume });
+        if (resume) {
+          // Auto-sync linked sections when opening a tailored copy
+          if (resume.variationType === 'variation' && resume.baseResumeId) {
+            const baseResume = get().resumes.find((r) => r.id === resume.baseResumeId);
+            if (baseResume) {
+              // Sync linked sections silently
+              const syncedSections = resume.sections.map(section => {
+                if (section.linkedToBase !== false) {
+                  const baseSection = baseResume.sections.find(s => s.type === section.type);
+                  if (baseSection) {
+                    return {
+                      ...section,
+                      content: JSON.parse(JSON.stringify(baseSection.content)),
+                      visible: baseSection.visible,
+                      linkedToBase: true,
+                    };
+                  }
+                }
+                return section;
+              });
+              
+              // Add any new sections from base
+              const variationTypes = new Set(resume.sections.map(s => s.type));
+              baseResume.sections.forEach(baseSection => {
+                if (!variationTypes.has(baseSection.type)) {
+                  syncedSections.push({
+                    ...JSON.parse(JSON.stringify(baseSection)),
+                    id: crypto.randomUUID(),
+                    order: syncedSections.length,
+                    linkedToBase: true,
+                  });
+                }
+              });
+              
+              const syncedResume = {
+                ...resume,
+                sections: syncedSections,
+                lastSyncedAt: new Date().toISOString(),
+              };
+              
+              set((state) => ({
+                activeResumeId: id,
+                activeResume: syncedResume,
+                resumes: state.resumes.map(r => r.id === id ? syncedResume : r),
+              }));
+              return;
+            }
+          }
+          set({ activeResumeId: id, activeResume: resume });
+        }
       },
 
       updateResume: (id: string, updates: Partial<Resume>) => {
@@ -116,11 +162,14 @@ export const useResumeStore = create<ResumeStore>()(
           name: newName,
           baseResumeId: undefined,
           variationType: 'base',
-          version: 1,
           createdAt: now,
           updatedAt: now,
         };
-        duplicate.sections = duplicate.sections.map((s: ResumeSection) => ({ ...s, id: crypto.randomUUID() }));
+        duplicate.sections = duplicate.sections.map((s: ResumeSection) => ({ 
+          ...s, 
+          id: crypto.randomUUID(),
+          linkedToBase: undefined,
+        }));
         const activity = logActivity(duplicate.id, 'duplicated', `Duplicated from "${original.name}"`);
         set((state) => ({
           resumes: [...state.resumes, duplicate],
@@ -146,7 +195,7 @@ export const useResumeStore = create<ResumeStore>()(
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const newSection: ResumeSection = { ...section, id: crypto.randomUUID(), order: r.sections.length };
-            return { ...r, sections: [...r.sections, newSection], currentVersionId: undefined, updatedAt: new Date().toISOString() };
+            return { ...r, sections: [...r.sections, newSection], updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           const activity = logActivity(resumeId, 'section_added', `Added ${section.type} section`);
@@ -161,7 +210,6 @@ export const useResumeStore = create<ResumeStore>()(
             return {
               ...r,
               sections: r.sections.map((s) => s.id === sectionId ? { ...s, ...updates } : s),
-              currentVersionId: undefined, // Clear when content is edited
               updatedAt: new Date().toISOString(),
             };
           });
@@ -174,11 +222,15 @@ export const useResumeStore = create<ResumeStore>()(
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            const sections = r.sections.filter((s) => s.id !== sectionId).map((s, index) => ({ ...s, order: index }));
-            return { ...r, sections, currentVersionId: undefined, updatedAt: new Date().toISOString() };
+            const sections = r.sections.filter((s) => s.id !== sectionId);
+            return {
+              ...r,
+              sections: sections.map((s, i) => ({ ...s, order: i })),
+              updatedAt: new Date().toISOString(),
+            };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
-          const activity = logActivity(resumeId, 'section_removed', `Removed section`);
+          const activity = logActivity(resumeId, 'section_removed', 'Removed section');
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
       },
@@ -187,8 +239,10 @@ export const useResumeStore = create<ResumeStore>()(
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            const sectionMap = new Map(r.sections.map((s) => [s.id, s]));
-            const sections = sectionIds.map((id) => sectionMap.get(id)).filter((s): s is ResumeSection => s !== undefined).map((s, index) => ({ ...s, order: index }));
+            const sections = sectionIds.map((id, index) => {
+              const section = r.sections.find((s) => s.id === id);
+              return section ? { ...section, order: index } : null;
+            }).filter(Boolean) as ResumeSection[];
             return { ...r, sections, updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
@@ -200,135 +254,33 @@ export const useResumeStore = create<ResumeStore>()(
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            const original = r.sections.find((s) => s.id === sectionId);
-            if (!original) return r;
-            const duplicate: ResumeSection = {
-              ...JSON.parse(JSON.stringify(original)),
+            const section = r.sections.find((s) => s.id === sectionId);
+            if (!section) return r;
+            const newSection: ResumeSection = {
+              ...JSON.parse(JSON.stringify(section)),
               id: crypto.randomUUID(),
               order: r.sections.length,
-              content: { ...original.content, title: `${original.content.title || original.type} (Copy)` },
+              linkedToBase: false,
             };
-            return { ...r, sections: [...r.sections, duplicate], updatedAt: new Date().toISOString() };
+            return { ...r, sections: [...r.sections, newSection], updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
       },
 
-      createVersion: (resumeId: string, description?: string) => {
-        const resume = get().resumes.find((r) => r.id === resumeId);
-        if (!resume) return;
-        const version: ResumeVersion = {
-          id: crypto.randomUUID(),
-          resumeId,
-          version: resume.version,
-          snapshot: JSON.parse(JSON.stringify(resume)),
-          createdAt: new Date().toISOString(),
-          changeDescription: description,
-        };
-        set((state) => {
-          const resumes = state.resumes.map((r) => r.id === resumeId ? { ...r, version: r.version + 1, updatedAt: new Date().toISOString() } : r);
-          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
-          return { versions: [...state.versions, version], resumes, activeResume };
-        });
-      },
-
-      getVersions: (resumeId: string) => {
-        return get().versions.filter((v) => v.resumeId === resumeId).sort((a, b) => b.version - a.version);
-      },
-
-      restoreVersion: (resumeId: string, versionId: string) => {
-        const version = get().versions.find((v) => v.id === versionId);
-        if (!version) return;
-        const activity = logActivity(resumeId, 'version_restored', `Restored to version ${version.version}`);
-        set((state) => {
-          const restored = { ...version.snapshot, id: resumeId, updatedAt: new Date().toISOString() };
-          const resumes = state.resumes.map((r) => r.id === resumeId ? restored : r);
-          const activeResume = state.activeResumeId === resumeId ? restored : state.activeResume;
-          return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
-        });
-      },
-
-      switchToVersion: (resumeId: string, versionId: string) => {
-        const version = get().versions.find((v) => v.id === versionId);
-        if (!version || !version.snapshot) return null;
-        
-        // Check if snapshot has actual data (not just empty object)
-        const snapshotCopy = JSON.parse(JSON.stringify(version.snapshot));
-        if (!snapshotCopy.sections || snapshotCopy.sections.length === 0) {
-          console.warn('Version snapshot is empty or has no sections');
-          return null;
-        }
-        
-        // Restore this version's content to the BASE resume (keeps all history)
-        const baseResumeId = version.resumeId;
-        const baseResume = get().resumes.find((r) => r.id === baseResumeId);
-        if (!baseResume) return null;
-        
-        const now = new Date().toISOString();
-        
-        // Use snapshot sections directly (they already have IDs)
-        const sections = snapshotCopy.sections;
-        
-        // Ensure metadata and settings exist
-        const template = snapshotCopy.template || baseResume.template || 'modern';
-        const defaultSettings = createDefaultSettings(template as TemplateType);
-        const metadata = {
-          personalInfo: snapshotCopy.metadata?.personalInfo || baseResume.metadata?.personalInfo || { fullName: '', email: '' },
-          settings: snapshotCopy.metadata?.settings 
-            ? { ...defaultSettings, ...snapshotCopy.metadata.settings }
-            : baseResume.metadata?.settings || defaultSettings,
-        };
-        
-        // Restore version content to the existing resume (preserves history!)
-        // Set currentVersionId to track which saved version we're viewing
-        const restoredResume: Resume = {
-          ...baseResume, // Keep the base resume's identity (id, name, version number, etc.)
-          sections,
-          metadata,
-          template,
-          currentVersionId: versionId, // Track which saved version is being viewed
-          updatedAt: now,
-        };
-        
-        const activity = logActivity(baseResumeId, 'version_restored', `Switched to version ${version.version}`);
-        set((state) => ({
-          resumes: state.resumes.map((r) => r.id === baseResumeId ? restoredResume : r),
-          activeResumeId: baseResumeId,
-          activeResume: restoredResume,
-          activityLog: [...state.activityLog, activity],
-        }));
-        
-        return baseResumeId;
-      },
-
-      deleteVersion: (versionId: string) => {
-        set((state) => ({ versions: state.versions.filter((v) => v.id !== versionId) }));
-      },
-
-      deleteVersionWithVariations: (versionId: string) => {
-        const version = get().versions.find((v) => v.id === versionId);
-        if (!version) return;
-        
-        // Find and delete all variations created from this version
-        const variationsToDelete = get().resumes.filter(
-          r => r.baseResumeId === version.resumeId && r.createdFromVersion === version.version
-        );
-        
-        const activity = logActivity(version.resumeId, 'version_deleted', 
-          `Deleted version ${version.version}${variationsToDelete.length > 0 ? ` and ${variationsToDelete.length} variation(s)` : ''}`
-        );
-        
-        set((state) => ({
-          versions: state.versions.filter((v) => v.id !== versionId),
-          resumes: state.resumes.filter((r) => !variationsToDelete.some(v => v.id === r.id)),
-          activityLog: [...state.activityLog, activity],
-        }));
-      },
+      // ============== TAILORED COPY MANAGEMENT ==============
 
       createVariation: (baseResumeId: string, domain: string, name: string) => {
         const baseResume = get().resumes.find((r) => r.id === baseResumeId);
         if (!baseResume) return '';
+        
+        // Cannot create tailored copy from another tailored copy
+        if (baseResume.variationType === 'variation') {
+          console.warn('Cannot create tailored copy from another tailored copy. Use duplicateVariation instead.');
+          return '';
+        }
+        
         const now = new Date().toISOString();
         const variation: Resume = {
           ...JSON.parse(JSON.stringify(baseResume)),
@@ -337,16 +289,80 @@ export const useResumeStore = create<ResumeStore>()(
           baseResumeId,
           variationType: 'variation',
           domain,
-          version: 1,
           createdAt: now,
           updatedAt: now,
-          createdFromVersion: baseResume.version, // Track which version this variation was created from
+          lastSyncedAt: now,
           tags: [...(baseResume.tags || []), domain],
         };
-        variation.sections = variation.sections.map((s: ResumeSection) => ({ ...s, id: crypto.randomUUID() }));
-        const activity = logActivity(variation.id, 'variation_created', `Created variation "${name}" for ${domain}`);
+        // All sections start linked to base
+        variation.sections = variation.sections.map((s: ResumeSection) => ({ 
+          ...s, 
+          id: crypto.randomUUID(),
+          linkedToBase: true,
+        }));
+        
+        const activity = logActivity(variation.id, 'variation_created', `Created tailored copy "${name}" for ${domain}`);
         set((state) => ({
           resumes: [...state.resumes, variation],
+          activeResumeId: variation.id,
+          activeResume: variation,
+          activityLog: [...state.activityLog, activity],
+        }));
+        return variation.id;
+      },
+
+      createVariationFromSection: (baseResumeId: string, sectionId: string, domain: string, name: string, customizedContent: Partial<ResumeSection>) => {
+        const baseResume = get().resumes.find((r) => r.id === baseResumeId);
+        if (!baseResume) return '';
+        
+        // Cannot create tailored copy from another tailored copy
+        if (baseResume.variationType === 'variation') {
+          console.warn('Cannot create tailored copy from another tailored copy. Use duplicateVariation instead.');
+          return '';
+        }
+        
+        const now = new Date().toISOString();
+        const variation: Resume = {
+          ...JSON.parse(JSON.stringify(baseResume)),
+          id: crypto.randomUUID(),
+          name,
+          baseResumeId,
+          variationType: 'variation',
+          domain,
+          createdAt: now,
+          updatedAt: now,
+          lastSyncedAt: now,
+          tags: [...(baseResume.tags || []), domain],
+        };
+        
+        // Find the section being customized
+        const originalSection = baseResume.sections.find(s => s.id === sectionId);
+        
+        // All sections start linked to base, except the one being customized
+        variation.sections = variation.sections.map((s: ResumeSection) => {
+          const newId = crypto.randomUUID();
+          if (originalSection && s.type === originalSection.type) {
+            return { 
+              ...s, 
+              ...customizedContent,
+              id: newId,
+              linkedToBase: false,
+            };
+          }
+          return { 
+            ...s, 
+            id: newId,
+            linkedToBase: true,
+          };
+        });
+        
+        const sectionLabel = originalSection ? SECTION_CONFIGS[originalSection.type]?.label || originalSection.type : 'section';
+        const activity = logActivity(variation.id, 'variation_created', `Created tailored copy "${name}" for ${domain} (customized ${sectionLabel})`);
+        
+        set((state) => ({
+          resumes: [...state.resumes, variation],
+          activeResumeId: variation.id,
+          activeResume: variation,
           activityLog: [...state.activityLog, activity],
         }));
         return variation.id;
@@ -356,31 +372,159 @@ export const useResumeStore = create<ResumeStore>()(
         return get().resumes.filter((r) => r.baseResumeId === baseResumeId);
       },
 
-      syncWithBase: (variationId: string) => {
-        const variation = get().resumes.find((r) => r.id === variationId);
-        if (!variation || !variation.baseResumeId) return;
-        const base = get().resumes.find((r) => r.id === variation.baseResumeId);
-        if (!base) return;
+      duplicateVariation: (variationId: string, newName: string) => {
+        const original = get().resumes.find((r) => r.id === variationId);
+        if (!original || original.variationType !== 'variation') return '';
+        
+        const now = new Date().toISOString();
+        const duplicate: Resume = {
+          ...JSON.parse(JSON.stringify(original)),
+          id: crypto.randomUUID(),
+          name: newName,
+          createdAt: now,
+          updatedAt: now,
+          lastSyncedAt: now,
+        };
+        duplicate.sections = duplicate.sections.map((s: ResumeSection) => ({ 
+          ...s, 
+          id: crypto.randomUUID(),
+        }));
+        
+        const activity = logActivity(duplicate.id, 'duplicated', `Copied tailored copy from "${original.name}"`);
+        set((state) => ({
+          resumes: [...state.resumes, duplicate],
+          activeResumeId: duplicate.id,
+          activeResume: duplicate,
+          activityLog: [...state.activityLog, activity],
+        }));
+        return duplicate.id;
+      },
+
+      // ============== SECTION LINKING ==============
+
+      customizeSection: (resumeId: string, sectionId: string) => {
+        const resume = get().resumes.find(r => r.id === resumeId);
+        if (!resume || resume.variationType !== 'variation') return;
+        
         set((state) => {
-          const synced: Resume = {
-            ...variation,
-            metadata: { ...base.metadata, ...variation.metadata },
-            template: base.template,
-            updatedAt: new Date().toISOString(),
-          };
-          const resumes = state.resumes.map((r) => r.id === variationId ? synced : r);
-          const activeResume = state.activeResumeId === variationId ? synced : state.activeResume;
+          const resumes = state.resumes.map((r) => {
+            if (r.id !== resumeId) return r;
+            return {
+              ...r,
+              sections: r.sections.map((s) => 
+                s.id === sectionId ? { ...s, linkedToBase: false } : s
+              ),
+              updatedAt: new Date().toISOString(),
+            };
+          });
+          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
       },
+
+      resetSectionToBase: (resumeId: string, sectionId: string) => {
+        const resume = get().resumes.find(r => r.id === resumeId);
+        if (!resume || resume.variationType !== 'variation' || !resume.baseResumeId) return;
+        
+        const baseResume = get().resumes.find(r => r.id === resume.baseResumeId);
+        if (!baseResume) return;
+        
+        const section = resume.sections.find(s => s.id === sectionId);
+        if (!section) return;
+        
+        const baseSection = baseResume.sections.find(s => s.type === section.type);
+        if (!baseSection) return;
+        
+        set((state) => {
+          const resumes = state.resumes.map((r) => {
+            if (r.id !== resumeId) return r;
+            return {
+              ...r,
+              sections: r.sections.map((s) => 
+                s.id === sectionId 
+                  ? { 
+                      ...s, 
+                      content: JSON.parse(JSON.stringify(baseSection.content)),
+                      visible: baseSection.visible,
+                      linkedToBase: true,
+                    } 
+                  : s
+              ),
+              updatedAt: new Date().toISOString(),
+            };
+          });
+          const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
+          const activity = logActivity(resumeId, 'updated', `Reset ${SECTION_CONFIGS[section.type]?.label || section.type} to base version`);
+          return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
+        });
+      },
+
+      syncLinkedSections: (variationId: string) => {
+        const variation = get().resumes.find(r => r.id === variationId);
+        if (!variation || variation.variationType !== 'variation' || !variation.baseResumeId) return;
+        
+        const baseResume = get().resumes.find(r => r.id === variation.baseResumeId);
+        if (!baseResume) return;
+        
+        const now = new Date().toISOString();
+        const syncedSections = variation.sections.map(section => {
+          if (section.linkedToBase !== false) {
+            const baseSection = baseResume.sections.find(s => s.type === section.type);
+            if (baseSection) {
+              return {
+                ...section,
+                content: JSON.parse(JSON.stringify(baseSection.content)),
+                visible: baseSection.visible,
+                linkedToBase: true,
+              };
+            }
+          }
+          return section;
+        });
+        
+        // Add new sections from base
+        const variationTypes = new Set(variation.sections.map(s => s.type));
+        baseResume.sections.forEach(baseSection => {
+          if (!variationTypes.has(baseSection.type)) {
+            syncedSections.push({
+              ...JSON.parse(JSON.stringify(baseSection)),
+              id: crypto.randomUUID(),
+              order: syncedSections.length,
+              linkedToBase: true,
+            });
+          }
+        });
+        
+        set((state) => {
+          const resumes = state.resumes.map((r) => 
+            r.id === variationId 
+              ? { ...r, sections: syncedSections, lastSyncedAt: now, updatedAt: now } 
+              : r
+          );
+          const activeResume = state.activeResumeId === variationId ? resumes.find((r) => r.id === variationId) || null : state.activeResume;
+          const activity = logActivity(variationId, 'synced_with_base', `Updated linked sections from base resume`);
+          return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
+        });
+      },
+
+      getSectionLinkStatus: (resumeId: string, sectionId: string) => {
+        const resume = get().resumes.find(r => r.id === resumeId);
+        if (!resume) return 'base';
+        if (resume.variationType !== 'variation') return 'base';
+        
+        const section = resume.sections.find(s => s.id === sectionId);
+        if (!section) return 'base';
+        
+        return section.linkedToBase === false ? 'customized' : 'linked';
+      },
+
+      // ============== SETTINGS & TEMPLATES ==============
 
       updateSettings: (resumeId: string, settings: PartialResumeSettings) => {
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            // Ensure metadata and settings exist with defaults
             const currentSettings = r.metadata?.settings || createDefaultSettings(r.template || 'modern');
-            // Deep merge colors and margins if provided
             const mergedColors = settings.colors 
               ? { ...currentSettings.colors, ...settings.colors }
               : currentSettings.colors;
@@ -400,7 +544,8 @@ export const useResumeStore = create<ResumeStore>()(
             return { ...r, metadata, updatedAt: new Date().toISOString() };
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
-          return { resumes, activeResume };
+          const activity = logActivity(resumeId, 'settings_changed', 'Updated resume settings');
+          return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
       },
 
@@ -426,7 +571,8 @@ export const useResumeStore = create<ResumeStore>()(
         });
       },
 
-      // Page management
+      // ============== PAGE MANAGEMENT ==============
+
       addPage: (resumeId: string, name?: string) => {
         const pageId = crypto.randomUUID();
         set((state) => {
@@ -456,7 +602,6 @@ export const useResumeStore = create<ResumeStore>()(
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const pages = (r.pages || []).filter(p => p.id !== pageId);
-            // Move sections from deleted page to no page (main)
             const sections = r.sections.map(s => 
               s.pageId === pageId ? { ...s, pageId: undefined } : s
             );
@@ -515,6 +660,8 @@ export const useResumeStore = create<ResumeStore>()(
         });
       },
 
+      // ============== IMPORT/EXPORT ==============
+
       exportToJSON: (resumeId: string) => {
         const resume = get().resumes.find((r) => r.id === resumeId);
         if (!resume) return '';
@@ -539,7 +686,11 @@ export const useResumeStore = create<ResumeStore>()(
             createdAt: now,
             updatedAt: now,
           };
-          imported.sections = imported.sections.map((s) => ({ ...s, id: crypto.randomUUID() }));
+          imported.sections = imported.sections.map((s) => ({ 
+            ...s, 
+            id: crypto.randomUUID(),
+            linkedToBase: undefined,
+          }));
           const activity = logActivity(imported.id, 'imported', `Imported resume "${resume.name}"`);
           set((state) => ({
             resumes: [...state.resumes, imported],
@@ -553,8 +704,8 @@ export const useResumeStore = create<ResumeStore>()(
       },
 
       exportAllToJSON: () => {
-        const { resumes, versions } = get();
-        return JSON.stringify({ resumes, versions, exportedAt: new Date().toISOString() }, null, 2);
+        const { resumes } = get();
+        return JSON.stringify({ resumes, exportedAt: new Date().toISOString() }, null, 2);
       },
 
       importAllFromJSON: (json: string) => {
@@ -576,6 +727,8 @@ export const useResumeStore = create<ResumeStore>()(
           console.error('Failed to import all resumes:', error);
         }
       },
+
+      // ============== ACTIVITY & SEARCH ==============
 
       getActivityLog: (resumeId?: string) => {
         const log = get().activityLog;
@@ -605,24 +758,20 @@ export const useResumeStore = create<ResumeStore>()(
     { 
       name: 'betta-resume-storage',
       partialize: (state) => ({
-        // Only persist these fields (not _hasHydrated, activeResume)
         resumes: state.resumes,
         activeResumeId: state.activeResumeId,
-        versions: state.versions,
         activityLog: state.activityLog,
       }),
     }
   )
 );
 
-// Hydration handling - must happen after store is created
-// Using setTimeout to ensure this runs after the persist middleware rehydrates
+// Hydration handling
 if (typeof window !== 'undefined') {
-  const unsubFinishHydration = useResumeStore.persist.onFinishHydration(() => {
+  useResumeStore.persist.onFinishHydration(() => {
     useResumeStore.setState({ _hasHydrated: true });
   });
   
-  // Also set hydrated immediately if rehydration already happened
   if (useResumeStore.persist.hasHydrated()) {
     useResumeStore.setState({ _hasHydrated: true });
   }

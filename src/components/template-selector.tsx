@@ -13,9 +13,10 @@ import { TEMPLATE_CONFIGS, type TemplateType } from '@/types/resume';
 interface TemplateSelectorProps {
   resumeId: string;
   compact?: boolean;
+  variant?: 'button' | 'panel';
 }
 
-export function TemplateSelector({ resumeId, compact = false }: TemplateSelectorProps) {
+export function TemplateSelector({ resumeId, compact = false, variant = 'button' }: TemplateSelectorProps) {
   const { activeResume, updateTemplate } = useResumeStore();
   const [open, setOpen] = useState(false);
 
@@ -25,6 +26,102 @@ export function TemplateSelector({ resumeId, compact = false }: TemplateSelector
   };
 
   const currentTemplate = activeResume?.template || 'minimal';
+
+  // Panel variant - embedded display for left sidebar
+  if (variant === 'panel') {
+    return (
+      <div className="space-y-2">
+        <div className="text-xs text-muted-foreground">
+          Current: <span className="capitalize font-medium text-foreground">{currentTemplate}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {Object.values(TEMPLATE_CONFIGS).slice(0, 6).map((template) => (
+            <button
+              key={template.id}
+              onClick={() => handleSelect(template.id)}
+              className={`p-2 rounded text-xs text-left transition-colors ${
+                currentTemplate === template.id 
+                  ? 'bg-primary/10 border border-primary/30' 
+                  : 'hover:bg-accent border border-transparent'
+              }`}
+            >
+              <div 
+                className="w-full h-1.5 rounded-sm mb-1"
+                style={{ backgroundColor: template.defaultColors.primary }}
+              />
+              <span className="capitalize">{template.id}</span>
+            </button>
+          ))}
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="w-full h-7 text-xs"
+          onClick={() => setOpen(true)}
+        >
+          <Sparkles className="h-3 w-3 mr-1" />
+          View All Templates
+        </Button>
+        
+        {/* Reuse the dialog for full template selection */}
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Layout className="h-5 w-5" />
+                Choose Template
+              </DialogTitle>
+              <DialogDescription>
+                Select a professional template for your resume. Your content will be preserved.
+              </DialogDescription>
+            </DialogHeader>
+
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {Object.values(TEMPLATE_CONFIGS).map((template) => (
+                  <Card 
+                    key={template.id}
+                    className={`cursor-pointer transition-all hover:border-primary/50 ${currentTemplate === template.id ? 'border-primary ring-2 ring-primary/20' : ''}`}
+                    onClick={() => handleSelect(template.id)}
+                  >
+                    <CardContent className="p-0">
+                      <div className="aspect-[8.5/11] bg-gradient-to-br from-muted/50 to-muted relative overflow-hidden rounded-t-lg">
+                        <div className="absolute inset-2 bg-background rounded shadow-sm p-2 text-[6px]">
+                          <div className="space-y-1.5">
+                            <div 
+                              className="h-3 w-2/3 mx-auto rounded-sm" 
+                              style={{ backgroundColor: template.defaultColors.heading }}
+                            />
+                            <div 
+                              className="h-1.5 w-1/2 mx-auto rounded-sm opacity-50" 
+                              style={{ backgroundColor: template.defaultColors.secondary }}
+                            />
+                            <div className="h-px w-full my-1" style={{ backgroundColor: template.defaultColors.divider }} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-3 border-t">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm capitalize">{template.id}</span>
+                          {currentTemplate === template.id && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Check className="h-3 w-3 mr-1" />
+                              Current
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
