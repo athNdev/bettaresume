@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Resume, ResumeSection, ResumeStore, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage } from '@/types/resume';
+import type { Resume, ResumeSection, ResumeStore, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage, SectionType } from '@/types/resume';
 import { TEMPLATE_CONFIGS, SECTION_CONFIGS } from '@/types/resume';
 
 const createDefaultSettings = (template: TemplateType): ResumeSettings => ({
@@ -272,27 +272,32 @@ export const useResumeStore = create<ResumeStore>()(
       // ============== TAILORED COPY MANAGEMENT ==============
 
       createVariation: (baseResumeId: string, domain: string, name: string) => {
-        const baseResume = get().resumes.find((r) => r.id === baseResumeId);
-        if (!baseResume) return '';
+        const sourceResume = get().resumes.find((r) => r.id === baseResumeId);
+        if (!sourceResume) return '';
         
-        // Cannot create tailored copy from another tailored copy
-        if (baseResume.variationType === 'variation') {
-          console.warn('Cannot create tailored copy from another tailored copy. Use duplicateVariation instead.');
-          return '';
+        // If source is a variation, get the actual base resume
+        let actualBaseResume = sourceResume;
+        let actualBaseResumeId = baseResumeId;
+        if (sourceResume.variationType === 'variation' && sourceResume.baseResumeId) {
+          const originalBase = get().resumes.find((r) => r.id === sourceResume.baseResumeId);
+          if (originalBase) {
+            actualBaseResume = originalBase;
+            actualBaseResumeId = originalBase.id;
+          }
         }
         
         const now = new Date().toISOString();
         const variation: Resume = {
-          ...JSON.parse(JSON.stringify(baseResume)),
+          ...JSON.parse(JSON.stringify(actualBaseResume)),
           id: crypto.randomUUID(),
           name,
-          baseResumeId,
+          baseResumeId: actualBaseResumeId,
           variationType: 'variation',
           domain,
           createdAt: now,
           updatedAt: now,
           lastSyncedAt: now,
-          tags: [...(baseResume.tags || []), domain],
+          tags: [...(actualBaseResume.tags || []), domain],
         };
         // All sections start linked to base
         variation.sections = variation.sections.map((s: ResumeSection) => ({ 
@@ -312,31 +317,36 @@ export const useResumeStore = create<ResumeStore>()(
       },
 
       createVariationFromSection: (baseResumeId: string, sectionId: string, domain: string, name: string, customizedContent: Partial<ResumeSection>) => {
-        const baseResume = get().resumes.find((r) => r.id === baseResumeId);
-        if (!baseResume) return '';
+        const sourceResume = get().resumes.find((r) => r.id === baseResumeId);
+        if (!sourceResume) return '';
         
-        // Cannot create tailored copy from another tailored copy
-        if (baseResume.variationType === 'variation') {
-          console.warn('Cannot create tailored copy from another tailored copy. Use duplicateVariation instead.');
-          return '';
+        // If source is a variation, get the actual base resume
+        let actualBaseResume = sourceResume;
+        let actualBaseResumeId = baseResumeId;
+        if (sourceResume.variationType === 'variation' && sourceResume.baseResumeId) {
+          const originalBase = get().resumes.find((r) => r.id === sourceResume.baseResumeId);
+          if (originalBase) {
+            actualBaseResume = originalBase;
+            actualBaseResumeId = originalBase.id;
+          }
         }
         
         const now = new Date().toISOString();
         const variation: Resume = {
-          ...JSON.parse(JSON.stringify(baseResume)),
+          ...JSON.parse(JSON.stringify(actualBaseResume)),
           id: crypto.randomUUID(),
           name,
-          baseResumeId,
+          baseResumeId: actualBaseResumeId,
           variationType: 'variation',
           domain,
           createdAt: now,
           updatedAt: now,
           lastSyncedAt: now,
-          tags: [...(baseResume.tags || []), domain],
+          tags: [...(actualBaseResume.tags || []), domain],
         };
         
-        // Find the section being customized
-        const originalSection = baseResume.sections.find(s => s.id === sectionId);
+        // Find the section being customized (from source resume, not base)
+        const originalSection = sourceResume.sections.find(s => s.id === sectionId);
         
         // All sections start linked to base, except the one being customized
         variation.sections = variation.sections.map((s: ResumeSection) => {
@@ -516,6 +526,14 @@ export const useResumeStore = create<ResumeStore>()(
         if (!section) return 'base';
         
         return section.linkedToBase === false ? 'customized' : 'linked';
+      },
+
+      logSectionChange: (resumeId: string, sectionType: SectionType, changeDescription: string) => {
+        const sectionLabel = SECTION_CONFIGS[sectionType]?.label || sectionType;
+        const activity = logActivity(resumeId, 'section_updated', `${sectionLabel}: ${changeDescription}`);
+        set((state) => ({
+          activityLog: [...state.activityLog, activity],
+        }));
       },
 
       // ============== SETTINGS & TEMPLATES ==============

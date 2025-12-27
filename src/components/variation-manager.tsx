@@ -88,20 +88,22 @@ export function VariationManager({ resumeId, variant = 'button' }: VariationMana
       <div className="space-y-2">
         {isVariation && baseResume && (
           <div className="p-2 rounded-md border border-dashed border-primary/50 bg-primary/5">
-            <p className="text-xs font-medium">Editing tailored copy</p>
-            <p className="text-[10px] text-muted-foreground">Base: {baseResume.name}</p>
+            <p className="text-xs font-medium">Editing a version</p>
+            <p className="text-[10px] text-muted-foreground">Based on: {baseResume.name}</p>
             <Button variant="link" size="sm" className="h-5 px-0 text-xs" onClick={handleGoToBase}>
-              Go to base →
+              ← Back to main
             </Button>
           </div>
         )}
         
-        <div className="text-xs text-muted-foreground">
-          {variations.length} {variations.length === 1 ? 'copy' : 'copies'}
-        </div>
+        {!isVariation && (
+          <div className="text-xs text-muted-foreground">
+            {variations.length} {variations.length === 1 ? 'version' : 'versions'}
+          </div>
+        )}
         
         {variations.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">No tailored copies yet</p>
+          <p className="text-xs text-muted-foreground py-1 italic">No versions yet</p>
         ) : (
           <div className="space-y-1">
             {variations.slice(0, 5).map((variation) => {
@@ -116,9 +118,9 @@ export function VariationManager({ resumeId, variant = 'button' }: VariationMana
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium truncate">{variation.name}</span>
-                    {isCurrent && <Badge variant="secondary" className="text-[9px] h-4">Current</Badge>}
+                    {isCurrent && <Badge variant="secondary" className="text-[9px] h-4">Editing</Badge>}
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{variation.domain}</span>
+                  <span className="text-[10px] text-muted-foreground capitalize">{variation.domain}</span>
                 </button>
               );
             })}
@@ -132,22 +134,22 @@ export function VariationManager({ resumeId, variant = 'button' }: VariationMana
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-3 w-3 mr-1" />
-          New Tailored Copy
+          New Version
         </Button>
         
         {/* Reuse the create dialog */}
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Tailored Copy</DialogTitle>
+              <DialogTitle>Create Targeted Version</DialogTitle>
               <DialogDescription>
-                Create a customized copy of your resume targeted for a specific role or industry.
+                Create a version of your resume tailored for a specific job or industry.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
               <div>
-                <Label>Copy Name</Label>
+                <Label>Version Name</Label>
                 <Input 
                   value={name} 
                   onChange={(e) => setName(e.target.value)} 

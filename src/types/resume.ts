@@ -312,7 +312,8 @@ export type ActivityAction =
   | 'section_added' 
   | 'section_removed' 
   | 'template_changed'
-  | 'settings_changed';
+  | 'settings_changed'
+  | 'section_updated';
 
 export interface ResumeStore {
   resumes: Resume[];
@@ -347,6 +348,9 @@ export interface ResumeStore {
   resetSectionToBase: (resumeId: string, sectionId: string) => void; // Re-link section to base
   syncLinkedSections: (variationId: string) => void; // Update all linked sections from base
   getSectionLinkStatus: (resumeId: string, sectionId: string) => 'linked' | 'customized' | 'base';
+  
+  // Activity logging for section changes
+  logSectionChange: (resumeId: string, sectionType: SectionType, changeDescription: string) => void;
   
   updateSettings: (resumeId: string, settings: PartialResumeSettings) => void;
   updateTemplate: (resumeId: string, template: TemplateType) => void;

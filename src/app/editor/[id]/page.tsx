@@ -364,6 +364,8 @@ export default function EditorPage() {
     createVariationFromSection,
   } = useResumeStore();
   
+  const { logSectionChange } = useResumeStore();
+  
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -374,6 +376,10 @@ export default function EditorPage() {
   const [previewDarkMode, setPreviewDarkMode] = useState(false);
   const [previewScale, setPreviewScale] = useState(70);
   
+  // State for pending changes - tracks unsaved changes per section
+  const [pendingChanges, setPendingChanges] = useState<Record<string, unknown>>({});
+  const [originalData, setOriginalData] = useState<Record<string, unknown>>({});
+  
   // State for "Save as Tailored Copy" dialog
   const [tailoredCopyDialogOpen, setTailoredCopyDialogOpen] = useState(false);
   const [tailoredCopySectionId, setTailoredCopySectionId] = useState<string | null>(null);
@@ -381,16 +387,32 @@ export default function EditorPage() {
   const [tailoredCopyTargetRole, setTailoredCopyTargetRole] = useState('');
   const [tailoredCopyCustomRole, setTailoredCopyCustomRole] = useState('');
   
-  // State for collapsible left panel groups
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    sections: true,
-    tailored: false,
-    template: false,
-    history: false,
+  // State for collapsible left panel groups - persisted to localStorage
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('editor-expanded-groups');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore parse errors
+        }
+      }
+    }
+    return {
+      sections: true,
+      tailored: false,
+      template: false,
+      history: false,
+    };
   });
   
   const toggleGroup = (group: string) => {
-    setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
+    setExpandedGroups(prev => {
+      const newState = { ...prev, [group]: !prev[group] };
+      localStorage.setItem('editor-expanded-groups', JSON.stringify(newState));
+      return newState;
+    });
   };
   
   const sensors = useSensors(
@@ -535,23 +557,163 @@ export default function EditorPage() {
     }
   };
 
-  const handleUpdateSectionContent = (content: unknown) => {
+  // Check if a section has pending changes
+  const hasPendingChanges = (sectionId: string) => {
+    return pendingChanges[sectionId] !== undefined;
+  };
+  
+  // Track changes without saving (buffer them)
+  const handleBufferSectionContent = (content: unknown) => {
     if (!activeSectionId || !activeSection) return;
+    
+    // Store original data on first change
+    if (originalData[activeSectionId] === undefined) {
+      setOriginalData(prev => ({ ...prev, [activeSectionId]: activeSection.content.data }));
+    }
+    
+    setPendingChanges(prev => ({ ...prev, [activeSectionId]: content }));
+  };
+  
+  // Track personal info changes
+  const handleBufferPersonalInfo = (data: PersonalInfo) => {
+    if (!activeSectionId || !activeSection) return;
+    
+    // Store original data on first change
+    if (originalData[activeSectionId] === undefined) {
+      setOriginalData(prev => ({ ...prev, [activeSectionId]: activeResume.metadata?.personalInfo }));
+    }
+    
+    setPendingChanges(prev => ({ ...prev, [activeSectionId]: data }));
+  };
+  
+  // Track rich text changes (summary/custom)
+  const handleBufferRichText = (html: string) => {
+    if (!activeSectionId || !activeSection) return;
+    
+    // Store original data on first change
+    if (originalData[activeSectionId] === undefined) {
+      setOriginalData(prev => ({ ...prev, [activeSectionId]: { html: activeSection.content.html } }));
+    }
+    
+    setPendingChanges(prev => ({ ...prev, [activeSectionId]: { html } }));
+  };
+  
+  // Save pending changes and log them
+  const handleSaveChanges = () => {
+    if (!activeSectionId || !activeSection) return;
+    
+    const pendingData = pendingChanges[activeSectionId];
+    if (pendingData === undefined) return;
+    
     // Auto-detach this section if it's linked in a tailored copy
     autoDetachIfNeeded(activeSectionId);
-    updateSection(resumeId, activeSectionId, { 
-      content: { ...activeSection.content, data: content } as ResumeSection['content'] 
+    
+    // Determine the change description based on section type
+    let changeDescription = 'Saved changes';
+    const originalSectionData = originalData[activeSectionId];
+    
+    if (activeSection.type === 'personal-info') {
+      const data = pendingData as PersonalInfo;
+      const oldData = originalSectionData as PersonalInfo | undefined;
+      
+      // Find which fields actually changed
+      const changedFields: string[] = [];
+      const fieldLabels: Record<string, string> = {
+        fullName: 'name',
+        email: 'email',
+        phone: 'phone',
+        location: 'location',
+        linkedin: 'LinkedIn',
+        github: 'GitHub',
+        website: 'website',
+        portfolio: 'portfolio',
+        professionalTitle: 'title',
+      };
+      
+      if (oldData) {
+        for (const key of Object.keys(fieldLabels)) {
+          const k = key as keyof PersonalInfo;
+          if ((data[k] || '') !== (oldData[k] || '')) {
+            changedFields.push(fieldLabels[key]);
+          }
+        }
+      }
+      
+      if (changedFields.length === 1) {
+        changeDescription = `Changed ${changedFields[0]}`;
+      } else if (changedFields.length > 1) {
+        changeDescription = `Changed ${changedFields.length} fields`;
+      } else {
+        changeDescription = 'Saved changes';
+      }
+      
+      updateResume(resumeId, { 
+        metadata: { ...activeResume.metadata, personalInfo: data } 
+      });
+    } else if (activeSection.type === 'summary' || activeSection.type === 'custom') {
+      changeDescription = 'Updated content';
+      const richTextData = pendingData as { html: string };
+      updateSection(resumeId, activeSectionId, { 
+        content: { ...activeSection.content, html: richTextData.html } 
+      });
+    } else if (Array.isArray(pendingData) && Array.isArray(originalSectionData)) {
+      // Compare arrays to determine what changed
+      const oldCount = originalSectionData.length;
+      const newCount = pendingData.length;
+      
+      if (newCount > oldCount) {
+        const diff = newCount - oldCount;
+        changeDescription = `Added ${diff} ${diff === 1 ? 'entry' : 'entries'}`;
+      } else if (newCount < oldCount) {
+        const diff = oldCount - newCount;
+        changeDescription = `Removed ${diff} ${diff === 1 ? 'entry' : 'entries'}`;
+      } else {
+        changeDescription = 'Edited content';
+      }
+      
+      updateSection(resumeId, activeSectionId, { 
+        content: { ...activeSection.content, data: pendingData } as ResumeSection['content'] 
+      });
+    } else if (Array.isArray(pendingData)) {
+      changeDescription = 'Saved changes';
+      updateSection(resumeId, activeSectionId, { 
+        content: { ...activeSection.content, data: pendingData } as ResumeSection['content'] 
+      });
+    } else {
+      updateSection(resumeId, activeSectionId, { 
+        content: { ...activeSection.content, data: pendingData } as ResumeSection['content'] 
+      });
+    }
+    
+    // Log the change
+    logSectionChange(resumeId, activeSection.type, changeDescription);
+    
+    // Clear pending changes for this section
+    setPendingChanges(prev => {
+      const newPending = { ...prev };
+      delete newPending[activeSectionId];
+      return newPending;
+    });
+    setOriginalData(prev => {
+      const newOriginal = { ...prev };
+      delete newOriginal[activeSectionId];
+      return newOriginal;
     });
   };
-
-  const handleUpdatePersonalInfo = (data: PersonalInfo) => {
-    // Auto-detach personal info section if editing in tailored copy
-    const personalInfoSection = activeResume.sections.find(s => s.type === 'personal-info');
-    if (personalInfoSection) {
-      autoDetachIfNeeded(personalInfoSection.id);
-    }
-    updateResume(resumeId, { 
-      metadata: { ...activeResume.metadata, personalInfo: data } 
+  
+  // Discard pending changes
+  const handleDiscardChanges = () => {
+    if (!activeSectionId) return;
+    
+    setPendingChanges(prev => {
+      const newPending = { ...prev };
+      delete newPending[activeSectionId];
+      return newPending;
+    });
+    setOriginalData(prev => {
+      const newOriginal = { ...prev };
+      delete newOriginal[activeSectionId];
+      return newOriginal;
     });
   };
 
@@ -586,112 +748,139 @@ export default function EditorPage() {
     if (!activeSection) return null;
     
     const sectionData = activeSection.content.data;
+    const sectionId = activeSection.id;
+    
+    // Get data to display (pending changes if any, otherwise saved data)
+    const getDisplayData = <T,>(savedData: T): T => {
+      const pending = pendingChanges[sectionId];
+      return pending !== undefined ? pending as T : savedData;
+    };
     
     switch (activeSection.type) {
-      case 'personal-info': 
+      case 'personal-info': {
+        const displayData = getDisplayData(activeResume.metadata?.personalInfo || { fullName: '', email: '' });
         return (
           <PersonalInfoForm 
-            data={activeResume.metadata?.personalInfo || { fullName: '', email: '' }} 
-            onChange={handleUpdatePersonalInfo} 
+            data={displayData as PersonalInfo} 
+            onChange={handleBufferPersonalInfo} 
           />
         );
+      }
       
-      case 'experience': 
+      case 'experience': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Experience[] : []);
         return (
           <ExperienceForm 
-            data={Array.isArray(sectionData) ? sectionData as Experience[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Experience[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'education': 
+      case 'education': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Education[] : []);
         return (
           <EducationForm 
-            data={Array.isArray(sectionData) ? sectionData as Education[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Education[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'skills':
+      case 'skills': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as SkillCategory[] : []);
         return (
           <SkillsForm 
-            data={Array.isArray(sectionData) ? sectionData as SkillCategory[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as SkillCategory[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'projects':
+      case 'projects': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Project[] : []);
         return (
           <ProjectsForm 
-            data={Array.isArray(sectionData) ? sectionData as Project[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Project[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'certifications':
+      case 'certifications': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Certification[] : []);
         return (
           <CertificationsForm 
-            data={Array.isArray(sectionData) ? sectionData as Certification[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Certification[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'awards':
+      case 'awards': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Award[] : []);
         return (
           <AwardsForm 
-            data={Array.isArray(sectionData) ? sectionData as Award[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Award[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'languages':
+      case 'languages': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Language[] : []);
         return (
           <LanguagesForm 
-            data={Array.isArray(sectionData) ? sectionData as Language[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Language[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'volunteer':
+      case 'volunteer': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Volunteer[] : []);
         return (
           <VolunteerForm 
-            data={Array.isArray(sectionData) ? sectionData as Volunteer[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Volunteer[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'publications':
+      case 'publications': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Publication[] : []);
         return (
           <PublicationsForm 
-            data={Array.isArray(sectionData) ? sectionData as Publication[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Publication[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
-      case 'references':
+      case 'references': {
+        const displayData = getDisplayData(Array.isArray(sectionData) ? sectionData as Reference[] : []);
         return (
           <ReferencesForm 
-            data={Array.isArray(sectionData) ? sectionData as Reference[] : []} 
-            onChange={handleUpdateSectionContent} 
+            data={displayData as Reference[]} 
+            onChange={handleBufferSectionContent} 
           />
         );
+      }
       
       case 'summary':
-      case 'custom': 
+      case 'custom': {
+        // For rich text, get pending HTML if any
+        const pendingRichText = pendingChanges[sectionId] as { html?: string } | undefined;
+        const displayHtml = pendingRichText?.html ?? activeSection.content.html ?? '';
         return (
           <AdvancedEditor 
-            content={activeSection.content.html || ''} 
-            onChange={(html) => {
-              // Auto-detach when editing rich text
-              autoDetachIfNeeded(activeSectionId!);
-              updateSection(resumeId, activeSectionId!, { 
-                content: { ...activeSection.content, html } 
-              });
-            }}
+            content={displayHtml} 
+            onChange={handleBufferRichText}
             placeholder="Write your professional summary here..."
             minHeight="250px"
           />
         );
+      }
       
       default: 
         return (
@@ -805,21 +994,24 @@ export default function EditorPage() {
                     >
                       {expandedGroups.sections ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       <Layers className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Sections</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Content</span>
                       <Badge variant="secondary" className="text-[10px] h-5">{activeResume.sections.length}</Badge>
                     </button>
                     {expandedGroups.sections && (
                       <div className="pb-2">
                         {/* Link status summary for tailored copies */}
                         {activeResume.variationType === 'variation' && (
-                          <div className="px-3 py-1 text-[10px] text-muted-foreground flex items-center gap-2">
-                            <span className="flex items-center gap-1">
-                              <LinkIcon className="h-3 w-3 text-blue-500" />
-                              {activeResume.sections.filter(s => s.linkedToBase !== false).length} linked
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Pencil className="h-3 w-3 text-orange-500" />
-                              {activeResume.sections.filter(s => s.linkedToBase === false).length} customized
+                          <div className="px-3 py-1.5 text-[10px] text-muted-foreground bg-muted/30 mx-2 mb-1 rounded">
+                            <span className="flex items-center gap-2">
+                              <span className="flex items-center gap-1">
+                                <LinkIcon className="h-3 w-3 text-blue-500" />
+                                {activeResume.sections.filter(s => s.linkedToBase !== false).length} synced
+                              </span>
+                              <span className="text-muted-foreground/50">•</span>
+                              <span className="flex items-center gap-1">
+                                <Pencil className="h-3 w-3 text-orange-500" />
+                                {activeResume.sections.filter(s => s.linkedToBase === false).length} custom
+                              </span>
                             </span>
                           </div>
                         )}
@@ -880,10 +1072,11 @@ export default function EditorPage() {
                     >
                       {expandedGroups.tailored ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       <GitBranch className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Tailored Copies</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Versions</span>
                     </button>
                     {expandedGroups.tailored && (
                       <div className="px-2 pb-2">
+                        <p className="text-[10px] text-muted-foreground px-1 mb-2">Create targeted versions for different jobs</p>
                         <Suspense fallback={<LoadingFallback />}>
                           <VariationManager resumeId={resumeId} variant="panel" />
                         </Suspense>
@@ -899,10 +1092,11 @@ export default function EditorPage() {
                     >
                       {expandedGroups.template ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       <Palette className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Template</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Design</span>
                     </button>
                     {expandedGroups.template && (
                       <div className="px-2 pb-2">
+                        <p className="text-[10px] text-muted-foreground px-1 mb-2">Choose a template style</p>
                         <Suspense fallback={<LoadingFallback />}>
                           <TemplateSelector resumeId={resumeId} variant="panel" />
                         </Suspense>
@@ -918,7 +1112,7 @@ export default function EditorPage() {
                     >
                       {expandedGroups.history ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       <History className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">History</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Activity</span>
                     </button>
                     {expandedGroups.history && (
                       <div className="px-2 pb-2">
@@ -957,12 +1151,12 @@ export default function EditorPage() {
                         getSectionLinkStatus(resumeId, activeSection.id) === 'linked' ? (
                           <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
                             <LinkIcon className="h-3 w-3 mr-1" />
-                            Linked to Base
+                            Synced
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/30">
                             <Pencil className="h-3 w-3 mr-1" />
-                            Customized
+                            Custom
                           </Badge>
                         )
                       )}
@@ -980,10 +1174,10 @@ export default function EditorPage() {
                                 className="text-xs"
                               >
                                 <Unlink className="h-3 w-3 mr-1" />
-                                Customize
+                                Edit Here
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Unlink from base to make changes</TooltipContent>
+                            <TooltipContent>Make changes specific to this version</TooltipContent>
                           </Tooltip>
                         ) : (
                           <Tooltip>
@@ -995,10 +1189,10 @@ export default function EditorPage() {
                                 className="text-xs"
                               >
                                 <RefreshCw className="h-3 w-3 mr-1" />
-                                Reset to Base
+                                Restore
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Discard changes and re-link to base</TooltipContent>
+                            <TooltipContent>Restore to match the main resume</TooltipContent>
                           </Tooltip>
                         )
                       )}
@@ -1032,6 +1226,34 @@ export default function EditorPage() {
                       >
                         {activeSection.visible ? <Eye className="h-4 w-4 mr-1" /> : <EyeOff className="h-4 w-4 mr-1" />}
                         {activeSection.visible ? 'Visible' : 'Hidden'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Save Changes Bar - shows when there are pending changes */}
+                {activeSection && hasPendingChanges(activeSection.id) && (
+                  <div className="px-4 py-2.5 border-b bg-primary/5 border-primary/20 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-primary">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      <span className="text-sm">Unsaved changes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={handleDiscardChanges}
+                        className="text-xs h-7"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={handleSaveChanges}
+                        className="text-xs h-7"
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Save
                       </Button>
                     </div>
                   </div>

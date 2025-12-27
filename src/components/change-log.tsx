@@ -18,7 +18,8 @@ import {
   RefreshCw,
   CheckCircle2,
   Settings,
-  Layers
+  Layers,
+  FileEdit
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { ActivityAction } from '@/types/resume';
@@ -43,6 +44,7 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ComponentType<{ classN
   section_removed: { icon: Trash2, color: 'text-red-400', label: 'Section Removed' },
   template_changed: { icon: Palette, color: 'text-pink-500', label: 'Template Changed' },
   settings_changed: { icon: Settings, color: 'text-gray-500', label: 'Settings Changed' },
+  section_updated: { icon: FileEdit, color: 'text-blue-400', label: 'Section Updated' },
 };
 
 export function ChangeLog({ resumeId, variant = 'button' }: ChangeLogProps) {
@@ -103,19 +105,19 @@ export function ChangeLog({ resumeId, variant = 'button' }: ChangeLogProps) {
         </div>
         
         {recentActivities.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">No activity yet</p>
+          <p className="text-xs text-muted-foreground py-1 italic">No activity yet</p>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {recentActivities.map((activity) => {
               const config = ACTION_CONFIG[activity.action];
               const Icon = config?.icon || RefreshCw;
               
               return (
-                <div key={activity.id} className="flex items-start gap-2 py-1">
+                <div key={activity.id} className="flex items-start gap-2 py-1.5 px-1 rounded hover:bg-accent/50">
                   <Icon className={`h-3 w-3 mt-0.5 flex-shrink-0 ${config?.color || 'text-muted-foreground'}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] truncate">{activity.description}</p>
-                    <p className="text-[9px] text-muted-foreground">
+                    <p className="text-[11px] truncate">{activity.description}</p>
+                    <p className="text-[10px] text-muted-foreground">
                       {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                     </p>
                   </div>
