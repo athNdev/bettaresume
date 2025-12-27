@@ -1,8 +1,8 @@
 /**
  * Load Sample Data Script
  * 
- * Waits for the dev server to be ready, then opens a browser with sample data
- * pre-loaded into localStorage.
+ * Waits for the dev server to be ready, then injects sample data into localStorage
+ * using a headless browser. No window opens - just navigate to the URL in your browser.
  * 
  * Run with: npm run dev:demo
  */
@@ -61,11 +61,9 @@ async function loadSampleData() {
   // Read sample data
   const sampleData = JSON.parse(fs.readFileSync(SAMPLE_DATA_PATH, 'utf-8'));
   
-  // Launch browser
+  // Launch headless browser just to inject localStorage
   const browser = await puppeteer.launch({ 
-    headless: false,
-    defaultViewport: null,
-    args: ['--start-maximized']
+    headless: true,
   });
   
   const page = await browser.newPage();
@@ -80,8 +78,8 @@ async function loadSampleData() {
   
   console.log('✅ Sample data loaded into localStorage');
   
-  // Navigate to dashboard and reload
-  await page.goto(`${DEV_URL}/dashboard`, { waitUntil: 'networkidle0' });
+  // Close the headless browser
+  await browser.close();
   
   console.log('\n📝 6 sample resumes loaded:');
   console.log('   • Alex Chen - Senior Software Engineer (modern)');
@@ -90,8 +88,8 @@ async function loadSampleData() {
   console.log('   • Emma Rodriguez - UX Designer (creative)');
   console.log('   • James Wilson - DevOps Engineer (tech)');
   console.log('   • Lisa Chen - Marketing Manager (minimal, archived)');
-  console.log('\n🌐 App ready at http://localhost:3000/dashboard');
-  console.log('🔌 Close the browser window when done.\n');
+  console.log('\n🌐 Open in your browser: http://localhost:3000/dashboard');
+  console.log('✨ Dev server running - press Ctrl+C to stop.\n');
 }
 
 loadSampleData().catch(console.error);

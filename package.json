@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:demo": "concurrently -k \"npm run dev\" \"node scripts/load-sample-data.js\"",
+    "dev:demo": "concurrently --kill-others-on-fail \"npm run dev\" \"node scripts/load-sample-data.js\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
