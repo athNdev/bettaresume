@@ -1,0 +1,38 @@
+# Understanding the Editor
+
+The editor uses a powerful 3-panel layout inspired by VS Code.
+
+## Left Panel — Content Navigation
+
+- Lists all your resume sections
+- Drag and drop to reorder sections
+- Click to select and edit a section
+- Shows sync status for versions (🔗 Synced or "Custom")
+
+## Center Panel — Editor
+
+- Where you edit the selected section
+- Different forms for different section types
+- Rich text editor for summary and descriptions
+- Save changes explicitly for full control
+
+## Right Panel — Live Preview
+
+- Real-time preview of your resume
+- Matches exactly what will be exported
+- Collapsible to give more editing space
+- Shows all pages if multi-page
+
+## Top Bar
+
+- Resume name and navigation breadcrumb
+- Version selector (if you have versions)
+- Template and design settings
+- Export options (PDF, JSON)
+
+## Workflow
+
+1. Select a section from the left panel
+2. Edit using the form in the center
+3. See changes reflected in the preview
+4. Click "Save Changes" to commit your edits

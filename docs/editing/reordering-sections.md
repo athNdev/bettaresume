@@ -1,0 +1,53 @@
+# Reordering Sections
+
+Drag and drop to customize the order of your resume sections.
+
+## How to Reorder
+
+1. Hover over a section in the left panel
+2. Grab the drag handle (⋮⋮)
+3. Drag to the new position
+4. Release to drop
+
+Changes save automatically.
+
+## Best Practices
+
+Order sections by relevance to the role:
+
+### Standard Order
+1. **Contact Info** — Always first
+2. **Summary** — Hook the reader
+3. **Most Relevant Section** — Experience or Skills
+4. **Supporting Sections** — Education, Projects
+5. **Additional Info** — Certifications, Languages
+
+## Different Orders for Different Situations
+
+### Experienced Professional
+1. Summary
+2. Experience ← Lead with work history
+3. Skills
+4. Education
+5. Certifications
+
+### Recent Graduate
+1. Summary
+2. Education ← Lead with academics
+3. Projects
+4. Skills
+5. Experience (internships)
+
+### Career Changer
+1. Summary ← Explain the transition
+2. Skills ← Show transferable skills
+3. Projects ← Relevant side projects
+4. Experience
+5. Education
+
+## Using Versions for Different Orders
+
+You can have different section orders in different versions:
+- Main resume: Experience first
+- Junior role version: Education first
+- Technical role version: Skills first

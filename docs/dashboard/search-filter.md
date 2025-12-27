@@ -1,0 +1,56 @@
+# Search and Filter
+
+Find resumes quickly in your collection.
+
+## Search
+
+Type in the search box to filter resumes by:
+- Name
+- Content keywords
+- Section content
+
+Search happens instantly as you type.
+
+## Filter Options
+
+### By Status
+- **All** — Everything
+- **Active** — Currently in use
+- **Archived** — Hidden from main view
+
+### By Template
+Filter to see only resumes using a specific template.
+
+### By Date
+- **Recently edited** — Last 7 days
+- **This month** — Current month
+- **Older** — Everything else
+
+## Sorting
+
+Change how resumes are ordered:
+
+| Sort Option | Description |
+|-------------|-------------|
+| Last edited | Most recent first |
+| Name A-Z | Alphabetical |
+| Name Z-A | Reverse alphabetical |
+| Date created | Newest first |
+
+## Quick Tips
+
+### Finding a Specific Resume
+1. Use search if you remember the name or content
+2. Sort by "last edited" if recent
+3. Check archived if not visible
+
+### Managing Many Resumes
+- Archive completed job searches
+- Use descriptive names
+- Delete truly obsolete resumes
+
+### Pro Workflow
+Keep your dashboard lean:
+- 2-3 active resumes maximum
+- Archive the rest
+- Delete duplicates
