@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, memo, useRef, useState, useEffect, useCallback } from 'react';
+import { forwardRef, memo, useRef, useState, useEffect } from 'react';
 import type { 
   Resume, 
   Experience, 
@@ -16,8 +16,9 @@ import type {
   SectionType,
   TemplateType,
   ResumeColors,
-  ResumeSection
+  TypographyScale
 } from '@/types/resume';
+import { DEFAULT_TYPOGRAPHY } from '@/types/resume';
 import { format, parseISO } from 'date-fns';
 
 interface ResumeRendererProps {
@@ -27,6 +28,28 @@ interface ResumeRendererProps {
   className?: string;
   forExport?: boolean;
 }
+
+// Typography context for consistent font sizes
+interface ScaledTypography {
+  name: string;
+  title: string;
+  sectionHeading: string;
+  itemTitle: string;
+  body: string;
+  small: string;
+}
+
+// Helper to calculate scaled typography
+const getScaledTypography = (typography: TypographyScale, fontScale: number): ScaledTypography => {
+  return {
+    name: `${Math.round(typography.name * fontScale)}px`,
+    title: `${Math.round(typography.title * fontScale)}px`,
+    sectionHeading: `${Math.round(typography.sectionHeading * fontScale)}px`,
+    itemTitle: `${Math.round(typography.itemTitle * fontScale)}px`,
+    body: `${Math.round(typography.body * fontScale)}px`,
+    small: `${Math.round(typography.small * fontScale)}px`,
+  };
+};
 
 // Page dimensions in pixels (at 96 DPI)
 const PAGE_SIZES = {
@@ -108,8 +131,8 @@ const getTemplateStyles = (template: TemplateType, darkMode: boolean, userColors
 };
 
 // Template Layout Components
-const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string }>(
-  ({ resume, darkMode: _darkMode, colors, dateFormat }, ref) => {
+const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string; typography: ScaledTypography }>(
+  ({ resume, darkMode: _darkMode, colors, dateFormat, typography }, ref) => {
     const sections = resume.sections.filter(s => s.visible && s.type !== 'personal-info').sort((a, b) => a.order - b.order);
     const pi = resume.metadata?.personalInfo || { fullName: '', email: '' };
 
@@ -120,14 +143,14 @@ const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
       <div ref={ref} style={{ backgroundColor: colors.bg, color: colors.text, padding: '40px 48px', minHeight: '100%', boxSizing: 'border-box' }}>
         {/* Header */}
         <header style={{ marginBottom: '24px', borderBottom: `1px solid ${colors.divider}`, paddingBottom: '16px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: colors.primary, margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
+          <h1 style={{ fontSize: typography.name, fontWeight: '700', color: colors.primary, margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
             {pi.fullName || 'Your Name'}
           </h1>
           {pi.professionalTitle && (
-            <p style={{ fontSize: '14px', color: colors.muted, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
+            <p style={{ fontSize: typography.title, color: colors.muted, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
           )}
           {/* Use inline spans with separators instead of flex gap */}
-          <div style={{ marginTop: '12px', fontSize: '12px', color: colors.muted, lineHeight: 1.6 }}>
+          <div style={{ marginTop: '12px', fontSize: typography.small, color: colors.muted, lineHeight: 1.6 }}>
             {contactItems.map((item, idx) => (
               <span key={idx}>
                 {item}
@@ -141,7 +164,7 @@ const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
         {sections.map((section) => (
           <section key={section.id} style={{ marginBottom: '20px' }}>
             <h2 style={{ 
-              fontSize: '11px', 
+              fontSize: typography.sectionHeading, 
               fontWeight: '700', 
               color: colors.primary, 
               textTransform: 'uppercase',
@@ -152,7 +175,7 @@ const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
             }}>
               {section.content.title || SECTION_LABELS[section.type]}
             </h2>
-            <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="minimal" />
+            <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="minimal" typography={typography} />
           </section>
         ))}
       </div>
@@ -161,8 +184,8 @@ const MinimalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
 );
 MinimalTemplate.displayName = 'MinimalTemplate';
 
-const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string }>(
-  ({ resume, darkMode: _darkMode, colors, dateFormat }, ref) => {
+const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string; typography: ScaledTypography }>(
+  ({ resume, darkMode: _darkMode, colors, dateFormat, typography }, ref) => {
     const sections = resume.sections.filter(s => s.visible && s.type !== 'personal-info').sort((a, b) => a.order - b.order);
     const pi = resume.metadata?.personalInfo || { fullName: '', email: '' };
 
@@ -174,20 +197,20 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
           color: '#ffffff',
           padding: '32px 48px'
         }}>
-          <h1 style={{ fontSize: '32px', fontWeight: '700', margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
+          <h1 style={{ fontSize: typography.name, fontWeight: '700', margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
             {pi.fullName || 'Your Name'}
           </h1>
           {pi.professionalTitle && (
-            <p style={{ fontSize: '16px', opacity: 0.9, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
+            <p style={{ fontSize: typography.title, opacity: 0.9, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
           )}
           {/* Contact info using margin spacing instead of gap */}
-          <div style={{ marginTop: '16px', fontSize: '13px', opacity: 0.85, lineHeight: 1.8 }}>
+          <div style={{ marginTop: '16px', fontSize: typography.small, opacity: 0.85, lineHeight: 1.8 }}>
             {pi.email && <span style={{ marginRight: '20px' }}>✉ {pi.email}</span>}
             {pi.phone && <span style={{ marginRight: '20px' }}>☎ {pi.phone}</span>}
             {pi.location && <span>📍 {pi.location}</span>}
           </div>
           {(pi.linkedin || pi.github || pi.website) && (
-            <div style={{ marginTop: '8px', fontSize: '12px', opacity: 0.8, lineHeight: 1.6 }}>
+            <div style={{ marginTop: '8px', fontSize: typography.small, opacity: 0.8, lineHeight: 1.6 }}>
               {pi.linkedin && <span style={{ marginRight: '20px' }}>{pi.linkedin}</span>}
               {pi.github && <span style={{ marginRight: '20px' }}>{pi.github}</span>}
               {pi.website && <span>{pi.website}</span>}
@@ -200,7 +223,7 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
           {sections.map((section) => (
             <section key={section.id} style={{ marginBottom: '24px' }}>
               <h2 style={{ 
-                fontSize: '14px', 
+                fontSize: typography.sectionHeading, 
                 fontWeight: '700', 
                 color: colors.primary,
                 marginBottom: '14px',
@@ -217,7 +240,7 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
                 }}></span>
                 {section.content.title || SECTION_LABELS[section.type]}
               </h2>
-              <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="modern" />
+              <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="modern" typography={typography} />
             </section>
           ))}
         </div>
@@ -227,8 +250,8 @@ const ModernTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bo
 );
 ModernTemplate.displayName = 'ModernTemplate';
 
-const ClassicTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string }>(
-  ({ resume, darkMode: _darkMode, colors, dateFormat }, ref) => {
+const ClassicTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string; typography: ScaledTypography }>(
+  ({ resume, darkMode: _darkMode, colors, dateFormat, typography }, ref) => {
     const sections = resume.sections.filter(s => s.visible && s.type !== 'personal-info').sort((a, b) => a.order - b.order);
     const pi = resume.metadata?.personalInfo || { fullName: '', email: '' };
 
@@ -236,17 +259,17 @@ const ClassicTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
       <div ref={ref} style={{ backgroundColor: colors.bg, color: colors.text, padding: '48px 56px', minHeight: '100%' }}>
         {/* Header - Classic centered */}
         <header style={{ textAlign: 'center', marginBottom: '28px', paddingBottom: '20px', borderBottom: `2px solid ${colors.primary}` }}>
-          <h1 style={{ fontSize: '26px', fontWeight: '700', color: colors.primary, margin: 0, fontVariant: 'small-caps', letterSpacing: '2px' }}>
+          <h1 style={{ fontSize: typography.name, fontWeight: '700', color: colors.primary, margin: 0, fontVariant: 'small-caps', letterSpacing: '2px' }}>
             {pi.fullName || 'Your Name'}
           </h1>
           {pi.professionalTitle && (
-            <p style={{ fontSize: '14px', color: colors.muted, marginTop: '6px', fontStyle: 'italic' }}>{pi.professionalTitle}</p>
+            <p style={{ fontSize: typography.title, color: colors.muted, marginTop: '6px', fontStyle: 'italic' }}>{pi.professionalTitle}</p>
           )}
-          <div style={{ marginTop: '12px', fontSize: '12px', color: colors.muted }}>
+          <div style={{ marginTop: '12px', fontSize: typography.small, color: colors.muted }}>
             {[pi.email, pi.phone, pi.location].filter(Boolean).join('  |  ')}
           </div>
           {(pi.linkedin || pi.github || pi.website) && (
-            <div style={{ marginTop: '4px', fontSize: '11px', color: colors.muted }}>
+            <div style={{ marginTop: '4px', fontSize: typography.small, color: colors.muted }}>
               {[pi.linkedin, pi.github, pi.website].filter(Boolean).join('  |  ')}
             </div>
           )}
@@ -256,7 +279,7 @@ const ClassicTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
         {sections.map((section) => (
           <section key={section.id} style={{ marginBottom: '22px' }}>
             <h2 style={{ 
-              fontSize: '13px', 
+              fontSize: typography.sectionHeading, 
               fontWeight: '700', 
               color: colors.primary,
               textAlign: 'center',
@@ -283,7 +306,7 @@ const ClassicTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
                 zIndex: 0
               }}></span>
             </h2>
-            <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="classic" />
+            <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="classic" typography={typography} />
           </section>
         ))}
       </div>
@@ -292,8 +315,8 @@ const ClassicTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: b
 );
 ClassicTemplate.displayName = 'ClassicTemplate';
 
-const ProfessionalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string }>(
-  ({ resume, darkMode: _darkMode, colors, dateFormat }, ref) => {
+const ProfessionalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string; typography: ScaledTypography }>(
+  ({ resume, darkMode: _darkMode, colors, dateFormat, typography }, ref) => {
     const sections = resume.sections.filter(s => s.visible && s.type !== 'personal-info').sort((a, b) => a.order - b.order);
     const pi = resume.metadata?.personalInfo || { fullName: '', email: '' };
 
@@ -313,17 +336,17 @@ const ProfessionalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMo
           flexShrink: 0
         }}>
           <div style={{ marginBottom: '28px' }}>
-            <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0, lineHeight: 1.2 }}>
+            <h1 style={{ fontSize: typography.name, fontWeight: '700', margin: 0, lineHeight: 1.2 }}>
               {pi.fullName || 'Your Name'}
             </h1>
             {pi.professionalTitle && (
-              <p style={{ fontSize: '12px', opacity: 0.85, marginTop: '6px' }}>{pi.professionalTitle}</p>
+              <p style={{ fontSize: typography.small, opacity: 0.85, marginTop: '6px' }}>{pi.professionalTitle}</p>
             )}
           </div>
           
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '10px' }}>Contact</h3>
-            <div style={{ fontSize: '11px', lineHeight: 1.8 }}>
+            <h3 style={{ fontSize: typography.small, textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '10px' }}>Contact</h3>
+            <div style={{ fontSize: typography.body, lineHeight: 1.8 }}>
               {pi.email && <div>{pi.email}</div>}
               {pi.phone && <div>{pi.phone}</div>}
               {pi.location && <div>{pi.location}</div>}
@@ -335,10 +358,10 @@ const ProfessionalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMo
 
           {sidebarSections.map((section) => (
             <div key={section.id} style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '10px' }}>
+              <h3 style={{ fontSize: typography.small, textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.7, marginBottom: '10px' }}>
                 {section.content.title || SECTION_LABELS[section.type]}
               </h3>
-              <SectionContent section={section} colors={{ ...colors, text: '#ffffff', muted: 'rgba(255,255,255,0.7)' }} dateFormat={dateFormat} template="professional" compact />
+              <SectionContent section={section} colors={{ ...colors, text: '#ffffff', muted: 'rgba(255,255,255,0.7)' }} dateFormat={dateFormat} template="professional" compact typography={typography} />
             </div>
           ))}
         </aside>
@@ -348,7 +371,7 @@ const ProfessionalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMo
           {mainSections.map((section) => (
             <section key={section.id} style={{ marginBottom: '24px' }}>
               <h2 style={{ 
-                fontSize: '14px', 
+                fontSize: typography.sectionHeading, 
                 fontWeight: '700', 
                 color: colors.primary,
                 borderBottom: `2px solid ${colors.accent}`,
@@ -357,7 +380,7 @@ const ProfessionalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMo
               }}>
                 {section.content.title || SECTION_LABELS[section.type]}
               </h2>
-              <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="professional" />
+              <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="professional" typography={typography} />
             </section>
           ))}
         </main>
@@ -367,8 +390,8 @@ const ProfessionalTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMo
 );
 ProfessionalTemplate.displayName = 'ProfessionalTemplate';
 
-const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string }>(
-  ({ resume, darkMode, colors, dateFormat }, ref) => {
+const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: boolean; colors: ReturnType<typeof getTemplateStyles>; dateFormat: string; typography: ScaledTypography }>(
+  ({ resume, darkMode, colors, dateFormat, typography }, ref) => {
     const sections = resume.sections.filter(s => s.visible && s.type !== 'personal-info').sort((a, b) => a.order - b.order);
     const pi = resume.metadata?.personalInfo || { fullName: '', email: '' };
 
@@ -382,21 +405,21 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <h1 style={{ fontSize: '28px', fontWeight: '700', color: colors.primary, margin: 0 }}>
+              <h1 style={{ fontSize: typography.name, fontWeight: '700', color: colors.primary, margin: 0 }}>
                 {pi.fullName || 'Your Name'}
               </h1>
               {pi.professionalTitle && (
-                <p style={{ fontSize: '14px', color: colors.muted, marginTop: '4px' }}>{pi.professionalTitle}</p>
+                <p style={{ fontSize: typography.title, color: colors.muted, marginTop: '4px' }}>{pi.professionalTitle}</p>
               )}
             </div>
-            <div style={{ textAlign: 'right', fontSize: '12px', color: colors.muted, lineHeight: 1.7 }}>
+            <div style={{ textAlign: 'right', fontSize: typography.small, color: colors.muted, lineHeight: 1.7 }}>
               {pi.email && <div>{pi.email}</div>}
               {pi.phone && <div>{pi.phone}</div>}
               {pi.location && <div>{pi.location}</div>}
             </div>
           </div>
           {(pi.linkedin || pi.github || pi.website) && (
-            <div style={{ marginTop: '12px', fontSize: '12px' }}>
+            <div style={{ marginTop: '12px', fontSize: typography.small }}>
               {pi.github && (
                 <span style={{ 
                   display: 'inline-block',
@@ -450,7 +473,7 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
               boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.08)'
             }}>
               <h2 style={{ 
-                fontSize: '13px', 
+                fontSize: typography.sectionHeading, 
                 fontWeight: '700', 
                 color: colors.primary,
                 marginBottom: '14px',
@@ -467,7 +490,7 @@ const TechTemplate = forwardRef<HTMLDivElement, { resume: Resume; darkMode: bool
                 }}></span>
                 {section.content.title || SECTION_LABELS[section.type]}
               </h2>
-              <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="tech" />
+              <SectionContent section={section} colors={colors} dateFormat={dateFormat} template="tech" typography={typography} />
             </section>
           ))}
         </div>
@@ -484,13 +507,17 @@ interface SectionContentProps {
   dateFormat: string;
   template: TemplateType;
   compact?: boolean;
+  typography?: ScaledTypography;
 }
 
 
 
-function SectionContent({ section, colors, dateFormat, template: _template, compact }: SectionContentProps) {
+function SectionContent({ section, colors, dateFormat, template: _template, compact, typography }: SectionContentProps) {
   const data = section.content.data;
-  const smallFontSize = compact ? '9px' : '11px';
+  // Use typography values if provided, otherwise fall back to default sizes
+  const itemTitleSize = typography?.itemTitle || (compact ? '11px' : '13px');
+  const bodySize = typography?.body || (compact ? '9px' : '11px');
+  const smallSize = typography?.small || (compact ? '8px' : '10px');
 
   switch (section.type) {
     case 'experience':
@@ -500,25 +527,25 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
             <div key={exp.id} style={{ marginBottom: idx < arr.length - 1 ? '16px' : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                 <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text, lineHeight: 1.3 }}>{exp.position}</h3>
-                  <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '2px 0 0 0', lineHeight: 1.4 }}>
+                  <h3 style={{ fontSize: itemTitleSize, fontWeight: '600', margin: 0, color: colors.text, lineHeight: 1.3 }}>{exp.position}</h3>
+                  <p style={{ fontSize: smallSize, color: colors.muted, margin: '2px 0 0 0', lineHeight: 1.4 }}>
                     {exp.company}{exp.location ? ` • ${exp.location}` : ''}
                   </p>
                 </div>
-                <span style={{ fontSize: smallFontSize, color: colors.muted, whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                <span style={{ fontSize: smallSize, color: colors.muted, whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                   {formatDate(exp.startDate, dateFormat)} – {exp.current ? 'Present' : formatDate(exp.endDate || '', dateFormat)}
                 </span>
               </div>
               {exp.description && (
-                <p style={{ fontSize: smallFontSize, color: colors.text, margin: '8px 0 0 0', lineHeight: 1.6 }}>{exp.description}</p>
+                <p style={{ fontSize: bodySize, color: colors.text, margin: '8px 0 0 0', lineHeight: 1.6 }}>{exp.description}</p>
               )}
               {exp.highlights && exp.highlights.length > 0 && (
-                <ul style={{ margin: '8px 0 0 16px', padding: 0, fontSize: smallFontSize, color: colors.text, lineHeight: 1.6 }}>
+                <ul style={{ margin: '8px 0 0 16px', padding: 0, fontSize: bodySize, color: colors.text, lineHeight: 1.6 }}>
                   {exp.highlights.map((h, i) => <li key={i} style={{ marginBottom: '3px' }}>{h}</li>)}
                 </ul>
               )}
               {exp.technologies && exp.technologies.length > 0 && (
-                <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '6px 0 0 0', fontStyle: 'italic' }}>
+                <p style={{ fontSize: smallSize, color: colors.muted, margin: '6px 0 0 0', fontStyle: 'italic' }}>
                   {exp.technologies.join(' • ')}
                 </p>
               )}
@@ -534,20 +561,20 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
             <div key={edu.id} style={{ marginBottom: idx < arr.length - 1 ? '14px' : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2px' }}>
                 <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text }}>
+                  <h3 style={{ fontSize: itemTitleSize, fontWeight: '600', margin: 0, color: colors.text }}>
                     {edu.degree}{edu.field ? ` in ${edu.field}` : ''}
                   </h3>
-                  <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '2px 0 0 0' }}>{edu.institution}</p>
+                  <p style={{ fontSize: smallSize, color: colors.muted, margin: '2px 0 0 0' }}>{edu.institution}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: smallFontSize, color: colors.muted }}>
+                  <span style={{ fontSize: smallSize, color: colors.muted }}>
                     {formatDate(edu.startDate, dateFormat)} – {edu.current ? 'Present' : formatDate(edu.endDate || '', dateFormat)}
                   </span>
-                  {edu.gpa && <div style={{ fontSize: '10px', color: colors.muted }}>GPA: {edu.gpa}</div>}
+                  {edu.gpa && <div style={{ fontSize: smallSize, color: colors.muted }}>GPA: {edu.gpa}</div>}
                 </div>
               </div>
               {edu.achievements && edu.achievements.length > 0 && (
-                <ul style={{ margin: '6px 0 0 16px', padding: 0, fontSize: smallFontSize, color: colors.text, lineHeight: 1.5 }}>
+                <ul style={{ margin: '6px 0 0 16px', padding: 0, fontSize: bodySize, color: colors.text, lineHeight: 1.5 }}>
                   {edu.achievements.map((a, i) => <li key={i} style={{ marginBottom: '2px' }}>{a}</li>)}
                 </ul>
               )}
@@ -559,7 +586,7 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
     case 'skills':
       if (compact) {
         return (
-          <div style={{ fontSize: smallFontSize, lineHeight: 1.7 }}>
+          <div style={{ fontSize: bodySize, lineHeight: 1.7 }}>
             {(Array.isArray(data) ? data as SkillCategory[] : []).map((cat) => (
               <div key={cat.id} style={{ marginBottom: '8px' }}>
                 <div style={{ fontWeight: '600', marginBottom: '3px' }}>{cat.name}</div>
@@ -579,8 +606,8 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
             <div key={rowIdx} style={{ display: 'table-row' }}>
               {row.map((cat) => (
                 <div key={cat.id} style={{ display: 'table-cell', width: '50%', paddingRight: '24px', verticalAlign: 'top' }}>
-                  <h4 style={{ fontSize: smallFontSize, fontWeight: '600', color: colors.text, marginBottom: '4px' }}>{cat.name}</h4>
-                  <p style={{ fontSize: smallFontSize, color: colors.muted, margin: 0, lineHeight: 1.5 }}>
+                  <h4 style={{ fontSize: bodySize, fontWeight: '600', color: colors.text, marginBottom: '4px' }}>{cat.name}</h4>
+                  <p style={{ fontSize: bodySize, color: colors.muted, margin: 0, lineHeight: 1.5 }}>
                     {cat.skills.map(s => s.name).join(', ')}
                   </p>
                 </div>
@@ -596,16 +623,16 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
           {(Array.isArray(data) ? data as Project[] : []).map((proj, idx, arr) => (
             <div key={proj.id} style={{ marginBottom: idx < arr.length - 1 ? '14px' : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text, lineHeight: 1.3 }}>{proj.name}</h3>
+                <h3 style={{ fontSize: itemTitleSize, fontWeight: '600', margin: 0, color: colors.text, lineHeight: 1.3 }}>{proj.name}</h3>
                 {proj.url && (
-                  <span style={{ fontSize: '10px', color: colors.muted, lineHeight: 1.3 }}>{proj.url}</span>
+                  <span style={{ fontSize: smallSize, color: colors.muted, lineHeight: 1.3 }}>{proj.url}</span>
                 )}
               </div>
               {proj.description && (
-                <p style={{ fontSize: smallFontSize, color: colors.text, margin: '4px 0 0 0', lineHeight: 1.5 }}>{proj.description}</p>
+                <p style={{ fontSize: bodySize, color: colors.text, margin: '4px 0 0 0', lineHeight: 1.5 }}>{proj.description}</p>
               )}
               {proj.technologies && proj.technologies.length > 0 && (
-                <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '4px 0 0 0', fontStyle: 'italic' }}>
+                <p style={{ fontSize: smallSize, color: colors.muted, margin: '4px 0 0 0', fontStyle: 'italic' }}>
                   {proj.technologies.join(' • ')}
                 </p>
               )}
@@ -617,7 +644,7 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
     case 'certifications':
       if (compact) {
         return (
-          <div style={{ fontSize: smallFontSize, lineHeight: 1.8 }}>
+          <div style={{ fontSize: bodySize, lineHeight: 1.8 }}>
             {(Array.isArray(data) ? data as Certification[] : []).map((cert) => (
               <div key={cert.id}>
                 <div style={{ fontWeight: '500' }}>{cert.name}</div>
@@ -630,12 +657,12 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
       return (
         <div>
           {(Array.isArray(data) ? data as Certification[] : []).map((cert) => (
-            <div key={cert.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: smallFontSize }}>
+            <div key={cert.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: bodySize }}>
               <div>
                 <span style={{ fontWeight: '600', color: colors.text }}>{cert.name}</span>
                 <span style={{ color: colors.muted }}> – {cert.issuer}</span>
               </div>
-              <span style={{ color: colors.muted }}>{formatDate(cert.issueDate, dateFormat)}</span>
+              <span style={{ color: colors.muted, fontSize: smallSize }}>{formatDate(cert.issueDate, dateFormat)}</span>
             </div>
           ))}
         </div>
@@ -644,7 +671,7 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
     case 'awards':
       if (compact) {
         return (
-          <div style={{ fontSize: smallFontSize, lineHeight: 1.8 }}>
+          <div style={{ fontSize: bodySize, lineHeight: 1.8 }}>
             {(Array.isArray(data) ? data as Award[] : []).map((award) => (
               <div key={award.id}>
                 <div style={{ fontWeight: '500' }}>{award.title}</div>
@@ -657,12 +684,12 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
       return (
         <div>
           {(Array.isArray(data) ? data as Award[] : []).map((award) => (
-            <div key={award.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: smallFontSize }}>
+            <div key={award.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: bodySize }}>
               <div>
                 <span style={{ fontWeight: '600', color: colors.text }}>{award.title}</span>
                 {award.issuer && <span style={{ color: colors.muted }}> – {award.issuer}</span>}
               </div>
-              <span style={{ color: colors.muted }}>{formatDate(award.date, dateFormat)}</span>
+              <span style={{ color: colors.muted, fontSize: smallSize }}>{formatDate(award.date, dateFormat)}</span>
             </div>
           ))}
         </div>
@@ -671,7 +698,7 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
     case 'languages':
       if (compact) {
         return (
-          <div style={{ fontSize: smallFontSize, lineHeight: 1.8 }}>
+          <div style={{ fontSize: bodySize, lineHeight: 1.8 }}>
             {(Array.isArray(data) ? data as Language[] : []).map((lang) => (
               <div key={lang.id}>
                 <span style={{ fontWeight: '500' }}>{lang.name}</span>
@@ -682,7 +709,7 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
         );
       }
       return (
-        <div style={{ fontSize: smallFontSize }}>
+        <div style={{ fontSize: bodySize }}>
           {(Array.isArray(data) ? data as Language[] : []).map((lang, idx, arr) => (
             <span key={lang.id}>
               <span style={{ fontWeight: '600', color: colors.text }}>{lang.name}</span>
@@ -697,10 +724,10 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
       return (
         <div>
           {(Array.isArray(data) ? data as Publication[] : []).map((pub) => (
-            <div key={pub.id} style={{ marginBottom: '8px', fontSize: smallFontSize }}>
+            <div key={pub.id} style={{ marginBottom: '8px', fontSize: bodySize }}>
               <span style={{ fontWeight: '600', color: colors.text }}>{pub.title}</span>
               {pub.publisher && <span style={{ color: colors.muted }}>, {pub.publisher}</span>}
-              <span style={{ color: colors.muted }}> ({formatDate(pub.date, dateFormat)})</span>
+              <span style={{ color: colors.muted, fontSize: smallSize }}> ({formatDate(pub.date, dateFormat)})</span>
             </div>
           ))}
         </div>
@@ -713,15 +740,15 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
             <div key={vol.id} style={{ marginBottom: idx < arr.length - 1 ? '14px' : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2px' }}>
                 <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: colors.text }}>{vol.role}</h3>
-                  <p style={{ fontSize: smallFontSize, color: colors.muted, margin: '2px 0 0 0' }}>{vol.organization}</p>
+                  <h3 style={{ fontSize: itemTitleSize, fontWeight: '600', margin: 0, color: colors.text }}>{vol.role}</h3>
+                  <p style={{ fontSize: smallSize, color: colors.muted, margin: '2px 0 0 0' }}>{vol.organization}</p>
                 </div>
-                <span style={{ fontSize: smallFontSize, color: colors.muted }}>
+                <span style={{ fontSize: smallSize, color: colors.muted }}>
                   {formatDate(vol.startDate, dateFormat)} – {vol.current ? 'Present' : formatDate(vol.endDate || '', dateFormat)}
                 </span>
               </div>
               {vol.description && (
-                <p style={{ fontSize: smallFontSize, color: colors.text, margin: '6px 0 0 0', lineHeight: 1.5 }}>{vol.description}</p>
+                <p style={{ fontSize: bodySize, color: colors.text, margin: '6px 0 0 0', lineHeight: 1.5 }}>{vol.description}</p>
               )}
             </div>
           ))}
@@ -731,29 +758,29 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
     case 'references':
       const refs = Array.isArray(data) ? data as Reference[] : [];
       if (refs.length === 0) {
-        return <p style={{ fontSize: smallFontSize, color: colors.muted, fontStyle: 'italic' }}>Available upon request</p>;
+        return <p style={{ fontSize: bodySize, color: colors.muted, fontStyle: 'italic' }}>Available upon request</p>;
       }
       // Use table layout for references (better html2canvas support)
       return (
         <div style={{ display: 'table', width: '100%', borderSpacing: '16px 0', marginLeft: '-16px' }}>
           <div style={{ display: 'table-row' }}>
             {refs.slice(0, 2).map((ref) => (
-              <div key={ref.id} style={{ display: 'table-cell', width: '50%', fontSize: smallFontSize, verticalAlign: 'top' }}>
+              <div key={ref.id} style={{ display: 'table-cell', width: '50%', fontSize: bodySize, verticalAlign: 'top' }}>
                 <div style={{ fontWeight: '600', color: colors.text }}>{ref.name}</div>
-                {ref.title && <div style={{ color: colors.muted }}>{ref.title}</div>}
-                {ref.company && <div style={{ color: colors.muted }}>{ref.company}</div>}
-                {ref.email && <div style={{ color: colors.muted, marginTop: '4px' }}>{ref.email}</div>}
+                {ref.title && <div style={{ color: colors.muted, fontSize: smallSize }}>{ref.title}</div>}
+                {ref.company && <div style={{ color: colors.muted, fontSize: smallSize }}>{ref.company}</div>}
+                {ref.email && <div style={{ color: colors.muted, marginTop: '4px', fontSize: smallSize }}>{ref.email}</div>}
               </div>
             ))}
           </div>
           {refs.length > 2 && (
             <div style={{ display: 'table-row' }}>
               {refs.slice(2, 4).map((ref) => (
-                <div key={ref.id} style={{ display: 'table-cell', width: '50%', fontSize: smallFontSize, verticalAlign: 'top', paddingTop: '16px' }}>
+                <div key={ref.id} style={{ display: 'table-cell', width: '50%', fontSize: bodySize, verticalAlign: 'top', paddingTop: '16px' }}>
                   <div style={{ fontWeight: '600', color: colors.text }}>{ref.name}</div>
-                  {ref.title && <div style={{ color: colors.muted }}>{ref.title}</div>}
-                  {ref.company && <div style={{ color: colors.muted }}>{ref.company}</div>}
-                  {ref.email && <div style={{ color: colors.muted, marginTop: '4px' }}>{ref.email}</div>}
+                  {ref.title && <div style={{ color: colors.muted, fontSize: smallSize }}>{ref.title}</div>}
+                  {ref.company && <div style={{ color: colors.muted, fontSize: smallSize }}>{ref.company}</div>}
+                  {ref.email && <div style={{ color: colors.muted, marginTop: '4px', fontSize: smallSize }}>{ref.email}</div>}
                 </div>
               ))}
             </div>
@@ -766,7 +793,7 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
       if (section.content.html) {
         return (
           <div 
-            style={{ fontSize: smallFontSize, color: colors.text, lineHeight: 1.7 }}
+            style={{ fontSize: bodySize, color: colors.text, lineHeight: 1.7 }}
             dangerouslySetInnerHTML={{ __html: section.content.html }} 
           />
         );
@@ -778,67 +805,15 @@ function SectionContent({ section, colors, dateFormat, template: _template, comp
   }
 }
 
-// Page component for multi-page rendering
-interface PageProps {
-  pageNumber: number;
-  totalPages: number;
-  pageSize: { width: number; height: number };
-  colors: ReturnType<typeof getTemplateStyles>;
-  children: React.ReactNode;
-  fontStack: string;
-  fontSize: number;
-  lineHeight: number;
-}
-
-function Page({ pageNumber, totalPages, pageSize, colors, children, fontStack, fontSize, lineHeight }: PageProps) {
-  return (
-    <div
-      style={{
-        width: `${pageSize.width}px`,
-        minHeight: `${pageSize.height}px`,
-        height: `${pageSize.height}px`,
-        backgroundColor: colors.bg,
-        position: 'relative',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        fontFamily: fontStack,
-        fontSize: `${fontSize}px`,
-        lineHeight,
-        pageBreakAfter: 'always',
-        breakAfter: 'page',
-      }}
-      className="resume-page"
-    >
-      {children}
-      {/* Page number indicator */}
-      {totalPages > 1 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '16px',
-            right: '24px',
-            fontSize: '10px',
-            color: colors.muted,
-          }}
-        >
-          Page {pageNumber} of {totalPages}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Multi-page Resume Renderer with automatic pagination
+// Simple Resume Renderer - renders content in fixed A4 pages with automatic overflow
 const ResumeRendererInner = forwardRef<HTMLDivElement, ResumeRendererProps>(
-  ({ resume, darkMode = false, scale = 100, className = '', forExport = false }, ref) => {
-    const measureRef = useRef<HTMLDivElement>(null);
-    const [pages, setPages] = useState<ResumeSection[][]>([]);
-    const [measured, setMeasured] = useState(false);
+  ({ resume, darkMode = false, className = '', forExport = false }, ref) => {
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [numPages, setNumPages] = useState(1);
     
     // Get page dimensions
     const pageSize = PAGE_SIZES[resume.metadata?.settings?.pageSize || 'A4'];
-    const margins = resume.metadata?.settings?.margins || { top: 20, right: 20, bottom: 20, left: 20 };
-    const contentHeight = pageSize.height - margins.top - margins.bottom - 40; // Extra padding for page number
+    const margins = resume.metadata?.settings?.margins || { top: 40, right: 48, bottom: 40, left: 48 };
     
     // Get user colors from settings
     const userColors = resume.metadata?.settings?.colors;
@@ -865,219 +840,203 @@ const ResumeRendererInner = forwardRef<HTMLDivElement, ResumeRendererProps>(
     const fontSize = resume.metadata?.settings?.fontSize || 11;
     const lineHeight = resume.metadata?.settings?.lineHeight || 1.5;
     
-    // Measure sections and distribute across pages
-    const measureAndPaginate = useCallback(() => {
-      if (!measureRef.current) return;
-      
-      const sectionElements = measureRef.current.querySelectorAll('[data-section-id]');
-      const headerElement = measureRef.current.querySelector('[data-header]');
-      
-      let currentPage: ResumeSection[] = [];
-      let currentHeight = headerElement ? headerElement.getBoundingClientRect().height : 0;
-      const pageGroups: ResumeSection[][] = [];
-      const visibleSections = resume.sections.filter(s => s.visible).sort((a, b) => a.order - b.order);
-      
-      sectionElements.forEach((el, index) => {
-        const sectionHeight = el.getBoundingClientRect().height;
-        const section = visibleSections[index];
-        
-        if (!section) return;
-        
-        // Check if adding this section would exceed page height
-        if (currentHeight + sectionHeight > contentHeight && currentPage.length > 0) {
-          // Start new page
-          pageGroups.push(currentPage);
-          currentPage = [section];
-          currentHeight = sectionHeight;
-        } else {
-          currentPage.push(section);
-          currentHeight += sectionHeight;
-        }
-      });
-      
-      // Add the last page
-      if (currentPage.length > 0 || pageGroups.length === 0) {
-        pageGroups.push(currentPage.length > 0 ? currentPage : visibleSections);
-      }
-      
-      setPages(pageGroups);
-      setMeasured(true);
-    }, [resume.sections, contentHeight]);
+    // Get typography settings with scaling
+    const typography = resume.metadata?.settings?.typography || DEFAULT_TYPOGRAPHY;
+    const fontScale = resume.metadata?.settings?.fontScale ?? 1.0;
+    const scaledTypography = getScaledTypography(typography, fontScale);
     
-    // Measure on mount and when sections change
-    useEffect(() => {
-      // Small delay to ensure DOM is rendered
-      const timer = setTimeout(measureAndPaginate, 100);
-      return () => clearTimeout(timer);
-    }, [measureAndPaginate, resume.sections, resume.metadata?.settings]);
+    // Get visible sections sorted by order
+    const visibleSections = resume.sections
+      .filter(s => s.visible && s.type !== 'personal-info')
+      .sort((a, b) => a.order - b.order);
     
-    // Remeasure when window resizes (for responsive behavior)
-    useEffect(() => {
-      const handleResize = () => {
-        setMeasured(false);
-        setTimeout(measureAndPaginate, 100);
-      };
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }, [measureAndPaginate]);
+    const pi = resume.metadata?.personalInfo || { fullName: '', email: '' };
+    const contactItems = [pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean);
 
-    const templateProps = { resume, darkMode: forExport ? false : darkMode, colors, dateFormat };
-
-    // Render single template (for measurement and single-page mode)
-    const renderTemplate = () => {
-      switch (resume.template) {
-        case 'modern':
-          return <ModernTemplate ref={ref} {...templateProps} />;
-        case 'classic':
-          return <ClassicTemplate ref={ref} {...templateProps} />;
-        case 'professional':
-          return <ProfessionalTemplate ref={ref} {...templateProps} />;
-        case 'tech':
-          return <TechTemplate ref={ref} {...templateProps} />;
-        case 'creative':
-        case 'executive':
-        case 'minimal':
-        default:
-          return <MinimalTemplate ref={ref} {...templateProps} />;
-      }
-    };
-    
-    // Render paginated content for each page
-    const renderPageContent = (pageSections: ResumeSection[], pageNum: number) => {
-      const isFirstPage = pageNum === 0;
-      const pi = resume.metadata?.personalInfo || { fullName: '', email: '' };
-      
-      // Render header only on first page (or a compact version on subsequent pages)
-      const renderHeader = () => {
-        if (!isFirstPage) {
-          // Compact header for continuation pages
-          return (
-            <div style={{ 
-              padding: '16px 48px',
-              borderBottom: `1px solid ${colors.divider}`,
-              marginBottom: '16px',
-            }}>
-              <span style={{ fontSize: '12px', color: colors.muted }}>
-                {pi.fullName} - Continued
-              </span>
-            </div>
-          );
+    // Measure content and calculate pages after render
+    useEffect(() => {
+      const measure = () => {
+        if (contentRef.current) {
+          const contentHeight = contentRef.current.scrollHeight;
+          const pagesNeeded = Math.max(1, Math.ceil(contentHeight / pageSize.height));
+          if (pagesNeeded !== numPages) {
+            setNumPages(pagesNeeded);
+          }
         }
-        
-        // Full header based on template
-        const contactItems = [pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website].filter(Boolean);
-        
-        return (
-          <header style={{ 
-            padding: '40px 48px 24px',
-            borderBottom: `1px solid ${colors.divider}`,
-            marginBottom: '20px',
-          }}>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: colors.primary, margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
-              {pi.fullName || 'Your Name'}
-            </h1>
-            {pi.professionalTitle && (
-              <p style={{ fontSize: '14px', color: colors.muted, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
-            )}
-            <div style={{ marginTop: '12px', fontSize: '12px', color: colors.muted, lineHeight: 1.6 }}>
-              {contactItems.map((item, idx) => (
-                <span key={idx}>
-                  {item}
-                  {idx < contactItems.length - 1 && <span style={{ margin: '0 8px' }}>•</span>}
-                </span>
-              ))}
-            </div>
-          </header>
-        );
       };
       
-      return (
-        <div style={{ backgroundColor: colors.bg, color: colors.text, minHeight: '100%' }}>
-          {renderHeader()}
-          <div style={{ padding: '0 48px 40px' }}>
-            {pageSections.filter(s => s.type !== 'personal-info').map((section) => (
-              <section key={section.id} style={{ marginBottom: '20px' }}>
-                <h2 style={{ 
-                  fontSize: '11px', 
-                  fontWeight: '700', 
-                  color: colors.primary, 
-                  textTransform: 'uppercase',
-                  letterSpacing: '1.5px',
-                  borderBottom: `1px solid ${colors.divider}`,
-                  paddingBottom: '6px',
-                  marginBottom: '12px'
-                }}>
-                  {section.content.title || SECTION_LABELS[section.type]}
-                </h2>
-                <SectionContent section={section} colors={colors} dateFormat={dateFormat} template={resume.template} />
-              </section>
-            ))}
-          </div>
-        </div>
-      );
-    };
+      // Measure after a short delay to ensure fonts are loaded
+      const timeoutId = setTimeout(measure, 50);
+      
+      // Also measure on resize
+      window.addEventListener('resize', measure);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        window.removeEventListener('resize', measure);
+      };
+    }, [resume, pageSize.height, numPages, scaledTypography]);
 
-    // For single page or measurement phase, render regular template
-    if (!measured || pages.length <= 1) {
-      return (
-        <div 
-          ref={measureRef}
-          className={className}
-          style={{
-            transform: scale !== 100 ? `scale(${scale / 100})` : undefined,
-            transformOrigin: 'top center',
-            width: forExport ? `${pageSize.width}px` : '100%',
-            minHeight: forExport ? `${pageSize.height}px` : 'auto',
-            fontFamily: fontStack,
-            fontSize: `${fontSize}px`,
-            lineHeight,
-          }}
-        >
-          {/* Hidden measurement container */}
-          <div 
-            style={{ position: 'absolute', visibility: 'hidden', width: `${pageSize.width}px` }}
-            ref={measureRef}
-          >
-            {resume.sections.filter(s => s.visible && s.type !== 'personal-info').sort((a, b) => a.order - b.order).map(section => (
-              <div key={section.id} data-section-id={section.id} style={{ padding: '0 48px', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '11px', fontWeight: '700', marginBottom: '12px' }}>
-                  {section.content.title || SECTION_LABELS[section.type]}
-                </h2>
-                <SectionContent section={section} colors={colors} dateFormat={dateFormat} template={resume.template} />
-              </div>
-            ))}
-          </div>
-          {renderTemplate()}
+    // Render header
+    const renderHeader = () => (
+      <header style={{ 
+        padding: `${margins.top}px ${margins.right}px 20px ${margins.left}px`,
+        borderBottom: `1px solid ${colors.divider}`,
+      }}>
+        <h1 style={{ fontSize: scaledTypography.name, fontWeight: '700', color: colors.primary, margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
+          {pi.fullName || 'Your Name'}
+        </h1>
+        {pi.professionalTitle && (
+          <p style={{ fontSize: scaledTypography.title, color: colors.muted, marginTop: '4px', lineHeight: 1.4 }}>{pi.professionalTitle}</p>
+        )}
+        <div style={{ marginTop: '12px', fontSize: scaledTypography.small, color: colors.muted, lineHeight: 1.6 }}>
+          {contactItems.map((item, idx) => (
+            <span key={idx}>
+              {item}
+              {idx < contactItems.length - 1 && <span style={{ margin: '0 8px' }}>•</span>}
+            </span>
+          ))}
         </div>
-      );
-    }
+      </header>
+    );
 
-    // Render multi-page layout
+    // Continuation header for pages 2+
+    const renderContinuationHeader = () => (
+      <div style={{ 
+        padding: `20px ${margins.right}px 16px ${margins.left}px`,
+        borderBottom: `1px solid ${colors.divider}`,
+        backgroundColor: colors.bg,
+      }}>
+        <span style={{ fontSize: scaledTypography.small, color: colors.muted }}>
+          {pi.fullName || 'Your Name'} — <em>continued</em>
+        </span>
+      </div>
+    );
+
+    // Render full content
+    const renderContent = () => (
+      <div style={{ backgroundColor: colors.bg, color: colors.text }}>
+        {renderHeader()}
+        <div style={{ padding: `20px ${margins.right}px ${margins.bottom}px ${margins.left}px` }}>
+          {visibleSections.map((section) => (
+            <section key={section.id} style={{ marginBottom: '20px' }}>
+              <h2 style={{ 
+                fontSize: scaledTypography.sectionHeading, 
+                fontWeight: '700', 
+                color: colors.primary, 
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                borderBottom: `1px solid ${colors.divider}`,
+                paddingBottom: '6px',
+                marginBottom: '12px'
+              }}>
+                {section.content.title || SECTION_LABELS[section.type]}
+              </h2>
+              <SectionContent section={section} colors={colors} dateFormat={dateFormat} template={resume.template} typography={scaledTypography} />
+            </section>
+          ))}
+        </div>
+      </div>
+    );
+
+    // Height of continuation header overlay
+    const continuationHeaderHeight = 56;
+
     return (
       <div 
         ref={ref}
         className={className}
         style={{
-          transform: scale !== 100 ? `scale(${scale / 100})` : undefined,
-          transformOrigin: 'top center',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
           gap: '24px',
         }}
       >
-        {pages.map((pageSections, pageIndex) => (
-          <Page
+        {/* Hidden measurement container */}
+        <div
+          ref={contentRef}
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: 0,
+            width: `${pageSize.width}px`,
+            fontFamily: fontStack,
+            fontSize: `${fontSize}px`,
+            lineHeight,
+            visibility: 'hidden',
+          }}
+          aria-hidden="true"
+        >
+          {renderContent()}
+        </div>
+
+        {/* Render pages */}
+        {Array.from({ length: numPages }, (_, pageIndex) => (
+          <div
             key={pageIndex}
-            pageNumber={pageIndex + 1}
-            totalPages={pages.length}
-            pageSize={pageSize}
-            colors={colors}
-            fontStack={fontStack}
-            fontSize={fontSize}
-            lineHeight={lineHeight}
+            style={{
+              width: `${pageSize.width}px`,
+              height: `${pageSize.height}px`,
+              backgroundColor: colors.bg,
+              position: 'relative',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+              fontFamily: fontStack,
+              fontSize: `${fontSize}px`,
+              lineHeight,
+              flexShrink: 0,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            }}
+            className="resume-page"
           >
-            {renderPageContent(pageSections, pageIndex)}
-          </Page>
+            {/* Content container that shifts up for each page */}
+            <div
+              style={{
+                position: 'absolute',
+                top: `-${pageIndex * pageSize.height}px`,
+                left: 0,
+                width: '100%',
+              }}
+            >
+              {renderContent()}
+            </div>
+            
+            {/* Continuation header overlay for pages 2+ */}
+            {pageIndex > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: `${continuationHeaderHeight}px`,
+                  backgroundColor: colors.bg,
+                  zIndex: 1,
+                }}
+              >
+                {renderContinuationHeader()}
+              </div>
+            )}
+            
+            {/* Page number */}
+            {numPages > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '16px',
+                  right: '24px',
+                  fontSize: '10px',
+                  color: colors.muted,
+                  backgroundColor: colors.bg,
+                  padding: '2px 6px',
+                  zIndex: 2,
+                }}
+              >
+                Page {pageIndex + 1} of {numPages}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     );

@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Settings, Type, Palette, Layout, RotateCcw } from 'lucide-react';
-import { TEMPLATE_CONFIGS, type FontFamily, type PartialResumeSettings, type ResumeSettings, type ResumeColors } from '@/types/resume';
+import { TEMPLATE_CONFIGS, DEFAULT_TYPOGRAPHY, type FontFamily, type PartialResumeSettings, type ResumeSettings, type ResumeColors, type TypographyScale } from '@/types/resume';
 
 interface SettingsPanelProps {
   resumeId: string;
@@ -44,6 +44,10 @@ export function SettingsPanel({ resumeId }: SettingsPanelProps) {
 
   if (!settings) return null;
 
+  // Ensure typography and fontScale have defaults for backward compatibility
+  const typography = settings.typography || DEFAULT_TYPOGRAPHY;
+  const fontScale = settings.fontScale ?? 1.0;
+
   const handleUpdate = (updates: PartialResumeSettings) => {
     updateSettings(resumeId, updates);
   };
@@ -56,12 +60,18 @@ export function SettingsPanel({ resumeId }: SettingsPanelProps) {
     updateSettings(resumeId, { margins: { [key]: value } });
   };
 
+  const handleTypographyChange = (key: keyof TypographyScale, value: number) => {
+    updateSettings(resumeId, { typography: { [key]: value } });
+  };
+
   const resetToDefault = () => {
     const template = activeResume?.template || 'minimal';
     const defaultColors = TEMPLATE_CONFIGS[template].defaultColors;
     updateSettings(resumeId, {
       colors: defaultColors,
       fontSize: 11,
+      fontScale: 1.0,
+      typography: { ...DEFAULT_TYPOGRAPHY },
       lineHeight: 1.5,
       fontFamily: 'Inter',
       margins: { top: 20, right: 20, bottom: 20, left: 20 },
@@ -118,11 +128,54 @@ export function SettingsPanel({ resumeId }: SettingsPanelProps) {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <Label>Font Size</Label>
-                <span className="text-sm text-muted-foreground">{settings.fontSize}pt</span>
+                <Label>Global Font Scale</Label>
+                <span className="text-sm text-muted-foreground">{Math.round(fontScale * 100)}%</span>
               </div>
-              <Slider value={[settings.fontSize]} onValueChange={([v]) => handleUpdate({ fontSize: v })} min={9} max={14} step={0.5} />
+              <Slider value={[fontScale]} onValueChange={([v]) => handleUpdate({ fontScale: v })} min={0.8} max={1.3} step={0.05} />
+              <p className="text-xs text-muted-foreground mt-1">Scales all text sizes proportionally</p>
             </div>
+
+            <Separator />
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label>Typography Scale</Label>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 text-xs"
+                  onClick={() => handleUpdate({ typography: { ...DEFAULT_TYPOGRAPHY } })}
+                >
+                  Reset
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {([
+                  { key: 'name', label: 'Name (H1)', min: 20, max: 36 },
+                  { key: 'title', label: 'Professional Title', min: 10, max: 20 },
+                  { key: 'sectionHeading', label: 'Section Heading (H2)', min: 10, max: 18 },
+                  { key: 'itemTitle', label: 'Item Title (H3)', min: 9, max: 16 },
+                  { key: 'body', label: 'Body Text', min: 8, max: 14 },
+                  { key: 'small', label: 'Small / Dates', min: 7, max: 12 },
+                ] as const).map(({ key, label, min, max }) => (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-xs">{label}</Label>
+                      <span className="text-xs text-muted-foreground tabular-nums">{typography[key]}pt</span>
+                    </div>
+                    <Slider 
+                      value={[typography[key]]} 
+                      onValueChange={([v]) => handleTypographyChange(key, v)} 
+                      min={min} 
+                      max={max} 
+                      step={0.5}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
 
             <div>
               <div className="flex items-center justify-between mb-2">

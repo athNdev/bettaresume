@@ -1258,12 +1258,10 @@ export default function EditorPage() {
                         style={{ backgroundColor: previewDarkMode ? '#1a1a1a' : '#f5f5f5' }}
                       >
                         <div 
-                          className="shadow-lg rounded overflow-hidden"
+                          className="shadow-lg rounded"
                           style={{
                             transform: `scale(${previewScale / 100})`,
                             transformOrigin: 'top center',
-                            width: '794px',
-                            minHeight: '1123px',
                           }}
                         >
                           <Suspense fallback={<div className="w-[794px] min-h-[1123px] bg-white flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>

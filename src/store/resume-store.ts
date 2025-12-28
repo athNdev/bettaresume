@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Resume, ResumeSection, ResumeStore, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage, SectionType } from '@/types/resume';
-import { TEMPLATE_CONFIGS, SECTION_CONFIGS } from '@/types/resume';
+import { TEMPLATE_CONFIGS, SECTION_CONFIGS, DEFAULT_TYPOGRAPHY } from '@/types/resume';
 
 const createDefaultSettings = (template: TemplateType): ResumeSettings => ({
   pageSize: 'A4',
   margins: { top: 20, right: 20, bottom: 20, left: 20 },
-  fontSize: 11,
+  fontSize: 11, // Deprecated - kept for backward compatibility
+  fontScale: 1.0,
+  typography: { ...DEFAULT_TYPOGRAPHY },
   lineHeight: 1.5,
   fontFamily: 'Inter',
   colors: TEMPLATE_CONFIGS[template].defaultColors,
@@ -549,11 +551,17 @@ export const useResumeStore = create<ResumeStore>()(
             const mergedMargins = settings.margins
               ? { ...currentSettings.margins, ...settings.margins }
               : currentSettings.margins;
+            const mergedTypography = settings.typography
+              ? { ...(currentSettings.typography || DEFAULT_TYPOGRAPHY), ...settings.typography }
+              : (currentSettings.typography || DEFAULT_TYPOGRAPHY);
             const newSettings = { 
               ...currentSettings, 
               ...settings, 
               colors: mergedColors,
-              margins: mergedMargins
+              margins: mergedMargins,
+              typography: mergedTypography,
+              // Ensure fontScale has a default
+              fontScale: settings.fontScale ?? currentSettings.fontScale ?? 1.0,
             };
             const metadata = {
               personalInfo: r.metadata?.personalInfo || { fullName: '', email: '' },

@@ -85,10 +85,22 @@ export interface PersonalInfo {
   photoUrl?: string;
 }
 
+// Typography scale for consistent font sizing across the resume
+export interface TypographyScale {
+  name: number;      // Full name (H1) - e.g., 28
+  title: number;     // Job title under name - e.g., 14
+  sectionHeading: number; // Section titles (H2) - e.g., 13
+  itemTitle: number; // Job titles, school names (H3) - e.g., 12
+  body: number;      // Regular body text - e.g., 11
+  small: number;     // Dates, captions - e.g., 10
+}
+
 export interface ResumeSettings {
   pageSize: 'A4' | 'Letter';
   margins: { top: number; right: number; bottom: number; left: number };
-  fontSize: number;
+  fontSize: number;  // Base font size - deprecated, kept for backward compatibility
+  fontScale: number; // Global scale multiplier (0.8 to 1.3, default 1.0)
+  typography: TypographyScale; // Individual font sizes
   lineHeight: number;
   fontFamily: FontFamily;
   colors: ResumeColors;
@@ -103,6 +115,8 @@ export interface PartialResumeSettings {
   pageSize?: 'A4' | 'Letter';
   margins?: Partial<{ top: number; right: number; bottom: number; left: number }>;
   fontSize?: number;
+  fontScale?: number;
+  typography?: Partial<TypographyScale>;
   lineHeight?: number;
   fontFamily?: FontFamily;
   colors?: Partial<ResumeColors>;
@@ -111,6 +125,16 @@ export interface PartialResumeSettings {
   dateFormat?: 'MM/YYYY' | 'MMM YYYY' | 'MMMM YYYY' | 'YYYY';
   accentStyle?: 'underline' | 'background' | 'border' | 'none';
 }
+
+// Default typography scale
+export const DEFAULT_TYPOGRAPHY: TypographyScale = {
+  name: 28,
+  title: 14,
+  sectionHeading: 13,
+  itemTitle: 12,
+  body: 11,
+  small: 10,
+};
 
 export type FontFamily = 'Inter' | 'Roboto' | 'Open Sans' | 'Lato' | 'Montserrat' | 'Playfair Display' | 'Georgia' | 'Times New Roman' | 'Arial';
 

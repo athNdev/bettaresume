@@ -18,9 +18,10 @@ import {
   Plus,
   Rows3,
   LayoutTemplate,
-  Palette
+  Palette,
+  ALargeSmall,
 } from 'lucide-react';
-import { TEMPLATE_CONFIGS, type FontFamily, type PartialResumeSettings, type ResumeSettings, type ResumeColors } from '@/types/resume';
+import { TEMPLATE_CONFIGS, DEFAULT_TYPOGRAPHY, type FontFamily, type PartialResumeSettings, type ResumeSettings, type ResumeColors, type TypographyScale } from '@/types/resume';
 
 interface InlineSettingsToolbarProps {
   resumeId: string;
@@ -53,6 +54,10 @@ export function InlineSettingsToolbar({ resumeId }: InlineSettingsToolbarProps) 
 
   if (!settings) return null;
 
+  // Ensure typography and fontScale have defaults for backward compatibility
+  const typography = settings.typography || DEFAULT_TYPOGRAPHY;
+  const fontScale = settings.fontScale ?? 1.0;
+
   const handleUpdate = (updates: PartialResumeSettings) => {
     updateSettings(resumeId, updates);
   };
@@ -70,12 +75,18 @@ export function InlineSettingsToolbar({ resumeId }: InlineSettingsToolbarProps) 
     updateSettings(resumeId, { margins: { [key]: value } });
   };
 
+  const handleTypographyChange = (key: keyof TypographyScale, value: number) => {
+    updateSettings(resumeId, { typography: { [key]: value } });
+  };
+
   const resetToDefault = () => {
     const template = activeResume?.template || 'minimal';
     const defaultColors = TEMPLATE_CONFIGS[template].defaultColors;
     updateSettings(resumeId, {
       colors: defaultColors,
       fontSize: 11,
+      fontScale: 1.0,
+      typography: { ...DEFAULT_TYPOGRAPHY },
       lineHeight: 1.5,
       fontFamily: 'Inter',
       margins: { top: 20, right: 20, bottom: 20, left: 20 },
@@ -86,10 +97,13 @@ export function InlineSettingsToolbar({ resumeId }: InlineSettingsToolbarProps) 
     });
   };
 
-  const adjustFontSize = (delta: number) => {
-    const newSize = Math.min(14, Math.max(9, settings.fontSize + delta));
-    handleUpdate({ fontSize: newSize });
+  const adjustFontScale = (delta: number) => {
+    const newScale = Math.min(1.3, Math.max(0.8, fontScale + delta));
+    handleUpdate({ fontScale: Math.round(newScale * 100) / 100 });
   };
+
+  // Calculate display percentage for scale
+  const scalePercent = Math.round(fontScale * 100);
 
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -108,28 +122,84 @@ export function InlineSettingsToolbar({ resumeId }: InlineSettingsToolbarProps) 
         </SelectContent>
       </Select>
 
-      {/* Font Size - inline stepper */}
+      {/* Global Font Scale - inline stepper */}
       <div className="flex items-center h-7 border rounded-md border-muted-foreground/20 bg-background">
         <Button 
           variant="ghost" 
           size="sm" 
           className="h-6 w-6 p-0 rounded-none hover:bg-muted"
-          onClick={() => adjustFontSize(-0.5)}
-          disabled={settings.fontSize <= 9}
+          onClick={() => adjustFontScale(-0.05)}
+          disabled={fontScale <= 0.8}
         >
           <Minus className="h-3 w-3" />
         </Button>
-        <span className="text-xs w-9 text-center tabular-nums border-x border-muted-foreground/20">{settings.fontSize}pt</span>
+        <span className="text-xs w-10 text-center tabular-nums border-x border-muted-foreground/20">{scalePercent}%</span>
         <Button 
           variant="ghost" 
           size="sm" 
           className="h-6 w-6 p-0 rounded-none hover:bg-muted"
-          onClick={() => adjustFontSize(0.5)}
-          disabled={settings.fontSize >= 14}
+          onClick={() => adjustFontScale(0.05)}
+          disabled={fontScale >= 1.3}
         >
           <Plus className="h-3 w-3" />
         </Button>
       </div>
+
+      {/* Typography Details Popover */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 px-2 border-muted-foreground/20">
+            <ALargeSmall className="h-3 w-3 opacity-60" />
+            <ChevronDown className="h-2.5 w-2.5 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[280px] p-3" align="start">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">Typography Scale</Label>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-[10px] px-2"
+                onClick={() => handleUpdate({ typography: { ...DEFAULT_TYPOGRAPHY } })}
+              >
+                Reset
+              </Button>
+            </div>
+            
+            {/* Individual font size controls */}
+            {([
+              { key: 'name', label: 'Name (H1)', min: 20, max: 36 },
+              { key: 'title', label: 'Title', min: 10, max: 20 },
+              { key: 'sectionHeading', label: 'Section Heading (H2)', min: 10, max: 18 },
+              { key: 'itemTitle', label: 'Item Title (H3)', min: 9, max: 16 },
+              { key: 'body', label: 'Body Text', min: 8, max: 14 },
+              { key: 'small', label: 'Small / Dates', min: 7, max: 12 },
+            ] as const).map(({ key, label, min, max }) => (
+              <div key={key} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] text-muted-foreground">{label}</Label>
+                  <span className="text-[10px] text-muted-foreground tabular-nums w-8 text-right">{typography[key]}pt</span>
+                </div>
+                <Slider 
+                  value={[typography[key]]} 
+                  onValueChange={([v]) => handleTypographyChange(key, v)} 
+                  min={min} 
+                  max={max} 
+                  step={0.5}
+                  className="h-3"
+                />
+              </div>
+            ))}
+            
+            <Separator />
+            
+            <p className="text-[10px] text-muted-foreground">
+              Use the scale control (%) to resize all text proportionally, or adjust individual sizes here.
+            </p>
+          </div>
+        </PopoverContent>
+      </Popover>
 
       {/* Line Height */}
       <Popover>
