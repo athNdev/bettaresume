@@ -40,10 +40,9 @@ import { Loader2 } from 'lucide-react';
 // Lazy load heavy components
 const ExportButtons = lazy(() => import('@/components/export/export-buttons').then(m => ({ default: m.ExportButtons })));
 const ChangeLog = lazy(() => import('@/components/change-log').then(m => ({ default: m.ChangeLog })));
-const VariationManager = lazy(() => import('@/components/variation-manager').then(m => ({ default: m.VariationManager })));
 const TemplateSelector = lazy(() => import('@/components/template-selector').then(m => ({ default: m.TemplateSelector })));
 const InlineSettingsToolbar = lazy(() => import('@/components/inline-settings-toolbar').then(m => ({ default: m.InlineSettingsToolbar })));
-const ResumeBreadcrumb = lazy(() => import('@/components/resume-breadcrumb').then(m => ({ default: m.ResumeBreadcrumb })));
+const VersionDropdown = lazy(() => import('@/components/version-dropdown').then(m => ({ default: m.VersionDropdown })));
 const ResumeRenderer = lazy(() => import('@/components/resume/resume-renderer'));
 const PageManager = lazy(() => import('@/components/page-manager').then(m => ({ default: m.PageManager })));
 const AdvancedEditor = lazy(() => import('@/components/editor/advanced-editor').then(m => ({ default: m.AdvancedEditor })));
@@ -100,6 +99,7 @@ import {
   History,
   Palette,
   Layers,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { 
@@ -368,8 +368,6 @@ export default function EditorPage() {
   
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
   const [autoSaved, setAutoSaved] = useState(false);
@@ -458,13 +456,6 @@ export default function EditorPage() {
       }
     }
   }, [activeResume, activeSectionId]);
-
-  const activeResumeName = activeResume?.name;
-  useEffect(() => {
-    if (activeResumeName) {
-      setEditedName(activeResumeName);
-    }
-  }, [activeResumeName]);
 
   // Auto-save indicator
   const activeResumeUpdatedAt = activeResume?.updatedAt;
@@ -717,13 +708,6 @@ export default function EditorPage() {
     });
   };
 
-  const handleUpdateName = () => {
-    if (editedName.trim() && editedName !== activeResume.name) {
-      updateResume(resumeId, { name: editedName.trim() });
-    }
-    setIsEditingName(false);
-  };
-
   const confirmDeleteSection = (sectionId: string) => {
     setSectionToDelete(sectionId);
     setDeleteDialogOpen(true);
@@ -912,44 +896,10 @@ export default function EditorPage() {
             </Link>
             <Separator orientation="vertical" className="h-6" />
             
-            {/* Resume Breadcrumb - shows base/variation state */}
+            {/* Version Dropdown - primary way to switch versions */}
             <Suspense fallback={<LoadingFallback />}>
-              <ResumeBreadcrumb resumeId={resumeId} />
+              <VersionDropdown resumeId={resumeId} />
             </Suspense>
-
-            <Separator orientation="vertical" className="h-6" />
-
-            {/* Editable Name */}
-            <div className="flex items-center gap-2">
-              {isEditingName ? (
-                <div className="flex items-center gap-1">
-                  <Input
-                    value={editedName}
-                    onChange={(e) => setEditedName(e.target.value)}
-                    onBlur={handleUpdateName}
-                    onKeyDown={(e) => e.key === 'Enter' && handleUpdateName()}
-                    className="h-7 w-48 text-sm"
-                    autoFocus
-                  />
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleUpdateName}>
-                    <Check className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button 
-                      className="flex items-center gap-1 hover:bg-accent px-2 py-1 rounded group text-muted-foreground hover:text-foreground"
-                      onClick={() => setIsEditingName(true)}
-                    >
-                      <Pencil className="h-3 w-3" />
-                      <span className="text-xs">Rename</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Click to rename</TooltipContent>
-                </Tooltip>
-              )}
-            </div>
 
             {autoSaved && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -1060,26 +1010,6 @@ export default function EditorPage() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* TAILORED COPIES Group */}
-                  <div className="border-b">
-                    <button
-                      onClick={() => toggleGroup('tailored')}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-accent/50 text-left"
-                    >
-                      {expandedGroups.tailored ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      <GitBranch className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold uppercase tracking-wider flex-1">Versions</span>
-                    </button>
-                    {expandedGroups.tailored && (
-                      <div className="px-2 pb-2">
-                        <p className="text-[10px] text-muted-foreground px-1 mb-2">Create targeted versions for different jobs</p>
-                        <Suspense fallback={<LoadingFallback />}>
-                          <VariationManager resumeId={resumeId} variant="panel" />
-                        </Suspense>
                       </div>
                     )}
                   </div>
