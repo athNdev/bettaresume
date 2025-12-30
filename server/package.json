@@ -17,15 +17,14 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
-    "better-sqlite3": "^11.6.0",
     "drizzle-orm": "^0.38.3",
+    "sql.js": "^1.11.0",
     "fastify": "^5.1.0",
     "graphql": "^16.9.0",
     "mercurius": "^15.1.0",
     "uuid": "^11.0.3"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.2",
     "@types/uuid": "^10.0.0",
     "drizzle-kit": "^0.30.1",

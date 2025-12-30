@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/sql-js';
+import initSqlJs, { Database } from 'sql.js';
 import * as schema from './schema';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -18,14 +18,32 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Create better-sqlite3 connection
-const sqlite = new Database(DB_PATH);
+// Initialize sql.js
+const SQL = await initSqlJs();
 
-// Enable WAL mode for better concurrency
-sqlite.pragma('journal_mode = WAL');
+// Load existing database or create new one
+let sqlite: Database;
+if (fs.existsSync(DB_PATH)) {
+  const fileBuffer = fs.readFileSync(DB_PATH);
+  sqlite = new SQL.Database(fileBuffer);
+} else {
+  sqlite = new SQL.Database();
+}
 
 // Create drizzle instance with schema
 export const db = drizzle(sqlite, { schema });
+
+// Save database to file
+export function saveDatabase() {
+  const data = sqlite.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(DB_PATH, buffer);
+}
+
+// Auto-save on process exit
+process.on('exit', saveDatabase);
+process.on('SIGINT', () => { saveDatabase(); process.exit(); });
+process.on('SIGTERM', () => { saveDatabase(); process.exit(); });
 
 // Export schema types
 export * from './schema';
