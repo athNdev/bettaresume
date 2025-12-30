@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { Resume, ResumeSection, ResumeStore, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage, SectionType } from '@/types/resume';
 import { TEMPLATE_CONFIGS, SECTION_CONFIGS, DEFAULT_TYPOGRAPHY } from '@/types/resume';
 
@@ -54,13 +53,12 @@ const logActivity = (resumeId: string, action: ActivityAction, description: stri
 });
 
 export const useResumeStore = create<ResumeStore>()(
-  persist(
     (set, get) => ({
       resumes: [],
       activeResumeId: null,
       activeResume: null,
       activityLog: [],
-      _hasHydrated: false,
+      _hasHydrated: true, // Always hydrated since no localStorage
       
       setHasHydrated: (state: boolean) => {
         set({ _hasHydrated: state });
@@ -777,28 +775,123 @@ export const useResumeStore = create<ResumeStore>()(
 
       filterByTag: (tag: string) => get().resumes.filter((r) => !r.isArchived && r.tags?.includes(tag)),
       filterByDomain: (domain: string) => get().resumes.filter((r) => !r.isArchived && r.domain === domain),
-
-      loadFromLocalStorage: () => {},
-      saveToLocalStorage: () => {},
-    }),
-    { 
-      name: 'betta-resume-storage',
-      partialize: (state) => ({
-        resumes: state.resumes,
-        activeResumeId: state.activeResumeId,
-        activityLog: state.activityLog,
-      }),
-    }
-  )
+      
+      // ============== CLOUD SYNC ==============
+      cloudSync: {
+        isEnabled: false,
+        isSyncing: false,
+        lastSyncedAt: null,
+        error: null,
+      },
+      _cloudUserId: null as string | null,
+      
+      setCloudUserId: (userId: string | null) => {
+        set({ _cloudUserId: userId } as Partial<ResumeStore>);
+      },
+      
+      enableCloudSync: (userId: string) => {
+        set({ 
+          _cloudUserId: userId,
+          cloudSync: { 
+            isEnabled: true, 
+            isSyncing: false, 
+            lastSyncedAt: null, 
+            error: null 
+          } 
+        } as Partial<ResumeStore>);
+      },
+      
+      disableCloudSync: () => {
+        set({ 
+          cloudSync: { 
+            isEnabled: false, 
+            isSyncing: false, 
+            lastSyncedAt: get().cloudSync.lastSyncedAt, 
+            error: null 
+          } 
+        });
+      },
+      
+      syncToCloud: async () => {
+        const { cloudSync, resumes, _cloudUserId } = get() as ResumeStore & { _cloudUserId: string | null };
+        if (!cloudSync.isEnabled || !_cloudUserId) return;
+        
+        set({ cloudSync: { ...cloudSync, isSyncing: true, error: null } });
+        
+        try {
+          const { saveResume } = await import('@/lib/resume-api');
+          
+          // Sync each resume to cloud
+          for (const resume of resumes) {
+            await saveResume(resume, _cloudUserId);
+          }
+          
+          set({ 
+            cloudSync: { 
+              ...cloudSync, 
+              isSyncing: false, 
+              lastSyncedAt: new Date().toISOString(),
+              error: null,
+            } 
+          });
+        } catch (error) {
+          set({ 
+            cloudSync: { 
+              ...cloudSync, 
+              isSyncing: false, 
+              error: error instanceof Error ? error.message : 'Sync failed',
+            } 
+          });
+        }
+      },
+      
+      fetchFromCloud: async () => {
+        const { cloudSync, _cloudUserId } = get() as ResumeStore & { _cloudUserId: string | null };
+        if (!cloudSync.isEnabled || !_cloudUserId) return;
+        
+        set({ cloudSync: { ...cloudSync, isSyncing: true, error: null } });
+        
+        try {
+          const { fetchAllResumes } = await import('@/lib/resume-api');
+          
+          const cloudResumes = await fetchAllResumes(_cloudUserId);
+          
+          if (cloudResumes.length > 0) {
+            // Merge cloud resumes with local (cloud wins for conflicts)
+            const localResumes = get().resumes;
+            const cloudIds = new Set(cloudResumes.map(r => r.id));
+            const localOnlyResumes = localResumes.filter(r => !cloudIds.has(r.id));
+            
+            set({ 
+              resumes: [...cloudResumes, ...localOnlyResumes],
+              cloudSync: { 
+                ...cloudSync, 
+                isSyncing: false, 
+                lastSyncedAt: new Date().toISOString(),
+                error: null,
+              } 
+            });
+          } else {
+            set({ 
+              cloudSync: { 
+                ...cloudSync, 
+                isSyncing: false, 
+                lastSyncedAt: new Date().toISOString(),
+                error: null,
+              } 
+            });
+          }
+        } catch (error) {
+          set({ 
+            cloudSync: { 
+              ...cloudSync, 
+              isSyncing: false, 
+              error: error instanceof Error ? error.message : 'Fetch failed',
+            } 
+          });
+        }
+      },
+    })
 );
 
-// Hydration handling
-if (typeof window !== 'undefined') {
-  useResumeStore.persist.onFinishHydration(() => {
-    useResumeStore.setState({ _hasHydrated: true });
-  });
-  
-  if (useResumeStore.persist.hasHydrated()) {
-    useResumeStore.setState({ _hasHydrated: true });
-  }
-}
+// No hydration needed - data comes from API

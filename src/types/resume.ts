@@ -398,8 +398,18 @@ export interface ResumeStore {
   filterByTag: (tag: string) => Resume[];
   filterByDomain: (domain: string) => Resume[];
   
-  loadFromLocalStorage: () => void;
-  saveToLocalStorage: () => void;
+  // Cloud sync methods
+  cloudSync: {
+    isEnabled: boolean;
+    isSyncing: boolean;
+    lastSyncedAt: string | null;
+    error: string | null;
+  };
+  enableCloudSync: (userId: string) => void;
+  disableCloudSync: () => void;
+  syncToCloud: () => Promise<void>;
+  fetchFromCloud: () => Promise<void>;
+  setCloudUserId: (userId: string | null) => void;
 }
 
 // Default creators

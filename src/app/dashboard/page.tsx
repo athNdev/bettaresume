@@ -33,6 +33,7 @@ import { ImportResume } from '@/components/import/import-resume';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ResumeThumbnail } from '@/components/resume/resume-thumbnail';
 import { ProtectedRoute, UserMenu } from '@/components/auth';
+import { CloudSyncButton } from '@/components/cloud-sync-button';
 import { 
   FileText, 
   Plus, 
@@ -54,6 +55,7 @@ import {
   FolderOpen,
   BookOpen,
   ArrowRight,
+  Cloud,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -386,40 +388,113 @@ export default function Dashboard() {
   };
 
   // Empty State Component
-  const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
+  const EmptyState = () => {
+    const { cloudSync } = useResumeStore();
+    const [showConnectDialog, setShowConnectDialog] = useState(false);
+    const [connectEmail, setConnectEmail] = useState('');
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [connectError, setConnectError] = useState<string | null>(null);
+
+    const handleConnect = async () => {
+      if (!connectEmail) return;
+      setIsConnecting(true);
+      setConnectError(null);
+      try {
+        const { getOrCreateUser } = await import('@/lib/resume-api');
+        const { useResumeStore } = await import('@/store/resume-store');
+        const apiUser = await getOrCreateUser(connectEmail);
+        if (apiUser) {
+          useResumeStore.getState().enableCloudSync(apiUser.id);
+          await useResumeStore.getState().fetchFromCloud();
+          setShowConnectDialog(false);
+        } else {
+          setConnectError('Failed to connect. Please try again.');
+        }
+      } catch (err) {
+        setConnectError(err instanceof Error ? err.message : 'Connection failed');
+      } finally {
+        setIsConnecting(false);
+      }
+    };
+
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
+          {hasActiveFilters ? (
+            <Search className="h-10 w-10 text-primary/60" />
+          ) : (
+            <FileText className="h-10 w-10 text-primary/60" />
+          )}
+        </div>
+        <h2 className="text-xl font-semibold mb-2">
+          {hasActiveFilters ? 'No matches found' : !cloudSync.isEnabled ? 'Connect to get started' : 'No resumes yet'}
+        </h2>
+        <p className="text-muted-foreground text-center max-w-sm mb-6">
+          {hasActiveFilters 
+            ? 'Try adjusting your filters or search query'
+            : !cloudSync.isEnabled 
+              ? 'Enter your email to load your resumes from the cloud or create new ones'
+              : 'Create your first resume and start building your professional profile'
+          }
+        </p>
         {hasActiveFilters ? (
-          <Search className="h-10 w-10 text-primary/60" />
+          <Button 
+            variant="outline" 
+            onClick={() => setFilters({ search: '', template: null, showArchived: false })}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear filters
+          </Button>
+        ) : !cloudSync.isEnabled ? (
+          <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+            {!showConnectDialog ? (
+              <Button onClick={() => setShowConnectDialog(true)} size="lg" className="w-full">
+                <Cloud className="h-4 w-4 mr-2" />
+                Connect with Email
+              </Button>
+            ) : (
+              <div className="w-full space-y-4 p-4 border rounded-lg bg-card">
+                <div className="space-y-2">
+                  <Label htmlFor="connect-email">Email Address</Label>
+                  <Input
+                    id="connect-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={connectEmail}
+                    onChange={(e) => setConnectEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                  />
+                </div>
+                {connectError && (
+                  <p className="text-sm text-destructive">{connectError}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowConnectDialog(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleConnect} disabled={!connectEmail || isConnecting} className="flex-1">
+                    {isConnecting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      'Connect'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
-          <FileText className="h-10 w-10 text-primary/60" />
+          <Button onClick={handleCreateResume} size="lg">
+            <Plus className="h-4 w-4 mr-2" />
+            Create your first resume
+          </Button>
         )}
       </div>
-      <h2 className="text-xl font-semibold mb-2">
-        {hasActiveFilters ? 'No matches found' : 'No resumes yet'}
-      </h2>
-      <p className="text-muted-foreground text-center max-w-sm mb-6">
-        {hasActiveFilters 
-          ? 'Try adjusting your filters or search query'
-          : 'Create your first resume and start building your professional profile'
-        }
-      </p>
-      {hasActiveFilters ? (
-        <Button 
-          variant="outline" 
-          onClick={() => setFilters({ search: '', template: null, showArchived: false })}
-        >
-          <X className="h-4 w-4 mr-2" />
-          Clear filters
-        </Button>
-      ) : (
-        <Button onClick={handleCreateResume} size="lg">
-          <Plus className="h-4 w-4 mr-2" />
-          Create your first resume
-        </Button>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <ProtectedRoute>
@@ -456,6 +531,8 @@ export default function Dashboard() {
                   </Tooltip>
 
                   <ThemeToggle />
+                  
+                  <CloudSyncButton />
                   
                   <div className="w-px h-6 bg-border mx-1" />
                   
