@@ -425,24 +425,42 @@ export const useAuthStore = create<AuthStore>()(
 
       // OAuth / Social Login
       signInWithGoogle: () => {
+        set({ isLoading: true, error: null });
+        
         // Check if we're in dev storage mode (set by npm scripts)
         if (checkIsDevMode()) {
-          console.warn('Google sign-in not available in dev storage mode. Use `npm run prod`.');
+          set({ 
+            isLoading: false, 
+            error: 'Google sign-in is not available in development mode. Run the app with `npm run prod` to enable social login.' 
+          });
           return;
         }
         
         if (!isCognitoConfigured()) {
-          console.warn('Google sign-in not available: Cognito not configured');
+          set({ 
+            isLoading: false, 
+            error: 'Google sign-in is not available: Cognito is not configured. Please set up AWS Cognito environment variables.' 
+          });
           return;
         }
         
         // Dynamic import to avoid loading OAuth code in dev mode
         import('@/lib/cognito').then(({ signInWithGoogle, isOAuthConfigured }) => {
           if (!isOAuthConfigured()) {
-            console.warn('Google sign-in not available: OAuth domain not configured. Set NEXT_PUBLIC_COGNITO_DOMAIN in .env');
+            set({ 
+              isLoading: false, 
+              error: 'Google sign-in is not available: OAuth domain not configured. Set NEXT_PUBLIC_COGNITO_DOMAIN in your .env file.' 
+            });
             return;
           }
+          // This will redirect to Google, so keep loading state
           signInWithGoogle();
+        }).catch((err) => {
+          set({ 
+            isLoading: false, 
+            error: 'Failed to initialize Google sign-in. Please try again.' 
+          });
+          console.error('Google sign-in error:', err);
         });
       },
 

@@ -176,6 +176,110 @@ const response = await fetch('http://localhost:4000/graphql', {
 });
 ```
 
+## Google SSO Setup
+
+To enable "Continue with Google" social login, you need to configure Google as a federated identity provider in your Cognito User Pool.
+
+### 1. Create Google OAuth Credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Navigate to **APIs & Services** → **Credentials**
+4. Click **Create Credentials** → **OAuth client ID**
+5. Select **Web application**
+6. Configure:
+   - **Name**: Betta Resume
+   - **Authorized JavaScript origins**: 
+     - `http://localhost:3000` (development)
+     - `https://your-production-domain.com` (production)
+   - **Authorized redirect URIs**: 
+     - `https://your-cognito-domain.auth.us-east-1.amazoncognito.com/oauth2/idpresponse`
+7. Save and note down:
+   - **Client ID**: `xxx.apps.googleusercontent.com`
+   - **Client Secret**: `GOCSPX-xxx`
+
+### 2. Configure Cognito User Pool Domain
+
+1. Go to AWS Cognito Console → Your User Pool
+2. Navigate to **App integration** → **Domain**
+3. Choose either:
+   - **Cognito domain**: `your-app-name` → `your-app-name.auth.us-east-1.amazoncognito.com`
+   - **Custom domain**: Your own domain (requires SSL certificate)
+4. Save the domain
+
+### 3. Add Google as Identity Provider
+
+1. In Cognito Console → **Sign-in experience** → **Federated identity provider sign-in**
+2. Click **Add identity provider** → **Google**
+3. Enter your Google OAuth credentials:
+   - **Client ID**: From step 1
+   - **Client secret**: From step 1
+4. Configure attribute mapping:
+   - `email` → `email`
+   - `name` → `name`
+   - `sub` → `username`
+5. Save changes
+
+### 4. Update App Client Settings
+
+1. Go to **App integration** → **App client list** → Your app client
+2. Under **Hosted UI**:
+   - **Allowed callback URLs**: `http://localhost:3000/auth/callback` (add production URL too)
+   - **Allowed sign-out URLs**: `http://localhost:3000` (add production URL too)
+   - **Identity providers**: Select **Google**
+   - **OAuth 2.0 grant types**: ✅ Authorization code grant
+   - **OpenID Connect scopes**: ✅ email, ✅ openid, ✅ profile
+3. Save changes
+
+### 5. Update Environment Variables
+
+Add these to your `.env.local` file:
+
+```env
+# Existing Cognito config
+NEXT_PUBLIC_COGNITO_REGION=us-east-1
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+NEXT_PUBLIC_COGNITO_CLIENT_ID=your-client-id-here
+
+# OAuth / Social Login (required for Google SSO)
+NEXT_PUBLIC_COGNITO_DOMAIN=your-app-name.auth.us-east-1.amazoncognito.com
+NEXT_PUBLIC_ENABLE_SOCIAL_LOGIN=true
+NEXT_PUBLIC_OAUTH_REDIRECT_SIGN_IN=http://localhost:3000/auth/callback
+NEXT_PUBLIC_OAUTH_REDIRECT_SIGN_OUT=http://localhost:3000
+```
+
+### 6. Test Google SSO
+
+1. Start the app in production mode: `npm run prod`
+2. Go to login page
+3. Click "Continue with Google"
+4. You should be redirected to Google's sign-in page
+5. After signing in, you'll be redirected back to `/auth/callback`
+6. The app will exchange the code for tokens and log you in
+
+### Google SSO Flow Diagram
+
+```
+User clicks "Continue with Google"
+            ↓
+    Redirect to Cognito Hosted UI
+    (https://your-domain.auth.region.amazoncognito.com/oauth2/authorize?identity_provider=Google)
+            ↓
+    Cognito redirects to Google
+            ↓
+    User signs in with Google
+            ↓
+    Google redirects back to Cognito
+            ↓
+    Cognito redirects to your app
+    (http://localhost:3000/auth/callback?code=xxx)
+            ↓
+    App exchanges code for tokens
+    (POST /oauth2/token)
+            ↓
+    User is logged in!
+```
+
 ## Security Notes
 
 1. **Never commit `.env` files** - They contain secrets
