@@ -386,40 +386,42 @@ export default function Dashboard() {
   };
 
   // Empty State Component
-  const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
+  const EmptyState = () => {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
+          {hasActiveFilters ? (
+            <Search className="h-10 w-10 text-primary/60" />
+          ) : (
+            <FileText className="h-10 w-10 text-primary/60" />
+          )}
+        </div>
+        <h2 className="text-xl font-semibold mb-2">
+          {hasActiveFilters ? 'No matches found' : 'No resumes yet'}
+        </h2>
+        <p className="text-muted-foreground text-center max-w-sm mb-6">
+          {hasActiveFilters 
+            ? 'Try adjusting your filters or search query'
+            : 'Create your first resume and start building your professional profile'
+          }
+        </p>
         {hasActiveFilters ? (
-          <Search className="h-10 w-10 text-primary/60" />
+          <Button 
+            variant="outline" 
+            onClick={() => setFilters({ search: '', template: null, showArchived: false })}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear filters
+          </Button>
         ) : (
-          <FileText className="h-10 w-10 text-primary/60" />
+          <Button onClick={handleCreateResume} size="lg">
+            <Plus className="h-4 w-4 mr-2" />
+            Create your first resume
+          </Button>
         )}
       </div>
-      <h2 className="text-xl font-semibold mb-2">
-        {hasActiveFilters ? 'No matches found' : 'No resumes yet'}
-      </h2>
-      <p className="text-muted-foreground text-center max-w-sm mb-6">
-        {hasActiveFilters 
-          ? 'Try adjusting your filters or search query'
-          : 'Create your first resume and start building your professional profile'
-        }
-      </p>
-      {hasActiveFilters ? (
-        <Button 
-          variant="outline" 
-          onClick={() => setFilters({ search: '', template: null, showArchived: false })}
-        >
-          <X className="h-4 w-4 mr-2" />
-          Clear filters
-        </Button>
-      ) : (
-        <Button onClick={handleCreateResume} size="lg">
-          <Plus className="h-4 w-4 mr-2" />
-          Create your first resume
-        </Button>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <ProtectedRoute>

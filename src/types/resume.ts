@@ -345,6 +345,17 @@ export interface ResumeStore {
   activeResume: Resume | null;
   activityLog: ActivityLog[];
   _hasHydrated: boolean;
+  _storageMode: 'dev' | 'prod';
+  _backendStatus: 'online' | 'offline' | 'unknown';
+  _isInitialized: boolean;
+  
+  // Sync methods
+  initializeSync: () => Promise<void>;
+  getStorageMode: () => 'dev' | 'prod';
+  getBackendStatus: () => 'online' | 'offline' | 'unknown';
+  _syncResume: (resume: Resume) => void;
+  _syncDelete: (id: string) => void;
+  
   setHasHydrated: (state: boolean) => void;
   
   createResume: (name: string, template: TemplateType, domain?: string) => string;
@@ -398,8 +409,18 @@ export interface ResumeStore {
   filterByTag: (tag: string) => Resume[];
   filterByDomain: (domain: string) => Resume[];
   
-  loadFromLocalStorage: () => void;
-  saveToLocalStorage: () => void;
+  // Cloud sync methods
+  cloudSync: {
+    isEnabled: boolean;
+    isSyncing: boolean;
+    lastSyncedAt: string | null;
+    error: string | null;
+  };
+  enableCloudSync: (userId: string) => void;
+  disableCloudSync: () => void;
+  syncToCloud: () => Promise<void>;
+  fetchFromCloud: () => Promise<void>;
+  setCloudUserId: (userId: string | null) => void;
 }
 
 // Default creators

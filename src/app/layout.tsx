@@ -11,6 +11,7 @@ import {
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth";
+import { SyncProvider } from "@/components/sync-provider";
 import { Toaster } from "react-hot-toast";
 
 // Load all fonts
@@ -79,7 +80,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
+            <SyncProvider>
+              {children}
+            </SyncProvider>
           </AuthProvider>
           <Toaster 
             position="bottom-right"

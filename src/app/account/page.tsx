@@ -25,13 +25,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { STORAGE_MODE_INFO } from '@/config/storage.config';
 import { 
   ArrowLeft,
   User,
   Bell,
-  HardDrive,
-  Cloud,
   Shield,
   Trash2,
   Loader2,
@@ -49,9 +46,6 @@ export default function AccountPage() {
     deleteAccount,
     logout,
     isLoading,
-    storageMode,
-    switchToLocalMode,
-    switchToCloudMode,
   } = useAuthStore();
 
   const [name, setName] = useState(user?.name || '');
@@ -193,97 +187,6 @@ export default function AccountPage() {
               </div>
 
               <Button onClick={handleSaveProfile}>Save changes</Button>
-            </CardContent>
-          </Card>
-
-          {/* Storage Mode Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {storageMode === 'local' ? <HardDrive className="h-5 w-5" /> : <Cloud className="h-5 w-5" />}
-                Storage Mode
-              </CardTitle>
-              <CardDescription>
-                Choose where your resume data is stored
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Local Mode Card */}
-                <div 
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    storageMode === 'local' 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-muted hover:border-muted-foreground/30'
-                  }`}
-                  onClick={switchToLocalMode}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      storageMode === 'local' ? 'bg-primary/10' : 'bg-muted'
-                    }`}>
-                      <HardDrive className={`h-5 w-5 ${storageMode === 'local' ? 'text-primary' : 'text-muted-foreground'}`} />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{STORAGE_MODE_INFO.local.name}</p>
-                      <p className="text-xs text-muted-foreground">{STORAGE_MODE_INFO.local.description}</p>
-                    </div>
-                    {storageMode === 'local' && (
-                      <Badge className="ml-auto">Active</Badge>
-                    )}
-                  </div>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    {STORAGE_MODE_INFO.local.features.slice(0, 3).map((f, i) => (
-                      <li key={i} className="flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Cloud Mode Card */}
-                <div 
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    storageMode === 'cloud' 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-muted hover:border-muted-foreground/30'
-                  }`}
-                  onClick={switchToCloudMode}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      storageMode === 'cloud' ? 'bg-primary/10' : 'bg-muted'
-                    }`}>
-                      <Cloud className={`h-5 w-5 ${storageMode === 'cloud' ? 'text-primary' : 'text-muted-foreground'}`} />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{STORAGE_MODE_INFO.cloud.name}</p>
-                      <p className="text-xs text-muted-foreground">{STORAGE_MODE_INFO.cloud.description}</p>
-                    </div>
-                    {storageMode === 'cloud' && (
-                      <Badge className="ml-auto">Active</Badge>
-                    )}
-                  </div>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    {STORAGE_MODE_INFO.cloud.features.slice(0, 3).map((f, i) => (
-                      <li key={i} className="flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {storageMode === 'local' && (
-                <Alert>
-                  <HardDrive className="h-4 w-4" />
-                  <AlertDescription>
-                    Your data is stored only in this browser. Clearing browser data will delete your resumes.
-                  </AlertDescription>
-                </Alert>
-              )}
             </CardContent>
           </Card>
 

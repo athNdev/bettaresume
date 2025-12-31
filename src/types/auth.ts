@@ -1,13 +1,14 @@
 /**
  * Authentication Types
  * 
- * For Betta Resume, all features are free for self-hosted users.
- * The hosted version supports Local Mode (no account) and Cloud Mode (with account).
+ * Betta Resume supports two storage modes:
+ * - Dev Mode: Demo account, localStorage only (npm run dev)
+ * - Prod Mode: Real accounts with backend sync (npm run prod)
  */
 
 import type { StorageMode } from '@/config/storage.config';
 
-// User Account Types (for Cloud Mode)
+// User Account Types
 export interface User {
   id: string;
   email: string;
@@ -136,14 +137,14 @@ export interface AccountActivity {
   location?: string;
 }
 
-// Local Mode User (for display purposes when in local mode)
+// Demo User (for dev mode)
 export const LOCAL_MODE_USER: User = {
-  id: 'local-user',
-  email: '',
-  name: 'Local User',
+  id: 'demo-user',
+  email: 'demo@bettaresume.dev',
+  name: 'Demo User',
   picture: null,
   createdAt: new Date().toISOString(),
-  emailVerified: false,
+  emailVerified: true,
   preferences: {
     theme: 'system',
     emailNotifications: false,
