@@ -87,11 +87,16 @@ export default function RegisterPage() {
     const result = await register({ email, password, name, acceptTerms });
     if (result.success) {
       // In dev mode, go directly to dashboard
-      // In prod mode, redirect to verify email page
+      // In prod mode, redirect to verify email page with username for confirmation
       if (inDevMode) {
         router.push('/dashboard');
       } else {
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        // Pass both email (for display) and username (for Cognito API)
+        const params = new URLSearchParams({ email });
+        if (result.username) {
+          params.set('username', result.username);
+        }
+        router.push(`/verify-email?${params.toString()}`);
       }
     }
   };

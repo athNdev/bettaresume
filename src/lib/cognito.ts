@@ -172,7 +172,7 @@ export async function signUp(
   email: string,
   password: string,
   name: string
-): Promise<{ success: boolean; error?: string; userConfirmed?: boolean }> {
+): Promise<{ success: boolean; error?: string; userConfirmed?: boolean; username?: string }> {
   if (!isCognitoConfigured()) {
     return { success: false, error: 'Cognito is not configured' };
   }
@@ -182,6 +182,8 @@ export async function signUp(
     const username = generateUsername();
     // Use name as preferred_username, or fallback to email prefix
     const preferredUsername = name || email.split('@')[0];
+    
+    console.log('[Cognito] SignUp with username:', username, 'email:', email);
 
     const response = await fetch(
       `https://cognito-idp.${cognitoConfig.region}.amazonaws.com/`,
@@ -205,9 +207,12 @@ export async function signUp(
     );
 
     const data = await response.json();
+    
+    console.log('[Cognito] SignUp response:', data);
 
     if (data.UserSub) {
-      return { success: true, userConfirmed: data.UserConfirmed };
+      // Return the generated username so it can be used for confirmation
+      return { success: true, userConfirmed: data.UserConfirmed, username };
     }
 
     if (data.__type?.includes('UsernameExistsException')) {
@@ -234,12 +239,24 @@ export async function signUp(
  * Confirm sign up with verification code
  */
 export async function confirmSignUp(
-  email: string,
+  usernameOrEmail: string,
   code: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!isCognitoConfigured()) {
     return { success: false, error: 'Cognito is not configured' };
   }
+
+  // Trim whitespace from code and username
+  const trimmedCode = code.trim();
+  // Don't lowercase the username - it could be a generated username like user_xyz123
+  const trimmedUsername = usernameOrEmail.trim();
+
+  console.log('[Cognito] Confirming sign up:', { 
+    username: trimmedUsername, 
+    codeLength: trimmedCode.length,
+    clientId: cognitoConfig.userPoolClientId,
+    region: cognitoConfig.region 
+  });
 
   try {
     const response = await fetch(
@@ -252,24 +269,34 @@ export async function confirmSignUp(
         },
         body: JSON.stringify({
           ClientId: cognitoConfig.userPoolClientId,
-          Username: email,
-          ConfirmationCode: code,
+          Username: trimmedUsername,
+          ConfirmationCode: trimmedCode,
         }),
       }
     );
 
     const data = await response.json();
+    
+    console.log('[Cognito] ConfirmSignUp response:', data);
 
     if (!data.__type) {
       return { success: true };
     }
 
     if (data.__type?.includes('CodeMismatchException')) {
-      return { success: false, error: 'Invalid verification code' };
+      return { success: false, error: 'Invalid verification code. Please check and try again.' };
     }
 
     if (data.__type?.includes('ExpiredCodeException')) {
-      return { success: false, error: 'Verification code has expired' };
+      return { success: false, error: 'Verification code has expired. Please request a new code.' };
+    }
+    
+    if (data.__type?.includes('NotAuthorizedException')) {
+      return { success: false, error: 'User is already confirmed. Please proceed to login.' };
+    }
+    
+    if (data.__type?.includes('UserNotFoundException')) {
+      return { success: false, error: 'User not found. Please register first.' };
     }
 
     return { success: false, error: data.message || 'Verification failed' };

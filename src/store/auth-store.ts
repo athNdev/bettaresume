@@ -215,8 +215,9 @@ export const useAuthStore = create<AuthStore>()(
           
           if (result.success) {
             // User needs to verify email in production
+            // Return the username so it can be used for confirmation
             set({ isLoading: false });
-            return { success: true };
+            return { success: true, username: result.username };
           } else {
             set({ isLoading: false, error: result.error || authErrors.unknown });
             return { success: false, error: result.error };

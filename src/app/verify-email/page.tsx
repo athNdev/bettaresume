@@ -23,6 +23,9 @@ function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || '';
+  // Get the Cognito username if provided (used for confirmation)
+  // Fall back to email if username not provided (for resend code flow)
+  const username = searchParams.get('username') || email;
   
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +48,8 @@ function VerifyEmailContent() {
       return;
     }
 
-    const result = await confirmSignUp(email, code);
+    // Use the Cognito username (not email) for confirmation
+    const result = await confirmSignUp(username, code);
     setIsLoading(false);
 
     if (result.success) {
