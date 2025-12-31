@@ -36,6 +36,16 @@ export const CREATE_USER = gql`
   }
 `;
 
+export const GET_OR_CREATE_USER = gql`
+  mutation GetOrCreateUser($email: String!) {
+    getOrCreateUser(email: $email) {
+      id
+      email
+      createdAt
+    }
+  }
+`;
+
 // ============================================
 // Resume Queries & Mutations
 // ============================================
@@ -47,9 +57,12 @@ export const GET_RESUMES = gql`
       userId
       name
       variationType
+      baseResumeId
+      domain
       template
       tags
       isArchived
+      metadata
       createdAt
       updatedAt
     }
@@ -63,9 +76,12 @@ export const GET_RESUME = gql`
       userId
       name
       variationType
+      baseResumeId
+      domain
       template
       tags
       isArchived
+      metadata
       createdAt
       updatedAt
       sections {
@@ -86,9 +102,12 @@ export const GET_RESUME_WITH_SECTIONS = gql`
       userId
       name
       variationType
+      baseResumeId
+      domain
       template
       tags
       isArchived
+      metadata
       createdAt
       updatedAt
       sections {

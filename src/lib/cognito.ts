@@ -152,7 +152,21 @@ export async function signIn(
 }
 
 /**
+ * Generate a unique username for Cognito
+ * Since the User Pool is configured with email alias, username cannot be in email format
+ */
+function generateUsername(): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 10);
+  return `user_${timestamp}_${random}`;
+}
+
+/**
  * Sign up with email and password
+ * 
+ * Note: This User Pool is configured with:
+ * - Email as an alias (so Username cannot be in email format)
+ * - Required attribute: preferred_username
  */
 export async function signUp(
   email: string,
@@ -164,6 +178,11 @@ export async function signUp(
   }
 
   try {
+    // Generate a unique username (cannot use email since pool has email alias enabled)
+    const username = generateUsername();
+    // Use name as preferred_username, or fallback to email prefix
+    const preferredUsername = name || email.split('@')[0];
+
     const response = await fetch(
       `https://cognito-idp.${cognitoConfig.region}.amazonaws.com/`,
       {
@@ -174,11 +193,12 @@ export async function signUp(
         },
         body: JSON.stringify({
           ClientId: cognitoConfig.userPoolClientId,
-          Username: email,
+          Username: username,
           Password: password,
           UserAttributes: [
             { Name: 'email', Value: email },
             { Name: 'name', Value: name },
+            { Name: 'preferred_username', Value: preferredUsername },
           ],
         }),
       }
@@ -196,6 +216,11 @@ export async function signUp(
 
     if (data.__type?.includes('InvalidPasswordException')) {
       return { success: false, error: 'Password does not meet requirements' };
+    }
+
+    if (data.__type?.includes('InvalidParameterException')) {
+      console.error('Cognito InvalidParameterException:', data.message);
+      return { success: false, error: data.message || 'Invalid registration data' };
     }
 
     return { success: false, error: data.message || 'Registration failed' };
@@ -250,6 +275,53 @@ export async function confirmSignUp(
     return { success: false, error: data.message || 'Verification failed' };
   } catch (error) {
     console.error('Confirm sign up error:', error);
+    return { success: false, error: 'Network error. Please try again.' };
+  }
+}
+
+/**
+ * Resend confirmation code
+ */
+export async function resendConfirmationCode(
+  email: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isCognitoConfigured()) {
+    return { success: false, error: 'Cognito is not configured' };
+  }
+
+  try {
+    const response = await fetch(
+      `https://cognito-idp.${cognitoConfig.region}.amazonaws.com/`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-amz-json-1.1',
+          'X-Amz-Target': 'AWSCognitoIdentityProviderService.ResendConfirmationCode',
+        },
+        body: JSON.stringify({
+          ClientId: cognitoConfig.userPoolClientId,
+          Username: email,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.__type) {
+      return { success: true };
+    }
+
+    if (data.__type?.includes('LimitExceededException')) {
+      return { success: false, error: 'Too many attempts. Please wait before trying again.' };
+    }
+
+    if (data.__type?.includes('UserNotFoundException')) {
+      return { success: false, error: 'No account found with this email' };
+    }
+
+    return { success: false, error: data.message || 'Failed to resend code' };
+  } catch (error) {
+    console.error('Resend confirmation code error:', error);
     return { success: false, error: 'Network error. Please try again.' };
   }
 }
@@ -525,4 +597,115 @@ export function getCurrentUser(): User | null {
   if (!userInfo) return null;
 
   return cognitoUserToUser(userInfo);
+}
+
+// ============================================
+// OAuth / Social Login Functions
+// ============================================
+
+/**
+ * Check if OAuth is configured
+ */
+export function isOAuthConfigured(): boolean {
+  return !!(cognitoConfig.oauth.domain && cognitoConfig.userPoolClientId);
+}
+
+/**
+ * Build OAuth authorization URL for Google sign-in
+ */
+export function getGoogleSignInUrl(): string {
+  if (!isOAuthConfigured()) {
+    throw new Error('OAuth is not configured');
+  }
+
+  const { oauth, userPoolClientId } = cognitoConfig;
+  
+  const params = new URLSearchParams({
+    client_id: userPoolClientId,
+    response_type: oauth.responseType,
+    scope: oauth.scope.join(' '),
+    redirect_uri: oauth.redirectSignIn,
+    identity_provider: 'Google',
+  });
+
+  return `https://${oauth.domain}/oauth2/authorize?${params.toString()}`;
+}
+
+/**
+ * Initiate Google sign-in by redirecting to Cognito's hosted UI
+ */
+export function signInWithGoogle(): void {
+  const url = getGoogleSignInUrl();
+  window.location.href = url;
+}
+
+/**
+ * Exchange authorization code for tokens (after OAuth callback)
+ */
+export async function exchangeCodeForTokens(
+  code: string
+): Promise<{ success: boolean; user?: User; error?: string; expiresAt?: string }> {
+  if (!isOAuthConfigured()) {
+    return { success: false, error: 'OAuth is not configured' };
+  }
+
+  const { oauth, userPoolClientId } = cognitoConfig;
+
+  try {
+    const response = await fetch(
+      `https://${oauth.domain}/oauth2/token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: userPoolClientId,
+          code,
+          redirect_uri: oauth.redirectSignIn,
+        }).toString(),
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.access_token && data.id_token) {
+      const tokens = {
+        accessToken: data.access_token,
+        idToken: data.id_token,
+        refreshToken: data.refresh_token || '',
+      };
+
+      storeTokens(tokens);
+
+      const userInfo = parseJwt(tokens.idToken);
+      if (userInfo) {
+        const user = cognitoUserToUser(userInfo);
+        const expiresAt = new Date(
+          Date.now() + (data.expires_in || 3600) * 1000
+        ).toISOString();
+
+        return { success: true, user, expiresAt };
+      }
+    }
+
+    return { success: false, error: data.error_description || 'Failed to exchange code for tokens' };
+  } catch (error) {
+    console.error('OAuth token exchange error:', error);
+    return { success: false, error: 'Network error. Please try again.' };
+  }
+}
+
+/**
+ * Sign out with OAuth (clears tokens and optionally redirects to Cognito logout)
+ */
+export function signOutWithOAuth(redirect: boolean = false): void {
+  clearTokens();
+  
+  if (redirect && isOAuthConfigured()) {
+    const { oauth, userPoolClientId } = cognitoConfig;
+    const logoutUrl = `https://${oauth.domain}/logout?client_id=${userPoolClientId}&logout_uri=${encodeURIComponent(oauth.redirectSignOut)}`;
+    window.location.href = logoutUrl;
+  }
 }

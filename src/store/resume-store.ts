@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Resume, ResumeSection, ResumeStore, ActivityLog, TemplateType, ResumeSettings, PartialResumeSettings, ActivityAction, ResumePage, SectionType } from '@/types/resume';
 import { TEMPLATE_CONFIGS, SECTION_CONFIGS, DEFAULT_TYPOGRAPHY } from '@/types/resume';
+import { syncManager, type StorageMode, type BackendStatus } from '@/lib/sync';
 
 const createDefaultSettings = (template: TemplateType): ResumeSettings => ({
   pageSize: 'A4',
@@ -58,7 +59,49 @@ export const useResumeStore = create<ResumeStore>()(
       activeResumeId: null,
       activeResume: null,
       activityLog: [],
-      _hasHydrated: true, // Always hydrated since no localStorage
+      _hasHydrated: false, // Start as false until data is loaded
+      
+      // Sync state
+      _storageMode: 'dev' as StorageMode,
+      _backendStatus: 'unknown' as BackendStatus,
+      _isInitialized: false,
+      
+      // Initialize sync and load data
+      initializeSync: async () => {
+        if (get()._isInitialized) return;
+        
+        try {
+          const { resumes, mode, backendStatus } = await syncManager.initialize();
+          set({
+            resumes,
+            _storageMode: mode,
+            _backendStatus: backendStatus,
+            _hasHydrated: true,
+            _isInitialized: true,
+          });
+        } catch (error) {
+          console.error('Failed to initialize sync:', error);
+          set({
+            _hasHydrated: true,
+            _isInitialized: true,
+            _backendStatus: 'offline',
+          });
+        }
+      },
+      
+      // Get current storage mode
+      getStorageMode: () => get()._storageMode,
+      getBackendStatus: () => get()._backendStatus,
+      
+      // Helper to sync after changes
+      _syncResume: (resume: Resume) => {
+        syncManager.queueSave(resume);
+      },
+      
+      // Helper to sync deletion
+      _syncDelete: (id: string) => {
+        syncManager.deleteResume(id);
+      },
       
       setHasHydrated: (state: boolean) => {
         set({ _hasHydrated: state });
@@ -73,6 +116,8 @@ export const useResumeStore = create<ResumeStore>()(
           activeResume: newResume,
           activityLog: [...state.activityLog, activity],
         }));
+        // Sync the new resume
+        syncManager.queueSave(newResume);
         return newResume.id;
       },
 
@@ -86,6 +131,8 @@ export const useResumeStore = create<ResumeStore>()(
           const activeResume = activeResumeId ? resumes.find((r) => r.id === activeResumeId) || null : null;
           return { resumes, activeResumeId, activeResume, activityLog: [...state.activityLog, activity] };
         });
+        // Sync deletion
+        syncManager.deleteResume(id);
       },
 
       setActiveResume: (id: string) => {
@@ -143,13 +190,22 @@ export const useResumeStore = create<ResumeStore>()(
       },
 
       updateResume: (id: string, updates: Partial<Resume>) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
-          const resumes = state.resumes.map((r) =>
-            r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
-          );
+          const resumes = state.resumes.map((r) => {
+            if (r.id === id) {
+              updatedResume = { ...r, ...updates, updatedAt: new Date().toISOString() };
+              return updatedResume;
+            }
+            return r;
+          });
           const activeResume = state.activeResumeId === id ? resumes.find((r) => r.id === id) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        // Sync the update
+        if (updatedResume) {
+          syncManager.queueSave(updatedResume);
+        }
       },
 
       duplicateResume: (id: string, newName: string) => {
@@ -175,67 +231,95 @@ export const useResumeStore = create<ResumeStore>()(
           resumes: [...state.resumes, duplicate],
           activityLog: [...state.activityLog, activity],
         }));
+        // Persist the duplicate
+        syncManager.queueSave(duplicate);
         return duplicate.id;
       },
 
       archiveResume: (id: string) => {
+        let archivedResume: Resume | null = null;
         set((state) => ({
-          resumes: state.resumes.map((r) => r.id === id ? { ...r, isArchived: true, updatedAt: new Date().toISOString() } : r),
+          resumes: state.resumes.map((r) => {
+            if (r.id === id) {
+              archivedResume = { ...r, isArchived: true, updatedAt: new Date().toISOString() };
+              return archivedResume;
+            }
+            return r;
+          }),
         }));
+        if (archivedResume) syncManager.queueSave(archivedResume);
       },
 
       restoreResume: (id: string) => {
+        let restoredResume: Resume | null = null;
         set((state) => ({
-          resumes: state.resumes.map((r) => r.id === id ? { ...r, isArchived: false, updatedAt: new Date().toISOString() } : r),
+          resumes: state.resumes.map((r) => {
+            if (r.id === id) {
+              restoredResume = { ...r, isArchived: false, updatedAt: new Date().toISOString() };
+              return restoredResume;
+            }
+            return r;
+          }),
         }));
+        if (restoredResume) syncManager.queueSave(restoredResume);
       },
 
       addSection: (resumeId: string, section: Omit<ResumeSection, 'id' | 'order'>) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const newSection: ResumeSection = { ...section, id: crypto.randomUUID(), order: r.sections.length };
-            return { ...r, sections: [...r.sections, newSection], updatedAt: new Date().toISOString() };
+            updatedResume = { ...r, sections: [...r.sections, newSection], updatedAt: new Date().toISOString() };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           const activity = logActivity(resumeId, 'section_added', `Added ${section.type} section`);
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       updateSection: (resumeId: string, sectionId: string, updates: Partial<ResumeSection>) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            return {
+            updatedResume = {
               ...r,
               sections: r.sections.map((s) => s.id === sectionId ? { ...s, ...updates } : s),
               updatedAt: new Date().toISOString(),
             };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       deleteSection: (resumeId: string, sectionId: string) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const sections = r.sections.filter((s) => s.id !== sectionId);
-            return {
+            updatedResume = {
               ...r,
               sections: sections.map((s, i) => ({ ...s, order: i })),
               updatedAt: new Date().toISOString(),
             };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           const activity = logActivity(resumeId, 'section_removed', 'Removed section');
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       reorderSections: (resumeId: string, sectionIds: string[]) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
@@ -243,14 +327,17 @@ export const useResumeStore = create<ResumeStore>()(
               const section = r.sections.find((s) => s.id === id);
               return section ? { ...section, order: index } : null;
             }).filter(Boolean) as ResumeSection[];
-            return { ...r, sections, updatedAt: new Date().toISOString() };
+            updatedResume = { ...r, sections, updatedAt: new Date().toISOString() };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       duplicateSection: (resumeId: string, sectionId: string) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
@@ -262,11 +349,13 @@ export const useResumeStore = create<ResumeStore>()(
               order: r.sections.length,
               linkedToBase: false,
             };
-            return { ...r, sections: [...r.sections, newSection], updatedAt: new Date().toISOString() };
+            updatedResume = { ...r, sections: [...r.sections, newSection], updatedAt: new Date().toISOString() };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       // ============== TAILORED COPY MANAGEMENT ==============
@@ -313,6 +402,8 @@ export const useResumeStore = create<ResumeStore>()(
           activeResume: variation,
           activityLog: [...state.activityLog, activity],
         }));
+        // Persist the variation
+        syncManager.queueSave(variation);
         return variation.id;
       },
 
@@ -375,6 +466,8 @@ export const useResumeStore = create<ResumeStore>()(
           activeResume: variation,
           activityLog: [...state.activityLog, activity],
         }));
+        // Persist the variation
+        syncManager.queueSave(variation);
         return variation.id;
       },
 
@@ -407,6 +500,8 @@ export const useResumeStore = create<ResumeStore>()(
           activeResume: duplicate,
           activityLog: [...state.activityLog, activity],
         }));
+        // Persist the duplicate
+        syncManager.queueSave(duplicate);
         return duplicate.id;
       },
 
@@ -416,20 +511,23 @@ export const useResumeStore = create<ResumeStore>()(
         const resume = get().resumes.find(r => r.id === resumeId);
         if (!resume || resume.variationType !== 'variation') return;
         
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            return {
+            updatedResume = {
               ...r,
               sections: r.sections.map((s) => 
                 s.id === sectionId ? { ...s, linkedToBase: false } : s
               ),
               updatedAt: new Date().toISOString(),
             };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       resetSectionToBase: (resumeId: string, sectionId: string) => {
@@ -445,10 +543,11 @@ export const useResumeStore = create<ResumeStore>()(
         const baseSection = baseResume.sections.find(s => s.type === section.type);
         if (!baseSection) return;
         
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
-            return {
+            updatedResume = {
               ...r,
               sections: r.sections.map((s) => 
                 s.id === sectionId 
@@ -462,11 +561,13 @@ export const useResumeStore = create<ResumeStore>()(
               ),
               updatedAt: new Date().toISOString(),
             };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           const activity = logActivity(resumeId, 'updated', `Reset ${SECTION_CONFIGS[section.type]?.label || section.type} to base version`);
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       syncLinkedSections: (variationId: string) => {
@@ -515,6 +616,9 @@ export const useResumeStore = create<ResumeStore>()(
           const activity = logActivity(variationId, 'synced_with_base', `Updated linked sections from base resume`);
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
+        // Persist the synced variation
+        const syncedVariation = get().resumes.find(r => r.id === variationId);
+        if (syncedVariation) syncManager.queueSave(syncedVariation);
       },
 
       getSectionLinkStatus: (resumeId: string, sectionId: string) => {
@@ -539,6 +643,7 @@ export const useResumeStore = create<ResumeStore>()(
       // ============== SETTINGS & TEMPLATES ==============
 
       updateSettings: (resumeId: string, settings: PartialResumeSettings) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
@@ -565,16 +670,19 @@ export const useResumeStore = create<ResumeStore>()(
               personalInfo: r.metadata?.personalInfo || { fullName: '', email: '' },
               settings: newSettings as ResumeSettings,
             };
-            return { ...r, metadata, updatedAt: new Date().toISOString() };
+            updatedResume = { ...r, metadata, updatedAt: new Date().toISOString() };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           const activity = logActivity(resumeId, 'settings_changed', 'Updated resume settings');
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       updateTemplate: (resumeId: string, template: TemplateType) => {
         const activity = logActivity(resumeId, 'template_changed', `Changed template to ${template}`);
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
@@ -583,22 +691,25 @@ export const useResumeStore = create<ResumeStore>()(
               personalInfo: r.metadata?.personalInfo || { fullName: '', email: '' },
               settings: { ...currentSettings, colors: TEMPLATE_CONFIGS[template].defaultColors },
             };
-            return {
+            updatedResume = {
               ...r,
               template,
               metadata,
               updatedAt: new Date().toISOString(),
             };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume, activityLog: [...state.activityLog, activity] };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       // ============== PAGE MANAGEMENT ==============
 
       addPage: (resumeId: string, name?: string) => {
         const pageId = crypto.randomUUID();
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
@@ -609,19 +720,22 @@ export const useResumeStore = create<ResumeStore>()(
               order: existingPages.length,
               sectionIds: [],
             };
-            return { 
+            updatedResume = { 
               ...r, 
               pages: [...existingPages, newPage],
               updatedAt: new Date().toISOString() 
             };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
         return pageId;
       },
 
       deletePage: (resumeId: string, pageId: string) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
@@ -629,19 +743,22 @@ export const useResumeStore = create<ResumeStore>()(
             const sections = r.sections.map(s => 
               s.pageId === pageId ? { ...s, pageId: undefined } : s
             );
-            return { 
+            updatedResume = { 
               ...r, 
               pages: pages.map((p, i) => ({ ...p, order: i })),
               sections,
               updatedAt: new Date().toISOString() 
             };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       reorderPages: (resumeId: string, pageIds: string[]) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
@@ -649,39 +766,47 @@ export const useResumeStore = create<ResumeStore>()(
               const page = (r.pages || []).find(p => p.id === id);
               return page ? { ...page, order: index } : null;
             }).filter(Boolean) as ResumePage[];
-            return { ...r, pages, updatedAt: new Date().toISOString() };
+            updatedResume = { ...r, pages, updatedAt: new Date().toISOString() };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       updatePage: (resumeId: string, pageId: string, updates: Partial<ResumePage>) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const pages = (r.pages || []).map(p => 
               p.id === pageId ? { ...p, ...updates } : p
             );
-            return { ...r, pages, updatedAt: new Date().toISOString() };
+            updatedResume = { ...r, pages, updatedAt: new Date().toISOString() };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       moveSectionToPage: (resumeId: string, sectionId: string, pageId: string) => {
+        let updatedResume: Resume | null = null;
         set((state) => {
           const resumes = state.resumes.map((r) => {
             if (r.id !== resumeId) return r;
             const sections = r.sections.map(s => 
               s.id === sectionId ? { ...s, pageId: pageId || undefined } : s
             );
-            return { ...r, sections, updatedAt: new Date().toISOString() };
+            updatedResume = { ...r, sections, updatedAt: new Date().toISOString() };
+            return updatedResume;
           });
           const activeResume = state.activeResumeId === resumeId ? resumes.find((r) => r.id === resumeId) || null : state.activeResume;
           return { resumes, activeResume };
         });
+        if (updatedResume) syncManager.queueSave(updatedResume);
       },
 
       // ============== IMPORT/EXPORT ==============
@@ -720,6 +845,8 @@ export const useResumeStore = create<ResumeStore>()(
             resumes: [...state.resumes, imported],
             activityLog: [...state.activityLog, activity],
           }));
+          // Persist the imported resume
+          syncManager.queueSave(imported);
           return imported.id;
         } catch (error) {
           console.error('Failed to import resume:', error);
@@ -746,6 +873,8 @@ export const useResumeStore = create<ResumeStore>()(
               sections: r.sections.map((s: ResumeSection) => ({ ...s, id: crypto.randomUUID() })),
             }));
             set((state) => ({ resumes: [...state.resumes, ...importedResumes] }));
+            // Persist all imported resumes
+            importedResumes.forEach((resume: Resume) => syncManager.queueSave(resume));
           }
         } catch (error) {
           console.error('Failed to import all resumes:', error);

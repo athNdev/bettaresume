@@ -2,7 +2,7 @@
  * Authentication Store
  * 
  * Manages authentication state using Zustand.
- * Supports Local Mode (no auth) and Cloud Mode (with auth).
+ * Supports Dev Mode (demo account) and Prod Mode (real accounts with backend).
  */
 
 import { create } from 'zustand';
@@ -17,7 +17,7 @@ import type {
 } from '@/types/auth';
 import { LOCAL_MODE_USER } from '@/types/auth';
 import type { StorageMode } from '@/config/storage.config';
-import { getStorageMode, setStorageMode as persistStorageMode } from '@/config/storage.config';
+import { getStorageMode, isDevMode as checkIsDevMode } from '@/config/storage.config';
 import { 
   IS_DEV_MODE, 
   devAccount, 
@@ -38,16 +38,17 @@ interface AuthStore extends AuthState {
   clearError: () => void;
   initializeAuth: () => Promise<void>;
   
-  // Storage mode actions
-  setStorageMode: (mode: StorageMode) => void;
-  switchToLocalMode: () => void;
-  switchToCloudMode: () => void;
+  // OAuth / Social Login
+  signInWithGoogle: () => void;
+  handleOAuthCallback: (code: string) => Promise<{ success: boolean; error?: string }>;
+  
+  // Storage mode helpers (read-only, mode is set by npm scripts)
+  getStorageMode: () => StorageMode;
+  isDevMode: () => boolean;
+  isProdMode: () => boolean;
   
   // Dev mode helpers
-  loginAsDev: () => void;
-  isDevMode: () => boolean;
-  isLocalMode: () => boolean;
-  isCloudMode: () => boolean;
+  loginAsDemo: () => void;
 }
 
 // Simulated delay for dev mode to mimic real auth
@@ -73,7 +74,7 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
       error: null,
       sessionExpiresAt: null,
-      storageMode: 'local' as StorageMode,
+      storageMode: getStorageMode(),
 
       // Login action
       login: async (credentials: LoginCredentials) => {
@@ -388,12 +389,12 @@ export const useAuthStore = create<AuthStore>()(
       initializeAuth: async () => {
         const state = get();
         
-        // Load storage mode from localStorage
-        const storedMode = getStorageMode();
-        set({ storageMode: storedMode });
+        // Get storage mode from environment (set by npm scripts)
+        const mode = getStorageMode();
+        set({ storageMode: mode });
         
-        // If in local mode, use local user
-        if (storedMode === 'local') {
+        // If in dev mode, auto-login with demo account
+        if (mode === 'dev') {
           set({
             user: LOCAL_MODE_USER,
             isAuthenticated: true,
@@ -401,12 +402,12 @@ export const useAuthStore = create<AuthStore>()(
           return;
         }
         
-        // If in dev mode and cloud mode, don't auto-login
-        if (IS_DEV_MODE || !isCognitoConfigured()) {
+        // In prod mode without Cognito configured, don't auto-login
+        if (!isCognitoConfigured()) {
           return;
         }
 
-        // In production cloud mode, check if session is still valid
+        // In production with Cognito, check if session is still valid
         if (state.isAuthenticated && state.sessionExpiresAt) {
           const expiresAt = new Date(state.sessionExpiresAt);
           if (expiresAt > new Date()) {
@@ -421,36 +422,63 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // Storage mode actions
-      setStorageMode: (mode: StorageMode) => {
-        persistStorageMode(mode);
-        set({ storageMode: mode });
-      },
-
-      switchToLocalMode: () => {
-        persistStorageMode('local');
-        set({
-          storageMode: 'local',
-          user: LOCAL_MODE_USER,
-          isAuthenticated: true,
-          error: null,
-          sessionExpiresAt: null,
+      // OAuth / Social Login
+      signInWithGoogle: () => {
+        // Check if we're in dev storage mode (set by npm scripts)
+        if (checkIsDevMode()) {
+          console.warn('Google sign-in not available in dev storage mode. Use `npm run prod`.');
+          return;
+        }
+        
+        if (!isCognitoConfigured()) {
+          console.warn('Google sign-in not available: Cognito not configured');
+          return;
+        }
+        
+        // Dynamic import to avoid loading OAuth code in dev mode
+        import('@/lib/cognito').then(({ signInWithGoogle, isOAuthConfigured }) => {
+          if (!isOAuthConfigured()) {
+            console.warn('Google sign-in not available: OAuth domain not configured. Set NEXT_PUBLIC_COGNITO_DOMAIN in .env');
+            return;
+          }
+          signInWithGoogle();
         });
       },
 
-      switchToCloudMode: () => {
-        persistStorageMode('cloud');
-        set({
-          storageMode: 'cloud',
-          user: null,
-          isAuthenticated: false,
-          error: null,
-          sessionExpiresAt: null,
-        });
+      handleOAuthCallback: async (code: string) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          const { exchangeCodeForTokens } = await import('@/lib/cognito');
+          const result = await exchangeCodeForTokens(code);
+
+          if (result.success && result.user) {
+            set({
+              user: result.user,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+              sessionExpiresAt: result.expiresAt || null,
+            });
+            return { success: true };
+          } else {
+            set({ isLoading: false, error: result.error || 'OAuth authentication failed' });
+            return { success: false, error: result.error };
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'OAuth authentication failed';
+          set({ isLoading: false, error: errorMessage });
+          return { success: false, error: errorMessage };
+        }
       },
 
-      // Dev mode login helper
-      loginAsDev: () => {
+      // Storage mode helpers (read-only)
+      getStorageMode: () => getStorageMode(),
+      isDevMode: () => checkIsDevMode(),
+      isProdMode: () => !checkIsDevMode(),
+
+      // Demo mode login helper
+      loginAsDemo: () => {
         set({
           user: devAccount,
           isAuthenticated: true,
@@ -459,13 +487,6 @@ export const useAuthStore = create<AuthStore>()(
           sessionExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         });
       },
-
-      // Check if in dev mode
-      isDevMode: () => IS_DEV_MODE || !isCognitoConfigured(),
-      
-      // Check storage modes
-      isLocalMode: () => get().storageMode === 'local',
-      isCloudMode: () => get().storageMode === 'cloud',
     }),
     {
       name: 'betta-resume-auth',

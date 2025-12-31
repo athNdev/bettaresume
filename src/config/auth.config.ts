@@ -20,12 +20,12 @@ export const cognitoConfig = {
   // Region
   region: process.env.NEXT_PUBLIC_COGNITO_REGION || 'us-east-1',
   
-  // OAuth Configuration (for social login, if needed)
+  // OAuth Configuration (for social login)
   oauth: {
     domain: process.env.NEXT_PUBLIC_COGNITO_DOMAIN || '',
     scope: ['email', 'openid', 'profile'],
-    redirectSignIn: process.env.NEXT_PUBLIC_COGNITO_REDIRECT_SIGN_IN || 'http://localhost:3000/auth/callback',
-    redirectSignOut: process.env.NEXT_PUBLIC_COGNITO_REDIRECT_SIGN_OUT || 'http://localhost:3000',
+    redirectSignIn: process.env.NEXT_PUBLIC_OAUTH_REDIRECT_SIGN_IN || 'http://localhost:3000/auth/callback',
+    redirectSignOut: process.env.NEXT_PUBLIC_OAUTH_REDIRECT_SIGN_OUT || 'http://localhost:3000',
     responseType: 'code' as const,
   },
   
@@ -33,9 +33,9 @@ export const cognitoConfig = {
   identityPoolId: process.env.NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID || '',
 };
 
-// Development/Demo Account (used when in Cloud Mode during development)
+// Demo Account (used in dev mode)
 export const devAccount = {
-  id: 'dev-user-001',
+  id: 'demo-user-001',
   email: 'demo@bettaresume.dev',
   name: 'Demo User',
   picture: null,

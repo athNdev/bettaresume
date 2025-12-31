@@ -16,9 +16,12 @@ export const typeDefs = `
     user: User!
     name: String!
     variationType: String!
+    baseResumeId: ID
+    domain: String
     template: String!
     tags: [String!]!
     isArchived: Boolean!
+    metadata: JSON
     sections: [Section!]!
     createdAt: DateTime!
     updatedAt: DateTime!
@@ -46,23 +49,31 @@ export const typeDefs = `
   }
 
   input CreateResumeInput {
+    id: ID
     userId: ID!
     name: String!
     variationType: String
+    baseResumeId: ID
+    domain: String
     template: String
     tags: [String!]
     isArchived: Boolean
+    metadata: JSON
   }
 
   input UpdateResumeInput {
     name: String
     variationType: String
+    baseResumeId: ID
+    domain: String
     template: String
     tags: [String!]
     isArchived: Boolean
+    metadata: JSON
   }
 
   input CreateSectionInput {
+    id: ID
     resumeId: ID!
     type: String!
     order: Int
@@ -83,6 +94,7 @@ export const typeDefs = `
     user(id: ID!): User
     userByEmail(email: String!): User
     users: [User!]!
+    me: User  # Current authenticated user
 
     # Resume queries
     resume(id: ID!): Resume
@@ -98,6 +110,7 @@ export const typeDefs = `
   type Mutation {
     # User mutations
     createUser(input: CreateUserInput!): User!
+    getOrCreateUser(email: String!): User!
     updateUser(id: ID!, input: UpdateUserInput!): User!
     deleteUser(id: ID!): Boolean!
 

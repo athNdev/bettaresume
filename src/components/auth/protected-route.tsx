@@ -3,14 +3,14 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { LOCAL_MODE_USER } from '@/types/auth';
+import { isDevMode } from '@/config/storage.config';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-// Routes that don't require authentication (even in cloud mode)
+// Routes that don't require authentication (even in prod mode)
 const publicRoutes = [
   '/login',
   '/register',
@@ -34,24 +34,25 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { 
     isAuthenticated, 
     isLoading, 
-    isLocalMode, 
-    isCloudMode,
     storageMode,
-    switchToLocalMode,
+    loginAsDemo,
     user,
   } = useAuthStore();
+  
+  const inDevMode = isDevMode();
+  const inProdMode = !inDevMode;
 
   useEffect(() => {
-    // In local mode, always allow access - auto-authenticate with local user
-    if (isLocalMode()) {
-      if (!isAuthenticated || user?.id !== LOCAL_MODE_USER.id) {
-        switchToLocalMode();
+    // In dev mode, always allow access - auto-authenticate with demo user
+    if (inDevMode) {
+      if (!isAuthenticated || !user?.id?.startsWith('demo')) {
+        loginAsDemo();
       }
       return;
     }
 
-    // In cloud mode, handle authentication
-    if (isCloudMode()) {
+    // In prod mode, handle authentication
+    if (inProdMode) {
       // If still loading, wait
       if (isLoading) return;
 
@@ -70,7 +71,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         return;
       }
     }
-  }, [isAuthenticated, isLoading, pathname, router, isLocalMode, isCloudMode, switchToLocalMode, storageMode, user]);
+  }, [isAuthenticated, isLoading, pathname, router, inDevMode, inProdMode, loginAsDemo, storageMode, user]);
 
   // Show loading state while checking auth
   if (isLoading) {
@@ -84,12 +85,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // In local mode, always render children
-  if (isLocalMode()) {
+  // In dev mode, always render children
+  if (inDevMode) {
     return <>{children}</>;
   }
 
-  // Cloud mode: Check if current route is public
+  // Prod mode: Check if current route is public
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
 
   // If not authenticated and not a public route, show loading while redirecting
@@ -113,8 +114,13 @@ export function useUser() {
   return { user, isAuthenticated, storageMode };
 }
 
-// Hook to check storage mode
+// Hook to check storage mode (read-only, mode is set by npm scripts)
 export function useStorageMode() {
-  const { storageMode, isLocalMode, isCloudMode, switchToLocalMode, switchToCloudMode } = useAuthStore();
-  return { storageMode, isLocalMode: isLocalMode(), isCloudMode: isCloudMode(), switchToLocalMode, switchToCloudMode };
+  const { storageMode } = useAuthStore();
+  const inDevMode = isDevMode();
+  return { 
+    storageMode, 
+    isDevMode: inDevMode, 
+    isProdMode: !inDevMode,
+  };
 }

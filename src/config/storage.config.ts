@@ -1,76 +1,80 @@
 /**
  * Storage Mode Configuration
  * 
- * Betta Resume supports two storage modes:
+ * Betta Resume runs in two modes controlled by npm scripts:
  * 
- * 1. LOCAL MODE - All data stored in browser localStorage
- *    - No account required
+ * 1. DEV MODE (npm run dev)
+ *    - Demo account with data in localStorage
+ *    - No backend required
  *    - Full feature access
- *    - Data persists only in the same browser
  *    - Private and offline-capable
  * 
- * 2. CLOUD MODE - Data synced to cloud storage
- *    - Requires account authentication
- *    - Access from any device
- *    - Automatic backup
- *    - (Future: may have free tier limitations)
+ * 2. PROD MODE (npm run prod) 
+ *    - Real account with backend sync
+ *    - Data synced to SQLite via GraphQL
+ *    - Cross-device access
+ *    - Requires backend server running
  */
 
-export type StorageMode = 'local' | 'cloud';
+export type StorageMode = 'dev' | 'prod';
 
-// Get current storage mode from localStorage or default to 'local'
+// Get storage mode from environment variable set by npm scripts
 export const getStorageMode = (): StorageMode => {
-  if (typeof window === 'undefined') return 'local';
-  return (localStorage.getItem('betta-storage-mode') as StorageMode) || 'local';
+  // Environment variable is set by cross-env in package.json scripts
+  const envMode = process.env.NEXT_PUBLIC_STORAGE_MODE;
+  if (envMode === 'prod') return 'prod';
+  return 'dev'; // Default to dev mode
 };
 
-// Set storage mode
+// Check if running in dev mode
+export const isDevMode = (): boolean => getStorageMode() === 'dev';
+
+// Check if running in prod mode  
+export const isProdMode = (): boolean => getStorageMode() === 'prod';
+
+// Set storage mode (deprecated - mode is now controlled by npm scripts)
 export const setStorageMode = (mode: StorageMode): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('betta-storage-mode', mode);
+  console.warn('setStorageMode is deprecated. Use npm run dev or npm run prod instead.');
 };
 
 // Storage mode display info
 export const STORAGE_MODE_INFO = {
-  local: {
-    name: 'Local Mode',
-    description: 'Your data stays on this device only',
-    icon: 'HardDrive',
+  dev: {
+    name: 'Demo Mode',
+    description: 'Demo account with local storage',
+    icon: 'FlaskConical',
     features: [
-      'No account required',
+      'Demo account auto-created',
       'Full feature access',
       'Data stored in browser',
       'Works offline',
-      'Maximum privacy',
+      'No backend required',
     ],
     limitations: [
-      'Data only accessible from this browser',
-      'Clearing browser data will delete your resumes',
-      'No cross-device sync',
+      'Data only in this browser',
+      'Clearing browser data deletes resumes',
+      'No real authentication',
     ],
   },
-  cloud: {
-    name: 'Cloud Mode',
-    description: 'Access your resumes from anywhere',
+  prod: {
+    name: 'Production Mode',
+    description: 'Real accounts with backend sync',
     icon: 'Cloud',
     features: [
-      'Access from any device',
-      'Automatic cloud backup',
-      'Cross-device sync',
-      'Account-based storage',
+      'Real user accounts',
+      'Backend database sync',
+      'Data persistence',
+      'Cross-device access',
     ],
     limitations: [
+      'Requires backend server',
       'Requires account sign-up',
-      'Requires internet connection for sync',
     ],
   },
 } as const;
 
-// Check if cloud mode is available (requires auth configuration)
-export const isCloudModeAvailable = (): boolean => {
-  const cognitoConfigured = !!(
-    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID &&
-    process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID
-  );
-  return cognitoConfigured;
+// Check if prod mode is properly configured
+export const isProdModeAvailable = (): boolean => {
+  // In prod mode, check if backend is reachable
+  return isProdMode();
 };

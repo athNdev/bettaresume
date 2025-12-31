@@ -6,48 +6,49 @@ The application is fully set up and ready to use. Access it at:
 **http://localhost:3000**
 
 ### Storage Modes
-The application supports two storage modes:
+The application supports two storage modes controlled by npm scripts:
 
-1. **Local Mode** (Default)
+1. **Dev Mode** (`npm run dev`)
+   - Demo account auto-created
    - All data stored in browser localStorage
-   - No account required
+   - No backend required
    - Full feature access
-   - Data persists only in current browser
 
-2. **Cloud Mode** (Optional)
-   - Data synced to cloud server
-   - Requires AWS Cognito account
-   - Access from any device
+2. **Prod Mode** (`npm run prod`)
+   - Real user accounts
+   - Data synced to backend server via GraphQL
+   - Requires backend server running (`npm run server:dev`)
+   - Cross-device access
 
-### Development Mode
-In development mode, the app auto-logs in with a demo account:
-- Email: `demo@bettaresume.com`
-- No password required - automatic login
+### Running the Application
 
-### Production Mode
-To use AWS Cognito authentication:
-1. Copy `.env.example` to `.env.local`
-2. Set `NEXT_PUBLIC_AUTH_MODE=production`
-3. Configure your Cognito credentials
+```bash
+# Development mode (localStorage only)
+npm run dev
+
+# Production mode (with backend sync)
+npm run server:dev  # Start backend first
+npm run prod        # Then start frontend
+```
 
 ## Authentication System
 
 ### Modes
-- **Local Mode**: No authentication required, data stored locally
-- **Cloud Mode (Development)**: Auto-login with demo account
-- **Cloud Mode (Production)**: Full AWS Cognito authentication
+- **Dev Mode**: Demo account auto-login, data in localStorage
+- **Prod Mode**: Real accounts with backend database sync
 
-### Auth Pages
-- `/login` - User login (Cloud Mode only)
-- `/register` - New user registration (Cloud Mode only)
+### Auth Pages (Prod Mode)
+- `/login` - User login
+- `/register` - New user registration
 - `/forgot-password` - Password reset request
 - `/reset-password` - Set new password
 - `/verify-email` - Email verification
-- `/account` - Account settings (profile, storage mode)
+- `/account` - Account settings
 
 ### Environment Variables
 ```bash
-# Auth mode: 'development' or 'production'
+# Storage mode (set by npm scripts via cross-env)
+NEXT_PUBLIC_STORAGE_MODE=dev|prod
 NEXT_PUBLIC_AUTH_MODE=development
 
 # Cognito settings (production only)
@@ -109,8 +110,15 @@ User {
   preferences: { theme, emailNotifications, autoSave }
 }
 
-StorageMode = 'local' | 'cloud'
+StorageMode = 'dev' | 'prod'
 ```
+
+### Storage Modes
+
+Run with different npm scripts to switch modes:
+
+- **Dev Mode** (`npm run dev`): Demo account, localStorage only
+- **Prod Mode** (`npm run prod`): Real accounts, backend sync
 
 ### Key Files
 

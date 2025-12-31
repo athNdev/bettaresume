@@ -14,17 +14,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  User,
   Settings,
   LogOut,
-  HardDrive,
-  Cloud,
   ChevronDown,
+  FlaskConical,
+  User as UserIcon,
 } from 'lucide-react';
 
 export function UserMenu() {
   const router = useRouter();
-  const { user, logout, isAuthenticated, storageMode } = useAuthStore();
+  const { user, logout, isAuthenticated, isDevMode } = useAuthStore();
+  const isDemoAccount = isDevMode();
 
   const handleLogout = async () => {
     await logout();
@@ -61,20 +61,26 @@ export function UserMenu() {
           <span className="hidden sm:inline-block max-w-[100px] truncate">
             {user.name.split(' ')[0]}
           </span>
-          <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-1 py-0">
-            {storageMode === 'local' ? (
-              <><HardDrive className="h-3 w-3 mr-0.5" />Local</>
-            ) : (
-              <><Cloud className="h-3 w-3 mr-0.5" />Cloud</>
-            )}
-          </Badge>
+          {isDemoAccount && (
+            <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-1.5 py-0 gap-1">
+              <FlaskConical className="h-3 w-3" />
+              Demo
+            </Badge>
+          )}
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium leading-none">{user.name}</p>
+              {isDemoAccount && (
+                <Badge variant="secondary" className="text-[10px] px-1.5">
+                  Demo
+                </Badge>
+              )}
+            </div>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -83,21 +89,21 @@ export function UserMenu() {
         
         <DropdownMenuSeparator />
         
-        {/* Storage Mode Badge */}
+        {/* Account Type Info */}
         <div className="px-2 py-1.5">
           <div className="flex items-center gap-2">
-            {storageMode === 'local' ? (
+            {isDemoAccount ? (
               <>
-                <HardDrive className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Local Mode</span>
+                <FlaskConical className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Demo Account</span>
                 <Badge variant="secondary" className="ml-auto text-[10px]">
-                  This browser only
+                  Dev Mode
                 </Badge>
               </>
             ) : (
               <>
-                <Cloud className="h-4 w-4 text-primary" />
-                <span className="text-sm text-primary font-medium">Cloud Mode</span>
+                <UserIcon className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Signed In</span>
               </>
             )}
           </div>

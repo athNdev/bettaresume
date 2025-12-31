@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { IS_DEV_MODE, isCognitoConfigured } from '@/config/auth.config';
-import { confirmSignUp } from '@/lib/cognito';
+import { confirmSignUp, resendConfirmationCode } from '@/lib/cognito';
 import { 
   FileText, 
   Loader2, 
@@ -26,8 +26,10 @@ function VerifyEmailContent() {
   
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,12 +151,41 @@ function VerifyEmailContent() {
               Didn&apos;t receive the code?{' '}
               <button 
                 type="button"
-                className="text-primary hover:underline"
-                onClick={() => {/* TODO: Resend code */}}
+                className="text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isResending}
+                onClick={async () => {
+                  setIsResending(true);
+                  setError(null);
+                  setResendSuccess(false);
+                  
+                  if (IS_DEV_MODE || !isCognitoConfigured()) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    setResendSuccess(true);
+                    setIsResending(false);
+                    return;
+                  }
+                  
+                  const result = await resendConfirmationCode(email);
+                  setIsResending(false);
+                  
+                  if (result.success) {
+                    setResendSuccess(true);
+                    // Clear success message after 5 seconds
+                    setTimeout(() => setResendSuccess(false), 5000);
+                  } else {
+                    setError(result.error || 'Failed to resend code');
+                  }
+                }}
               >
-                Resend
+                {isResending ? 'Sending...' : 'Resend'}
               </button>
             </p>
+            
+            {resendSuccess && (
+              <p className="text-xs text-green-500 text-center">
+                ✓ New verification code sent to your email
+              </p>
+            )}
           </form>
         )}
       </CardContent>

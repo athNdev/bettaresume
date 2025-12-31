@@ -2,6 +2,31 @@ import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================
+// Resume Metadata Type (stored as JSON)
+// ============================================
+export interface ResumeMetadata {
+  personalInfo?: {
+    fullName?: string;
+    email?: string;
+  };
+  settings?: {
+    pageSize?: string;
+    margins?: { top: number; right: number; bottom: number; left: number };
+    fontSize?: number;
+    fontScale?: number;
+    typography?: Record<string, unknown>;
+    lineHeight?: number;
+    fontFamily?: string;
+    colors?: Record<string, string>;
+    sectionSpacing?: string;
+    showIcons?: boolean;
+    dateFormat?: string;
+    accentStyle?: string;
+  };
+  pages?: unknown[];
+}
+
+// ============================================
 // Users Table
 // ============================================
 export const users = sqliteTable('users', {
@@ -19,9 +44,12 @@ export const resumes = sqliteTable('resumes', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   variationType: text('variation_type').notNull().default('base'),
+  baseResumeId: text('base_resume_id'),
+  domain: text('domain'),
   template: text('template').notNull().default('modern'),
   tags: text('tags', { mode: 'json' }).$type<string[]>().default([]),
   isArchived: integer('is_archived', { mode: 'boolean' }).notNull().default(false),
+  metadata: text('metadata', { mode: 'json' }).$type<ResumeMetadata>(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
