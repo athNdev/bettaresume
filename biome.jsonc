@@ -6,6 +6,10 @@
 		"useIgnoreFile": true,
 		"clientKind": "git"
 	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": ["**", "!node_modules", "!generated"]
+	},
 	"assist": {
 		"enabled": true,
 		"actions": {
