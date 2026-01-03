@@ -1,43 +1,95 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
     provider = "prisma-client-js"
     output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "sqlite"
+    provider = "sqlite"
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
+// ============================================
+// Users Table
+// ============================================
+model User {
+    id            String    @id @default(cuid())
+    email         String    @unique
+    name          String?
+    emailVerified DateTime?
+    image         String?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    // Relations
+    accounts Account[]
+    sessions Session[]
+    resumes  Resume[]
+}
+
+// ============================================
+// Resumes Table
+// ============================================
+model Resume {
+    id            String   @id @default(cuid())
+    userId        String
+    name          String
+    variationType String   @default("base")
+    baseResumeId  String?
+    domain        String?
+    template      String   @default("modern")
+    tags          String   @default("[]") // JSON array stored as string
+    isArchived    Boolean  @default(false)
+    metadata      String?  // JSON stored as string (ResumeMetadata type)
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    // Relations
+    user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    baseResume Resume?   @relation("ResumeVariations", fields: [baseResumeId], references: [id])
+    variations Resume[]  @relation("ResumeVariations")
+    sections   Section[]
+
+    @@index([userId])
+    @@index([baseResumeId])
+}
+
+// ============================================
+// Sections Table
+// ============================================
+model Section {
+    id        String   @id @default(cuid())
+    resumeId  String
+    type      String   // personal-info, summary, experience, education, skills, projects, etc.
+    order     Int      @default(0)
+    visible   Boolean  @default(true)
+    content   String   // JSON stored as string (SectionContent type)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
+    // Relations
+    resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
-    @@index([name])
+    @@index([resumeId])
 }
 
-// Necessary for Next auth
+// ============================================
+// NextAuth Models
+// ============================================
 model Account {
     id                       String  @id @default(cuid())
     userId                   String
     type                     String
     provider                 String
     providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
+    refresh_token            String?
+    access_token             String?
     expires_at               Int?
     token_type               String?
     scope                    String?
-    id_token                 String? // @db.Text
+    id_token                 String?
     session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
     refresh_token_expires_in Int?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([provider, providerAccountId])
 }
@@ -47,18 +99,8 @@ model Session {
     sessionToken String   @unique
     userId       String
     expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
 
-model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
-    posts         Post[]
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
