@@ -131,3 +131,9 @@ export const protectedProcedure = t.procedure
 			},
 		});
 	});
+
+/**
+ * Export middleware helper for creating reusable middleware.
+ * Use this to create ownership checks and other reusable middleware.
+ */
+export const middleware = t.middleware;
