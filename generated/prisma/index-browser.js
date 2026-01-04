@@ -117,12 +117,40 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
-exports.Prisma.PostScalarFieldEnum = {
+exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
+  email: 'email',
   name: 'name',
+  emailVerified: 'emailVerified',
+  image: 'image',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  createdById: 'createdById'
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ResumeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  variationType: 'variationType',
+  baseResumeId: 'baseResumeId',
+  domain: 'domain',
+  template: 'template',
+  tags: 'tags',
+  isArchived: 'isArchived',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SectionScalarFieldEnum = {
+  id: 'id',
+  resumeId: 'resumeId',
+  type: 'type',
+  order: 'order',
+  visible: 'visible',
+  content: 'content',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.AccountScalarFieldEnum = {
@@ -148,14 +176,6 @@ exports.Prisma.SessionScalarFieldEnum = {
   expires: 'expires'
 };
 
-exports.Prisma.UserScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  email: 'email',
-  emailVerified: 'emailVerified',
-  image: 'image'
-};
-
 exports.Prisma.VerificationTokenScalarFieldEnum = {
   identifier: 'identifier',
   token: 'token',
@@ -174,10 +194,11 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
-  Post: 'Post',
+  User: 'User',
+  Resume: 'Resume',
+  Section: 'Section',
   Account: 'Account',
   Session: 'Session',
-  User: 'User',
   VerificationToken: 'VerificationToken'
 };
 
