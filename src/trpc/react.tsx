@@ -7,36 +7,43 @@ import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
 import SuperJSON from "superjson";
 
-import type { AppRouter } from "@/server/api/root";
 import { createQueryClient } from "./query-client";
+
+// Import ApiRouter directly from api-server (type-only, no runtime code)
+import type { ApiRouter } from "../../api-server/src/root";
+
+// Re-export entity types for use in components
+export type {
+	User,
+	Resume,
+	Section,
+	ResumeWithSections,
+	SectionContent,
+	CreateResumeInput,
+	UpdateResumeInput,
+} from "@bettaresume/types";
 
 let clientQueryClientSingleton: QueryClient | undefined;
 const getQueryClient = () => {
 	if (typeof window === "undefined") {
-		// Server: always make a new query client
 		return createQueryClient();
 	}
-	// Browser: use singleton pattern to keep the same query client
 	clientQueryClientSingleton ??= createQueryClient();
-
 	return clientQueryClientSingleton;
 };
 
-export const api = createTRPCReact<AppRouter>();
+/**
+ * tRPC React client with full type safety.
+ * ApiRouter is imported from the api-server workspace package.
+ */
+export const api = createTRPCReact<ApiRouter>();
 
 /**
- * Inference helper for inputs.
- *
- * @example type HelloInput = RouterInputs['example']['hello']
+ * Inference helpers for inputs and outputs.
+ * @example type ResumeList = RouterOutputs['resume']['list']
  */
-export type RouterInputs = inferRouterInputs<AppRouter>;
-
-/**
- * Inference helper for outputs.
- *
- * @example type HelloOutput = RouterOutputs['example']['hello']
- */
-export type RouterOutputs = inferRouterOutputs<AppRouter>;
+export type RouterInputs = inferRouterInputs<ApiRouter>;
+export type RouterOutputs = inferRouterOutputs<ApiRouter>;
 
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
 	const queryClient = getQueryClient();
@@ -72,7 +79,9 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 }
 
 function getBaseUrl() {
+	if (process.env.NEXT_PUBLIC_API_URL) {
+		return process.env.NEXT_PUBLIC_API_URL;
+	}
 	if (typeof window !== "undefined") return window.location.origin;
-	if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
 	return `http://localhost:${process.env.PORT ?? 3000}`;
 }

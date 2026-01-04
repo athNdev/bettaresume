@@ -1,0 +1,39 @@
+{
+  "name": "bettaresume-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/dev-server.ts",
+    "build": "prisma generate",
+    "db:generate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:local-reset": "shx rm -f ./dev.db",
+    "dev:seed": "run-s db:local-reset db:push postinstall db:seed dev",
+    "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@bettaresume/types": "*",
+    "@libsql/client": "^0.15.15",
+    "@prisma/adapter-libsql": "^7.2.0",
+    "@prisma/client": "^7.2.0",
+    "@trpc/server": "^11.8.1",
+    "superjson": "^2.2.6",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@vercel/node": "^5.5.16",
+    "npm-run-all": "^4.1.5",
+    "prisma": "^7.2.0",
+    "shx": "^0.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

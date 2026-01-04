@@ -40,20 +40,34 @@
       ],
       "~/*": [
         ".//*"
+      ],
+      "@bettaresume/types": [
+        "./packages/types/src/index.ts"
+      ],
+      "@bettaresume/types/*": [
+        "./packages/types/src/*"
       ]
     }
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.cjs",
-    "**/*.js",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.cjs",
+    "src/**/*.js",
+    "packages/types/src/**/*.ts",
+    "api-server/src/root.ts",
+    "api-server/src/trpc.ts",
+    "api-server/src/routers/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "generated"
+    "generated",
+    "api-server/api",
+    "api-server/src/dev-server.ts",
+    "api-server/src/db.ts",
+    "api-server/node_modules"
   ]
 }
