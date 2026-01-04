@@ -77,6 +77,31 @@ export const withSectionOwnership = middleware(async ({ ctx, input, next }) => {
   });
 });
 
+/**
+ * Middleware that verifies the user is accessing their own data.
+ * Checks for user ID in `input.id` and compares it with the session user.
+ */
+export const withUserSelfAccess = middleware(async ({ ctx, input, next }) => {
+    const userId = (input as { id?: string })?.id;
+
+    if (!userId) {
+        throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "User id is required",
+        });
+    }
+
+    // Note: This middleware is used with protectedProcedure which guarantees session.user exists
+    if (userId !== ctx.session!.user.id) {
+        throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You can only access your own user data",
+        });
+    }
+
+    return next({ ctx });
+});
+
 // Type exports for use in routers
 export type ResumeOwnershipContext = {
   resume: Resume;
