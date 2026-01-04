@@ -3,58 +3,42 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
+	"workspaces": [
+		"packages/*",
+		"api-server"
+	],
 	"scripts": {
 		"build": "next build",
+		"build:types": "npm run build -w @bettaresume/types",
 		"check": "biome check .",
 		"check:unsafe": "biome check --write --unsafe .",
 		"check:write": "biome check --write .",
-		"db:seed": "prisma db seed",
-		"db:generate": "prisma migrate dev",
-		"db:migrate": "prisma migrate deploy",
-		"db:push": "prisma db push",
-		"db:studio": "prisma studio",
-		"db:local-reset": "shx rm -f ./db.sqlite",
 		"dev": "next dev --turbo",
-		"dev:seed": "run-s db:local-reset db:push postinstall db:seed dev",
-		"postinstall": "prisma generate",
 		"preview": "next build && next start",
 		"start": "next start",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@auth/prisma-adapter": "^2.11.1",
-		"@prisma/adapter-better-sqlite3": "^7.2.0",
-		"@prisma/client": "^7.2.0",
-		"@t3-oss/env-nextjs": "^0.13.10",
+		"@bettaresume/types": "*",
 		"@tanstack/react-query": "^5.90.16",
 		"@trpc/client": "^11.8.1",
 		"@trpc/react-query": "^11.8.1",
 		"@trpc/server": "^11.8.1",
-		"better-sqlite3": "^12.5.0",
 		"next": "^16.1.1",
-		"next-auth": "5.0.0-beta.30",
 		"react": "^19.2.3",
 		"react-dom": "^19.2.3",
-		"server-only": "^0.0.1",
 		"superjson": "^2.2.6",
-		"zod": "^4.3.4"
+		"zod": "^4.3.5"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.10",
+		"@biomejs/biome": "^2.3.11",
 		"@tailwindcss/postcss": "^4.1.18",
-		"@types/better-sqlite3": "^7.6.13",
 		"@types/node": "^25.0.3",
 		"@types/react": "^19.2.7",
 		"@types/react-dom": "^19.2.3",
-		"npm-run-all": "^4.1.5",
 		"postcss": "^8.5.6",
-		"prisma": "^7.2.0",
-		"shx": "^0.4.0",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3"
-	},
-	"ct3aMetadata": {
-		"initVersion": "7.40.0"
 	},
 	"packageManager": "npm@11.7.0"
 }
