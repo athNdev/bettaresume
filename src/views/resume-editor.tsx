@@ -40,7 +40,7 @@ import {
 } from '@/components/sections-forms';
 
 // Editor Components
-import { RichTextEditor } from '@/components/editor';
+import { RichTextEditor } from '@/components/rich-text-editor';
 import { ExportButtons } from '@/components/export';
 import {
   Preview,
