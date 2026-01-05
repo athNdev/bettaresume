@@ -224,6 +224,11 @@ export const useResumeStore = create<ResumeStore>()(
     },
 
     setActiveResume: (id: string) => {
+      // Skip if already active to prevent unnecessary re-renders
+      if (get().activeResumeId === id) {
+        return;
+      }
+      
       const resume = get().resumes.find((r) => r.id === id);
       if (resume) {
         // Auto-sync linked sections when opening a variation
