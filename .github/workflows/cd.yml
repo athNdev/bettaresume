@@ -28,6 +28,9 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      - name: Create .env file
+        run: echo "DATABASE_URL=${{ vars.DATABASE_URL }}" > api-server/.env
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
