@@ -1,14 +1,13 @@
 'use client';
 
 /**
- * Dashboard Page
+ * Dashboard Page (Hash Router Version)
  * 
  * Main page showing all resumes with filtering, search, and CRUD actions.
  */
 
 import { useState, useMemo, Suspense } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useHashRouter } from '@/lib/hash-router';
 import { 
   Plus, 
   Search, 
@@ -48,7 +47,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TEMPLATE_CONFIGS, type TemplateType } from '@/types/resume';
 
-export default function DashboardPage() {
+export default function Dashboard() {
   return (
     <ProtectedRoute>
       <TooltipProvider>
@@ -113,7 +112,7 @@ function ResumeCardSkeleton() {
 }
 
 function DashboardContent() {
-  const router = useRouter();
+  const { navigate } = useHashRouter();
   const { user } = useAuthStore();
   const { 
     resumes, 
@@ -139,15 +138,12 @@ function DashboardContent() {
   const [newResumeTemplate, setNewResumeTemplate] = useState<TemplateType>('modern');
   const [showWelcomeGuide, setShowWelcomeGuide] = useState(true);
 
-  // Filtered resumes - must be before any conditional returns (Rules of Hooks)
+  // Filtered resumes
   const filteredResumes = useMemo(() => {
     if (!_hasHydrated) return [];
     return resumes.filter(resume => {
-      // Filter by archived status
       if (!showArchived && resume.isArchived) return false;
       if (showArchived && !resume.isArchived) return false;
-
-      // Filter by search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const nameMatch = resume.name.toLowerCase().includes(query);
@@ -155,18 +151,13 @@ function DashboardContent() {
         const tagsMatch = resume.tags?.some(tag => tag.toLowerCase().includes(query));
         if (!nameMatch && !domainMatch && !tagsMatch) return false;
       }
-
-      // Filter by template
       if (selectedTemplate !== 'all' && resume.template !== selectedTemplate) return false;
-
       return true;
     });
   }, [resumes, searchQuery, showArchived, selectedTemplate, _hasHydrated]);
 
-  // Stats - also must be before conditional returns
+  // Stats
   const totalResumes = useMemo(() => resumes.filter(r => !r.isArchived).length, [resumes]);
-  const archivedResumes = useMemo(() => resumes.filter(r => r.isArchived).length, [resumes]);
-  const variationCount = useMemo(() => resumes.filter(r => r.variationType === 'variation').length, [resumes]);
 
   // Show skeleton while hydrating
   if (!_hasHydrated) {
@@ -179,7 +170,7 @@ function DashboardContent() {
     const id = createResume(newResumeName.trim(), newResumeTemplate);
     setIsCreateDialogOpen(false);
     setNewResumeName('');
-    router.push(`/editor/${id}`);
+    navigate(`/resume-editor/${id}`);
   };
 
   const handleDeleteResume = () => {
@@ -193,7 +184,7 @@ function DashboardContent() {
   const handleDuplicateResume = (id: string, name: string) => {
     const newId = duplicateResume(id, `${name} (copy)`);
     if (newId) {
-      router.push(`/editor/${newId}`);
+      navigate(`/resume-editor/${newId}`);
     }
   };
 
@@ -220,24 +211,12 @@ function DashboardContent() {
         const text = await file.text();
         const id = importFromJSON(text);
         if (id) {
-          router.push(`/editor/${id}`);
+          navigate(`/resume-editor/${id}`);
         }
       }
     };
     input.click();
   };
-
-  // Loading state
-  if (!_hasHydrated) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading resumes...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -245,9 +224,9 @@ function DashboardContent() {
       <header className="border-b bg-card">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-xl font-bold">
+            <button onClick={() => navigate('/')} className="text-xl font-bold">
               Betta Resume
-            </Link>
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleImportResume}>
@@ -350,7 +329,7 @@ function DashboardContent() {
                 key={resume.id}
                 resume={resume}
                 variations={getVariations(resume.id)}
-                onEdit={() => router.push(`/editor/${resume.id}`)}
+                onEdit={() => navigate(`/resume-editor/${resume.id}`)}
                 onDuplicate={() => handleDuplicateResume(resume.id, resume.name)}
                 onExport={() => handleExportResume(resume.id, resume.name)}
                 onArchive={() => archiveResume(resume.id)}

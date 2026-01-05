@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <script>
+    // Single Page Apps for GitHub Pages
+    // Converts the path into a hash-based route
+    // https://github.com/rafgraph/spa-github-pages
+    var pathSegmentsToKeep = 0;
+    var l = window.location;
+    l.replace(
+      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+      l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/#/' +
+      l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+      (l.search ? '~and~' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
+    );
+  </script>
+</head>
+<body>
+  <noscript>
+    <h1>Betta Resume</h1>
+    <p>JavaScript is required to run this application.</p>
+    <p><a href="/">Go to homepage</a></p>
+  </noscript>
+</body>
+</html>

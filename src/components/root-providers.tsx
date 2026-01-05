@@ -7,6 +7,7 @@ import {
   AuthProvider,
   ApiProvider,
 } from './providers';
+import { ConfirmDialog } from '@/hooks/use-confirm';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -28,6 +29,7 @@ export function Providers({ children }: ProvidersProps) {
           </ApiProvider>
         </AuthProvider>
         <ToastProvider />
+        <ConfirmDialog />
       </ThemeProvider>
     </TRPCReactProvider>
   );

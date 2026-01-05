@@ -1,9 +1,8 @@
 /**
  * Sync Layer
  *
- * Handles data syncing with the tRPC backend.
- * Both dev and prod modes use the backend for persistence.
- * Environment configuration is handled via .env files.
+ * Handles data syncing with localStorage.
+ * For now, we use localStorage only (no backend sync).
  */
 
 import type { Resume } from '@/types/resume';
@@ -14,54 +13,47 @@ import type { Resume } from '@/types/resume';
 
 export type BackendStatus = 'online' | 'offline' | 'unknown';
 
-const BACKEND_STATUS_KEY = 'betta-backend-status';
+const STORAGE_KEY = 'bettaresume-resumes';
 
 // ============================================
-// Backend Health Check
+// Backend Health Check (placeholder for future use)
 // ============================================
-
-let cachedBackendStatus: BackendStatus = 'unknown';
-let lastHealthCheck: number = 0;
-const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
 
 export async function checkBackendHealth(): Promise<BackendStatus> {
-  const now = Date.now();
-
-  // Use cached result if recent
-  if (cachedBackendStatus !== 'unknown' && now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
-    return cachedBackendStatus;
-  }
-
-  try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    const healthUrl = `${apiUrl}/health`;
-
-    const response = await fetch(healthUrl, {
-      method: 'GET',
-      signal: AbortSignal.timeout(3000), // 3 second timeout
-    });
-
-    cachedBackendStatus = response.ok ? 'online' : 'offline';
-    lastHealthCheck = now;
-
-    // Store status for other tabs
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
-        status: cachedBackendStatus,
-        timestamp: now,
-      }));
-    }
-
-    return cachedBackendStatus;
-  } catch {
-    cachedBackendStatus = 'offline';
-    lastHealthCheck = now;
-    return 'offline';
-  }
+  // Always return offline for now - we're in local-only mode
+  return 'offline';
 }
 
 export function getBackendStatus(): BackendStatus {
-  return cachedBackendStatus;
+  return 'offline';
+}
+
+// ============================================
+// Local Storage Helpers
+// ============================================
+
+function loadFromLocalStorage(): Resume[] {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Failed to load from localStorage:', error);
+  }
+  return [];
+}
+
+function saveToLocalStorage(resumes: Resume[]): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(resumes));
+  } catch (error) {
+    console.error('Failed to save to localStorage:', error);
+  }
 }
 
 // ============================================
@@ -77,30 +69,15 @@ export class SyncManager {
 
   async initialize(): Promise<{ resumes: Resume[]; backendStatus: BackendStatus }> {
     if (this.isInitialized) {
-      return { resumes: this.cachedResumes, backendStatus: getBackendStatus() };
+      return { resumes: this.cachedResumes, backendStatus: 'offline' };
     }
 
-    let resumes: Resume[] = [];
-    const backendStatus = await checkBackendHealth();
-
-    if (backendStatus === 'online') {
-      try {
-        // TODO: Load from tRPC backend
-        // resumes = await trpc.resume.list.query();
-        console.log('Would load resumes from backend');
-        resumes = [];
-      } catch (error) {
-        console.error('Failed to load from backend:', error);
-        resumes = [];
-      }
-    } else {
-      console.warn('Backend offline - please start the API server');
-      resumes = [];
-    }
-
-    this.cachedResumes = resumes;
+    // Load from localStorage
+    this.cachedResumes = loadFromLocalStorage();
     this.isInitialized = true;
-    return { resumes, backendStatus };
+    
+    console.log('[SyncManager] Loaded', this.cachedResumes.length, 'resumes from localStorage');
+    return { resumes: this.cachedResumes, backendStatus: 'offline' };
   }
 
   setUserId(userId: string) {
@@ -119,10 +96,10 @@ export class SyncManager {
       clearTimeout(this.saveTimeout);
     }
     
-    // Debounce saves by 1 second
+    // Debounce saves by 500ms
     this.saveTimeout = setTimeout(() => {
       this.flushSaveQueue();
-    }, 1000);
+    }, 500);
   }
 
   // Immediately save all queued resumes
@@ -142,78 +119,29 @@ export class SyncManager {
       }
     }
 
-    // Save to backend
-    const status = await checkBackendHealth();
-    if (status === 'online') {
-      try {
-        // TODO: Save to tRPC backend
-        // for (const resume of resumes) {
-        //   await trpc.resume.upsert.mutate(resume);
-        // }
-        console.log('Would save to backend:', resumes.length, 'resumes');
-      } catch (error) {
-        console.error('Failed to save to backend:', error);
-      }
-    } else {
-      console.warn('Backend offline - changes not saved');
-    }
+    // Save to localStorage
+    saveToLocalStorage(this.cachedResumes);
+    console.log('[SyncManager] Saved', resumes.length, 'resume(s) to localStorage');
   }
 
   // Save all resumes at once
   async saveAll(resumes: Resume[]) {
     this.cachedResumes = resumes;
-
-    const status = await checkBackendHealth();
-    if (status === 'online') {
-      try {
-        // TODO: Save to tRPC backend
-        // await trpc.resume.saveAll.mutate(resumes);
-        console.log('Would save all to backend:', resumes.length, 'resumes');
-      } catch (error) {
-        console.error('Failed to save all to backend:', error);
-      }
-    } else {
-      console.warn('Backend offline - changes not saved');
-    }
+    saveToLocalStorage(this.cachedResumes);
+    console.log('[SyncManager] Saved all', resumes.length, 'resumes to localStorage');
   }
 
   // Delete a resume
   async deleteResume(id: string) {
     // Remove from local cache
     this.cachedResumes = this.cachedResumes.filter(r => r.id !== id);
-
-    // Remove from backend
-    const status = await checkBackendHealth();
-    if (status === 'online') {
-      try {
-        // TODO: Delete from tRPC backend
-        // await trpc.resume.delete.mutate({ id });
-        console.log('Would delete from backend:', id);
-      } catch (error) {
-        console.error('Failed to delete from backend:', error);
-      }
-    } else {
-      console.warn('Backend offline - deletion not synced');
-    }
+    saveToLocalStorage(this.cachedResumes);
+    console.log('[SyncManager] Deleted resume:', id);
   }
 
-  // Force sync with backend
+  // Force sync (just returns cached resumes in local mode)
   async syncWithBackend(): Promise<Resume[]> {
-    const status = await checkBackendHealth();
-    if (status !== 'online') {
-      console.warn('Backend offline - cannot sync');
-      return this.cachedResumes;
-    }
-
-    try {
-      // TODO: Implement tRPC sync
-      // this.cachedResumes = await trpc.resume.list.query();
-      console.log('Would sync with backend');
-      return this.cachedResumes;
-    } catch (error) {
-      console.error('Failed to sync with backend:', error);
-      return this.cachedResumes;
-    }
+    return this.cachedResumes;
   }
 }
 

@@ -216,7 +216,8 @@ export interface Education {
   institution: string;
   degree: string;
   field: string;
-  startDate: string;
+  startDate?: string;
+  graduationDate: string;
   endDate?: string;
   current: boolean;
   gpa?: string;
@@ -250,7 +251,7 @@ export interface Project {
   role?: string;
   technologies?: string[];
   url?: string;
-  githubUrl?: string;
+  github?: string;
   startDate?: string;
   endDate?: string;
   current?: boolean;
@@ -261,11 +262,12 @@ export interface Certification {
   id: string;
   name: string;
   issuer: string;
-  issueDate: string;
-  expiryDate?: string;
-  noExpiry?: boolean;
+  date: string;
+  expirationDate?: string;
+  noExpiration?: boolean;
   credentialId?: string;
-  credentialUrl?: string;
+  url?: string;
+  description?: string;
 }
 
 export interface Award {
@@ -290,7 +292,7 @@ export interface Publication {
   date: string;
   authors?: string[];
   url?: string;
-  description?: string;
+  summary?: string;
 }
 
 export interface Volunteer {
@@ -301,6 +303,7 @@ export interface Volunteer {
   endDate?: string;
   current: boolean;
   location?: string;
+  cause?: string;
   description?: string;
   highlights?: string[];
 }
@@ -308,9 +311,9 @@ export interface Volunteer {
 export interface Reference {
   id: string;
   name: string;
-  title: string;
-  company: string;
-  relationship: string;
+  position: string;
+  company?: string;
+  relationship?: string;
   email?: string;
   phone?: string;
   linkedin?: string;
@@ -432,3 +435,133 @@ export const SECTION_CONFIGS: Record<SectionType, { icon: string; label: string;
   'references': { icon: '👥', label: 'References', description: 'Professional references', defaultTitle: 'References' },
   'custom': { icon: '📄', label: 'Custom', description: 'Custom section', defaultTitle: 'Custom Section' },
 };
+
+// Factory functions for creating default data structures
+export const generateId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+export const createDefaultExperience = (): Experience => ({
+  id: generateId(),
+  company: '',
+  position: '',
+  startDate: '',
+  endDate: '',
+  current: false,
+  location: '',
+  employmentType: 'full-time',
+  description: '',
+  highlights: [],
+  technologies: [],
+});
+
+export const createDefaultEducation = (): Education => ({
+  id: generateId(),
+  institution: '',
+  degree: '',
+  field: '',
+  startDate: '',
+  graduationDate: '',
+  endDate: '',
+  current: false,
+  gpa: '',
+  location: '',
+  achievements: [],
+  coursework: [],
+  honors: [],
+});
+
+export const createDefaultSkillCategory = (): SkillCategory => ({
+  id: generateId(),
+  name: '',
+  skills: [],
+  order: 0,
+});
+
+export const createDefaultSkill = (): Skill => ({
+  id: generateId(),
+  name: '',
+  level: 'intermediate',
+});
+
+export const createDefaultProject = (): Project => ({
+  id: generateId(),
+  name: '',
+  description: '',
+  role: '',
+  technologies: [],
+  url: '',
+  github: '',
+  startDate: '',
+  endDate: '',
+  current: false,
+  highlights: [],
+});
+
+export const createDefaultCertification = (): Certification => ({
+  id: generateId(),
+  name: '',
+  issuer: '',
+  date: '',
+  expirationDate: '',
+  noExpiration: false,
+  credentialId: '',
+  url: '',
+});
+
+export const createDefaultAward = (): Award => ({
+  id: generateId(),
+  title: '',
+  issuer: '',
+  date: '',
+  description: '',
+});
+
+export const createDefaultLanguage = (): Language => ({
+  id: generateId(),
+  name: '',
+  proficiency: 'intermediate',
+});
+
+export const createDefaultVolunteer = (): Volunteer => ({
+  id: generateId(),
+  organization: '',
+  role: '',
+  startDate: '',
+  endDate: '',
+  current: false,
+  location: '',
+  cause: '',
+  description: '',
+  highlights: [],
+});
+
+export const createDefaultPublication = (): Publication => ({
+  id: generateId(),
+  title: '',
+  publisher: '',
+  date: '',
+  authors: [],
+  url: '',
+  summary: '',
+});
+
+export const createDefaultReference = (): Reference => ({
+  id: generateId(),
+  name: '',
+  position: '',
+  company: '',
+  relationship: '',
+  email: '',
+  phone: '',
+});
+
+export const createDefaultPersonalInfo = (): PersonalInfo => ({
+  fullName: '',
+  email: '',
+  phone: '',
+  location: '',
+  linkedin: '',
+  github: '',
+  website: '',
+  portfolio: '',
+  professionalTitle: '',
+});

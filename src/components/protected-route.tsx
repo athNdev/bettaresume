@@ -7,7 +7,7 @@
  */
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useHashRouter } from '@/lib/hash-router';
 import { useAuthStore } from '@/store';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -27,14 +27,14 @@ function AuthCheckingSkeleton() {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const router = useRouter();
+  const { navigate } = useHashRouter();
   const { isAuthenticated, isLoading } = useAuthStore();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      navigate('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Show loading while checking auth
   if (isLoading) {

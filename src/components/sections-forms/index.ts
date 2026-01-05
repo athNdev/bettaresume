@@ -1,0 +1,11 @@
+export { PersonalInfoForm } from './personal-info-form';
+export { ExperienceForm } from './experience-form';
+export { EducationForm } from './education-form';
+export { SkillsForm } from './skills-form';
+export { ProjectsForm } from './projects-form';
+export { CertificationsForm } from './certifications-form';
+export { AwardsForm } from './awards-form';
+export { LanguagesForm } from './languages-form';
+export { VolunteerForm } from './volunteer-form';
+export { PublicationsForm } from './publications-form';
+export { ReferencesForm } from './references-form';
