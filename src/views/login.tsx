@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useHashRouter } from '@/lib/hash-router';
 import { useAuthStore } from '@/store/auth.store';
 import { Button, Input, Label, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function Login() {
+  const { navigate } = useHashRouter();
   const { login, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +17,7 @@ export default function LoginPage() {
     e.preventDefault();
     const result = await login({ email, password });
     if (result.success) {
-      router.push('/dashboard');
+      navigate('/dashboard');
     }
   };
 
@@ -82,9 +81,12 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col text-center text-sm text-muted-foreground">
           <p>
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-primary hover:underline">
+            <button 
+              onClick={() => navigate('/register')}
+              className="text-primary hover:underline"
+            >
               Sign up
-            </Link>
+            </button>
           </p>
         </CardFooter>
       </Card>
