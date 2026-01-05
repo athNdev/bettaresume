@@ -2,15 +2,14 @@
  * Authentication Store
  *
  * Manages authentication state using Zustand.
- * All authentication is handled via the backend API.
- * Demo accounts are created via database seed scripts.
+ * Local-only mode for now - backend integration will be added later.
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, LoginCredentials } from '@/types/auth';
 
-// Error messages (inline until proper auth is implemented)
+// Error messages
 const authErrors = {
   invalidCredentials: 'Invalid email or password',
   invalidEmail: 'Please enter a valid email address',
@@ -31,9 +30,6 @@ interface AuthStore extends AuthState {
   initializeAuth: () => Promise<void>;
 }
 
-// Simulated delay for demo purposes (remove when backend is fully integrated)
-const simulateDelay = (ms: number = 500) => new Promise(resolve => setTimeout(resolve, ms));
-
 // Validate email format
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,14 +38,14 @@ const isValidEmail = (email: string): boolean => {
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Initial state
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
 
-      // Login action
+      // Login action (local-only for now)
       login: async (credentials: LoginCredentials) => {
         set({ isLoading: true, error: null });
 
@@ -64,10 +60,7 @@ export const useAuthStore = create<AuthStore>()(
             return { success: false, error: authErrors.invalidCredentials };
           }
 
-          // TODO: Replace with actual tRPC call
-          await simulateDelay();
-          
-          // Temporary: create user from credentials (remove when backend is integrated)
+          // Create local user (no backend for now)
           const user: User = {
             id: `user-${Date.now()}`,
             email: credentials.email,
@@ -102,7 +95,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
 
         try {
-          await simulateDelay(200);
+          // Clear state
         } catch (error) {
           console.error('Logout error:', error);
         } finally {
@@ -123,11 +116,10 @@ export const useAuthStore = create<AuthStore>()(
       // Initialize auth from persisted state
       initializeAuth: async () => {
         // Auth state is automatically restored by persist middleware
-        // This is a placeholder for any additional initialization logic
       },
     }),
     {
-      name: 'betta-resume-auth',
+      name: 'bettaresume-auth',
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,

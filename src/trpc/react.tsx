@@ -45,6 +45,7 @@ export const api = createTRPCReact<ApiRouter>();
 export type RouterInputs = inferRouterInputs<ApiRouter>;
 export type RouterOutputs = inferRouterOutputs<ApiRouter>;
 
+// tRPC provider - not actively used yet, but kept for future API integration
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
 	const queryClient = getQueryClient();
 
@@ -82,6 +83,7 @@ function getBaseUrl() {
 	if (process.env.NEXT_PUBLIC_API_URL) {
 		return process.env.NEXT_PUBLIC_API_URL;
 	}
+	// Default to same origin in browser, localhost:3001 for SSR
 	if (typeof window !== "undefined") return window.location.origin;
-	return `http://localhost:${process.env.PORT ?? 3000}`;
+	return `http://localhost:${process.env.PORT ?? 3001}`;
 }
