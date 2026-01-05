@@ -1,29 +1,24 @@
-"use client";
+import type { Metadata } from 'next';
+import { fontVariables, defaultFont } from '@/lib/fonts';
+import { Providers } from '@/components/root-providers';
+import '@/styles/globals.css';
 
-import "@/styles/globals.css";
-
-import { Geist } from "next/font/google";
-
-import { TRPCReactProvider } from "@/trpc/react";
-
-const geist = Geist({
-	subsets: ["latin"],
-	variable: "--font-geist-sans",
-});
+export const metadata: Metadata = {
+  title: 'Betta Resume - Professional Resume Builder',
+  description: 'Create professional, customizable resumes with ease',
+  keywords: ['resume', 'cv', 'resume builder', 'professional resume'],
+};
 
 export default function RootLayout({
-	children,
-}: Readonly<{ children: React.ReactNode }>) {
-	return (
-		<html className={`${geist.variable}`} lang="en">
-			<head>
-				<title>BettaResume</title>
-				<meta name="description" content="Resume builder application" />
-				<link rel="icon" href="/favicon.ico" />
-			</head>
-			<body>
-				<TRPCReactProvider>{children}</TRPCReactProvider>
-			</body>
-		</html>
-	);
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${fontVariables} ${defaultFont}`}>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
 }
