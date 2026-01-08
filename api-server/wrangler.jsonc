@@ -15,10 +15,11 @@
 		{
 			"binding": "bettaresume_d1",
 			"database_name": "bettaresume",
-			"database_id": "870de713-e81b-4e96-aa87-f2b7a785820b"
+			"database_id": "870de713-e81b-4e96-aa87-f2b7a785820b",
+			"migrations_dir": "./drizzle"
 		}
 	],
 	"dev": {
-    	"port": 4000
-  	}
+		"port": 4000
+	}
 }

@@ -1,4 +1,5 @@
-import { createClerkClient } from '@clerk/backend';
+import { createClerkClient, type ClerkClient } from '@clerk/backend';
+import { createDb, type Database } from '../db';
 
 interface CreateContextOptions {
   request: Request;
@@ -10,6 +11,9 @@ interface CreateContextOptions {
  * Generates a context, which is passed down to procedures
  */
 export async function createContext({ request, env }: CreateContextOptions) {
+  // Initialize database
+  const db = createDb(env.bettaresume_d1);
+
   const clerkClient = createClerkClient({
     secretKey: env.CLERK_SECRET_KEY,
     publishableKey: env.CLERK_PUBLISHABLE_KEY,
@@ -17,6 +21,7 @@ export async function createContext({ request, env }: CreateContextOptions) {
 
   // Helper to return unauthenticated context
   const unauthenticatedContext = () => ({
+    db,
     user: null,
     userId: null,
     env,
@@ -40,6 +45,7 @@ export async function createContext({ request, env }: CreateContextOptions) {
     const user = await clerkClient.users.getUser(userId);
 
     return {
+      db,
       user,
       userId,
       env,
