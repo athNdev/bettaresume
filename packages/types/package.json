@@ -12,12 +12,18 @@
     },
     "./types": {
       "types": "./src/types.ts"
+    },
+    "./schemas": {
+      "types": "./src/schemas.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

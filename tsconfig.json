@@ -62,6 +62,6 @@
   "exclude": [
     "node_modules",
     "generated",
-    "api-server/node_modules"
+    "api-server"
   ]
 }
