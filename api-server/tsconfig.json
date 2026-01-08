@@ -10,7 +10,7 @@
     "moduleResolution": "bundler",
     "module": "esnext",
     "target": "esnext",
-    "types": ["node"],
+    "types": ["node", "@cloudflare/workers-types"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -41,5 +41,6 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  "include": ["src/**/*.ts", "worker-configuration.d.ts"]
 }

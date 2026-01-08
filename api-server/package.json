@@ -20,6 +20,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260108.0",
     "better-sqlite3": "^12.5.0",
     "drizzle-kit": "^0.31.8",
     "shx": "^0.4.0",

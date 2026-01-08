@@ -6,7 +6,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useState, useRef } from "react";
 import SuperJSON from "superjson";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/clerk-react";
 
 import { createQueryClient } from "./query-client";
 

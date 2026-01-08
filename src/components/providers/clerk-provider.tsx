@@ -4,9 +4,11 @@
  * Clerk Provider
  * 
  * Wraps the app with ClerkProvider for authentication.
+ * Uses @clerk/clerk-react instead of @clerk/nextjs to avoid Server Actions
+ * which are incompatible with static export.
  */
 
-import { ClerkProvider } from '@clerk/nextjs';
+import { ClerkProvider } from '@clerk/clerk-react';
 import { dark } from '@clerk/themes';
 import { useTheme } from 'next-themes';
 
