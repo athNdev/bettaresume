@@ -41,13 +41,14 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
 
-  deploy:
+  deploy-to-pages:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -58,7 +59,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  deploy-api:
+  deploy-to-workers:
     runs-on: ubuntu-latest
     needs: build
     steps:
