@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Resume, ResumeSection, Experience, Education, SkillCategory, Project, Certification, Award, Language, Volunteer, Publication, Reference } from '@/types/resume';
+import type { Resume, ResumeSection, Experience, Education, SkillCategory, Project, Certification, Award, Language, Volunteer, Publication, Reference, ResumeSettings, PersonalInfo } from '@/types/resume';
 import { cn } from '@/lib/utils';
 
 interface PreviewProps {
@@ -10,9 +10,53 @@ interface PreviewProps {
   className?: string;
 }
 
+// Default settings for when metadata is null
+const defaultSettings: ResumeSettings = {
+  fontFamily: 'Inter',
+  fontSize: 11,
+  fontScale: 1,
+  lineHeight: 1.5,
+  margins: { top: 40, right: 40, bottom: 40, left: 40 },
+  pageSize: 'Letter',
+  colors: { 
+    primary: '#2563eb', 
+    secondary: '#64748b', 
+    text: '#1e293b', 
+    heading: '#1e293b',
+    background: '#ffffff', 
+    accent: '#f59e0b',
+    divider: '#e2e8f0',
+  },
+  typography: { 
+    name: 24,
+    title: 14,
+    sectionHeading: 14, 
+    itemTitle: 12,
+    body: 11, 
+    small: 9 
+  },
+  sectionSpacing: 'normal',
+  showIcons: true,
+  dateFormat: 'MMM YYYY',
+  accentStyle: 'underline',
+};
+
+const defaultPersonalInfo: PersonalInfo = {
+  fullName: '',
+  email: '',
+};
+
 export function Preview({ resume, scale = 1, className }: PreviewProps) {
   const { metadata, sections, template } = resume;
-  const { settings, personalInfo } = metadata;
+  // Deep merge settings with defaults to ensure all properties exist
+  const settings: ResumeSettings = {
+    ...defaultSettings,
+    ...(metadata?.settings ?? {}),
+    colors: { ...defaultSettings.colors, ...(metadata?.settings?.colors ?? {}) },
+    typography: { ...defaultSettings.typography, ...(metadata?.settings?.typography ?? {}) },
+    margins: { ...defaultSettings.margins, ...(metadata?.settings?.margins ?? {}) },
+  };
+  const personalInfo = metadata?.personalInfo ?? defaultPersonalInfo;
   const colors = settings.colors;
   const typography = settings.typography;
 

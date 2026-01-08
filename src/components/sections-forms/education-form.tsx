@@ -1,76 +1,103 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useConfirm } from '@/hooks/use-confirm';
+import { useAutoSave, useBeforeUnload } from '@/hooks';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
+import { SaveStatusIndicator } from '@/components/ui/save-status-indicator';
 import { Plus, Trash2, GraduationCap, GripVertical, ChevronUp, ChevronDown, X } from 'lucide-react';
 import type { Education } from '@/types/resume';
 import { createDefaultEducation } from '@/types/resume';
 
 interface EducationFormProps {
   data: Education[];
-  onChange: (data: Education[]) => void;
+  onChange: (data: Education[]) => Promise<void>;
+  title?: string;
 }
 
-export function EducationForm({ data, onChange }: EducationFormProps) {
+export function EducationForm({ data, onChange, title }: EducationFormProps) {
   const confirm = useConfirm();
   const [expandedItems, setExpandedItems] = useState<string[]>(data.length > 0 && data[0]?.id ? [data[0].id] : []);
   const [newAchievement, setNewAchievement] = useState<Record<string, string>>({});
   const [newCoursework, setNewCoursework] = useState<Record<string, string>>({});
   const [newHonor, setNewHonor] = useState<Record<string, string>>({});
 
-  const addEducation = () => {
+  // Auto-save hook
+  const {
+    localData,
+    setLocalData,
+    status,
+    error,
+    retrySave,
+    isDirty,
+  } = useAutoSave({
+    data,
+    onSave: onChange,
+  });
+
+  // Warn user before leaving with unsaved changes
+  useBeforeUnload(isDirty);
+
+  const addEducation = useCallback(() => {
     const newEdu = createDefaultEducation();
-    onChange([...data, newEdu]);
+    setLocalData(prev => [...prev, newEdu]);
     setExpandedItems([newEdu.id]);
-  };
+  }, [setLocalData]);
 
-  const removeEducation = (id: string) => {
-    onChange(data.filter((edu) => edu.id !== id));
-  };
+  const removeEducation = useCallback((id: string) => {
+    setLocalData(prev => prev.filter((edu) => edu.id !== id));
+  }, [setLocalData]);
 
-  const updateEducation = (id: string, updates: Partial<Education>) => {
-    onChange(data.map((edu) => edu.id === id ? { ...edu, ...updates } : edu));
-  };
+  const updateEducation = useCallback((id: string, updates: Partial<Education>) => {
+    setLocalData(prev => prev.map((edu) => edu.id === id ? { ...edu, ...updates } : edu));
+  }, [setLocalData]);
 
-  const moveEducation = (index: number, direction: 'up' | 'down') => {
+  const moveEducation = useCallback((index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= data.length) return;
-    const newData = [...data];
-    const temp = newData[index]!;
-    newData[index] = newData[newIndex]!;
-    newData[newIndex] = temp;
-    onChange(newData);
-  };
+    if (newIndex < 0 || newIndex >= localData.length) return;
+    setLocalData(prev => {
+      const newData = [...prev];
+      const temp = newData[index]!;
+      newData[index] = newData[newIndex]!;
+      newData[newIndex] = temp;
+      return newData;
+    });
+  }, [localData.length, setLocalData]);
 
-  const addItem = (eduId: string, field: 'achievements' | 'coursework' | 'honors', value: string, setter: React.Dispatch<React.SetStateAction<Record<string, string>>>) => {
+  const addItem = useCallback((eduId: string, field: 'achievements' | 'coursework' | 'honors', value: string, setter: React.Dispatch<React.SetStateAction<Record<string, string>>>) => {
     const text = value?.trim();
     if (!text) return;
-    const edu = data.find((e) => e.id === eduId);
+    const edu = localData.find((e) => e.id === eduId);
     if (!edu) return;
     updateEducation(eduId, { [field]: [...(edu[field] || []), text] });
     setter((prev) => ({ ...prev, [eduId]: '' }));
-  };
+  }, [localData, updateEducation]);
 
-  const removeItem = (eduId: string, field: 'achievements' | 'coursework' | 'honors', index: number) => {
-    const edu = data.find((e) => e.id === eduId);
+  const removeItem = useCallback((eduId: string, field: 'achievements' | 'coursework' | 'honors', index: number) => {
+    const edu = localData.find((e) => e.id === eduId);
     if (!edu) return;
     updateEducation(eduId, { [field]: edu[field]?.filter((_, i) => i !== index) });
-  };
+  }, [localData, updateEducation]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{data.length} education entr{data.length !== 1 ? 'ies' : 'y'}</p>
-        <Button onClick={addEducation} size="sm"><Plus className="h-4 w-4 mr-2" /> Add Education</Button>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-2 -mx-4 -mt-4 mb-4 flex items-center justify-between min-h-10">
+        <div className="flex items-center gap-3">
+          {title && <h3 className="font-semibold">{title}</h3>}
+          <SaveStatusIndicator status={status} error={error} onRetry={retrySave} />
+        </div>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted-foreground">{localData.length} education entr{localData.length !== 1 ? 'ies' : 'y'}</p>
+          <Button onClick={addEducation} size="sm"><Plus className="h-4 w-4 mr-2" /> Add Education</Button>
+        </div>
       </div>
 
-      {data.length === 0 ? (
+      {localData.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8">
             <GraduationCap className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -81,26 +108,28 @@ export function EducationForm({ data, onChange }: EducationFormProps) {
         </Card>
       ) : (
         <Accordion type="multiple" value={expandedItems} onValueChange={setExpandedItems} className="space-y-3">
-          {data.map((edu, index) => (
+          {localData.map((edu, index) => (
             <AccordionItem key={edu.id} value={edu.id} className="border rounded-lg overflow-hidden">
-              <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50">
-                <div className="flex items-center gap-3 w-full">
-                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="font-medium">{edu.degree || 'Degree'} {edu.field && `in ${edu.field}`}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                      <GraduationCap className="h-3 w-3" />
-                      {edu.institution || 'Institution'}
-                      {edu.graduationDate && <span>• {edu.graduationDate}</span>}
+              <div className="flex items-center">
+                <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline hover:bg-muted/50">
+                  <div className="flex items-center gap-3 w-full">
+                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">{edu.degree || 'Degree'} {edu.field && `in ${edu.field}`}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        <GraduationCap className="h-3 w-3" />
+                        {edu.institution || 'Institution'}
+                        {edu.graduationDate && <span>• {edu.graduationDate}</span>}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 mr-2">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveEducation(index, 'up'); }} disabled={index === 0}><ChevronUp className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveEducation(index, 'down'); }} disabled={index === data.length - 1}><ChevronDown className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); const confirmed = await confirm('Remove Education', 'Remove this education?'); if (confirmed) removeEducation(edu.id); }}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
+                </AccordionTrigger>
+                <div className="flex items-center gap-1 px-2">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveEducation(index, 'up')} disabled={index === 0}><ChevronUp className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveEducation(index, 'down')} disabled={index === localData.length - 1}><ChevronDown className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => { const confirmed = await confirm('Remove Education', 'Remove this education?'); if (confirmed) removeEducation(edu.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
-              </AccordionTrigger>
+              </div>
               <AccordionContent className="px-4 pb-4 pt-2">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">

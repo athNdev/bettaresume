@@ -4,6 +4,7 @@
  * Dashboard Page (Hash Router Version)
  * 
  * Main page showing all resumes with filtering, search, and CRUD actions.
+ * Uses React Query (tRPC) for data fetching instead of localStorage.
  */
 
 import { useState, useMemo, Suspense } from 'react';
@@ -15,10 +16,17 @@ import {
   Archive, 
   Upload,
   X,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
-import { useResumeStore, useAuthStore } from '@/store';
+import { useAuthStore } from '@/store';
+import { 
+  useResumes, 
+  useResumeMutations, 
+  useActiveResumeStore 
+} from '@/hooks';
 import { ProtectedRoute } from '@/components/protected-route';
+import type { Resume } from '@bettaresume/types';
 import { ThemeToggle } from '@/components/dashboard/theme-toggle';
 import { UserMenu } from '@/components/dashboard/user-menu';
 import { ResumeCard } from '@/components/dashboard/resume-card';
@@ -114,18 +122,7 @@ function ResumeCardSkeleton() {
 function DashboardContent() {
   const { navigate } = useHashRouter();
   const { user } = useAuthStore();
-  const { 
-    resumes, 
-    createResume, 
-    deleteResume, 
-    duplicateResume, 
-    archiveResume, 
-    restoreResume,
-    exportToJSON,
-    importFromJSON,
-    getVariations,
-    _hasHydrated,
-  } = useResumeStore();
+  const setActiveResumeId = useActiveResumeStore((s) => s.setActiveResumeId);
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -138,59 +135,132 @@ function DashboardContent() {
   const [newResumeTemplate, setNewResumeTemplate] = useState<TemplateType>('modern');
   const [showWelcomeGuide, setShowWelcomeGuide] = useState(true);
 
+  // Data fetching via tRPC
+  const { data: resumes = [], isLoading, isError, error } = useResumes({ includeArchived: true });
+  const { 
+    createResume, 
+    deleteResume, 
+    duplicateResume, 
+    archiveResume,
+    isCreating,
+    isDeleting,
+    isDuplicating,
+  } = useResumeMutations();
+
   // Filtered resumes
   const filteredResumes = useMemo(() => {
-    if (!_hasHydrated) return [];
-    return resumes.filter(resume => {
+    return resumes.filter((resume: Resume) => {
       if (!showArchived && resume.isArchived) return false;
       if (showArchived && !resume.isArchived) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const nameMatch = resume.name.toLowerCase().includes(query);
         const domainMatch = resume.domain?.toLowerCase().includes(query);
-        const tagsMatch = resume.tags?.some(tag => tag.toLowerCase().includes(query));
+        const tagsMatch = resume.tags?.some((tag: string) => tag.toLowerCase().includes(query));
         if (!nameMatch && !domainMatch && !tagsMatch) return false;
       }
       if (selectedTemplate !== 'all' && resume.template !== selectedTemplate) return false;
       return true;
     });
-  }, [resumes, searchQuery, showArchived, selectedTemplate, _hasHydrated]);
+  }, [resumes, searchQuery, showArchived, selectedTemplate]);
+
+  // Get variations for a resume (resumes with baseResumeId matching this resume)
+  const getVariations = (resumeId: string) => {
+    return resumes.filter((r: Resume) => r.baseResumeId === resumeId);
+  };
 
   // Stats
-  const totalResumes = useMemo(() => resumes.filter(r => !r.isArchived).length, [resumes]);
+  const totalResumes = useMemo(() => resumes.filter((r: Resume) => !r.isArchived).length, [resumes]);
 
-  // Show skeleton while hydrating
-  if (!_hasHydrated) {
+  // Show skeleton while loading
+  if (isLoading) {
     return <DashboardSkeleton />;
   }
 
-  // Handlers
-  const handleCreateResume = () => {
-    if (!newResumeName.trim()) return;
-    const id = createResume(newResumeName.trim(), newResumeTemplate);
-    setIsCreateDialogOpen(false);
-    setNewResumeName('');
-    navigate(`/resume-editor/${id}`);
-  };
+  // Show error state
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive">Error Loading Resumes</CardTitle>
+            <CardDescription>
+              {error?.message || 'Failed to load your resumes. Please try again.'}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
-  const handleDeleteResume = () => {
-    if (resumeToDelete) {
-      deleteResume(resumeToDelete);
-      setResumeToDelete(null);
-      setIsDeleteDialogOpen(false);
+  // Handlers
+  const handleCreateResume = async () => {
+    if (!newResumeName.trim()) return;
+    try {
+      const newResume = await createResume({
+        name: newResumeName.trim(),
+        template: newResumeTemplate,
+      });
+      setIsCreateDialogOpen(false);
+      setNewResumeName('');
+      if (newResume?.id) {
+        setActiveResumeId(newResume.id);
+        navigate(`/resume-editor/${newResume.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to create resume:', err);
     }
   };
 
-  const handleDuplicateResume = (id: string, name: string) => {
-    const newId = duplicateResume(id, `${name} (copy)`);
-    if (newId) {
-      navigate(`/resume-editor/${newId}`);
+  const handleDeleteResume = async () => {
+    if (resumeToDelete) {
+      try {
+        await deleteResume(resumeToDelete);
+        setResumeToDelete(null);
+        setIsDeleteDialogOpen(false);
+      } catch (err) {
+        console.error('Failed to delete resume:', err);
+      }
+    }
+  };
+
+  const handleDuplicateResume = async (id: string, name: string) => {
+    try {
+      const newResume = await duplicateResume(id, `${name} (copy)`);
+      if (newResume?.id) {
+        setActiveResumeId(newResume.id);
+        navigate(`/resume-editor/${newResume.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to duplicate resume:', err);
+    }
+  };
+
+  const handleArchiveResume = async (id: string) => {
+    try {
+      await archiveResume(id, true);
+    } catch (err) {
+      console.error('Failed to archive resume:', err);
+    }
+  };
+
+  const handleRestoreResume = async (id: string) => {
+    try {
+      await archiveResume(id, false);
+    } catch (err) {
+      console.error('Failed to restore resume:', err);
     }
   };
 
   const handleExportResume = (id: string, name: string) => {
-    const json = exportToJSON(id);
-    if (json) {
+    const resume = resumes.find((r: Resume) => r.id === id);
+    if (resume) {
+      const json = JSON.stringify(resume, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -208,10 +278,22 @@ function DashboardContent() {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const text = await file.text();
-        const id = importFromJSON(text);
-        if (id) {
-          navigate(`/resume-editor/${id}`);
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          const newResume = await createResume({
+            name: data.name || 'Imported Resume',
+            template: data.template || 'modern',
+            domain: data.domain,
+            tags: data.tags,
+            metadata: data.metadata,
+          });
+          if (newResume?.id) {
+            setActiveResumeId(newResume.id);
+            navigate(`/resume-editor/${newResume.id}`);
+          }
+        } catch (err) {
+          console.error('Failed to import resume:', err);
         }
       }
     };
@@ -233,8 +315,12 @@ function DashboardContent() {
               <Upload className="mr-2 h-4 w-4" />
               Import
             </Button>
-            <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button size="sm" onClick={() => setIsCreateDialogOpen(true)} disabled={isCreating}>
+              {isCreating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
               New Resume
             </Button>
             <ThemeToggle />
@@ -288,8 +374,12 @@ function DashboardContent() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+              <Button onClick={() => setIsCreateDialogOpen(true)} disabled={isCreating}>
+                {isCreating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
                 Create Your First Resume
               </Button>
             </CardFooter>
@@ -324,16 +414,19 @@ function DashboardContent() {
         {/* Resume Grid */}
         {filteredResumes.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredResumes.map((resume) => (
+            {filteredResumes.map((resume: Resume) => (
               <ResumeCard
                 key={resume.id}
                 resume={resume}
                 variations={getVariations(resume.id)}
-                onEdit={() => navigate(`/resume-editor/${resume.id}`)}
+                onEdit={() => {
+                  setActiveResumeId(resume.id);
+                  navigate(`/resume-editor/${resume.id}`);
+                }}
                 onDuplicate={() => handleDuplicateResume(resume.id, resume.name)}
                 onExport={() => handleExportResume(resume.id, resume.name)}
-                onArchive={() => archiveResume(resume.id)}
-                onRestore={() => restoreResume(resume.id)}
+                onArchive={() => handleArchiveResume(resume.id)}
+                onRestore={() => handleRestoreResume(resume.id)}
                 onDelete={() => {
                   setResumeToDelete(resume.id);
                   setIsDeleteDialogOpen(true);
@@ -402,7 +495,10 @@ function DashboardContent() {
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateResume} disabled={!newResumeName.trim()}>
+            <Button onClick={handleCreateResume} disabled={!newResumeName.trim() || isCreating}>
+              {isCreating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               Create Resume
             </Button>
           </DialogFooter>
@@ -422,7 +518,10 @@ function DashboardContent() {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteResume}>
+            <Button variant="destructive" onClick={handleDeleteResume} disabled={isDeleting}>
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               Delete
             </Button>
           </DialogFooter>

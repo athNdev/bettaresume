@@ -18,24 +18,24 @@ interface ProvidersProps {
  * App Providers
  * 
  * Composes all providers in the correct order.
- * ClerkAuthProvider must be after ThemeProvider (for dark mode theming)
+ * ClerkAuthProvider must wrap TRPCReactProvider so useAuth is available for token injection
  * AuthProvider syncs Clerk state to local store
  */
 export function Providers({ children }: ProvidersProps) {
   return (
-    <TRPCReactProvider>
-      <ThemeProvider>
-        <ClerkAuthProvider>
+    <ThemeProvider>
+      <ClerkAuthProvider>
+        <TRPCReactProvider>
           <AuthProvider>
             <ApiProvider>
               {children}
             </ApiProvider>
           </AuthProvider>
-        </ClerkAuthProvider>
-        <ToastProvider />
-        <ConfirmDialog />
-      </ThemeProvider>
-    </TRPCReactProvider>
+        </TRPCReactProvider>
+      </ClerkAuthProvider>
+      <ToastProvider />
+      <ConfirmDialog />
+    </ThemeProvider>
   );
 }
 

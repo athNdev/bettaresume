@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useHashRouter, matchRoute } from '@/lib/hash-router';
 import { useAuthStore } from '@/store/auth.store';
-import { useResumeStore } from '@/store/resume.store';
 import { useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { SplashScreen } from '@/components/splash-screen';
 import { RedirectToSignIn } from '@clerk/clerk-react';
@@ -22,7 +21,6 @@ const ResumeEditorPage = dynamic(() => import('@/views/resume-editor'), {
 export function AppRouter() {
   const { path, navigate, replace } = useHashRouter();
   const { isAuthenticated } = useAuthStore();
-  const { _hasHydrated } = useResumeStore();
   const { isLoaded: isClerkLoaded, isSignedIn } = useClerkAuth();
   const [mounted, setMounted] = useState(false);
 
@@ -32,16 +30,16 @@ export function AppRouter() {
 
   // Handle routing after auth is ready
   useEffect(() => {
-    if (!mounted || !_hasHydrated || !isClerkLoaded) return;
+    if (!mounted || !isClerkLoaded) return;
 
     // Root path - redirect to dashboard if authenticated
     if (path === '/' && isSignedIn && isAuthenticated) {
       replace('/dashboard');
     }
-  }, [path, isSignedIn, isAuthenticated, _hasHydrated, isClerkLoaded, mounted, replace]);
+  }, [path, isSignedIn, isAuthenticated, isClerkLoaded, mounted, replace]);
 
-  // Don't render until hydrated and Clerk is loaded
-  if (!mounted || !_hasHydrated || !isClerkLoaded) {
+  // Don't render until mounted and Clerk is loaded
+  if (!mounted || !isClerkLoaded) {
     return <SplashScreen message="Loading Betta Resume..." />;
   }
 

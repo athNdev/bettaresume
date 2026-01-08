@@ -25,7 +25,7 @@ export function SplashScreen({ message = 'Loading...' }: SplashScreenProps) {
 
       {/* App Name */}
       <h1 className="text-3xl font-bold text-foreground mb-2">Betta Resume</h1>
-      <p className="text-muted-foreground mb-8">Build your perfect resume</p>
+      <p className="text-muted-foreground mb-8"></p>
 
       {/* Spinner */}
       <div className="flex flex-col items-center gap-4">

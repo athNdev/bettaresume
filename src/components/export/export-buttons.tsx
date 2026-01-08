@@ -51,6 +51,7 @@ export function ExportButtons({ resume, variant = 'default' }: ExportButtonsProp
   const exportText = () => {
     // Generate plain text version of resume
     const { metadata, sections } = resume;
+    if (!metadata) return;
     const { personalInfo } = metadata;
     
     let text = `${personalInfo.fullName}\n`;

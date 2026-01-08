@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useConfirm } from '@/hooks/use-confirm';
+import { useAutoSave, useBeforeUnload } from '@/hooks';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -10,13 +11,15 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { SaveStatusIndicator } from '@/components/ui/save-status-indicator';
 import { Plus, Trash2, Zap, GripVertical, ChevronUp, ChevronDown, X } from 'lucide-react';
 import type { SkillCategory, Skill, SkillLevel } from '@/types/resume';
 import { createDefaultSkillCategory, createDefaultSkill } from '@/types/resume';
 
 interface SkillsFormProps {
   data: SkillCategory[];
-  onChange: (data: SkillCategory[]) => void;
+  onChange: (data: SkillCategory[]) => Promise<void>;
+  title?: string;
 }
 
 const SKILL_LEVELS: { value: SkillLevel; label: string; percent: number }[] = [
@@ -31,67 +34,91 @@ const SUGGESTED_CATEGORIES = [
   'Tools & Software', 'Soft Skills', 'Languages', 'Design', 'Management',
 ];
 
-export function SkillsForm({ data, onChange }: SkillsFormProps) {
+export function SkillsForm({ data, onChange, title }: SkillsFormProps) {
   const confirm = useConfirm();
   const [expandedItems, setExpandedItems] = useState<string[]>(data.length > 0 && data[0]?.id ? [data[0].id] : []);
   const [newSkill, setNewSkill] = useState<Record<string, string>>({});
 
-  const addCategory = (name?: string) => {
-    const newCat = { ...createDefaultSkillCategory(), name: name || '', order: data.length };
-    onChange([...data, newCat]);
+  // Auto-save hook
+  const {
+    localData,
+    setLocalData,
+    status,
+    error,
+    retrySave,
+    isDirty,
+  } = useAutoSave({
+    data,
+    onSave: onChange,
+  });
+
+  // Warn user before leaving with unsaved changes
+  useBeforeUnload(isDirty);
+
+  const addCategory = useCallback((name?: string) => {
+    const newCat = { ...createDefaultSkillCategory(), name: name || '', order: localData.length };
+    setLocalData(prev => [...prev, newCat]);
     setExpandedItems([newCat.id]);
-  };
+  }, [localData.length, setLocalData]);
 
-  const removeCategory = (id: string) => {
-    onChange(data.filter((cat) => cat.id !== id));
-  };
+  const removeCategory = useCallback((id: string) => {
+    setLocalData(prev => prev.filter((cat) => cat.id !== id));
+  }, [setLocalData]);
 
-  const updateCategory = (id: string, updates: Partial<SkillCategory>) => {
-    onChange(data.map((cat) => cat.id === id ? { ...cat, ...updates } : cat));
-  };
+  const updateCategory = useCallback((id: string, updates: Partial<SkillCategory>) => {
+    setLocalData(prev => prev.map((cat) => cat.id === id ? { ...cat, ...updates } : cat));
+  }, [setLocalData]);
 
-  const moveCategory = (index: number, direction: 'up' | 'down') => {
+  const moveCategory = useCallback((index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= data.length) return;
-    const newData = [...data];
-    const temp = newData[index]!;
-    newData[index] = newData[newIndex]!;
-    newData[newIndex] = temp;
-    onChange(newData.map((cat, i) => ({ ...cat, order: i })));
-  };
+    if (newIndex < 0 || newIndex >= localData.length) return;
+    setLocalData(prev => {
+      const newData = [...prev];
+      const temp = newData[index]!;
+      newData[index] = newData[newIndex]!;
+      newData[newIndex] = temp;
+      return newData.map((cat, i) => ({ ...cat, order: i }));
+    });
+  }, [localData.length, setLocalData]);
 
-  const addSkill = (catId: string) => {
+  const addSkill = useCallback((catId: string) => {
     const name = newSkill[catId]?.trim();
     if (!name) return;
-    const cat = data.find((c) => c.id === catId);
+    const cat = localData.find((c) => c.id === catId);
     if (!cat) return;
     const skill: Skill = { ...createDefaultSkill(), name };
     updateCategory(catId, { skills: [...cat.skills, skill] });
-    setNewSkill({ ...newSkill, [catId]: '' });
-  };
+    setNewSkill(prev => ({ ...prev, [catId]: '' }));
+  }, [newSkill, localData, updateCategory]);
 
-  const removeSkill = (catId: string, skillId: string) => {
-    const cat = data.find((c) => c.id === catId);
+  const removeSkill = useCallback((catId: string, skillId: string) => {
+    const cat = localData.find((c) => c.id === catId);
     if (!cat) return;
     updateCategory(catId, { skills: cat.skills.filter((s) => s.id !== skillId) });
-  };
+  }, [localData, updateCategory]);
 
-  const updateSkill = (catId: string, skillId: string, updates: Partial<Skill>) => {
-    const cat = data.find((c) => c.id === catId);
+  const updateSkill = useCallback((catId: string, skillId: string, updates: Partial<Skill>) => {
+    const cat = localData.find((c) => c.id === catId);
     if (!cat) return;
     updateCategory(catId, { skills: cat.skills.map((s) => s.id === skillId ? { ...s, ...updates } : s) });
-  };
+  }, [localData, updateCategory]);
 
-  const totalSkills = data.reduce((acc, cat) => acc + cat.skills.length, 0);
+  const totalSkills = localData.reduce((acc, cat) => acc + cat.skills.length, 0);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{data.length} categor{data.length !== 1 ? 'ies' : 'y'}, {totalSkills} skill{totalSkills !== 1 ? 's' : ''}</p>
-        <Button onClick={() => addCategory()} size="sm"><Plus className="h-4 w-4 mr-2" /> Add Category</Button>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-2 -mx-4 -mt-4 mb-4 flex items-center justify-between min-h-10">
+        <div className="flex items-center gap-3">
+          {title && <h3 className="font-semibold">{title}</h3>}
+          <SaveStatusIndicator status={status} error={error} onRetry={retrySave} />
+        </div>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted-foreground">{localData.length} categor{localData.length !== 1 ? 'ies' : 'y'}, {totalSkills} skill{totalSkills !== 1 ? 's' : ''}</p>
+          <Button onClick={() => addCategory()} size="sm"><Plus className="h-4 w-4 mr-2" /> Add Category</Button>
+        </div>
       </div>
 
-      {data.length === 0 ? (
+      {localData.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Zap className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -108,22 +135,24 @@ export function SkillsForm({ data, onChange }: SkillsFormProps) {
       ) : (
         <>
           <Accordion type="multiple" value={expandedItems} onValueChange={setExpandedItems} className="space-y-3">
-            {data.map((cat, index) => (
+            {localData.map((cat, index) => (
               <AccordionItem key={cat.id} value={cat.id} className="border rounded-lg overflow-hidden">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50">
-                  <div className="flex items-center gap-3 w-full">
-                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">{cat.name || 'Untitled Category'}</div>
-                      <div className="text-sm text-muted-foreground">{cat.skills.length} skill{cat.skills.length !== 1 ? 's' : ''}</div>
+                <div className="flex items-center">
+                  <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline hover:bg-muted/50">
+                    <div className="flex items-center gap-3 w-full">
+                      <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 text-left">
+                        <div className="font-medium">{cat.name || 'Untitled Category'}</div>
+                        <div className="text-sm text-muted-foreground">{cat.skills.length} skill{cat.skills.length !== 1 ? 's' : ''}</div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 mr-2">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveCategory(index, 'up'); }} disabled={index === 0}><ChevronUp className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveCategory(index, 'down'); }} disabled={index === data.length - 1}><ChevronDown className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); const confirmed = await confirm('Remove Category', 'Remove this category?'); if (confirmed) removeCategory(cat.id); }}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
+                  </AccordionTrigger>
+                  <div className="flex items-center gap-1 px-2">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveCategory(index, 'up')} disabled={index === 0}><ChevronUp className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveCategory(index, 'down')} disabled={index === localData.length - 1}><ChevronDown className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => { const confirmed = await confirm('Remove Category', 'Remove this category?'); if (confirmed) removeCategory(cat.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
-                </AccordionTrigger>
+                </div>
                 <AccordionContent className="px-4 pb-4 pt-2">
                   <div className="space-y-4">
                     <div>
@@ -164,7 +193,7 @@ export function SkillsForm({ data, onChange }: SkillsFormProps) {
           <div className="pt-2">
             <Label className="text-muted-foreground text-xs">Quick Add Categories</Label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {SUGGESTED_CATEGORIES.filter((cat) => !data.some((d) => d.name.toLowerCase() === cat.toLowerCase())).map((cat) => (
+              {SUGGESTED_CATEGORIES.filter((cat) => !localData.some((d) => d.name.toLowerCase() === cat.toLowerCase())).map((cat) => (
                 <Badge key={cat} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => addCategory(cat)}>
                   <Plus className="h-3 w-3 mr-1" /> {cat}
                 </Badge>

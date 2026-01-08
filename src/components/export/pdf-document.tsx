@@ -55,6 +55,9 @@ interface PDFDocumentProps {
 
 export function PDFDocument({ resume }: PDFDocumentProps) {
   const { metadata, sections, template } = resume;
+  if (!metadata) {
+    return null;
+  }
   const { settings, personalInfo } = metadata;
   const fontFamily = getFontFamily(settings.fontFamily);
   const colors = settings.colors;

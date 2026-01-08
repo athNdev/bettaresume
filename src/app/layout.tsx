@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { fontVariables, defaultFont } from '@/lib/fonts';
 import { Providers } from '@/components/root-providers';
+import { DevBadge } from '@/components/ui/dev-badge';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${fontVariables} ${defaultFont}`}>
         <Providers>{children}</Providers>
+        <DevBadge />
       </body>
     </html>
   );

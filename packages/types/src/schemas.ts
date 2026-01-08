@@ -219,7 +219,7 @@ export const sectionLayoutSchema = z.object({
 
 export const sectionContentSchema = z.object({
   title: z.string().optional(),
-  data: z.union([z.record(z.unknown()), z.array(z.unknown())]).optional(),
+  data: z.union([z.record(z.string(), z.any()), z.array(z.any())]).optional(),
   html: z.string().optional(),
 }).passthrough();
 
