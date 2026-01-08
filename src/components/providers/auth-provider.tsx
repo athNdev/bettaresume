@@ -3,19 +3,23 @@
 /**
  * Auth Provider
  * 
- * Handles authentication initialization and provides auth context.
+ * Syncs Clerk authentication state to the local Zustand store.
+ * This bridges Clerk's auth state with our app's auth store.
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-react';
 import { useAuthStore } from '@/store';
-import { Skeleton } from '@/components/ui/skeleton';
+import { SplashScreen } from '@/components/splash-screen';
 
 interface AuthContextValue {
   isInitialized: boolean;
+  isClerkLoaded: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   isInitialized: false,
+  isClerkLoaded: false,
 });
 
 export function useAuth() {
@@ -26,59 +30,64 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-function AuthLoadingSkeleton() {
-  return (
-    <div className="flex h-screen w-full items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
-        <Skeleton className="h-4 w-32" />
-      </div>
-    </div>
-  );
-}
-
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  
+  // Clerk hooks
+  const { isLoaded: isClerkLoaded, isSignedIn, getToken } = useClerkAuth();
+  const { user: clerkUser } = useUser();
+  
+  // Local store actions
+  const setUser = useAuthStore((state) => state.setUser);
+  const setToken = useAuthStore((state) => state.setToken);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
 
+  // Sync Clerk state to local store
   useEffect(() => {
-    let mounted = true;
+    if (!isClerkLoaded) return;
 
-    const init = async () => {
-      try {
-        await initializeAuth();
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-      } finally {
-        if (mounted) {
-          setIsInitialized(true);
+    const syncAuth = async () => {
+      if (isSignedIn && clerkUser) {
+        // Get JWT token for API calls
+        const token = await getToken();
+        
+        // Sync user to local store
+        setUser({
+          id: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress || '',
+          name: clerkUser.fullName || clerkUser.firstName || 'User',
+          picture: clerkUser.imageUrl || null,
+          createdAt: clerkUser.createdAt?.toISOString() || new Date().toISOString(),
+          emailVerified: clerkUser.primaryEmailAddress?.verification?.status === 'verified',
+          preferences: {
+            theme: 'dark',
+            emailNotifications: true,
+            autoSave: true,
+            defaultTemplate: 'modern',
+          },
+        });
+        
+        if (token) {
+          setToken(token);
         }
+      } else {
+        // User signed out - clear local state
+        clearAuth();
       }
+      
+      setIsInitialized(true);
     };
 
-    init();
+    syncAuth();
+  }, [isClerkLoaded, isSignedIn, clerkUser, getToken, setUser, setToken, clearAuth]);
 
-    // Failsafe: Set initialized after 5 seconds even if init fails
-    const timeout = setTimeout(() => {
-      if (mounted && !isInitialized) {
-        console.warn('Auth initialization timeout, forcing initialized state');
-        setIsInitialized(true);
-      }
-    }, 5000);
-
-    return () => {
-      mounted = false;
-      clearTimeout(timeout);
-    };
-  }, [initializeAuth, isInitialized]);
-
-  // Show loading state while initializing
-  if (!isInitialized) {
-    return <AuthLoadingSkeleton />;
+  // Show splash screen while Clerk is loading
+  if (!isClerkLoaded) {
+    return <SplashScreen message="Initializing..." />;
   }
 
   return (
-    <AuthContext.Provider value={{ isInitialized }}>
+    <AuthContext.Provider value={{ isInitialized, isClerkLoaded }}>
       {children}
     </AuthContext.Provider>
   );
