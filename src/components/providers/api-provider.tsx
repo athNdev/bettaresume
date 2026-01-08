@@ -3,21 +3,25 @@
 /**
  * API Provider
  * 
- * Initializes the API client and provides API context.
+ * Provides API context for backend connection status.
+ * With React Query, this is simplified - no more SyncManager initialization.
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useResumeStore } from '@/store';
-import type { BackendStatus } from '@/lib/api';
+import React, { createContext, useContext } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+type BackendStatus = 'online' | 'offline' | 'unknown';
 
 interface ApiContextValue {
   isInitialized: boolean;
   backendStatus: BackendStatus;
+  clearCache: () => void;
 }
 
 const ApiContext = createContext<ApiContextValue>({
-  isInitialized: false,
+  isInitialized: true,
   backendStatus: 'unknown',
+  clearCache: () => {},
 });
 
 export function useApi() {
@@ -29,38 +33,23 @@ interface ApiProviderProps {
 }
 
 export function ApiProvider({ children }: ApiProviderProps) {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const initializeSync = useResumeStore((state) => state.initializeSync);
-  const backendStatus = useResumeStore((state) => state._backendStatus);
-  const hasHydrated = useResumeStore((state) => state._hasHydrated);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    let mounted = true;
+  // Clear all cached data (used on logout)
+  const clearCache = () => {
+    queryClient.clear();
+  };
 
-    const init = async () => {
-      try {
-        await initializeSync();
-      } catch (error) {
-        console.error('API initialization error:', error);
-      } finally {
-        if (mounted) {
-          setIsInitialized(true);
-        }
-      }
-    };
-
-    init();
-
-    return () => {
-      mounted = false;
-    };
-  }, [initializeSync]);
-
-  // Wait for both API initialization and hydration
-  const ready = isInitialized && hasHydrated;
+  // With React Query, initialization is handled by the query hooks themselves
+  // Backend status can be derived from query states if needed
+  const value: ApiContextValue = {
+    isInitialized: true,
+    backendStatus: 'online', // React Query handles this per-query
+    clearCache,
+  };
 
   return (
-    <ApiContext.Provider value={{ isInitialized: ready, backendStatus }}>
+    <ApiContext.Provider value={value}>
       {children}
     </ApiContext.Provider>
   );

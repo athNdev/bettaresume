@@ -38,9 +38,11 @@ const createDefaultResume = (name: string, template: TemplateType, domain?: stri
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
+    userId: '', // Will be set when syncing to backend
     name,
     variationType: 'base',
-    domain,
+    baseResumeId: null,
+    domain: domain ?? null,
     createdAt: now,
     updatedAt: now,
     template,
@@ -843,7 +845,7 @@ export const useResumeStore = create<ResumeStore>()(
           ...resume,
           id: crypto.randomUUID(),
           name: `${resume.name} (imported)`,
-          baseResumeId: undefined,
+          baseResumeId: null,
           variationType: 'base',
           createdAt: now,
           updatedAt: now,

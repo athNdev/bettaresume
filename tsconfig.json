@@ -56,18 +56,12 @@
     "src/**/*.cjs",
     "src/**/*.js",
     "packages/types/src/**/*.ts",
-    "api-server/src/root.ts",
-    "api-server/src/trpc.ts",
-    "api-server/src/routers/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "generated",
-    "api-server/api",
-    "api-server/src/dev-server.ts",
-    "api-server/src/db.ts",
-    "api-server/node_modules"
+    "api-server"
   ]
 }

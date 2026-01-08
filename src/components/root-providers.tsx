@@ -4,6 +4,7 @@ import {
   ThemeProvider,
   ToastProvider,
   TRPCReactProvider,
+  ClerkAuthProvider,
   AuthProvider,
   ApiProvider,
 } from './providers';
@@ -17,21 +18,24 @@ interface ProvidersProps {
  * App Providers
  * 
  * Composes all providers in the correct order.
- * Individual providers are defined in ./providers/
+ * ClerkAuthProvider must wrap TRPCReactProvider so useAuth is available for token injection
+ * AuthProvider syncs Clerk state to local store
  */
 export function Providers({ children }: ProvidersProps) {
   return (
-    <TRPCReactProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <ApiProvider>
-            {children}
-          </ApiProvider>
-        </AuthProvider>
-        <ToastProvider />
-        <ConfirmDialog />
-      </ThemeProvider>
-    </TRPCReactProvider>
+    <ThemeProvider>
+      <ClerkAuthProvider>
+        <TRPCReactProvider>
+          <AuthProvider>
+            <ApiProvider>
+              {children}
+            </ApiProvider>
+          </AuthProvider>
+        </TRPCReactProvider>
+      </ClerkAuthProvider>
+      <ToastProvider />
+      <ConfirmDialog />
+    </ThemeProvider>
   );
 }
 

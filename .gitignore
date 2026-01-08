@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules
 /.pnp
 .pnp.js
 
@@ -36,12 +36,14 @@ yarn-error.log*
 # do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
 .env
 .env*.local
+.dev.vars
 
-# vercel
-.vercel
+# wrangler
+.wrangler
 
 # typescript
 *.tsbuildinfo
 
 # idea files
 .idea
+packages/types/dist

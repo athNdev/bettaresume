@@ -4,46 +4,28 @@
  * Protected Route
  * 
  * Wraps pages that require authentication.
+ * Uses Clerk for auth state.
  */
 
-import { useEffect } from 'react';
-import { useHashRouter } from '@/lib/hash-router';
-import { useAuthStore } from '@/store';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@clerk/clerk-react';
+import { RedirectToSignIn } from '@clerk/clerk-react';
+import { SplashScreen } from '@/components/splash-screen';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-function AuthCheckingSkeleton() {
-  return (
-    <div className="flex h-screen w-full items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
-        <Skeleton className="h-4 w-40" />
-      </div>
-    </div>
-  );
-}
-
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { navigate } = useHashRouter();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isLoaded, isSignedIn } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isAuthenticated, isLoading, navigate]);
-
-  // Show loading while checking auth
-  if (isLoading) {
-    return <AuthCheckingSkeleton />;
+  // Show splash screen while checking auth
+  if (!isLoaded) {
+    return <SplashScreen message="Checking authentication..." />;
   }
 
-  // Don't render content if not authenticated
-  if (!isAuthenticated) {
-    return null;
+  // Redirect to Clerk sign-in if not authenticated
+  if (!isSignedIn) {
+    return <RedirectToSignIn />;
   }
 
   return <>{children}</>;

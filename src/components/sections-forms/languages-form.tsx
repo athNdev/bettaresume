@@ -1,18 +1,22 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useConfirm } from '@/hooks/use-confirm';
+import { useAutoSave, useBeforeUnload } from '@/hooks';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { SaveStatusIndicator } from '@/components/ui/save-status-indicator';
 import { Plus, Trash2, Globe2 } from 'lucide-react';
 import type { Language } from '@/types/resume';
 import { createDefaultLanguage } from '@/types/resume';
 
 interface LanguagesFormProps {
   data: Language[];
-  onChange: (data: Language[]) => void;
+  onChange: (data: Language[]) => Promise<void>;
+  title?: string;
 }
 
 const PROFICIENCY_LEVELS = [
@@ -25,29 +29,52 @@ const PROFICIENCY_LEVELS = [
 
 const COMMON_LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 'Portuguese', 'Arabic', 'Hindi', 'Korean'];
 
-export function LanguagesForm({ data, onChange }: LanguagesFormProps) {
+export function LanguagesForm({ data, onChange, title }: LanguagesFormProps) {
   const confirm = useConfirm();
-  const addLanguage = (name?: string) => {
+
+  // Auto-save hook
+  const {
+    localData,
+    setLocalData,
+    status,
+    error,
+    retrySave,
+    isDirty,
+  } = useAutoSave({
+    data,
+    onSave: onChange,
+  });
+
+  // Warn user before leaving with unsaved changes
+  useBeforeUnload(isDirty);
+
+  const addLanguage = useCallback((name?: string) => {
     const newLang = { ...createDefaultLanguage(), name: name || '' };
-    onChange([...data, newLang]);
-  };
+    setLocalData(prev => [...prev, newLang]);
+  }, [setLocalData]);
 
-  const removeLanguage = (id: string) => {
-    onChange(data.filter((l) => l.id !== id));
-  };
+  const removeLanguage = useCallback((id: string) => {
+    setLocalData(prev => prev.filter((l) => l.id !== id));
+  }, [setLocalData]);
 
-  const updateLanguage = (id: string, updates: Partial<Language>) => {
-    onChange(data.map((l) => l.id === id ? { ...l, ...updates } : l));
-  };
+  const updateLanguage = useCallback((id: string, updates: Partial<Language>) => {
+    setLocalData(prev => prev.map((l) => l.id === id ? { ...l, ...updates } : l));
+  }, [setLocalData]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{data.length} language{data.length !== 1 ? 's' : ''}</p>
-        <Button onClick={() => addLanguage()} size="sm"><Plus className="h-4 w-4 mr-2" /> Add Language</Button>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-2 -mx-4 -mt-4 mb-4 flex items-center justify-between min-h-10">
+        <div className="flex items-center gap-3">
+          {title && <h3 className="font-semibold">{title}</h3>}
+          <SaveStatusIndicator status={status} error={error} onRetry={retrySave} />
+        </div>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted-foreground">{localData.length} language{localData.length !== 1 ? 's' : ''}</p>
+          <Button onClick={() => addLanguage()} size="sm"><Plus className="h-4 w-4 mr-2" /> Add Language</Button>
+        </div>
       </div>
 
-      {data.length === 0 ? (
+      {localData.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Globe2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -63,7 +90,7 @@ export function LanguagesForm({ data, onChange }: LanguagesFormProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          {data.map((lang) => (
+          {localData.map((lang) => (
             <div key={lang.id} className="flex items-center gap-3 p-3 border rounded-lg">
               <div className="flex-1 grid grid-cols-3 gap-3">
                 <div>
@@ -95,7 +122,7 @@ export function LanguagesForm({ data, onChange }: LanguagesFormProps) {
           <div className="pt-2">
             <Label className="text-muted-foreground text-xs">Quick Add</Label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {COMMON_LANGUAGES.filter((lang) => !data.some((d) => d.name.toLowerCase() === lang.toLowerCase())).slice(0, 6).map((lang) => (
+              {COMMON_LANGUAGES.filter((lang) => !localData.some((d) => d.name.toLowerCase() === lang.toLowerCase())).slice(0, 6).map((lang) => (
                 <Button key={lang} variant="outline" size="sm" onClick={() => addLanguage(lang)}>
                   <Plus className="h-3 w-3 mr-1" /> {lang}
                 </Button>

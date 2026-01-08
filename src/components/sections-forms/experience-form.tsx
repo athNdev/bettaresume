@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useConfirm } from '@/hooks/use-confirm';
+import { useAutoSave, useBeforeUnload } from '@/hooks';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -11,85 +12,111 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SaveStatusIndicator } from '@/components/ui/save-status-indicator';
 import { Plus, Trash2, Briefcase, GripVertical, ChevronUp, ChevronDown, X } from 'lucide-react';
 import type { Experience } from '@/types/resume';
 import { createDefaultExperience } from '@/types/resume';
 
 interface ExperienceFormProps {
   data: Experience[];
-  onChange: (data: Experience[]) => void;
+  onChange: (data: Experience[]) => Promise<void>;
+  title?: string;
 }
 
-export function ExperienceForm({ data, onChange }: ExperienceFormProps) {
+export function ExperienceForm({ data, onChange, title }: ExperienceFormProps) {
   const confirm = useConfirm();
   const [expandedItems, setExpandedItems] = useState<string[]>(data.length > 0 && data[0]?.id ? [data[0].id] : []);
   const [newHighlight, setNewHighlight] = useState<Record<string, string>>({});
   const [newTech, setNewTech] = useState<Record<string, string>>({});
 
-  const addExperience = () => {
+  // Auto-save hook
+  const {
+    localData,
+    setLocalData,
+    status,
+    error,
+    retrySave,
+    isDirty,
+  } = useAutoSave({
+    data,
+    onSave: onChange,
+  });
+
+  // Warn user before leaving with unsaved changes
+  useBeforeUnload(isDirty);
+
+  const addExperience = useCallback(() => {
     const newExp = createDefaultExperience();
-    onChange([...data, newExp]);
+    setLocalData(prev => [...prev, newExp]);
     setExpandedItems([newExp.id]);
-  };
+  }, [setLocalData]);
 
-  const removeExperience = (id: string) => {
-    onChange(data.filter((exp) => exp.id !== id));
-  };
+  const removeExperience = useCallback((id: string) => {
+    setLocalData(prev => prev.filter((exp) => exp.id !== id));
+  }, [setLocalData]);
 
-  const updateExperience = (id: string, updates: Partial<Experience>) => {
-    onChange(data.map((exp) => exp.id === id ? { ...exp, ...updates } : exp));
-  };
+  const updateExperience = useCallback((id: string, updates: Partial<Experience>) => {
+    setLocalData(prev => prev.map((exp) => exp.id === id ? { ...exp, ...updates } : exp));
+  }, [setLocalData]);
 
-  const moveExperience = (index: number, direction: 'up' | 'down') => {
+  const moveExperience = useCallback((index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= data.length) return;
-    const newData = [...data];
-    const temp = newData[index]!;
-    newData[index] = newData[newIndex]!;
-    newData[newIndex] = temp;
-    onChange(newData);
-  };
+    if (newIndex < 0 || newIndex >= localData.length) return;
+    setLocalData(prev => {
+      const newData = [...prev];
+      const temp = newData[index]!;
+      newData[index] = newData[newIndex]!;
+      newData[newIndex] = temp;
+      return newData;
+    });
+  }, [localData.length, setLocalData]);
 
-  const addHighlight = (expId: string) => {
+  const addHighlight = useCallback((expId: string) => {
     const text = newHighlight[expId]?.trim();
     if (!text) return;
-    const exp = data.find((e) => e.id === expId);
+    const exp = localData.find((e) => e.id === expId);
     if (!exp) return;
     updateExperience(expId, { highlights: [...(exp.highlights || []), text] });
-    setNewHighlight({ ...newHighlight, [expId]: '' });
-  };
+    setNewHighlight(prev => ({ ...prev, [expId]: '' }));
+  }, [newHighlight, localData, updateExperience]);
 
-  const removeHighlight = (expId: string, index: number) => {
-    const exp = data.find((e) => e.id === expId);
+  const removeHighlight = useCallback((expId: string, index: number) => {
+    const exp = localData.find((e) => e.id === expId);
     if (!exp) return;
     updateExperience(expId, { highlights: exp.highlights?.filter((_, i) => i !== index) });
-  };
+  }, [localData, updateExperience]);
 
-  const addTechnology = (expId: string) => {
+  const addTechnology = useCallback((expId: string) => {
     const text = newTech[expId]?.trim();
     if (!text) return;
-    const exp = data.find((e) => e.id === expId);
+    const exp = localData.find((e) => e.id === expId);
     if (!exp) return;
     updateExperience(expId, { technologies: [...(exp.technologies || []), text] });
-    setNewTech({ ...newTech, [expId]: '' });
-  };
+    setNewTech(prev => ({ ...prev, [expId]: '' }));
+  }, [newTech, localData, updateExperience]);
 
-  const removeTechnology = (expId: string, index: number) => {
-    const exp = data.find((e) => e.id === expId);
+  const removeTechnology = useCallback((expId: string, index: number) => {
+    const exp = localData.find((e) => e.id === expId);
     if (!exp) return;
     updateExperience(expId, { technologies: exp.technologies?.filter((_, i) => i !== index) });
-  };
+  }, [localData, updateExperience]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{data.length} position{data.length !== 1 ? 's' : ''}</p>
-        <Button onClick={addExperience} size="sm">
-          <Plus className="h-4 w-4 mr-2" /> Add Position
-        </Button>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-2 -mx-4 -mt-4 mb-4 flex items-center justify-between min-h-10">
+        <div className="flex items-center gap-3">
+          {title && <h3 className="font-semibold">{title}</h3>}
+          <SaveStatusIndicator status={status} error={error} onRetry={retrySave} />
+        </div>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted-foreground">{localData.length} position{localData.length !== 1 ? 's' : ''}</p>
+          <Button onClick={addExperience} size="sm">
+            <Plus className="h-4 w-4 mr-2" /> Add Position
+          </Button>
+        </div>
       </div>
 
-      {data.length === 0 ? (
+      {localData.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Briefcase className="h-12 w-12 text-muted-foreground/50 mb-4" />
@@ -100,26 +127,28 @@ export function ExperienceForm({ data, onChange }: ExperienceFormProps) {
         </Card>
       ) : (
         <Accordion type="multiple" value={expandedItems} onValueChange={setExpandedItems} className="space-y-3">
-          {data.map((exp, index) => (
+          {localData.map((exp, index) => (
             <AccordionItem key={exp.id} value={exp.id} className="border rounded-lg overflow-hidden">
-              <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50">
-                <div className="flex items-center gap-3 w-full">
-                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="font-medium">{exp.position || 'Untitled Position'}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Briefcase className="h-3 w-3" />
-                      {exp.company || 'Company'}
-                      {exp.startDate && <span>• {exp.startDate} - {exp.current ? 'Present' : exp.endDate || 'Present'}</span>}
+              <div className="flex items-center">
+                <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline hover:bg-muted/50">
+                  <div className="flex items-center gap-3 w-full">
+                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">{exp.position || 'Untitled Position'}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Briefcase className="h-3 w-3" />
+                        {exp.company || 'Company'}
+                        {exp.startDate && <span>• {exp.startDate} - {exp.current ? 'Present' : exp.endDate || 'Present'}</span>}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 mr-2">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveExperience(index, 'up'); }} disabled={index === 0}><ChevronUp className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveExperience(index, 'down'); }} disabled={index === data.length - 1}><ChevronDown className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async (e) => { e.stopPropagation(); const confirmed = await confirm('Remove Position', 'Remove this position?'); if (confirmed) removeExperience(exp.id); }}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
+                </AccordionTrigger>
+                <div className="flex items-center gap-1 px-2">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveExperience(index, 'up')} disabled={index === 0}><ChevronUp className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveExperience(index, 'down')} disabled={index === localData.length - 1}><ChevronDown className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => { const confirmed = await confirm('Remove Position', 'Remove this position?'); if (confirmed) removeExperience(exp.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
-              </AccordionTrigger>
+              </div>
               <AccordionContent className="px-4 pb-4 pt-2">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">

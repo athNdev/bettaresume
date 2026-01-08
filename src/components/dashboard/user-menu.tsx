@@ -1,7 +1,8 @@
 'use client';
 
 import { useAuthStore } from '@/store';
-import { Button, Badge } from '@/components/ui';
+import { useClerk } from '@clerk/clerk-react';
+import { Button } from '@/components/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,11 +18,18 @@ import { User, Settings, LogOut } from 'lucide-react';
  * User Menu
  * 
  * Displays user info with dropdown menu for actions.
+ * Uses Clerk for sign-out functionality.
  */
 export function UserMenu() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
+  const { signOut } = useClerk();
 
   if (!user) return null;
+
+  const handleSignOut = () => {
+    // Sign out from Clerk - this will trigger auth state sync
+    signOut();
+  };
 
   return (
     <div className="flex items-center gap-2">      
@@ -52,7 +60,7 @@ export function UserMenu() {
             Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={logout}>
+          <DropdownMenuItem onClick={handleSignOut}>
             <LogOut className="h-4 w-4 mr-2" />
             Log out
           </DropdownMenuItem>

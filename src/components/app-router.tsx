@@ -3,71 +3,64 @@
 import { useEffect, useState } from 'react';
 import { useHashRouter, matchRoute } from '@/lib/hash-router';
 import { useAuthStore } from '@/store/auth.store';
-import { useResumeStore } from '@/store/resume.store';
+import { useAuth as useClerkAuth } from '@clerk/clerk-react';
+import { SplashScreen } from '@/components/splash-screen';
+import { RedirectToSignIn } from '@clerk/clerk-react';
 
 // Lazy load views for code splitting
 import dynamic from 'next/dynamic';
 
-const LoginPage = dynamic(() => import('@/views/login'), { 
-  loading: () => <PageLoader message="Loading login..." />
-});
-
 const DashboardPage = dynamic(() => import('@/views/dashboard'), { 
-  loading: () => <PageLoader message="Loading dashboard..." />
+  loading: () => <SplashScreen message="Loading dashboard..." />
 });
 
 const ResumeEditorPage = dynamic(() => import('@/views/resume-editor'), { 
-  loading: () => <PageLoader message="Loading editor..." />
+  loading: () => <SplashScreen message="Loading editor..." />
 });
-
-function PageLoader({ message }: { message: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
-          <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-        </div>
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
-    </div>
-  );
-}
 
 export function AppRouter() {
   const { path, navigate, replace } = useHashRouter();
   const { isAuthenticated } = useAuthStore();
-  const { _hasHydrated } = useResumeStore();
+  const { isLoaded: isClerkLoaded, isSignedIn } = useClerkAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Handle initial routing
+  // Handle routing after auth is ready
   useEffect(() => {
-    if (!mounted || !_hasHydrated) return;
+    if (!mounted || !isClerkLoaded) return;
 
-    // Root path - redirect based on auth status
-    if (path === '/') {
-      if (isAuthenticated) {
-        replace('/dashboard');
-      } else {
-        replace('/login');
-      }
+    // Root path - redirect to dashboard if authenticated
+    if (path === '/' && isSignedIn && isAuthenticated) {
+      replace('/dashboard');
     }
-  }, [path, isAuthenticated, _hasHydrated, mounted, replace]);
+  }, [path, isSignedIn, isAuthenticated, isClerkLoaded, mounted, replace]);
 
-  // Don't render until hydrated
-  if (!mounted || !_hasHydrated) {
-    return <PageLoader message="Loading Betta Resume..." />;
+  // Don't render until mounted and Clerk is loaded
+  if (!mounted || !isClerkLoaded) {
+    return <SplashScreen message="Loading Betta Resume..." />;
   }
 
-  // Route matching
-  if (path === '/login') {
-    return <LoginPage />;
+  // Root path "/" - Show splash screen
+  // If not signed in, redirect to Clerk login
+  // If signed in, redirect to dashboard (handled by useEffect above)
+  if (path === '/' || path === '/login') {
+    if (!isSignedIn) {
+      // Redirect to Clerk's hosted sign-in page
+      return <RedirectToSignIn />;
+    }
+    // Show splash while redirecting to dashboard
+    return <SplashScreen message="Signing you in..." />;
   }
 
+  // Protected routes - require authentication
+  if (!isSignedIn) {
+    return <RedirectToSignIn />;
+  }
+
+  // Route matching for authenticated users
   if (path === '/dashboard') {
     return <DashboardPage />;
   }
@@ -76,11 +69,6 @@ export function AppRouter() {
   const resumeEditorParams = matchRoute(path, '/resume-editor/:id');
   if (resumeEditorParams && resumeEditorParams.id) {
     return <ResumeEditorPage id={resumeEditorParams.id} />;
-  }
-
-  // Root path shows loader while redirecting
-  if (path === '/') {
-    return <PageLoader message="Loading Betta Resume..." />;
   }
 
   // 404 - Not found

@@ -1,17 +1,20 @@
-import { createTRPCRouter, createCallerFactory } from "./trpc";
-import { userRouter, resumeRouter, sectionRouter } from "./routers";
-
 /**
- * Primary router for the API
+ * Root tRPC Router
+ * Combines all procedure routers and exports the AppRouter type
  */
-export const apiRouter = createTRPCRouter({
+
+import { router } from './trpc';
+import { userRouter } from './trpc/procedures/user';
+import { resumeRouter } from './trpc/procedures/resume';
+import { sectionRouter } from './trpc/procedures/section';
+import { authRouter } from './trpc/procedures/auth';
+
+export const appRouter = router({
   user: userRouter,
   resume: resumeRouter,
   section: sectionRouter,
+  auth: authRouter,
 });
 
-// Export type definition for client
-export type ApiRouter = typeof apiRouter;
-
-// Server-side caller factory
-export const createCaller = createCallerFactory(apiRouter);
+// Export type for frontend
+export type AppRouter = typeof appRouter;

@@ -1,39 +1,41 @@
 {
-  "name": "bettaresume-api",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "name": "api-server",
+  "version": "1.0.0",
+  "description": "BettaResume API Server (Cloudflare Worker)",
+  "main": "./src/server.ts",
   "scripts": {
-    "dev": "tsx watch src/dev-server.ts",
-    "build": "prisma generate",
-    "db:generate": "prisma migrate dev",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "db:local-reset": "shx rm -f ./dev.db",
-    "dev:seed": "run-s db:local-reset db:push postinstall db:seed dev",
-    "postinstall": "prisma generate",
-    "typecheck": "tsc --noEmit"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply bettaresume --local",
+    "db:reset": "shx rm -rf .wrangler/state && wrangler d1 migrations apply bettaresume --local",
+    "db:seed": "wrangler d1 execute bettaresume --local --file=src/db/seed.sql",
+    "db:studio": "drizzle-kit studio"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "better-sqlite3": "^12.5.0",
+    "drizzle-kit": "^0.31.8",
+    "shx": "^0.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.57.0"
   },
   "dependencies": {
     "@bettaresume/types": "*",
-    "@libsql/client": "^0.15.15",
-    "@prisma/adapter-libsql": "^7.2.0",
-    "@prisma/client": "^7.2.0",
+    "@clerk/backend": "^2.29.1",
+    "@trpc/client": "^11.8.1",
     "@trpc/server": "^11.8.1",
-    "superjson": "^2.2.6",
-    "zod": "^4.3.5"
-  },
-  "devDependencies": {
     "@types/node": "^25.0.3",
-    "@vercel/node": "^5.5.16",
-    "npm-run-all": "^4.1.5",
-    "prisma": "^7.2.0",
-    "shx": "^0.4.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.1",
+    "superjson": "^2.2.6",
+    "zod": "^3.24.0"
   }
 }
