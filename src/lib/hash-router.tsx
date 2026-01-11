@@ -1,11 +1,11 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 
 interface RouterContextType {
   path: string;
   params: Record<string, string>;
-  navigate: (to: string) => void;
+  navigate: (to: string | { to?: string; search?: any; replace?: boolean }) => void;
   replace: (to: string) => void;
 }
 
@@ -86,9 +86,43 @@ export function HashRouterProvider({ children }: HashRouterProviderProps) {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const navigate = useCallback((to: string) => {
-    window.location.hash = to.startsWith('/') ? to : `/${to}`;
-  }, []);
+  const navigate = useCallback((to: string | { to?: string; search?: any; replace?: boolean }) => {
+    if (typeof to === 'string') {
+      window.location.hash = to.startsWith('/') ? to : `/${to}`;
+    } else {
+      const { to: path, search, replace } = to;
+      let newPath = path || state.path;
+      if (!newPath.startsWith('/')) newPath = `/${newPath}`;
+      
+      let finalParams = state.params;
+      if (search === true) {
+        finalParams = state.params;
+      } else if (typeof search === 'function') {
+        finalParams = search(state.params);
+      } else if (search) {
+        finalParams = search;
+      }
+
+      if (search) {
+        const searchParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(finalParams)) {
+          if (value !== undefined && value !== null) {
+            searchParams.set(key, String(value));
+          }
+        }
+        const queryString = searchParams.toString();
+        if (queryString) {
+          newPath += `?${queryString}`;
+        }
+      }
+      
+      if (replace) {
+        window.location.replace(`${window.location.pathname}${window.location.search}#${newPath}`);
+      } else {
+        window.location.hash = newPath;
+      }
+    }
+  }, [state.path, state.params]);
 
   const replace = useCallback((to: string) => {
     const newHash = to.startsWith('/') ? to : `/${to}`;
@@ -108,6 +142,64 @@ export function useHashRouter() {
     throw new Error('useHashRouter must be used within a HashRouterProvider');
   }
   return context;
+}
+
+export function useNavigate() {
+  const { navigate } = useHashRouter();
+  return navigate;
+}
+
+export function useLocation() {
+  const { path } = useHashRouter();
+  return { pathname: path };
+}
+
+export function useSearch(_?: any) {
+  const { params } = useHashRouter();
+  return params;
+}
+
+interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+  to: string;
+  search?: Record<string, string>;
+  disabled?: boolean;
+}
+
+export function Link({ to, search, disabled, children, ...props }: LinkProps) {
+  const { navigate } = useHashRouter();
+  
+  const href = useMemo(() => {
+    let finalTo = to.startsWith('/') ? to : `/${to}`;
+    if (search) {
+      const searchParams = new URLSearchParams(search);
+      finalTo += `?${searchParams.toString()}`;
+    }
+    return `#${finalTo}`;
+  }, [to, search]);
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (disabled) {
+      e.preventDefault();
+      return;
+    }
+    if (props.onClick) props.onClick(e);
+    if (!e.defaultPrevented && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      navigate(to + (search ? `?${new URLSearchParams(search).toString()}` : ''));
+    }
+  };
+
+  return (
+    <a 
+      {...props} 
+      href={href} 
+      onClick={handleClick}
+      aria-disabled={disabled}
+      className={`${disabled ? 'pointer-events-none opacity-50' : ''} ${props.className || ''}`}
+    >
+      {children}
+    </a>
+  );
 }
 
 /**

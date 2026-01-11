@@ -61,7 +61,16 @@ export function AppRouter() {
   }
 
   // Route matching for authenticated users
-  if (path === '/dashboard') {
+  if (
+    path === '/dashboard' || 
+    path.startsWith('/dashboard/') || 
+    path === '/tasks' || 
+    path === '/apps' || 
+    path === '/chats' || 
+    path === '/users' || 
+    path === '/settings' || 
+    path.startsWith('/settings/')
+  ) {
     return <DashboardPage />;
   }
 

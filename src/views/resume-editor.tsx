@@ -460,8 +460,8 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
           {baseResume && (
             <div className="hidden md:flex items-center">
               <VariationManager
-                baseResume={baseResume}
-                variations={variations}
+                baseResume={baseResume as any}
+                variations={variations as any}
                 currentResumeId={activeResume.id}
                 onCreateVariation={handleCreateVariation}
                 onSelectVariation={handleSelectVariation}
@@ -472,7 +472,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            <ExportButtons resume={activeResume} variant="dropdown" />
+            <ExportButtons resume={activeResume as any} variant="dropdown" />
           </div>
         </div>
       </header>
@@ -504,7 +504,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
                   <CollapsibleContent>
                     <div className="px-2 pb-2">
                       <SectionsManager
-                        sections={activeResume.sections}
+                        sections={activeResume.sections as any}
                         onSectionsChange={handleSectionsReorder}
                         onAddSection={handleAddSection}
                         onDeleteSection={handleDeleteSection}
@@ -529,7 +529,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
                       <p className="text-xs text-muted-foreground px-2 mb-2">Choose a template style</p>
                       <p className="text-xs px-2 mb-3">Current: <span className="font-medium">{activeResume.template}</span></p>
                       <TemplateSelector
-                        currentTemplate={activeResume.template}
+                        currentTemplate={activeResume.template as any}
                         onSelect={handleTemplateChange}
                         onColorChange={handleColorChange}
                       />
@@ -552,7 +552,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
                       {currentActivityLog.length === 0 ? (
                         <p className="text-sm text-muted-foreground italic">No activity yet</p>
                       ) : (
-                        <ChangeLog logs={currentActivityLog} />
+                        <ChangeLog logs={currentActivityLog as any} />
                       )}
                     </div>
                   </CollapsibleContent>
@@ -604,7 +604,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
               {/* Preview Area */}
               <div className="flex-1 overflow-auto">
                 <div className="min-h-full flex items-start justify-center p-8">
-                  <Preview resume={activeResume} scale={previewScale} />
+                  <Preview resume={activeResume as any} scale={previewScale} />
                 </div>
               </div>
             </div>

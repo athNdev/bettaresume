@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { fontVariables, defaultFont } from '@/lib/fonts';
-import { Providers } from '@/components/root-providers';
+import { Providers } from '@/components/providers';
 import { DevBadge } from '@/components/ui/dev-badge';
 import '@/styles/globals.css';
 

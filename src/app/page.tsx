@@ -1,6 +1,5 @@
 'use client';
 
-import { HashRouterProvider } from '@/lib/hash-router';
 import { AppRouter } from '@/components/app-router';
 
 /**
@@ -15,9 +14,5 @@ import { AppRouter } from '@/components/app-router';
  * - Default: redirects based on auth status
  */
 export default function Home() {
-  return (
-    <HashRouterProvider>
-      <AppRouter />
-    </HashRouterProvider>
-  );
+  return <AppRouter />;
 }

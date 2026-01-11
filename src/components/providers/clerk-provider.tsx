@@ -10,7 +10,7 @@
 
 import { ClerkProvider } from '@clerk/clerk-react';
 import { dark } from '@clerk/themes';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@/components/providers/theme-provider';
 
 const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -27,7 +27,7 @@ export function ClerkAuthProvider({ children }: ClerkAuthProviderProps) {
 
   return (
     <ClerkProvider
-      publishableKey={PUBLISHABLE_KEY}
+      publishableKey={PUBLISHABLE_KEY as string}
       appearance={{
         baseTheme: resolvedTheme === 'dark' ? dark : undefined,
         elements: {

@@ -1,9 +1,10 @@
+/// <reference types="@cloudflare/workers-types" />
 import { createClerkClient, type ClerkClient } from '@clerk/backend';
 import { createDb, type Database } from '../db';
 
 interface CreateContextOptions {
   request: Request;
-  env: Env;
+  env: any;
 }
 
 /**
@@ -26,6 +27,7 @@ export async function createContext({ request, env }: CreateContextOptions) {
     userId: null,
     env,
     clerkClient,
+    isDevMode: false,
   });
 
   try {
@@ -50,10 +52,12 @@ export async function createContext({ request, env }: CreateContextOptions) {
       userId,
       env,
       clerkClient,
+      isDevMode: false, // Default to false
     };
   } catch (error) {
     console.error('Error creating context:', error);
-    return unauthenticatedContext();
+    const ctx = unauthenticatedContext();
+    return { ...ctx, isDevMode: false };
   }
 }
 
