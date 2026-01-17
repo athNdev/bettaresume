@@ -15,7 +15,7 @@ export default {
 					"Access-Control-Allow-Origin": "*",
 					"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 					"Access-Control-Allow-Headers":
-						"Content-Type, Authorization, x-trpc-source, trpc-accept",
+						"Content-Type, Authorization, x-trpc-source, trpc-accept, x-dev-mode",
 					"Access-Control-Max-Age": "86400",
 				},
 			});
@@ -40,7 +40,7 @@ export default {
 			headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 			headers.set(
 				"Access-Control-Allow-Headers",
-				"Content-Type, Authorization, x-trpc-source, trpc-accept",
+				"Content-Type, Authorization, x-trpc-source, trpc-accept, x-dev-mode",
 			);
 
 			return new Response(response.body, {

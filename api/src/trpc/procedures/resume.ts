@@ -7,6 +7,40 @@ import { z } from "zod";
 import { resumes, sections } from "../../db/schema";
 import { protectedProcedure, router } from "../index";
 
+function normalizePersonalInfo(value: any) {
+	const info = value && typeof value === "object" ? value : {};
+	return {
+		fullName: typeof info.fullName === "string" ? info.fullName : "",
+		email: typeof info.email === "string" ? info.email : "",
+		phone: typeof info.phone === "string" ? info.phone : "",
+		location: typeof info.location === "string" ? info.location : "",
+		linkedin: typeof info.linkedin === "string" ? info.linkedin : "",
+		github: typeof info.github === "string" ? info.github : "",
+		website: typeof info.website === "string" ? info.website : "",
+		portfolio: typeof info.portfolio === "string" ? info.portfolio : "",
+		professionalTitle:
+			typeof info.professionalTitle === "string" ? info.professionalTitle : "",
+		photoUrl: typeof info.photoUrl === "string" ? info.photoUrl : "",
+	};
+}
+
+function normalizeMetadata(value: any) {
+	if (!value || typeof value !== "object") return null;
+	return {
+		...value,
+		personalInfo: normalizePersonalInfo((value as any).personalInfo),
+	};
+}
+
+function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
+	if (!value) return fallback;
+	try {
+		return JSON.parse(value) as T;
+	} catch {
+		return fallback;
+	}
+}
+
 export const resumeRouter = router({
 	/**
 	 * List all resumes for the current user
@@ -32,14 +66,25 @@ export const resumeRouter = router({
 				orderBy: [desc(resumes.updatedAt)],
 			});
 
+			console.log(
+				"[resume.list] userId=",
+				ctx.userId,
+				"includeArchived=",
+				includeArchived,
+				"count=",
+				userResumes.length,
+			);
+
 			// Parse JSON fields
 			return userResumes.map((resume) => ({
 				...resume,
-				tags: JSON.parse(resume.tags || "[]") as string[],
-				metadata: resume.metadata ? JSON.parse(resume.metadata) : null,
+				tags: safeJsonParse<string[]>(resume.tags, []),
+				metadata: resume.metadata
+					? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+					: null,
 				sections: resume.sections.map((section) => ({
 					...section,
-					content: JSON.parse(section.content || "{}"),
+					content: safeJsonParse<any>(section.content, {}),
 				})),
 			}));
 		}),
@@ -65,11 +110,13 @@ export const resumeRouter = router({
 
 			return {
 				...resume,
-				tags: JSON.parse(resume.tags || "[]") as string[],
-				metadata: resume.metadata ? JSON.parse(resume.metadata) : null,
+				tags: safeJsonParse<string[]>(resume.tags, []),
+				metadata: resume.metadata
+					? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+					: null,
 				sections: resume.sections.map((section) => ({
 					...section,
-					content: JSON.parse(section.content || "{}"),
+					content: safeJsonParse<any>(section.content, {}),
 				})),
 			};
 		}),
@@ -153,11 +200,13 @@ export const resumeRouter = router({
 					if (!resume) return null;
 					return {
 						...resume,
-						tags: JSON.parse(resume.tags || "[]") as string[],
-						metadata: resume.metadata ? JSON.parse(resume.metadata) : null,
+						tags: safeJsonParse<string[]>(resume.tags, []),
+						metadata: resume.metadata
+							? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+							: null,
 						sections: resume.sections.map((section) => ({
 							...section,
-							content: JSON.parse(section.content || "{}"),
+							content: safeJsonParse<any>(section.content, {}),
 						})),
 					};
 				});
@@ -224,11 +273,13 @@ export const resumeRouter = router({
 					if (!resume) return null;
 					return {
 						...resume,
-						tags: JSON.parse(resume.tags || "[]") as string[],
-						metadata: resume.metadata ? JSON.parse(resume.metadata) : null,
+						tags: safeJsonParse<string[]>(resume.tags, []),
+						metadata: resume.metadata
+							? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+							: null,
 						sections: resume.sections.map((section) => ({
 							...section,
-							content: JSON.parse(section.content || "{}"),
+							content: safeJsonParse<any>(section.content, {}),
 						})),
 					};
 				});
@@ -321,11 +372,13 @@ export const resumeRouter = router({
 					if (!resume) return null;
 					return {
 						...resume,
-						tags: JSON.parse(resume.tags || "[]") as string[],
-						metadata: resume.metadata ? JSON.parse(resume.metadata) : null,
+						tags: safeJsonParse<string[]>(resume.tags, []),
+						metadata: resume.metadata
+							? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+							: null,
 						sections: resume.sections.map((section) => ({
 							...section,
-							content: JSON.parse(section.content || "{}"),
+							content: safeJsonParse<any>(section.content, {}),
 						})),
 					};
 				});
@@ -361,4 +414,331 @@ export const resumeRouter = router({
 
 			return { success: true, id: input.id, archived: input.archived };
 		}),
-});
+
+	seedDemo: protectedProcedure
+		.input(z.object({ force: z.boolean().optional().default(false) }).optional())
+		.mutation(async ({ ctx, input }) => {
+			const force = input?.force ?? false;
+			console.log("[resume.seedDemo] called userId=", ctx.userId, "force=", force);
+			const existingResume = await ctx.db.query.resumes.findFirst({
+				where: eq(resumes.userId, ctx.userId),
+			});
+
+			if (!force && existingResume) {
+				console.log("[resume.seedDemo] skipped (already has resumes) userId=", ctx.userId);
+				return { seeded: false };
+			}
+
+			if (force) {
+				const existing = await ctx.db.query.resumes.findMany({
+					where: eq(resumes.userId, ctx.userId),
+				});
+				for (const r of existing) {
+					await ctx.db.delete(resumes).where(eq(resumes.id, r.id));
+				}
+			}
+
+			const now = new Date();
+			const mkId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
+			const mkHighlights = (base: string, count: number) =>
+				Array.from({ length: count }, (_, i) => `${base} (impact ${i + 1})`);
+			const mkTech = (items: string[]) => items;
+
+			const sharedSettings = {
+				fontFamily: "Inter",
+				fontSize: 11,
+				lineHeight: 1.4,
+				margins: { top: 40, right: 40, bottom: 40, left: 40 },
+				sectionSpacing: "normal",
+				colors: {
+					primary: "#1e293b",
+					secondary: "#64748b",
+					text: "#0f172a",
+					heading: "#0f172a",
+					background: "#ffffff",
+					accent: "#2563eb",
+					divider: "#e2e8f0",
+				},
+			};
+
+			const createResume = async (def: {
+				name: string;
+				template: string;
+				tags: string[];
+				personalInfo: Record<string, unknown>;
+				sections: Array<{ type: string; order: number; visible: boolean; content: unknown }>;
+			}) => {
+				const resumeId = crypto.randomUUID();
+				await ctx.db.insert(resumes).values({
+					id: resumeId,
+					userId: ctx.userId,
+					name: def.name,
+					variationType: "base",
+					baseResumeId: null,
+					domain: null,
+					template: def.template as any,
+					tags: JSON.stringify(def.tags),
+					isArchived: false,
+					metadata: JSON.stringify({
+						personalInfo: def.personalInfo,
+						settings: sharedSettings,
+					}),
+					createdAt: now,
+					updatedAt: now,
+				});
+
+				for (const s of def.sections) {
+					await ctx.db.insert(sections).values({
+						id: crypto.randomUUID(),
+						resumeId,
+						type: s.type as any,
+						order: s.order,
+						visible: s.visible,
+						content: JSON.stringify(s.content),
+						createdAt: now,
+						updatedAt: now,
+					});
+				}
+
+				return resumeId;
+			};
+
+			const buildExperience = (rolePrefix: string, companies: string[]) =>
+				companies.map((company, idx) => ({
+					id: mkId(`exp-${rolePrefix}-${idx + 1}`),
+					company,
+					position: `${rolePrefix} ${idx + 1}`,
+					startDate: `201${idx}-01`,
+					endDate: idx === 0 ? "" : `201${idx}-12`,
+					current: idx === 0,
+					location: "Australia",
+					description: `Owned ${rolePrefix.toLowerCase()} deliverables across multiple stakeholders and systems.`,
+					highlights: mkHighlights(`Delivered ${rolePrefix.toLowerCase()} initiative at ${company}`, 8),
+					technologies: mkTech([
+						"TypeScript",
+						"PostgreSQL",
+						"Redis",
+						"Docker",
+						"Kubernetes",
+					]),
+				}));
+
+			const buildProjects = (prefix: string) =>
+				Array.from({ length: 5 }, (_, i) => ({
+					id: mkId(`pr-${prefix}-${i + 1}`),
+					name: `${prefix} Project ${i + 1}`,
+					description:
+						"Designed, built, and iterated on a production-grade project with measurable outcomes.",
+					url: "",
+					technologies: ["Next.js", "TypeScript", "PostgreSQL"],
+					highlights: mkHighlights("Shipped feature", 6),
+				}));
+
+			const buildSkills = () => [
+				{
+					id: mkId("sc-1"),
+					name: "Core",
+					order: 0,
+					skills: [
+						{ id: mkId("sk"), name: "TypeScript", level: "expert", yearsOfExperience: 8 },
+						{ id: mkId("sk"), name: "React", level: "advanced", yearsOfExperience: 6 },
+						{ id: mkId("sk"), name: "PostgreSQL", level: "expert", yearsOfExperience: 8 },
+					],
+				},
+				{
+					id: mkId("sc-2"),
+					name: "Infra",
+					order: 1,
+					skills: [
+						{ id: mkId("sk"), name: "Docker", level: "advanced", yearsOfExperience: 5 },
+						{ id: mkId("sk"), name: "Kubernetes", level: "advanced", yearsOfExperience: 4 },
+						{ id: mkId("sk"), name: "CI/CD", level: "advanced", yearsOfExperience: 6 },
+					],
+				},
+			];
+
+			const resumeDefs = [
+				{
+					name: "Senior Software Engineer — Platform & Reliability",
+					template: "tech",
+					tags: ["backend", "platform", "sre"],
+					personalInfo: {
+						fullName: "Avery Chen",
+						email: "avery.chen@example.com",
+						phone: "+61 400 000 001",
+						location: "Melbourne, VIC",
+						linkedin: "linkedin.com/in/averychen",
+						github: "github.com/averychen",
+						website: "averychen.dev",
+						portfolio: "",
+						professionalTitle: "Senior / Staff Software Engineer",
+						photoUrl: "",
+					},
+					sections: [
+						{
+							type: "summary",
+							order: 0,
+							visible: true,
+							content: {
+								title: "Summary",
+								html:
+									"<p>Senior backend engineer with deep distributed-systems experience. Led large migrations, improved reliability, and built high-throughput data pipelines.</p>",
+							},
+						},
+						{
+							type: "experience",
+							order: 1,
+							visible: true,
+							content: {
+								title: "Experience",
+								data: buildExperience("Platform Engineer", [
+									"Nimbus Cloud",
+									"Finly",
+									"Atlas Pay",
+									"DataRail",
+									"Monarch Systems",
+								]),
+							},
+						},
+						{
+							type: "projects",
+							order: 2,
+							visible: true,
+							content: { title: "Projects", data: buildProjects("Platform") },
+						},
+						{
+							type: "skills",
+							order: 3,
+							visible: true,
+							content: { title: "Skills", data: buildSkills() },
+						},
+					],
+				},
+				{
+					name: "Product Engineer — Full Stack",
+					template: "modern",
+					tags: ["frontend", "fullstack", "product"],
+					personalInfo: {
+						fullName: "Sam Rivera",
+						email: "sam.rivera@example.com",
+						phone: "+61 400 000 002",
+						location: "Sydney, NSW",
+						linkedin: "linkedin.com/in/samrivera",
+						github: "github.com/samrivera",
+						website: "",
+						portfolio: "",
+						professionalTitle: "Product Engineer",
+						photoUrl: "",
+					},
+					sections: [
+						{
+							type: "summary",
+							order: 0,
+							visible: true,
+							content: {
+								title: "Profile",
+								html:
+									"<p>Full-stack engineer focused on UX, performance, and reliable delivery. Shipped features from discovery to launch with strong product sense.</p>",
+							},
+						},
+						{
+							type: "experience",
+							order: 1,
+							visible: true,
+							content: {
+								title: "Experience",
+								data: buildExperience("Product Engineer", [
+									"Betta Labs",
+									"CartPilot",
+									"MarketPulse",
+									"FlowCRM",
+									"Onboardly",
+								]),
+							},
+						},
+						{
+							type: "projects",
+							order: 2,
+							visible: true,
+							content: { title: "Projects", data: buildProjects("Product") },
+						},
+						{
+							type: "skills",
+							order: 3,
+							visible: true,
+							content: { title: "Skills", data: buildSkills() },
+						},
+					],
+				},
+				{
+					name: "Consulting — Strategy & Operations",
+					template: "professional",
+					tags: ["consulting", "strategy", "ops"],
+					personalInfo: {
+						fullName: "Jordan Patel",
+						email: "jordan.patel@example.com",
+						phone: "+61 400 000 003",
+						location: "Brisbane, QLD",
+						linkedin: "linkedin.com/in/jordanpatel",
+						github: "",
+						website: "",
+						portfolio: "",
+						professionalTitle: "Consultant",
+						photoUrl: "",
+					},
+					sections: [
+						{
+							type: "summary",
+							order: 0,
+							visible: true,
+							content: {
+								title: "Profile",
+								html:
+									"<p>Consultant delivering cost transformation, operating model design, and analytics-driven decision support across multiple industries.</p>",
+							},
+						},
+						{
+							type: "experience",
+							order: 1,
+							visible: true,
+							content: {
+								title: "Experience",
+								data: buildExperience("Consultant", [
+									"Northbridge Consulting",
+									"Crescent Retail",
+									"Metro Bank",
+									"TransitCo",
+									"HealthWorks",
+								]),
+							},
+						},
+						{
+							type: "projects",
+							order: 2,
+							visible: true,
+							content: { title: "Projects", data: buildProjects("Analytics") },
+						},
+						{
+							type: "skills",
+							order: 3,
+							visible: true,
+							content: { title: "Skills", data: buildSkills() },
+						},
+					],
+				},
+			];
+
+			const resumeIds: string[] = [];
+			for (const def of resumeDefs) {
+				resumeIds.push(await createResume(def));
+			}
+
+			console.log(
+				"[resume.seedDemo] seeded resumes=",
+				resumeIds.length,
+				"userId=",
+				ctx.userId,
+			);
+			return { seeded: true, resumeIds };
+		}),
+	});

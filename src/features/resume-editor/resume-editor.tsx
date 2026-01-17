@@ -127,7 +127,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 	// Live updates for draft (instant, no server call)
 	const handleDraftSectionDataUpdate = useCallback(
-		(sectionId: string, data: unknown) => {
+		(sectionId: string, data: Record<string, unknown> | unknown[] | undefined) => {
 			setDraftResume((prev) => {
 				if (!prev) return prev;
 				// Only update if data actually changed to avoid re-render loops
@@ -201,7 +201,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	}, [selectedSectionId]);
 
 	const stableDraftSectionDataUpdate = useCallback(
-		(data: unknown) => {
+		(data: Record<string, unknown> | unknown[] | undefined) => {
 			if (selectedSectionIdRef.current) {
 				handleDraftSectionDataUpdate(selectedSectionIdRef.current, data);
 			}
@@ -320,7 +320,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 
 	const handleSectionDataChange = useCallback(
-		async (sectionId: string, data: unknown) => {
+		async (sectionId: string, data: Record<string, unknown> | unknown[] | undefined) => {
 			await handleSectionChange(sectionId, {
 				content: { ...selectedSection?.content, data },
 			} as Partial<ResumeSection>);
@@ -473,9 +473,23 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						</div>
 					);
 				}
+				const personalInfo =
+					activeResume.metadata.personalInfo ??
+					({
+						fullName: "",
+						email: "",
+						phone: "",
+						location: "",
+						linkedin: "",
+						github: "",
+						website: "",
+						portfolio: "",
+						professionalTitle: "",
+						photoUrl: "",
+					} as any);
 				return (
 					<PersonalInfoForm
-						data={activeResume.metadata.personalInfo}
+						data={personalInfo}
 						key={selectedSection.id}
 						onChange={handlePersonalInfoChange}
 						onLocalUpdate={handleDraftPersonalInfoUpdate}

@@ -63,7 +63,7 @@ export function ResumeCard({
 	onRestore,
 	onDelete,
 }: ResumeCardProps) {
-	const templateConfig = TEMPLATE_CONFIGS[resume.template];
+	const templateName = TEMPLATE_CONFIGS[resume.template as keyof typeof TEMPLATE_CONFIGS]?.name;
 
 	return (
 		<Card
@@ -75,7 +75,7 @@ export function ResumeCard({
 						<CardTitle className="truncate text-lg">{resume.name}</CardTitle>
 						<CardDescription className="mt-1 flex items-center gap-2">
 							<Badge className="text-xs" variant="secondary">
-								{templateConfig.name}
+								{templateName ?? resume.template}
 							</Badge>
 							{resume.variationType === "variation" && (
 								<Tooltip>

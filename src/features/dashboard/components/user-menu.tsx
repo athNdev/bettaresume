@@ -12,7 +12,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuthStore } from "@/store";
+import { useAuthStore } from "@/features/auth/auth.store";
 
 /**
  * User Menu

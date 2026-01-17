@@ -18,7 +18,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { ProtectedRoute } from "@/app/protected-route";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +57,7 @@ import {
 } from "@/features/resume-editor/types";
 import { useActiveResumeStore, useResumeMutations, useResumes } from "@/hooks";
 import { useHashRouter } from "@/lib/hash-router";
-import { useAuthStore } from "@/store";
+import { api } from "@/lib/trpc/react";
 
 export default function Dashboard() {
 	return (
@@ -125,8 +125,8 @@ function ResumeCardSkeleton() {
 
 function DashboardContent() {
 	const { navigate } = useHashRouter();
-	const { user } = useAuthStore();
 	const setActiveResumeId = useActiveResumeStore((s) => s.setActiveResumeId);
+	const utils = api.useUtils();
 
 	// State
 	const [searchQuery, setSearchQuery] = useState("");
@@ -141,6 +141,7 @@ function DashboardContent() {
 	const [newResumeTemplate, setNewResumeTemplate] =
 		useState<TemplateType>("modern");
 	const [showWelcomeGuide, setShowWelcomeGuide] = useState(true);
+	const [hasAttemptedDevSeed, setHasAttemptedDevSeed] = useState(false);
 
 	// Data fetching via tRPC
 	const {
@@ -149,6 +150,11 @@ function DashboardContent() {
 		isError,
 		error,
 	} = useResumes({ includeArchived: true });
+	const seedDemo = api.resume.seedDemo.useMutation({
+		onSuccess: () => {
+			utils.resume.list.invalidate();
+		},
+	});
 	const {
 		createResume,
 		deleteResume,
@@ -158,6 +164,21 @@ function DashboardContent() {
 		isDeleting,
 		isDuplicating,
 	} = useResumeMutations();
+
+	useEffect(() => {
+		if (process.env.NODE_ENV !== "development") return;
+		if (hasAttemptedDevSeed) return;
+		if (isLoading || isError) return;
+		if (resumes.length > 0) return;
+		seedDemo.mutate({ force: false });
+		setHasAttemptedDevSeed(true);
+	}, [
+		hasAttemptedDevSeed,
+		isLoading,
+		isError,
+		resumes.length,
+		seedDemo,
+	]);
 
 	// Filtered resumes
 	const filteredResumes = useMemo(() => {

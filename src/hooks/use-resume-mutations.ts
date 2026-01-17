@@ -56,6 +56,7 @@ export function useResumeMutations() {
 			const previousList = utils.resume.list.getData();
 
 			// Optimistically remove from list
+			if (previousList) {
 				utils.resume.list.setData(
 					undefined,
 					previousList.filter((r) => r.id !== id),

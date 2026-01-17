@@ -86,6 +86,11 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 						const headers = new Headers();
 						headers.set("x-trpc-source", "nextjs-react");
 
+						// Enable dev mode bypass for local development
+						if (process.env.NEXT_PUBLIC_DEV_MODE === "true") {
+							headers.set("x-dev-mode", "true");
+						}
+
 						// Get fresh token from Clerk for each request
 						// This handles token refresh automatically
 						try {

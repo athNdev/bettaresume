@@ -34,6 +34,7 @@ export async function createContext({ request, env }: CreateContextOptions) {
 		const isDevMode = request.headers.get("x-dev-mode") === "true";
 
 		if (isDevMode) {
+			console.log("[createContext] Dev mode enabled via x-dev-mode header");
 			return {
 				db,
 				user: {

@@ -184,3 +184,246 @@ VALUES (
     strftime('%s', 'now') * 1000,
     strftime('%s', 'now') * 1000
 );
+
+INSERT INTO "Resume" (
+    id,
+    userId,
+    name,
+    variationType,
+    template,
+    tags,
+    isArchived,
+    createdAt,
+    updatedAt,
+    metadata
+)
+VALUES (
+    'resume-2',
+    'user-1',
+    'Senior Software Engineer — Platform & Reliability',
+    'base',
+    'tech',
+    '["backend","platform","sre"]',
+    0,
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000,
+    '{"personalInfo":{"fullName":"Avery Chen","email":"avery.chen@example.com","phone":"+61 400 000 001","location":"Melbourne, VIC","linkedin":"linkedin.com/in/averychen","github":"github.com/averychen","website":"averychen.dev","portfolio":"","professionalTitle":"Senior Software Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"}}}'
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec2-personal',
+    'resume-2',
+    'personal-info',
+    0,
+    1,
+    '{"title":"Contact","data":{"fullName":"Avery Chen","email":"avery.chen@example.com","phone":"+61 400 000 001","location":"Melbourne, VIC","linkedin":"linkedin.com/in/averychen","github":"github.com/averychen","website":"averychen.dev"}}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec2-summary',
+    'resume-2',
+    'summary',
+    1,
+    1,
+    '{"title":"Summary","html":"<p>Senior backend engineer with distributed-systems experience. Led large migrations, improved reliability, and built high-throughput pipelines with strong observability.</p>"}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec2-exp',
+    'resume-2',
+    'experience',
+    2,
+    1,
+    '{"title":"Experience","data":[{"id":"exp2-1","company":"Nimbus Cloud","position":"Staff Platform Engineer","location":"Remote","startDate":"2022-02","endDate":"","current":true,"description":"Owned reliability initiatives and service platform evolution.","highlights":["Improved availability by introducing SLOs and error budgets","Reduced incident volume by building runbooks and automated alert tuning","Implemented idempotent event ingestion and replay mechanisms","Cut p95 latency via caching and query optimization","Standardized service templates and golden paths to speed delivery","Led postmortems and cross-team remediation plans"],"technologies":["TypeScript","Go","PostgreSQL","Redis","Kubernetes"]},{"id":"exp2-2","company":"Finly","position":"Senior Software Engineer","location":"Sydney, NSW","startDate":"2019-01","endDate":"2022-01","current":false,"description":"Built payment workflows and ledger services with auditability.","highlights":["Migrated core ledger queries and improved performance significantly","Introduced outbox pattern for reliable event publishing","Built reconciliation dashboards with anomaly detection","Created data access layer conventions and testing patterns","Improved deployment reliability by adding health checks and rollbacks","Partnered with risk teams on compliance requirements"],"technologies":["Node.js","TypeScript","PostgreSQL","Redis"]},{"id":"exp2-3","company":"Atlas Pay","position":"Software Engineer","location":"Melbourne, VIC","startDate":"2016-02","endDate":"2018-12","current":false,"description":"Worked on backend APIs and data processing.","highlights":["Built REST APIs and background workers for settlement","Improved observability by adding structured logging","Introduced CI checks and faster build pipelines","Implemented pagination, filtering, and caching patterns","Reduced manual ops work with automation scripts","Supported on-call rotations and incident response"],"technologies":["JavaScript","PostgreSQL","Docker"]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec2-skills',
+    'resume-2',
+    'skills',
+    3,
+    1,
+    '{"title":"Skills","data":[{"id":"sc2-1","name":"Backend & Systems","skills":[{"id":"sk2-1","name":"TypeScript","level":"expert"},{"id":"sk2-2","name":"Go","level":"advanced"},{"id":"sk2-3","name":"PostgreSQL","level":"expert"},{"id":"sk2-4","name":"Redis","level":"advanced"}]},{"id":"sc2-2","name":"Infra & Observability","skills":[{"id":"sk2-5","name":"Kubernetes","level":"advanced"},{"id":"sk2-6","name":"Docker","level":"advanced"},{"id":"sk2-7","name":"CI/CD","level":"advanced"},{"id":"sk2-8","name":"Monitoring","level":"advanced"}]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec2-proj',
+    'resume-2',
+    'projects',
+    4,
+    1,
+    '{"title":"Projects","data":[{"id":"pr2-1","name":"Edge Log Processor","description":"Streaming processor for edge deployments with durable queues and replay.","url":"","technologies":["Rust","SQLite"],"highlights":["Designed plugin model for transforms and sinks","Built replay tooling for incident recovery","Added end-to-end tests for reliability" ]},{"id":"pr2-2","name":"Service Template Generator","description":"CLI to bootstrap services with observability and best practices.","url":"","technologies":["TypeScript"],"highlights":["Standardized telemetry and health endpoints","Reduced time-to-first-deploy for new services","Provided guardrails for config and secrets" ]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Resume" (
+    id,
+    userId,
+    name,
+    variationType,
+    template,
+    tags,
+    isArchived,
+    createdAt,
+    updatedAt,
+    metadata
+)
+VALUES (
+    'resume-3',
+    'user-1',
+    'Product Engineer — Full Stack',
+    'base',
+    'modern',
+    '["frontend","fullstack","product"]',
+    0,
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000,
+    '{"personalInfo":{"fullName":"Sam Rivera","email":"sam.rivera@example.com","phone":"+61 400 000 002","location":"Sydney, NSW","linkedin":"linkedin.com/in/samrivera","github":"github.com/samrivera","website":"","portfolio":"","professionalTitle":"Product Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"}}}'
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec3-personal',
+    'resume-3',
+    'personal-info',
+    0,
+    1,
+    '{"title":"Contact","data":{"fullName":"Sam Rivera","email":"sam.rivera@example.com","phone":"+61 400 000 002","location":"Sydney, NSW","linkedin":"linkedin.com/in/samrivera","github":"github.com/samrivera"}}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec3-summary',
+    'resume-3',
+    'summary',
+    1,
+    1,
+    '{"title":"Profile","html":"<p>Full-stack product engineer focused on UX, performance, and reliable delivery. Comfortable owning features end-to-end from discovery to launch.</p>"}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec3-exp',
+    'resume-3',
+    'experience',
+    2,
+    1,
+    '{"title":"Experience","data":[{"id":"exp3-1","company":"Betta Labs","position":"Product Engineer","location":"Sydney, NSW","startDate":"2023-01","endDate":"","current":true,"description":"Shipped customer-facing features and internal tooling.","highlights":["Improved Core Web Vitals through code-splitting and caching","Built a design system and standardized component patterns","Reduced form errors by adding validation and inline guidance","Created analytics dashboards for feature adoption","Improved onboarding funnel and reduced drop-off","Collaborated with design and support to prioritize fixes"],"technologies":["Next.js","TypeScript","tRPC","PostgreSQL"]},{"id":"exp3-2","company":"FlowCRM","position":"Full Stack Developer","location":"Remote","startDate":"2021-04","endDate":"2022-12","current":false,"description":"Built workflow automation and integrations.","highlights":["Implemented webhook-based integrations and retries","Built role-based access control flows","Reduced API errors by improving validation and rate-limits","Implemented optimistic updates for a faster UI","Added tests and CI checks for stability","Partnered with CS to debug production issues"],"technologies":["React","TypeScript","Node.js"]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec3-proj',
+    'resume-3',
+    'projects',
+    3,
+    1,
+    '{"title":"Projects","data":[{"id":"pr3-1","name":"Resume Builder UI","description":"Editor interface with live preview and autosave.","url":"","technologies":["React","TypeScript"],"highlights":["Implemented sections manager UX","Added debounced autosave and retries","Improved accessibility for forms" ]},{"id":"pr3-2","name":"Experiment Framework","description":"Lightweight feature flags and A/B testing utilities.","url":"","technologies":["TypeScript"],"highlights":["Added consistent event tracking","Built admin UI for toggles","Standardized experiment analysis exports" ]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec3-skills',
+    'resume-3',
+    'skills',
+    4,
+    1,
+    '{"title":"Skills","data":[{"id":"sc3-1","name":"Frontend","skills":[{"id":"sk3-1","name":"React","level":"expert"},{"id":"sk3-2","name":"Next.js","level":"advanced"},{"id":"sk3-3","name":"TypeScript","level":"expert"}]},{"id":"sc3-2","name":"Backend","skills":[{"id":"sk3-4","name":"Node.js","level":"advanced"},{"id":"sk3-5","name":"PostgreSQL","level":"advanced"},{"id":"sk3-6","name":"REST APIs","level":"advanced"}]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Resume" (
+    id,
+    userId,
+    name,
+    variationType,
+    template,
+    tags,
+    isArchived,
+    createdAt,
+    updatedAt,
+    metadata
+)
+VALUES (
+    'resume-4',
+    'user-1',
+    'Consulting — Strategy & Operations',
+    'base',
+    'professional',
+    '["consulting","strategy","ops"]',
+    0,
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000,
+    '{"personalInfo":{"fullName":"Jordan Patel","email":"jordan.patel@example.com","phone":"+61 400 000 003","location":"Brisbane, QLD","linkedin":"linkedin.com/in/jordanpatel","github":"","website":"","portfolio":"","professionalTitle":"Consultant","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"}}}'
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec4-personal',
+    'resume-4',
+    'personal-info',
+    0,
+    1,
+    '{"title":"Contact","data":{"fullName":"Jordan Patel","email":"jordan.patel@example.com","phone":"+61 400 000 003","location":"Brisbane, QLD","linkedin":"linkedin.com/in/jordanpatel"}}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec4-summary',
+    'resume-4',
+    'summary',
+    1,
+    1,
+    '{"title":"Profile","html":"<p>Consultant delivering cost transformation, operating model design, and analytics-driven decision support. Strong stakeholder management and executive communication.</p>"}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec4-exp',
+    'resume-4',
+    'experience',
+    2,
+    1,
+    '{"title":"Experience","data":[{"id":"exp4-1","company":"Northbridge Consulting","position":"Senior Consultant","location":"Brisbane, QLD","startDate":"2021-03","endDate":"","current":true,"description":"Led workstreams across transformation programs and built executive-ready deliverables.","highlights":["Built savings roadmap with quantified benefits and risks","Created KPI framework and weekly exec dashboard","Facilitated workshops to define target operating model and RACI","Produced board-ready narrative and supporting analysis","Managed stakeholders across finance, ops, and tech","Improved governance cadence and decision logs"],"technologies":["Excel","PowerPoint","SQL"]},{"id":"exp4-2","company":"Crescent Retail","position":"Consultant","location":"Sydney, NSW","startDate":"2019-02","endDate":"2021-02","current":false,"description":"Supported growth strategy and operational performance initiatives.","highlights":["Modeled store-level profitability drivers and scenarios","Designed metrics for supply chain performance","Built reporting packs used by regional leadership","Conducted customer research and synthesized findings","Supported program management for multi-site rollout","Created training materials for new processes"],"technologies":["Excel","PowerPoint"]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
+VALUES (
+    'sec4-skills',
+    'resume-4',
+    'skills',
+    3,
+    1,
+    '{"title":"Skills","data":[{"id":"sc4-1","name":"Strategy & Ops","skills":[{"id":"sk4-1","name":"Operating Model","level":"advanced"},{"id":"sk4-2","name":"Cost Transformation","level":"advanced"},{"id":"sk4-3","name":"Stakeholder Management","level":"expert"}]},{"id":"sc4-2","name":"Analytics","skills":[{"id":"sk4-4","name":"SQL","level":"advanced"},{"id":"sk4-5","name":"Financial Modeling","level":"advanced"},{"id":"sk4-6","name":"Dashboarding","level":"advanced"}]}]}',
+    strftime('%s', 'now') * 1000,
+    strftime('%s', 'now') * 1000
+);

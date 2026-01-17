@@ -13,8 +13,8 @@ import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { SplashScreen } from "@/app/splash-screen";
 import { useActiveResumeStore } from "@/hooks";
-import { useAuthStore } from "@/store";
-import { api } from "@/trpc/react";
+import { useAuthStore } from "@/features/auth/auth.store";
+import { api } from "@/lib/trpc/react";
 
 interface AuthContextValue {
 	isInitialized: boolean;
