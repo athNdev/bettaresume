@@ -5,7 +5,7 @@
 	"type": "module",
 	"workspaces": [
 		"packages/*",
-		"api-server"
+		"api"
 	],
 	"scripts": {
 		"build": "run-s build:types build:next postbuild",

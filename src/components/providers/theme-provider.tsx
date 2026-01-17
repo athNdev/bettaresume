@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import { ThemeProvider as NextThemesProvider } from 'next-themes';
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 interface ThemeProviderProps {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }
 
 /**
  * Theme Provider
- * 
+ *
  * Provides dark/light mode support using next-themes.
  */
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  return (
-    <NextThemesProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem
-      disableTransitionOnChange
-    >
-      {children}
-    </NextThemesProvider>
-  );
+	return (
+		<NextThemesProvider
+			attribute="class"
+			defaultTheme="dark"
+			disableTransitionOnChange
+			enableSystem
+		>
+			{children}
+		</NextThemesProvider>
+	);
 }

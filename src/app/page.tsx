@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { HashRouterProvider } from '@/lib/hash-router';
-import { AppRouter } from '@/components/app-router';
+import { AppRouter } from "@/app/router";
+import { HashRouterProvider } from "@/lib/hash-router";
 
 /**
  * Main entry point for the static SPA
  * Uses hash-based routing for GitHub Pages compatibility
  * All routes are handled client-side via the hash fragment
- * 
+ *
  * Routes:
  * - #/login - Login page
  * - #/dashboard - Dashboard (protected)
@@ -15,9 +15,9 @@ import { AppRouter } from '@/components/app-router';
  * - Default: redirects based on auth status
  */
 export default function Home() {
-  return (
-    <HashRouterProvider>
-      <AppRouter />
-    </HashRouterProvider>
-  );
+	return (
+		<HashRouterProvider>
+			<AppRouter />
+		</HashRouterProvider>
+	);
 }

@@ -1,2 +1,2 @@
 // Editor components barrel export
-export { RichTextEditor, useEditor, Editor } from './rich-text-editor';
+export { Editor, RichTextEditor, useEditor } from "./rich-text-editor";

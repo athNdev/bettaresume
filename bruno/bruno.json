@@ -1,9 +1,6 @@
 {
-  "version": "1",
-  "name": "bettaresume-bruno-collection",
-  "type": "collection",
-  "ignore": [
-    "node_modules",
-    ".git"
-  ]
+	"version": "1",
+	"name": "bettaresume-bruno-collection",
+	"type": "collection",
+	"ignore": ["node_modules", ".git"]
 }

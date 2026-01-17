@@ -1,0 +1,42 @@
+{
+	"name": "api-server",
+	"version": "1.0.0",
+	"description": "BettaResume API Server (Cloudflare Worker)",
+	"main": "./src/server.ts",
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"typecheck": "tsc --noEmit",
+		"cf-typegen": "wrangler types",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "wrangler d1 migrations apply bettaresume --local",
+		"db:reset": "shx rm -rf .wrangler/state && wrangler d1 migrations apply bettaresume --local",
+		"db:seed": "wrangler d1 execute bettaresume --local --file=src/db/seed.sql",
+		"db:studio": "drizzle-kit studio"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260108.0",
+		"better-sqlite3": "^12.5.0",
+		"drizzle-kit": "^0.31.8",
+		"shx": "^0.4.0",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.57.0"
+	},
+	"dependencies": {
+		"@bettaresume/types": "*",
+		"@clerk/backend": "^2.29.1",
+		"@trpc/client": "^11.8.1",
+		"@trpc/server": "^11.8.1",
+		"@types/node": "^25.0.3",
+		"dotenv": "^17.2.3",
+		"drizzle-orm": "^0.45.1",
+		"superjson": "^2.2.6",
+		"zod": "^3.24.0"
+	}
+}
