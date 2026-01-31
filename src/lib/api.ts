@@ -105,6 +105,7 @@ export class SyncManager {
 	};
 	private listeners: Set<SyncEventCallback> = new Set();
 	private syncInProgress = false;
+	private trpcClient: unknown = null;
 
 	// Subscribe to sync state changes
 	subscribe(callback: SyncEventCallback): () => void {

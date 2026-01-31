@@ -20,6 +20,8 @@ if (!PUBLISHABLE_KEY) {
 	);
 }
 
+const PUBLISHABLE_KEY_STR = PUBLISHABLE_KEY as string;
+
 interface ClerkAuthProviderProps {
 	children: React.ReactNode;
 }
@@ -43,7 +45,7 @@ export function ClerkAuthProvider({ children }: ClerkAuthProviderProps) {
 					footerActionLink: "text-primary hover:text-primary/90",
 				},
 			}}
-			publishableKey={PUBLISHABLE_KEY}
+			publishableKey={PUBLISHABLE_KEY_STR}
 		>
 			{children}
 		</ClerkProvider>

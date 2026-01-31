@@ -79,6 +79,14 @@ export interface ResumeMetadata {
 	atsScore?: ATSScore;
 }
 
+export interface PartialResumeMetadata {
+	personalInfo?: Partial<PersonalInfo>;
+	settings?: PartialResumeSettings;
+	exportHistory?: ExportRecord[];
+	jobTarget?: JobTarget;
+	atsScore?: ATSScore;
+}
+
 // ============================================
 // Section Types
 // ============================================
@@ -160,39 +168,41 @@ export interface TypographyScale {
 }
 
 export interface ResumeSettings {
-	pageSize: "A4" | "Letter";
-	margins: { top: number; right: number; bottom: number; left: number };
-	fontSize: number;
-	fontScale: number;
-	typography: TypographyScale;
-	lineHeight: number;
-	fontFamily: FontFamily;
-	colors: ResumeColors;
-	sectionSpacing: "compact" | "normal" | "spacious";
-	showIcons: boolean;
-	dateFormat: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
-	accentStyle: "underline" | "background" | "border" | "none";
-}
+		pageSize: "A4" | "Letter";
+		margins: { top: number; right: number; bottom: number; left: number };
+		fontSize: number;
+		fontScale: number;
+		typography: TypographyScale;
+		lineHeight: number;
+		fontFamily: FontFamily;
+		colors: ResumeColors;
+		layout?: ResumeLayout;
+		sectionSpacing: "compact" | "normal" | "spacious";
+		showIcons: boolean;
+		dateFormat: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
+		accentStyle: "underline" | "background" | "border" | "none";
+	}
 
 export interface PartialResumeSettings {
-	pageSize?: "A4" | "Letter";
-	margins?: Partial<{
-		top: number;
-		right: number;
-		bottom: number;
-		left: number;
-	}>;
-	fontSize?: number;
-	fontScale?: number;
-	typography?: Partial<TypographyScale>;
-	lineHeight?: number;
-	fontFamily?: FontFamily;
-	colors?: Partial<ResumeColors>;
-	sectionSpacing?: "compact" | "normal" | "spacious";
-	showIcons?: boolean;
-	dateFormat?: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
-	accentStyle?: "underline" | "background" | "border" | "none";
-}
+		pageSize?: "A4" | "Letter";
+		margins?: Partial<{
+			top: number;
+			right: number;
+			bottom: number;
+			left: number;
+		}>;
+		fontSize?: number;
+		fontScale?: number;
+		typography?: Partial<TypographyScale>;
+		lineHeight?: number;
+		fontFamily?: FontFamily;
+		colors?: Partial<ResumeColors>;
+		layout?: ResumeLayout;
+		sectionSpacing?: "compact" | "normal" | "spacious";
+		showIcons?: boolean;
+		dateFormat?: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
+		accentStyle?: "underline" | "background" | "border" | "none";
+	}
 
 export type FontFamily =
 	| "Inter"
@@ -231,16 +241,18 @@ export type TemplateType =
 	| "executive"
 	| "tech";
 
+export type ResumeLayout = "single-column" | "two-column" | "sidebar";
+
 export interface TemplateConfig {
-	id: TemplateType;
-	name: string;
-	description: string;
-	thumbnail: string;
-	features: string[];
-	defaultColors: ResumeColors;
-	supportedSections: SectionType[];
-	layout: "single-column" | "two-column" | "sidebar";
-}
+		id: TemplateType;
+		name: string;
+		description: string;
+		thumbnail: string;
+		features: string[];
+		defaultColors: ResumeColors;
+		supportedSections: SectionType[];
+		layout: ResumeLayout;
+	}
 
 // ============================================
 // Export & Job Target Types
@@ -532,7 +544,7 @@ export interface UpdateResumeInput {
 	template?: TemplateType;
 	tags?: string[];
 	isArchived?: boolean;
-	metadata?: ResumeMetadata | null;
+	metadata?: PartialResumeMetadata | null;
 }
 
 export interface CreateSectionInput {

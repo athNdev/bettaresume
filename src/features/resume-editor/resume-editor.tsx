@@ -57,8 +57,11 @@ import type {
 	Project,
 	Publication,
 	Reference,
+	ResumeMetadata,
 	ResumeSection,
+	ResumeSettings,
 	ResumeWithSections,
+	SectionContent,
 	SectionType,
 	SkillCategory,
 	Volunteer,
@@ -246,29 +249,62 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	const handleTemplateSelect = (template: UniversityTemplate) => {
 		if (!activeResume?.metadata) return;
 
+		const metadata = activeResume.metadata as ResumeMetadata;
+
 		// Create new settings by merging current settings with template settings
 		const newSettings: PartialResumeSettings = {
-			...activeResume.metadata.settings,
+			...metadata.settings,
 			...template.settings,
 			// Ensure we preserve settings that might not be in the template
 			margins: {
-				...activeResume.metadata.settings.margins,
+				...metadata.settings.margins,
 				...template.settings.margins,
 			},
 			typography: {
-				...activeResume.metadata.settings.typography,
+				...metadata.settings.typography,
 				...template.settings.typography,
 			},
 			colors: {
-				...activeResume.metadata.settings.colors,
+				...metadata.settings.colors,
 				...template.settings.colors,
 			},
 		};
 
+		setDraftResume((prev) => {
+			if (!prev || !prev.metadata) return prev;
+			const baseSettings = prev.metadata.settings;
+			const mergedSettings: ResumeSettings = {
+				...baseSettings,
+				...newSettings,
+				margins: {
+					...baseSettings.margins,
+					...(newSettings.margins ?? {}),
+				},
+				typography: {
+					...baseSettings.typography,
+					...(newSettings.typography ?? {}),
+				},
+				colors: {
+					...baseSettings.colors,
+					...(newSettings.colors ?? {}),
+				},
+			};
+			return {
+				...prev,
+				domain: template.id,
+				metadata: {
+					...prev.metadata,
+					settings: mergedSettings,
+				},
+				updatedAt: new Date(),
+			};
+		});
+
 		updateResume(resumeId, {
+			domain: template.id,
 			metadata: {
-				...activeResume.metadata,
-				settings: newSettings as any,
+				...(activeResume.metadata as ResumeMetadata),
+				settings: newSettings,
 			},
 		});
 	};
@@ -343,7 +379,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			if (!activeResume || !activeResume.metadata) return;
 			try {
 				await updateResume(activeResume.id, {
-					metadata: { ...activeResume.metadata, personalInfo: info },
+					metadata: { ...(activeResume.metadata as ResumeMetadata), personalInfo: info },
 				});
 			} catch (err) {
 				console.error("Failed to update personal info:", err);
@@ -413,10 +449,56 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		async (settings: PartialResumeSettings) => {
 			if (!activeResume || !activeResume.metadata) return;
 			try {
+				setDraftResume((prev) => {
+					if (!prev || !prev.metadata) return prev;
+					const baseSettings = prev.metadata.settings;
+					const mergedSettings: ResumeSettings = {
+						...baseSettings,
+						...settings,
+						margins: {
+							...baseSettings.margins,
+							...(settings.margins ?? {}),
+						},
+						typography: {
+							...baseSettings.typography,
+							...(settings.typography ?? {}),
+						},
+						colors: {
+							...baseSettings.colors,
+							...(settings.colors ?? {}),
+						},
+					};
+					return {
+						...prev,
+						metadata: {
+							...prev.metadata,
+							settings: mergedSettings,
+						},
+						updatedAt: new Date(),
+					};
+				});
+
+				const mergedServerSettings: ResumeSettings = {
+					...(activeResume.metadata as ResumeMetadata).settings,
+					...settings,
+					margins: {
+						...(activeResume.metadata as ResumeMetadata).settings.margins,
+						...(settings.margins ?? {}),
+					},
+					typography: {
+						...(activeResume.metadata as ResumeMetadata).settings.typography,
+						...(settings.typography ?? {}),
+					},
+					colors: {
+						...(activeResume.metadata as ResumeMetadata).settings.colors,
+						...(settings.colors ?? {}),
+					},
+				};
+
 				await updateResume(activeResume.id, {
 					metadata: {
-						...activeResume.metadata,
-						settings: { ...activeResume.metadata.settings, ...settings },
+						...(activeResume.metadata as ResumeMetadata),
+						settings: mergedServerSettings,
 					},
 				});
 			} catch (err) {
@@ -463,6 +545,8 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	const renderSectionForm = () => {
 		if (!selectedSection || !activeResume) return null;
 
+		const content = selectedSection.content as SectionContent;
+
 		switch (selectedSection.type) {
 			case "personal-info":
 				// Personal info requires metadata
@@ -494,7 +578,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						onChange={handlePersonalInfoChange}
 						onLocalUpdate={handleDraftPersonalInfoUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -504,12 +588,12 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					<div className="space-y-4">
 						<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center border-b bg-background/95 px-4 py-2 backdrop-blur">
 							<h3 className="font-semibold">
-								{selectedSection.content.title ||
+								{content.title ||
 									SECTION_CONFIGS[selectedSection.type].defaultTitle}
 							</h3>
 						</div>
 						<RichTextEditor
-							content={selectedSection.content.html || ""}
+							content={content.html || ""}
 							key={selectedSection.id}
 							minHeight="200px"
 							onChange={handleSummaryChange}
@@ -521,14 +605,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "experience":
 				return (
 					<ExperienceForm
-						data={(selectedSection.content.data as Experience[]) || []}
+						data={(content.data as Experience[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Experience[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -536,14 +620,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "education":
 				return (
 					<EducationForm
-						data={(selectedSection.content.data as Education[]) || []}
+						data={(content.data as Education[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Education[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -551,14 +635,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "skills":
 				return (
 					<SkillsForm
-						data={(selectedSection.content.data as SkillCategory[]) || []}
+						data={(content.data as SkillCategory[]) || []}
 						key={selectedSection.id}
 						onChange={(data: SkillCategory[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -566,14 +650,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "projects":
 				return (
 					<ProjectsForm
-						data={(selectedSection.content.data as Project[]) || []}
+						data={(content.data as Project[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Project[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -581,14 +665,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "certifications":
 				return (
 					<CertificationsForm
-						data={(selectedSection.content.data as Certification[]) || []}
+						data={(content.data as Certification[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Certification[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -596,14 +680,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "awards":
 				return (
 					<AwardsForm
-						data={(selectedSection.content.data as Award[]) || []}
+						data={(content.data as Award[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Award[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -611,14 +695,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "languages":
 				return (
 					<LanguagesForm
-						data={(selectedSection.content.data as Language[]) || []}
+						data={(content.data as Language[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Language[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -626,14 +710,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "volunteer":
 				return (
 					<VolunteerForm
-						data={(selectedSection.content.data as Volunteer[]) || []}
+						data={(content.data as Volunteer[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Volunteer[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -641,14 +725,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "publications":
 				return (
 					<PublicationsForm
-						data={(selectedSection.content.data as Publication[]) || []}
+						data={(content.data as Publication[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Publication[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -656,14 +740,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			case "references":
 				return (
 					<ReferencesForm
-						data={(selectedSection.content.data as Reference[]) || []}
+						data={(content.data as Reference[]) || []}
 						key={selectedSection.id}
 						onChange={(data: Reference[]) =>
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
 						title={
-							selectedSection.content.title ||
+							content.title ||
 							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
 						}
 					/>
@@ -832,7 +916,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									<CollapsibleContent>
 										<div className="px-2 pb-2">
 											<UniversityTemplateSelector
-												currentTemplate={activeResume.template}
+												currentTemplate={draftResume?.domain ?? activeResume.domain ?? undefined}
 												onSelectTemplate={handleTemplateSelect}
 											/>
 										</div>
@@ -900,7 +984,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									onScaleChange={setPreviewScale}
 									onSettingsChange={handleSettingsChange}
 									scale={previewScale}
-									settings={activeResume.metadata.settings}
+									settings={
+										(draftResume?.metadata?.settings as ResumeSettings | undefined) ??
+										activeResume.metadata.settings
+									}
 								/>
 							)}
 

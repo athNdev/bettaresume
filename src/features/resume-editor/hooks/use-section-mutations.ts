@@ -45,7 +45,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 						s.id === id ? { ...s, ...data, updatedAt: new Date() } : s,
 					),
 					updatedAt: new Date(),
-				} as ResumeWithSections);
+				} as any);
 			}
 
 			return { previousResume };
@@ -78,7 +78,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 				const reorderedSections = sectionIds
 					.map((id, index) => {
 						const section = previousResume.sections.find((s) => s.id === id);
-						return section ? { ...section, order: index } : null;
+						return section ? { ...section, order: index } as ResumeSection : null;
 					})
 					.filter((s): s is ResumeSection => s !== null);
 
@@ -86,7 +86,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 					...previousResume,
 					sections: reorderedSections,
 					updatedAt: new Date(),
-				} as ResumeWithSections);
+				} as any);
 			}
 
 			return { previousResume };
@@ -112,7 +112,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 					...previousResume,
 					sections: previousResume.sections.filter((s) => s.id !== id),
 					updatedAt: new Date(),
-				} as ResumeWithSections);
+				} as any);
 			}
 
 			return { previousResume };

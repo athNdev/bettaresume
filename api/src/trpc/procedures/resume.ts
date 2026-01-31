@@ -1,3 +1,4 @@
+import type { SectionType, TemplateType, ResumeMetadata, PersonalInfo, ResumeSettings, FontFamily } from "@bettaresume/types";
 import {
 	createResumeInputSchema,
 	updateResumeInputSchema,
@@ -7,8 +8,11 @@ import { z } from "zod";
 import { resumes, sections } from "../../db/schema";
 import { protectedProcedure, router } from "../index";
 
-function normalizePersonalInfo(value: any) {
-	const info = value && typeof value === "object" ? value : {};
+function normalizePersonalInfo(value: unknown): PersonalInfo {
+	const info =
+		value && typeof value === "object"
+			? (value as Record<string, unknown>)
+			: {};
 	return {
 		fullName: typeof info.fullName === "string" ? info.fullName : "",
 		email: typeof info.email === "string" ? info.email : "",
@@ -24,11 +28,57 @@ function normalizePersonalInfo(value: any) {
 	};
 }
 
-function normalizeMetadata(value: any) {
-	if (!value || typeof value !== "object") return null;
+function normalizeSettings(value: unknown): ResumeSettings {
+	// This is a simplified normalization - in a real app you'd want more comprehensive defaults
+	const settings =
+		value && typeof value === "object"
+			? (value as Record<string, unknown>)
+			: {};
 	return {
-		...value,
-		personalInfo: normalizePersonalInfo((value as any).personalInfo),
+		pageSize: (typeof settings.pageSize === "string" && (settings.pageSize === "A4" || settings.pageSize === "Letter")) ? settings.pageSize : "A4",
+		margins: {
+			top: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).top === "number" ? (settings.margins as any).top : 20,
+			right: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).right === "number" ? (settings.margins as any).right : 20,
+			bottom: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).bottom === "number" ? (settings.margins as any).bottom : 20,
+			left: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).left === "number" ? (settings.margins as any).left : 20,
+		},
+		fontSize: typeof settings.fontSize === "number" ? settings.fontSize : 12,
+		fontScale: typeof settings.fontScale === "number" ? settings.fontScale : 1,
+		typography: {
+			name: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).name === "number" ? (settings.typography as any).name : 24,
+			title: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).title === "number" ? (settings.typography as any).title : 18,
+			sectionHeading: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).sectionHeading === "number" ? (settings.typography as any).sectionHeading : 14,
+			itemTitle: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).itemTitle === "number" ? (settings.typography as any).itemTitle : 12,
+			body: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).body === "number" ? (settings.typography as any).body : 10,
+			small: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).small === "number" ? (settings.typography as any).small : 8,
+		},
+		lineHeight: typeof settings.lineHeight === "number" ? settings.lineHeight : 1.4,
+		fontFamily: (typeof settings.fontFamily === "string" && ["Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Playfair Display", "Georgia", "Times New Roman", "Arial", "Calibri", "Garamond", "Helvetica", "Computer Modern"].includes(settings.fontFamily)) ? settings.fontFamily as FontFamily : "Inter",
+		colors: {
+			primary: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).primary === "string" ? (settings.colors as any).primary : "#000000",
+			secondary: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).secondary === "string" ? (settings.colors as any).secondary : "#666666",
+			text: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).text === "string" ? (settings.colors as any).text : "#000000",
+			heading: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).heading === "string" ? (settings.colors as any).heading : "#000000",
+			accent: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).accent === "string" ? (settings.colors as any).accent : "#007acc",
+			background: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).background === "string" ? (settings.colors as any).background : "#ffffff",
+			divider: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).divider === "string" ? (settings.colors as any).divider : "#cccccc",
+		},
+		sectionSpacing: (typeof settings.sectionSpacing === "string" && (settings.sectionSpacing === "compact" || settings.sectionSpacing === "normal" || settings.sectionSpacing === "spacious")) ? settings.sectionSpacing : "normal",
+		showIcons: typeof settings.showIcons === "boolean" ? settings.showIcons : true,
+		dateFormat: (typeof settings.dateFormat === "string" && (settings.dateFormat === "MM/YYYY" || settings.dateFormat === "MMM YYYY" || settings.dateFormat === "MMMM YYYY" || settings.dateFormat === "YYYY")) ? settings.dateFormat : "MM/YYYY",
+		accentStyle: (typeof settings.accentStyle === "string" && (settings.accentStyle === "underline" || settings.accentStyle === "background" || settings.accentStyle === "border" || settings.accentStyle === "none")) ? settings.accentStyle : "underline",
+	};
+}
+
+function normalizeMetadata(value: unknown): ResumeMetadata | null {
+	if (!value || typeof value !== "object") return null;
+	const obj = value as Record<string, unknown>;
+	return {
+		personalInfo: normalizePersonalInfo(obj.personalInfo),
+		settings: normalizeSettings(obj.settings),
+		exportHistory: Array.isArray(obj.exportHistory) ? obj.exportHistory as any[] : undefined,
+		jobTarget: obj.jobTarget && typeof obj.jobTarget === "object" ? obj.jobTarget as any : undefined,
+		atsScore: obj.atsScore && typeof obj.atsScore === "object" ? obj.atsScore as any : undefined,
 	};
 }
 
@@ -80,11 +130,16 @@ export const resumeRouter = router({
 				...resume,
 				tags: safeJsonParse<string[]>(resume.tags, []),
 				metadata: resume.metadata
-					? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+					? normalizeMetadata(
+							safeJsonParse<Record<string, unknown> | null>(
+								resume.metadata,
+								null,
+							),
+						)
 					: null,
 				sections: resume.sections.map((section) => ({
 					...section,
-					content: safeJsonParse<any>(section.content, {}),
+					content: safeJsonParse<Record<string, unknown>>(section.content, {}),
 				})),
 			}));
 		}),
@@ -112,11 +167,16 @@ export const resumeRouter = router({
 				...resume,
 				tags: safeJsonParse<string[]>(resume.tags, []),
 				metadata: resume.metadata
-					? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+					? normalizeMetadata(
+							safeJsonParse<Record<string, unknown> | null>(
+								resume.metadata,
+								null,
+							),
+						)
 					: null,
 				sections: resume.sections.map((section) => ({
 					...section,
-					content: safeJsonParse<any>(section.content, {}),
+					content: safeJsonParse<Record<string, unknown>>(section.content, {}),
 				})),
 			};
 		}),
@@ -167,6 +227,7 @@ export const resumeRouter = router({
 						background: "#ffffff",
 						divider: "#e2e8f0",
 					},
+					layout: "single-column" as const,
 					sectionSpacing: "normal" as const,
 					showIcons: true,
 					dateFormat: "MMM YYYY" as const,
@@ -202,11 +263,19 @@ export const resumeRouter = router({
 						...resume,
 						tags: safeJsonParse<string[]>(resume.tags, []),
 						metadata: resume.metadata
-							? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+							? normalizeMetadata(
+									safeJsonParse<Record<string, unknown> | null>(
+										resume.metadata,
+										null,
+									),
+								)
 							: null,
 						sections: resume.sections.map((section) => ({
 							...section,
-							content: safeJsonParse<any>(section.content, {}),
+							content: safeJsonParse<Record<string, unknown>>(
+								section.content,
+								{},
+							),
 						})),
 					};
 				});
@@ -275,11 +344,19 @@ export const resumeRouter = router({
 						...resume,
 						tags: safeJsonParse<string[]>(resume.tags, []),
 						metadata: resume.metadata
-							? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+							? normalizeMetadata(
+									safeJsonParse<Record<string, unknown> | null>(
+										resume.metadata,
+										null,
+									),
+								)
 							: null,
 						sections: resume.sections.map((section) => ({
 							...section,
-							content: safeJsonParse<any>(section.content, {}),
+							content: safeJsonParse<Record<string, unknown>>(
+								section.content,
+								{},
+							),
 						})),
 					};
 				});
@@ -374,11 +451,19 @@ export const resumeRouter = router({
 						...resume,
 						tags: safeJsonParse<string[]>(resume.tags, []),
 						metadata: resume.metadata
-							? normalizeMetadata(safeJsonParse<any>(resume.metadata, null))
+							? normalizeMetadata(
+									safeJsonParse<Record<string, unknown> | null>(
+										resume.metadata,
+										null,
+									),
+								)
 							: null,
 						sections: resume.sections.map((section) => ({
 							...section,
-							content: safeJsonParse<any>(section.content, {}),
+							content: safeJsonParse<Record<string, unknown>>(
+								section.content,
+								{},
+							),
 						})),
 					};
 				});
@@ -416,16 +501,26 @@ export const resumeRouter = router({
 		}),
 
 	seedDemo: protectedProcedure
-		.input(z.object({ force: z.boolean().optional().default(false) }).optional())
+		.input(
+			z.object({ force: z.boolean().optional().default(false) }).optional(),
+		)
 		.mutation(async ({ ctx, input }) => {
 			const force = input?.force ?? false;
-			console.log("[resume.seedDemo] called userId=", ctx.userId, "force=", force);
+			console.log(
+				"[resume.seedDemo] called userId=",
+				ctx.userId,
+				"force=",
+				force,
+			);
 			const existingResume = await ctx.db.query.resumes.findFirst({
 				where: eq(resumes.userId, ctx.userId),
 			});
 
 			if (!force && existingResume) {
-				console.log("[resume.seedDemo] skipped (already has resumes) userId=", ctx.userId);
+				console.log(
+					"[resume.seedDemo] skipped (already has resumes) userId=",
+					ctx.userId,
+				);
 				return { seeded: false };
 			}
 
@@ -463,10 +558,15 @@ export const resumeRouter = router({
 
 			const createResume = async (def: {
 				name: string;
-				template: string;
+				template: TemplateType;
 				tags: string[];
 				personalInfo: Record<string, unknown>;
-				sections: Array<{ type: string; order: number; visible: boolean; content: unknown }>;
+				sections: Array<{
+					type: SectionType;
+					order: number;
+					visible: boolean;
+					content: unknown;
+				}>;
 			}) => {
 				const resumeId = crypto.randomUUID();
 				await ctx.db.insert(resumes).values({
@@ -476,7 +576,7 @@ export const resumeRouter = router({
 					variationType: "base",
 					baseResumeId: null,
 					domain: null,
-					template: def.template as any,
+					template: def.template,
 					tags: JSON.stringify(def.tags),
 					isArchived: false,
 					metadata: JSON.stringify({
@@ -491,7 +591,7 @@ export const resumeRouter = router({
 					await ctx.db.insert(sections).values({
 						id: crypto.randomUUID(),
 						resumeId,
-						type: s.type as any,
+						type: s.type,
 						order: s.order,
 						visible: s.visible,
 						content: JSON.stringify(s.content),
@@ -513,7 +613,10 @@ export const resumeRouter = router({
 					current: idx === 0,
 					location: "Australia",
 					description: `Owned ${rolePrefix.toLowerCase()} deliverables across multiple stakeholders and systems.`,
-					highlights: mkHighlights(`Delivered ${rolePrefix.toLowerCase()} initiative at ${company}`, 8),
+					highlights: mkHighlights(
+						`Delivered ${rolePrefix.toLowerCase()} initiative at ${company}`,
+						8,
+					),
 					technologies: mkTech([
 						"TypeScript",
 						"PostgreSQL",
@@ -540,9 +643,24 @@ export const resumeRouter = router({
 					name: "Core",
 					order: 0,
 					skills: [
-						{ id: mkId("sk"), name: "TypeScript", level: "expert", yearsOfExperience: 8 },
-						{ id: mkId("sk"), name: "React", level: "advanced", yearsOfExperience: 6 },
-						{ id: mkId("sk"), name: "PostgreSQL", level: "expert", yearsOfExperience: 8 },
+						{
+							id: mkId("sk"),
+							name: "TypeScript",
+							level: "expert",
+							yearsOfExperience: 8,
+						},
+						{
+							id: mkId("sk"),
+							name: "React",
+							level: "advanced",
+							yearsOfExperience: 6,
+						},
+						{
+							id: mkId("sk"),
+							name: "PostgreSQL",
+							level: "expert",
+							yearsOfExperience: 8,
+						},
 					],
 				},
 				{
@@ -550,20 +668,35 @@ export const resumeRouter = router({
 					name: "Infra",
 					order: 1,
 					skills: [
-						{ id: mkId("sk"), name: "Docker", level: "advanced", yearsOfExperience: 5 },
-						{ id: mkId("sk"), name: "Kubernetes", level: "advanced", yearsOfExperience: 4 },
-						{ id: mkId("sk"), name: "CI/CD", level: "advanced", yearsOfExperience: 6 },
+						{
+							id: mkId("sk"),
+							name: "Docker",
+							level: "advanced",
+							yearsOfExperience: 5,
+						},
+						{
+							id: mkId("sk"),
+							name: "Kubernetes",
+							level: "advanced",
+							yearsOfExperience: 4,
+						},
+						{
+							id: mkId("sk"),
+							name: "CI/CD",
+							level: "advanced",
+							yearsOfExperience: 6,
+						},
 					],
 				},
 			];
 
-			const resumeDefs = [
+			const resumeDefs: Parameters<typeof createResume>[0][] = [
 				{
 					name: "Senior Software Engineer — Platform & Reliability",
 					template: "tech",
-					tags: ["backend", "platform", "sre"],
+					tags: ["engineering", "platform", "sre"],
 					personalInfo: {
-						fullName: "Avery Chen",
+						fullName: "Alex Chen",
 						email: "avery.chen@example.com",
 						phone: "+61 400 000 001",
 						location: "Melbourne, VIC",
@@ -581,8 +714,7 @@ export const resumeRouter = router({
 							visible: true,
 							content: {
 								title: "Summary",
-								html:
-									"<p>Senior backend engineer with deep distributed-systems experience. Led large migrations, improved reliability, and built high-throughput data pipelines.</p>",
+								html: "<p>Senior backend engineer with deep distributed-systems experience. Led large migrations, improved reliability, and built high-throughput data pipelines.</p>",
 							},
 						},
 						{
@@ -615,9 +747,9 @@ export const resumeRouter = router({
 					],
 				},
 				{
-					name: "Product Engineer — Full Stack",
+					name: "Product Engineer — Growth & Experimentation",
 					template: "modern",
-					tags: ["frontend", "fullstack", "product"],
+					tags: ["product", "growth", "experimentation"],
 					personalInfo: {
 						fullName: "Sam Rivera",
 						email: "sam.rivera@example.com",
@@ -637,8 +769,7 @@ export const resumeRouter = router({
 							visible: true,
 							content: {
 								title: "Profile",
-								html:
-									"<p>Full-stack engineer focused on UX, performance, and reliable delivery. Shipped features from discovery to launch with strong product sense.</p>",
+								html: "<p>Full-stack engineer focused on UX, performance, and reliable delivery. Shipped features from discovery to launch with strong product sense.</p>",
 							},
 						},
 						{
@@ -693,8 +824,7 @@ export const resumeRouter = router({
 							visible: true,
 							content: {
 								title: "Profile",
-								html:
-									"<p>Consultant delivering cost transformation, operating model design, and analytics-driven decision support across multiple industries.</p>",
+								html: "<p>Consultant delivering cost transformation, operating model design, and analytics-driven decision support across multiple industries.</p>",
 							},
 						},
 						{
@@ -741,4 +871,4 @@ export const resumeRouter = router({
 			);
 			return { seeded: true, resumeIds };
 		}),
-	});
+});

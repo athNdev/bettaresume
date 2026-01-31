@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
 	Certification,
 	Education,
@@ -57,8 +57,97 @@ const defaultPersonalInfo: PersonalInfo = {
 	email: "",
 };
 
+function resolveFontFamily(fontFamily: string) {
+	switch (fontFamily) {
+		case "Inter":
+			return "var(--font-inter)";
+		case "Roboto":
+			return "var(--font-roboto)";
+		case "Open Sans":
+			return "var(--font-open-sans)";
+		case "Lato":
+			return "var(--font-lato)";
+		case "Montserrat":
+			return "var(--font-montserrat)";
+		case "Playfair Display":
+			return "var(--font-playfair)";
+		case "Georgia":
+			return "Georgia, serif";
+		case "Times New Roman":
+			return '"Times New Roman", Times, serif';
+		case "Arial":
+			return "Arial, Helvetica, sans-serif";
+		case "Calibri":
+			return "Calibri, Arial, sans-serif";
+		case "Garamond":
+			return "Garamond, Georgia, serif";
+		case "Helvetica":
+			return "Helvetica, Arial, sans-serif";
+		case "Computer Modern":
+			return "serif";
+		default:
+			return fontFamily;
+	}
+}
+
+const PRIMARY_SECTION_TYPES = new Set([
+	"summary",
+	"experience",
+	"projects",
+	"education",
+]);
+const SECONDARY_SECTION_TYPES = new Set([
+	"skills",
+	"certifications",
+	"languages",
+	"awards",
+]);
+
+function sameStringArray(a: string[], b: string[]) {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i += 1) {
+		if (a[i] !== b[i]) return false;
+	}
+	return true;
+}
+
+function sameSinglePagination(a: string[][], b: string[][]) {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i += 1) {
+		const ap = a[i];
+		const bp = b[i];
+		if (!ap || !bp) return false;
+		if (!sameStringArray(ap, bp)) return false;
+	}
+	return true;
+}
+
+function sameColumnPagination(
+	a: Array<{ main: string[]; side: string[] }>,
+	b: Array<{ main: string[]; side: string[] }>,
+) {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i += 1) {
+		const ap = a[i];
+		const bp = b[i];
+		if (!ap || !bp) return false;
+		if (!sameStringArray(ap.main, bp.main)) return false;
+		if (!sameStringArray(ap.side, bp.side)) return false;
+	}
+	return true;
+}
+
 export function Preview({ resume, scale = 1, className }: PreviewProps) {
-	const { metadata, sections, template } = resume;
+	const { metadata, sections } = resume;
+	const [paginatedSingle, setPaginatedSingle] = useState<string[][]>([]);
+	const [paginatedColumns, setPaginatedColumns] = useState<
+		Array<{ main: string[]; side: string[] }>
+	>([]);
+
+	const headerMeasureRef = useRef<HTMLDivElement | null>(null);
+	const singleMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+	const mainMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
+	const sideMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
 	// Deep merge settings with defaults to ensure all properties exist
 	const settings: ResumeSettings = {
 		...defaultSettings,
@@ -89,16 +178,20 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 	// Page dimensions in pixels (at 96 DPI)
 	const pageWidth = settings.pageSize === "A4" ? 794 : 816;
 	const pageHeight = settings.pageSize === "A4" ? 1123 : 1056;
+	const pageInnerHeight =
+		pageHeight - (settings.margins.top + settings.margins.bottom);
 
-	const containerStyle: React.CSSProperties = {
+	const basePageStyle: React.CSSProperties = {
 		width: pageWidth * scale,
-		minHeight: pageHeight * scale,
+		height: pageHeight * scale,
 		backgroundColor: colors.background,
 		color: colors.text,
-		fontFamily: settings.fontFamily,
+		fontFamily: resolveFontFamily(settings.fontFamily),
 		fontSize: typography.body * scale,
 		lineHeight: settings.lineHeight,
 		padding: `${settings.margins.top * scale}px ${settings.margins.right * scale}px ${settings.margins.bottom * scale}px ${settings.margins.left * scale}px`,
+		boxSizing: "border-box",
+		overflow: "hidden",
 		boxShadow:
 			"0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
 	};
@@ -187,23 +280,27 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 		</h2>
 	);
 
+	const stripHtml = (input: string) => input.replace(/<[^>]*>/g, "");
+
 	const renderSummary = (section: ResumeSection) => {
 		const html =
 			section.content.html ||
 			(section.content.data as { summary?: string })?.summary ||
 			"";
+		const summaryText = stripHtml(html);
 		return (
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>
 					{section.content.title || "Professional Summary"}
 				</SectionTitle>
-				<div
-					dangerouslySetInnerHTML={{ __html: html }}
+				<p
 					style={{
 						fontSize: typography.body * scale,
 						lineHeight: settings.lineHeight * 1.2,
 					}}
-				/>
+				>
+					{summaryText}
+				</p>
 			</div>
 		);
 	};
@@ -267,7 +364,7 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 							<ul style={{ paddingLeft: 16 * scale, marginTop: 4 * scale }}>
 								{exp.highlights.map((h, i) => (
 									<li
-										key={i}
+										key={`${exp.id}-${h}-${i}`}
 										style={{
 											fontSize: typography.body * scale,
 											marginBottom: 2 * scale,
@@ -425,7 +522,7 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 							>
 								{proj.technologies.map((tech, i) => (
 									<span
-										key={i}
+										key={`${proj.id}-${tech}-${i}`}
 										style={{
 											fontSize: typography.small * scale,
 											backgroundColor: `${colors.accent}20`,
@@ -541,12 +638,299 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 		}
 	};
 
+	const layout = settings.layout || "single-column";
+	const isTwoColumn = layout === "two-column";
+	const isSidebar = layout === "sidebar";
+
+	const mainSections = useMemo(
+		() =>
+			visibleSections.filter(
+				(s) =>
+					PRIMARY_SECTION_TYPES.has(s.type) ||
+					(!SECONDARY_SECTION_TYPES.has(s.type) && !isTwoColumn),
+			),
+		[isTwoColumn, visibleSections],
+	);
+	const sideSections = useMemo(
+		() => visibleSections.filter((s) => SECONDARY_SECTION_TYPES.has(s.type)),
+		[visibleSections],
+	);
+
+	useLayoutEffect(() => {
+		const headerHeight = headerMeasureRef.current?.offsetHeight ?? 0;
+		const firstPageAvailable = pageInnerHeight * scale - headerHeight;
+		const laterPageAvailable = pageInnerHeight * scale;
+
+		if (layout === "single-column") {
+			const pages: string[][] = [];
+			let remaining = Math.max(0, firstPageAvailable);
+			let current: string[] = [];
+
+			for (const section of visibleSections) {
+				const h = singleMeasureRefs.current[section.id]?.offsetHeight ?? 0;
+				if (current.length === 0) {
+					remaining =
+						pages.length === 0
+							? Math.max(0, firstPageAvailable)
+							: laterPageAvailable;
+				}
+
+				if (h <= remaining || current.length === 0) {
+					current.push(section.id);
+					remaining -= h;
+					continue;
+				}
+
+				pages.push(current);
+				current = [section.id];
+				remaining = laterPageAvailable - h;
+			}
+
+			if (current.length > 0) pages.push(current);
+			setPaginatedSingle((prev) =>
+				sameSinglePagination(prev, pages) ? prev : pages,
+			);
+			setPaginatedColumns((prev) => (prev.length === 0 ? prev : []));
+			return;
+		}
+
+		const pages: Array<{ main: string[]; side: string[] }> = [];
+		let mainIndex = 0;
+		let sideIndex = 0;
+
+		while (mainIndex < mainSections.length || sideIndex < sideSections.length) {
+			const isFirstPage = pages.length === 0;
+			let remainingMain = Math.max(
+				0,
+				isFirstPage ? firstPageAvailable : laterPageAvailable,
+			);
+			let remainingSide = Math.max(
+				0,
+				isFirstPage ? firstPageAvailable : laterPageAvailable,
+			);
+			const page = { main: [] as string[], side: [] as string[] };
+
+			while (mainIndex < mainSections.length) {
+				const s = mainSections[mainIndex];
+				if (!s) break;
+				const h = mainMeasureRefs.current[s.id]?.offsetHeight ?? 0;
+				if (h <= remainingMain || page.main.length === 0) {
+					page.main.push(s.id);
+					remainingMain -= h;
+					mainIndex += 1;
+					continue;
+				}
+				break;
+			}
+
+			while (sideIndex < sideSections.length) {
+				const s = sideSections[sideIndex];
+				if (!s) break;
+				const h = sideMeasureRefs.current[s.id]?.offsetHeight ?? 0;
+				if (h <= remainingSide || page.side.length === 0) {
+					page.side.push(s.id);
+					remainingSide -= h;
+					sideIndex += 1;
+					continue;
+				}
+				break;
+			}
+
+			pages.push(page);
+		}
+
+		setPaginatedColumns((prev) =>
+			sameColumnPagination(prev, pages) ? prev : pages,
+		);
+		setPaginatedSingle((prev) => (prev.length === 0 ? prev : []));
+	}, [
+		layout,
+		mainSections,
+		pageInnerHeight,
+		scale,
+		sideSections,
+		visibleSections,
+	]);
+
+	const sectionsById = useMemo(() => {
+		const map = new Map<string, ResumeSection>();
+		for (const s of visibleSections) map.set(s.id, s);
+		return map;
+	}, [visibleSections]);
+
+	const renderPage = (
+		content: React.ReactNode,
+		key: string,
+		includeHeader: boolean,
+	) => (
+		<div key={key} style={{ marginBottom: 16 * scale }}>
+			<div style={basePageStyle}>
+				{includeHeader && renderPersonalInfo()}
+				{content}
+			</div>
+		</div>
+	);
+
+	const renderSingleColumnPages = () => {
+		const pages =
+			paginatedSingle.length > 0
+				? paginatedSingle
+				: [visibleSections.map((s) => s.id)];
+		return pages.map((ids, i) =>
+			renderPage(
+				<>
+					{ids.map((id) => {
+						const section = sectionsById.get(id);
+						if (!section) return null;
+						return <div key={id}>{renderSection(section)}</div>;
+					})}
+				</>,
+				`page-${i}`,
+				i === 0,
+			),
+		);
+	};
+
+	const renderColumnPages = () => {
+		const pages =
+			paginatedColumns.length > 0
+				? paginatedColumns
+				: [
+						{
+							main: mainSections.map((s) => s.id),
+							side: sideSections.map((s) => s.id),
+						},
+					];
+		const sideWidth = isTwoColumn ? 220 * scale : 240 * scale;
+		const gap = 20 * scale;
+		const mainStyle: React.CSSProperties = isTwoColumn
+			? { flex: 1 }
+			: { flex: 1 };
+		const sideStyle: React.CSSProperties = isTwoColumn
+			? { width: sideWidth }
+			: { width: sideWidth };
+
+		return pages.map((p, i) =>
+			renderPage(
+				<div style={{ display: "flex", gap }}>
+					{isSidebar && (
+						<div style={sideStyle}>
+							{p.side.map((id) => {
+								const section = sectionsById.get(id);
+								if (!section) return null;
+								return <div key={id}>{renderSection(section)}</div>;
+							})}
+						</div>
+					)}
+					<div style={mainStyle}>
+						{p.main.map((id) => {
+							const section = sectionsById.get(id);
+							if (!section) return null;
+							return <div key={id}>{renderSection(section)}</div>;
+						})}
+					</div>
+					{isTwoColumn && (
+						<div style={sideStyle}>
+							{p.side.map((id) => {
+								const section = sectionsById.get(id);
+								if (!section) return null;
+								return <div key={id}>{renderSection(section)}</div>;
+							})}
+						</div>
+					)}
+				</div>,
+				`page-${i}`,
+				i === 0,
+			),
+		);
+	};
+
 	return (
-		<div className={cn("bg-white", className)} style={containerStyle}>
-			{renderPersonalInfo()}
-			{visibleSections.map((section) => (
-				<div key={section.id}>{renderSection(section)}</div>
-			))}
+		<div
+			className={cn("bg-white", className)}
+			style={{ width: pageWidth * scale }}
+		>
+			{layout === "single-column" && renderSingleColumnPages()}
+			{(isTwoColumn || isSidebar) && renderColumnPages()}
+			<div
+				aria-hidden="true"
+				style={{
+					position: "absolute",
+					left: -100000,
+					top: 0,
+					visibility: "hidden",
+					width: pageWidth * scale,
+				}}
+			>
+				<div
+					style={{
+						...basePageStyle,
+						height: "auto",
+						overflow: "visible",
+						boxShadow: "none",
+					}}
+				>
+					<div ref={headerMeasureRef}>{renderPersonalInfo()}</div>
+					{layout === "single-column" && (
+						<>
+							{visibleSections.map((section) => (
+								<div
+									key={section.id}
+									ref={(el) => {
+										singleMeasureRefs.current[section.id] = el;
+									}}
+								>
+									{renderSection(section)}
+								</div>
+							))}
+						</>
+					)}
+					{(isTwoColumn || isSidebar) && (
+						<div style={{ display: "flex", gap: 20 * scale }}>
+							{isSidebar && (
+								<div style={{ width: 240 * scale }}>
+									{sideSections.map((section) => (
+										<div
+											key={section.id}
+											ref={(el) => {
+												sideMeasureRefs.current[section.id] = el;
+											}}
+										>
+											{renderSection(section)}
+										</div>
+									))}
+								</div>
+							)}
+							<div style={{ flex: 1 }}>
+								{mainSections.map((section) => (
+									<div
+										key={section.id}
+										ref={(el) => {
+											mainMeasureRefs.current[section.id] = el;
+										}}
+									>
+										{renderSection(section)}
+									</div>
+								))}
+							</div>
+							{isTwoColumn && (
+								<div style={{ width: 220 * scale }}>
+									{sideSections.map((section) => (
+										<div
+											key={section.id}
+											ref={(el) => {
+												sideMeasureRefs.current[section.id] = el;
+											}}
+										>
+											{renderSection(section)}
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+					)}
+				</div>
+			</div>
 		</div>
 	);
 }

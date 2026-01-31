@@ -31,6 +31,7 @@ import {
 import type {
 	FontFamily,
 	PartialResumeSettings,
+	ResumeLayout,
 	ResumeSettings,
 	TypographyScale,
 } from "@/features/resume-editor/types";
@@ -258,6 +259,7 @@ export function FormattingToolbar({
 							strokeWidth="2"
 							viewBox="0 0 24 24"
 						>
+							<title>Line height</title>
 							<line x1="3" x2="21" y1="6" y2="6" />
 							<line x1="3" x2="21" y1="12" y2="12" />
 							<line x1="3" x2="21" y1="18" y2="18" />
@@ -321,6 +323,7 @@ export function FormattingToolbar({
 											})
 										}
 										style={{ backgroundColor: color }}
+										type="button"
 									/>
 								))}
 							</div>
@@ -344,6 +347,7 @@ export function FormattingToolbar({
 											})
 										}
 										style={{ backgroundColor: color }}
+										type="button"
 									/>
 								))}
 							</div>
@@ -367,6 +371,7 @@ export function FormattingToolbar({
 											})
 										}
 										style={{ backgroundColor: color }}
+										type="button"
 									/>
 								))}
 							</div>
@@ -425,6 +430,25 @@ export function FormattingToolbar({
 								<SelectContent>
 									<SelectItem value="A4">A4</SelectItem>
 									<SelectItem value="Letter">Letter</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div>
+							<Label className="text-xs">Layout</Label>
+							<Select
+								onValueChange={(v) =>
+									onSettingsChange({ layout: v as ResumeLayout })
+								}
+								value={settings.layout || "single-column"}
+							>
+								<SelectTrigger className="mt-1 h-8">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="single-column">Single column</SelectItem>
+									<SelectItem value="two-column">Two column</SelectItem>
+									<SelectItem value="sidebar">Sidebar</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

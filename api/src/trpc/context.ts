@@ -1,5 +1,16 @@
 import { createClerkClient } from "@clerk/backend";
 import { createDb } from "../db";
+import type { D1Database } from "@cloudflare/workers-types";
+
+interface Env {
+	CLERK_PUBLISHABLE_KEY: string;
+	CLERK_SECRET_KEY: string;
+	CLOUDFLARE_ACCOUNT_ID: string;
+	CLOUDFLARE_DATABASE_ID: string;
+	CLOUDFLARE_D1_TOKEN: string;
+	LOCAL_DB_PATH: string;
+	bettaresume_d1: D1Database;
+}
 
 interface CreateContextOptions {
 	request: Request;

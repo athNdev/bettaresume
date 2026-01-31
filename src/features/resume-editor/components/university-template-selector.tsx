@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -29,6 +29,10 @@ export function UniversityTemplateSelector({
 	const [selectedId, setSelectedId] = useState(currentTemplate);
 	const templatesByCategory = getTemplatesByCategory();
 
+	useEffect(() => {
+		setSelectedId(currentTemplate);
+	}, [currentTemplate]);
+
 	const handleSelect = (template: UniversityTemplate) => {
 		setSelectedId(template.id);
 		onSelectTemplate(template);
@@ -42,7 +46,7 @@ export function UniversityTemplateSelector({
 				</p>
 			</div>
 
-			<ScrollArea className="h-[400px]">
+			<ScrollArea className="h-100">
 				<div className="space-y-6 px-2">
 					{/* Ivy League Section */}
 					{templatesByCategory["ivy-league"].length > 0 && (

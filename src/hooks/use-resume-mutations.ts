@@ -1,6 +1,7 @@
 ﻿import type {
 	CreateResumeInput,
 	Resume,
+	ResumeWithSections,
 	UpdateResumeInput,
 } from "@bettaresume/types";
 import { api } from "@/lib/trpc/react";
@@ -31,9 +32,9 @@ export function useResumeMutations() {
 			if (previousResume) {
 				utils.resume.getById.setData({ id }, {
 					...previousResume,
-					...(data as Partial<Resume>),
+					...data,
 					updatedAt: new Date(),
-				} as Resume);
+				} as any);
 			}
 
 			return { previousResume };
@@ -98,7 +99,7 @@ export function useResumeMutations() {
 									updatedAt: new Date(),
 								} as Resume)
 							: r,
-					),
+					) as any,
 				);
 			}
 

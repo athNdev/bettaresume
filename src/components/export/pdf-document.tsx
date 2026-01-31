@@ -102,7 +102,7 @@ interface PDFDocumentProps {
 }
 
 export function PDFDocument({ resume }: PDFDocumentProps) {
-	const { metadata, sections, template } = resume;
+	const { metadata, sections } = resume;
 	if (!metadata) {
 		return null;
 	}
@@ -327,7 +327,7 @@ export function PDFDocument({ resume }: PDFDocumentProps) {
 						{exp.highlights && exp.highlights.length > 0 && (
 							<View style={styles.bulletList}>
 								{exp.highlights.map((h, i) => (
-									<Text key={i} style={styles.bulletItem}>
+									<Text key={`${exp.id}-${h}-${i}`} style={styles.bulletItem}>
 										• {h}
 									</Text>
 								))}
@@ -363,7 +363,7 @@ export function PDFDocument({ resume }: PDFDocumentProps) {
 						{edu.achievements && edu.achievements.length > 0 && (
 							<View style={styles.bulletList}>
 								{edu.achievements.map((a, i) => (
-									<Text key={i} style={styles.bulletItem}>
+									<Text key={`${edu.id}-${a}-${i}`} style={styles.bulletItem}>
 										• {a}
 									</Text>
 								))}
@@ -419,7 +419,7 @@ export function PDFDocument({ resume }: PDFDocumentProps) {
 						{proj.technologies && proj.technologies.length > 0 && (
 							<View style={{ ...styles.skillTags, marginTop: 4 }}>
 								{proj.technologies.map((tech, i) => (
-									<Text key={i} style={styles.skillTag}>
+									<Text key={`${proj.id}-${tech}-${i}`} style={styles.skillTag}>
 										{tech}
 									</Text>
 								))}
@@ -499,10 +499,13 @@ export function PDFDocument({ resume }: PDFDocumentProps) {
 			<Page
 				size={settings.pageSize === "Letter" ? "LETTER" : "A4"}
 				style={styles.page}
+				wrap
 			>
 				{renderPersonalInfo()}
 				{visibleSections.map((section) => (
-					<View key={section.id}>{renderSection(section)}</View>
+					<View key={section.id} wrap>
+						{renderSection(section)}
+					</View>
 				))}
 			</Page>
 		</Document>

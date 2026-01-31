@@ -276,12 +276,28 @@ export const resumeSettingsSchema = z.object({
 		"Georgia",
 		"Times New Roman",
 		"Arial",
+		"Calibri",
+		"Garamond",
+		"Helvetica",
+		"Computer Modern",
 	]),
 	colors: resumeColorsSchema,
+	layout: z.enum(["single-column", "two-column", "sidebar"]).optional(),
 	sectionSpacing: z.enum(["compact", "normal", "spacious"]),
 	showIcons: z.boolean(),
 	dateFormat: z.enum(["MM/YYYY", "MMM YYYY", "MMMM YYYY", "YYYY"]),
 	accentStyle: z.enum(["underline", "background", "border", "none"]),
+});
+
+export const partialResumeSettingsSchema = resumeSettingsSchema.partial().extend({
+	margins: z.object({
+		top: z.number(),
+		right: z.number(),
+		bottom: z.number(),
+		left: z.number(),
+	}).partial().optional(),
+	typography: typographyScaleSchema.partial().optional(),
+	colors: resumeColorsSchema.partial().optional(),
 });
 
 // ============================================
@@ -333,6 +349,14 @@ export const resumeMetadataSchema = z.object({
 	atsScore: atsScoreSchema.optional(),
 });
 
+export const partialResumeMetadataSchema = z.object({
+	personalInfo: personalInfoSchema.partial().optional(),
+	settings: partialResumeSettingsSchema.optional(),
+	exportHistory: z.array(exportRecordSchema).optional(),
+	jobTarget: jobTargetSchema.optional(),
+	atsScore: atsScoreSchema.optional(),
+});
+
 // ============================================
 // API Input Schemas
 // ============================================
@@ -356,7 +380,7 @@ export const updateResumeInputSchema = z.object({
 	template: templateTypeSchema.optional(),
 	tags: z.array(z.string()).optional(),
 	isArchived: z.boolean().optional(),
-	metadata: resumeMetadataSchema.nullable().optional(),
+	metadata: partialResumeMetadataSchema.nullable().optional(),
 });
 
 export const createSectionInputSchema = z.object({

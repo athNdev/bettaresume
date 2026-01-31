@@ -32,6 +32,7 @@ const createDefaultSettings = (template: TemplateType): ResumeSettings => ({
 	lineHeight: 1.5,
 	fontFamily: "Inter",
 	colors: TEMPLATE_CONFIGS[template].defaultColors,
+	layout: TEMPLATE_CONFIGS[template].layout,
 	sectionSpacing: "normal",
 	showIcons: true,
 	dateFormat: "MMM YYYY",
@@ -967,6 +968,7 @@ export const useResumeStore = create<ResumeStore>()((set, get) => ({
 					settings: {
 						...currentSettings,
 						colors: TEMPLATE_CONFIGS[template].defaultColors,
+						layout: currentSettings.layout ?? TEMPLATE_CONFIGS[template].layout,
 					},
 				};
 				updatedResume = {
@@ -1191,9 +1193,9 @@ export const useResumeStore = create<ResumeStore>()((set, get) => ({
 					})),
 				}));
 				set((state) => ({ resumes: [...state.resumes, ...importedResumes] }));
-				importedResumes.forEach((resume: Resume) =>
-					syncManager.queueSave(resume),
-				);
+				importedResumes.forEach((resume: Resume) => {
+					syncManager.queueSave(resume);
+				});
 			}
 		} catch (error) {
 			console.error("Failed to import all resumes:", error);
