@@ -1,3 +1,3 @@
-'use client';
+"use client";
 
-export { TRPCReactProvider } from '@/trpc/react';
+export { TRPCReactProvider } from "@/lib/trpc/react";

@@ -2,12 +2,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface ActiveResumeState {
-  /** Currently selected resume ID */
-  activeResumeId: string | null;
-  /** Set the active resume ID */
-  setActiveResumeId: (id: string | null) => void;
-  /** Clear the active resume (convenience method) */
-  clearActiveResume: () => void;
+	/** Currently selected resume ID */
+	activeResumeId: string | null;
+	/** Set the active resume ID */
+	setActiveResumeId: (id: string | null) => void;
+	/** Clear the active resume (convenience method) */
+	clearActiveResume: () => void;
 }
 
 /**
@@ -15,16 +15,16 @@ interface ActiveResumeState {
  * This is UI-only state - the actual resume data comes from React Query.
  */
 export const useActiveResumeStore = create<ActiveResumeState>()(
-  persist(
-    (set) => ({
-      activeResumeId: null,
-      setActiveResumeId: (id) => set({ activeResumeId: id }),
-      clearActiveResume: () => set({ activeResumeId: null }),
-    }),
-    {
-      name: "bettaresume-active-resume",
-    }
-  )
+	persist(
+		(set) => ({
+			activeResumeId: null,
+			setActiveResumeId: (id) => set({ activeResumeId: id }),
+			clearActiveResume: () => set({ activeResumeId: null }),
+		}),
+		{
+			name: "bettaresume-active-resume",
+		},
+	),
 );
 
 /**
@@ -32,7 +32,9 @@ export const useActiveResumeStore = create<ActiveResumeState>()(
  * Returns the ID and setter function.
  */
 export function useActiveResumeId() {
-  const activeResumeId = useActiveResumeStore((state) => state.activeResumeId);
-  const setActiveResumeId = useActiveResumeStore((state) => state.setActiveResumeId);
-  return [activeResumeId, setActiveResumeId] as const;
+	const activeResumeId = useActiveResumeStore((state) => state.activeResumeId);
+	const setActiveResumeId = useActiveResumeStore(
+		(state) => state.setActiveResumeId,
+	);
+	return [activeResumeId, setActiveResumeId] as const;
 }
