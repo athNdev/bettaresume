@@ -11,9 +11,9 @@ VALUES (
     'user-1',
     'demo@bettaresume.com',
     'Demo User',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- Create a main resume (Harvard Template)
@@ -37,8 +37,8 @@ VALUES (
     'harvard',
     '["ivy-league", "consulting"]',
     0,
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
     '{"settings":{"fontFamily":"Times New Roman","fontSize":11,"lineHeight":1.15,"margins":{"top":36,"right":36,"bottom":36,"left":36},"sectionSpacing":"compact","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#1e293b","heading":"#0f172a","background":"#ffffff","accent":"#334155","divider":"#e2e8f0"}}}'
 );
 
@@ -51,8 +51,8 @@ VALUES (
     0,
     1,
     '{"title":"Contact Information","data":{"fullName":"James Smith","email":"james.smith@harvard.edu","phone":"(617) 555-0123","location":"Cambridge, MA","linkedin":"linkedin.com/in/jamessmith","website":"jamessmith.com"}}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 2. Education Section (multiple entries)
@@ -64,8 +64,8 @@ VALUES (
     1,
     1,
     '{"title":"Education","data":[{"id":"edu-1","institution":"Harvard University","degree":"Bachelor of Science in Computer Science","startDate":"2020-09","endDate":"2024-05","location":"Cambridge, MA","gpa":"3.9/4.0","achievements":["Dean''s List (All Semesters)","Teaching Assistant for CS50"]},{"id":"edu-2","institution":"Phillips Exeter Academy","degree":"High School Diploma","startDate":"2016-09","endDate":"2020-05","location":"Exeter, NH","gpa":"4.0/4.0","achievements":["Valedictorian","National Merit Scholar"]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 3. Experience Section (multiple entries)
@@ -77,8 +77,8 @@ VALUES (
     2,
     1,
     '{"title":"Professional Experience","data":[{"id":"exp-1","company":"Google","position":"Software Engineering Intern","location":"Mountain View, CA","startDate":"2023-06","endDate":"2023-08","current":false,"description":"Worked on the Cloud team improving infrastructure scalability.","highlights":["Optimized database queries reducing latency by 40%","Implemented a new caching service using Redis","Collaborated with senior engineers to design new API endpoints"]},{"id":"exp-2","company":"StartUp Inc","position":"Full Stack Developer","location":"Boston, MA","startDate":"2022-06","endDate":"2022-08","current":false,"description":"Early stage startup focused on ed-tech.","highlights":["Built the MVP frontend using React and TypeScript","Integrated Stripe payment processing","Managed deployment pipeline using GitHub Actions"]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 4. Skills Section (Categorized)
@@ -90,8 +90,8 @@ VALUES (
     3,
     1,
     '{"title":"Skills","data":[{"id":"skill-cat-1","name":"Programming","skills":[{"id":"s1","name":"TypeScript","level":"expert"},{"id":"s2","name":"Python","level":"advanced"},{"id":"s3","name":"Rust","level":"intermediate"}]},{"id":"skill-cat-2","name":"Technologies","skills":[{"id":"s4","name":"React","level":"expert"},{"id":"s5","name":"Next.js","level":"advanced"},{"id":"s6","name":"PostgreSQL","level":"advanced"},{"id":"s7","name":"Docker","level":"intermediate"}]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 5. Projects Section
@@ -103,8 +103,8 @@ VALUES (
     4,
     1,
     '{"title":"Projects","data":[{"id":"proj-1","name":"BettaResume","description":"An open-source AI-powered resume builder.","url":"github.com/bettaresume","technologies":["Next.js","tRPC","TailwindCSS"],"highlights":["Developed drag-and-drop interface for resume sections","Implemented real-time PDF preview generation","Integrated AI suggestions for bullet points"]},{"id":"proj-2","name":"Algorithmic Trading Bot","description":"Automated cryptocurrency trading bot.","technologies":["Python","Pandas","Binance API"],"highlights":["Achieved 15% monthly ROI in backtesting","Deployed on AWS Lambda for 24/7 operation"]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 6. Awards Section
@@ -116,8 +116,8 @@ VALUES (
     5,
     1,
     '{"title":"Honors & Awards","data":[{"id":"award-1","title":"HackMIT Winner","issuer":"MIT","date":"2023-09","description":"First place out of 1000+ participants for best use of AI."},{"id":"award-2","title":"Research Grant","issuer":"National Science Foundation","date":"2022-05","description":"$5000 grant for undergraduate research in distributed systems."}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 7. Certifications
@@ -129,8 +129,8 @@ VALUES (
     6,
     1,
     '{"title":"Certifications","data":[{"id":"cert-1","name":"AWS Certified Solutions Architect","issuer":"Amazon Web Services","date":"2023-01","expirationDate":"2026-01"}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 8. Languages
@@ -142,8 +142,8 @@ VALUES (
     7,
     1,
     '{"title":"Languages","data":[{"id":"lang-1","name":"English","proficiency":"Native"},{"id":"lang-2","name":"Spanish","proficiency":"Professional Working Proficiency"}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 9. Publications
@@ -155,8 +155,8 @@ VALUES (
     8,
     1,
     '{"title":"Publications","data":[{"id":"pub-1","title":"Optimizing Neural Networks for Edge Devices","publisher":"IEEE Conference on Computer Vision","date":"2023-12","authors":["J. Smith","A. Johnson"],"link":"https://ieee.org/paper/123"}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 10. Volunteer
@@ -168,8 +168,8 @@ VALUES (
     9,
     1,
     '{"title":"Volunteer Experience","data":[{"id":"vol-1","organization":"Code for Good","role":"Mentor","startDate":"2021-01","current":true,"description":"Teaching coding skills to underrepresented high school students.","highlights":["Mentored 20+ students directly","Developed curriculum for Intro to Python course"]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 -- 11. References
@@ -181,8 +181,8 @@ VALUES (
     10,
     1,
     '{"title":"References","data":[{"id":"ref-1","name":"Dr. Alan Turing","position":"Professor","company":"Harvard University","email":"aturing@harvard.edu","phone":"(617) 555-9876","relationship":"Research Advisor"}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Resume" (
@@ -205,8 +205,8 @@ VALUES (
     'tech',
     '["backend","platform","sre"]',
     0,
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
     '{"personalInfo":{"fullName":"Avery Chen","email":"avery.chen@example.com","phone":"+61 400 000 001","location":"Melbourne, VIC","linkedin":"linkedin.com/in/averychen","github":"github.com/averychen","website":"averychen.dev","portfolio":"","professionalTitle":"Senior Software Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"}}}'
 );
 
@@ -218,8 +218,8 @@ VALUES (
     0,
     1,
     '{"title":"Contact","data":{"fullName":"Avery Chen","email":"avery.chen@example.com","phone":"+61 400 000 001","location":"Melbourne, VIC","linkedin":"linkedin.com/in/averychen","github":"github.com/averychen","website":"averychen.dev"}}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -230,8 +230,8 @@ VALUES (
     1,
     1,
     '{"title":"Summary","html":"<p>Senior backend engineer with distributed-systems experience. Led large migrations, improved reliability, and built high-throughput pipelines with strong observability.</p>"}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -242,8 +242,8 @@ VALUES (
     2,
     1,
     '{"title":"Experience","data":[{"id":"exp2-1","company":"Nimbus Cloud","position":"Staff Platform Engineer","location":"Remote","startDate":"2022-02","endDate":"","current":true,"description":"Owned reliability initiatives and service platform evolution.","highlights":["Improved availability by introducing SLOs and error budgets","Reduced incident volume by building runbooks and automated alert tuning","Implemented idempotent event ingestion and replay mechanisms","Cut p95 latency via caching and query optimization","Standardized service templates and golden paths to speed delivery","Led postmortems and cross-team remediation plans"],"technologies":["TypeScript","Go","PostgreSQL","Redis","Kubernetes"]},{"id":"exp2-2","company":"Finly","position":"Senior Software Engineer","location":"Sydney, NSW","startDate":"2019-01","endDate":"2022-01","current":false,"description":"Built payment workflows and ledger services with auditability.","highlights":["Migrated core ledger queries and improved performance significantly","Introduced outbox pattern for reliable event publishing","Built reconciliation dashboards with anomaly detection","Created data access layer conventions and testing patterns","Improved deployment reliability by adding health checks and rollbacks","Partnered with risk teams on compliance requirements"],"technologies":["Node.js","TypeScript","PostgreSQL","Redis"]},{"id":"exp2-3","company":"Atlas Pay","position":"Software Engineer","location":"Melbourne, VIC","startDate":"2016-02","endDate":"2018-12","current":false,"description":"Worked on backend APIs and data processing.","highlights":["Built REST APIs and background workers for settlement","Improved observability by adding structured logging","Introduced CI checks and faster build pipelines","Implemented pagination, filtering, and caching patterns","Reduced manual ops work with automation scripts","Supported on-call rotations and incident response"],"technologies":["JavaScript","PostgreSQL","Docker"]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -254,8 +254,8 @@ VALUES (
     3,
     1,
     '{"title":"Skills","data":[{"id":"sc2-1","name":"Backend & Systems","skills":[{"id":"sk2-1","name":"TypeScript","level":"expert"},{"id":"sk2-2","name":"Go","level":"advanced"},{"id":"sk2-3","name":"PostgreSQL","level":"expert"},{"id":"sk2-4","name":"Redis","level":"advanced"}]},{"id":"sc2-2","name":"Infra & Observability","skills":[{"id":"sk2-5","name":"Kubernetes","level":"advanced"},{"id":"sk2-6","name":"Docker","level":"advanced"},{"id":"sk2-7","name":"CI/CD","level":"advanced"},{"id":"sk2-8","name":"Monitoring","level":"advanced"}]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -266,8 +266,8 @@ VALUES (
     4,
     1,
     '{"title":"Projects","data":[{"id":"pr2-1","name":"Edge Log Processor","description":"Streaming processor for edge deployments with durable queues and replay.","url":"","technologies":["Rust","SQLite"],"highlights":["Designed plugin model for transforms and sinks","Built replay tooling for incident recovery","Added end-to-end tests for reliability" ]},{"id":"pr2-2","name":"Service Template Generator","description":"CLI to bootstrap services with observability and best practices.","url":"","technologies":["TypeScript"],"highlights":["Standardized telemetry and health endpoints","Reduced time-to-first-deploy for new services","Provided guardrails for config and secrets" ]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Resume" (
@@ -290,8 +290,8 @@ VALUES (
     'modern',
     '["frontend","fullstack","product"]',
     0,
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
     '{"personalInfo":{"fullName":"Sam Rivera","email":"sam.rivera@example.com","phone":"+61 400 000 002","location":"Sydney, NSW","linkedin":"linkedin.com/in/samrivera","github":"github.com/samrivera","website":"","portfolio":"","professionalTitle":"Product Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"}}}'
 );
 
@@ -303,8 +303,8 @@ VALUES (
     0,
     1,
     '{"title":"Contact","data":{"fullName":"Sam Rivera","email":"sam.rivera@example.com","phone":"+61 400 000 002","location":"Sydney, NSW","linkedin":"linkedin.com/in/samrivera","github":"github.com/samrivera"}}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -315,8 +315,8 @@ VALUES (
     1,
     1,
     '{"title":"Profile","html":"<p>Full-stack product engineer focused on UX, performance, and reliable delivery. Comfortable owning features end-to-end from discovery to launch.</p>"}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -327,8 +327,8 @@ VALUES (
     2,
     1,
     '{"title":"Experience","data":[{"id":"exp3-1","company":"Betta Labs","position":"Product Engineer","location":"Sydney, NSW","startDate":"2023-01","endDate":"","current":true,"description":"Shipped customer-facing features and internal tooling.","highlights":["Improved Core Web Vitals through code-splitting and caching","Built a design system and standardized component patterns","Reduced form errors by adding validation and inline guidance","Created analytics dashboards for feature adoption","Improved onboarding funnel and reduced drop-off","Collaborated with design and support to prioritize fixes"],"technologies":["Next.js","TypeScript","tRPC","PostgreSQL"]},{"id":"exp3-2","company":"FlowCRM","position":"Full Stack Developer","location":"Remote","startDate":"2021-04","endDate":"2022-12","current":false,"description":"Built workflow automation and integrations.","highlights":["Implemented webhook-based integrations and retries","Built role-based access control flows","Reduced API errors by improving validation and rate-limits","Implemented optimistic updates for a faster UI","Added tests and CI checks for stability","Partnered with CS to debug production issues"],"technologies":["React","TypeScript","Node.js"]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -339,8 +339,8 @@ VALUES (
     3,
     1,
     '{"title":"Projects","data":[{"id":"pr3-1","name":"Resume Builder UI","description":"Editor interface with live preview and autosave.","url":"","technologies":["React","TypeScript"],"highlights":["Implemented sections manager UX","Added debounced autosave and retries","Improved accessibility for forms" ]},{"id":"pr3-2","name":"Experiment Framework","description":"Lightweight feature flags and A/B testing utilities.","url":"","technologies":["TypeScript"],"highlights":["Added consistent event tracking","Built admin UI for toggles","Standardized experiment analysis exports" ]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -351,8 +351,8 @@ VALUES (
     4,
     1,
     '{"title":"Skills","data":[{"id":"sc3-1","name":"Frontend","skills":[{"id":"sk3-1","name":"React","level":"expert"},{"id":"sk3-2","name":"Next.js","level":"advanced"},{"id":"sk3-3","name":"TypeScript","level":"expert"}]},{"id":"sc3-2","name":"Backend","skills":[{"id":"sk3-4","name":"Node.js","level":"advanced"},{"id":"sk3-5","name":"PostgreSQL","level":"advanced"},{"id":"sk3-6","name":"REST APIs","level":"advanced"}]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Resume" (
@@ -375,8 +375,8 @@ VALUES (
     'professional',
     '["consulting","strategy","ops"]',
     0,
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
     '{"personalInfo":{"fullName":"Jordan Patel","email":"jordan.patel@example.com","phone":"+61 400 000 003","location":"Brisbane, QLD","linkedin":"linkedin.com/in/jordanpatel","github":"","website":"","portfolio":"","professionalTitle":"Consultant","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"}}}'
 );
 
@@ -388,8 +388,8 @@ VALUES (
     0,
     1,
     '{"title":"Contact","data":{"fullName":"Jordan Patel","email":"jordan.patel@example.com","phone":"+61 400 000 003","location":"Brisbane, QLD","linkedin":"linkedin.com/in/jordanpatel"}}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -400,8 +400,8 @@ VALUES (
     1,
     1,
     '{"title":"Profile","html":"<p>Consultant delivering cost transformation, operating model design, and analytics-driven decision support. Strong stakeholder management and executive communication.</p>"}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -412,8 +412,8 @@ VALUES (
     2,
     1,
     '{"title":"Experience","data":[{"id":"exp4-1","company":"Northbridge Consulting","position":"Senior Consultant","location":"Brisbane, QLD","startDate":"2021-03","endDate":"","current":true,"description":"Led workstreams across transformation programs and built executive-ready deliverables.","highlights":["Built savings roadmap with quantified benefits and risks","Created KPI framework and weekly exec dashboard","Facilitated workshops to define target operating model and RACI","Produced board-ready narrative and supporting analysis","Managed stakeholders across finance, ops, and tech","Improved governance cadence and decision logs"],"technologies":["Excel","PowerPoint","SQL"]},{"id":"exp4-2","company":"Crescent Retail","position":"Consultant","location":"Sydney, NSW","startDate":"2019-02","endDate":"2021-02","current":false,"description":"Supported growth strategy and operational performance initiatives.","highlights":["Modeled store-level profitability drivers and scenarios","Designed metrics for supply chain performance","Built reporting packs used by regional leadership","Conducted customer research and synthesized findings","Supported program management for multi-site rollout","Created training materials for new processes"],"technologies":["Excel","PowerPoint"]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -424,6 +424,7 @@ VALUES (
     3,
     1,
     '{"title":"Skills","data":[{"id":"sc4-1","name":"Strategy & Ops","skills":[{"id":"sk4-1","name":"Operating Model","level":"advanced"},{"id":"sk4-2","name":"Cost Transformation","level":"advanced"},{"id":"sk4-3","name":"Stakeholder Management","level":"expert"}]},{"id":"sc4-2","name":"Analytics","skills":[{"id":"sk4-4","name":"SQL","level":"advanced"},{"id":"sk4-5","name":"Financial Modeling","level":"advanced"},{"id":"sk4-6","name":"Dashboarding","level":"advanced"}]}]}',
-    strftime('%s', 'now') * 1000,
-    strftime('%s', 'now') * 1000
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000,
+    CAST(strftime('%s', 'now') AS INTEGER) * 1000
 );
+

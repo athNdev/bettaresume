@@ -15,6 +15,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
+	const isDevBypass = process.env.NODE_ENV === "development";
+	if (isDevBypass) {
+		return <>{children}</>;
+	}
+
 	const { isLoaded, isSignedIn } = useAuth();
 
 	// Show splash screen while checking auth

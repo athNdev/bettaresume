@@ -1,7 +1,7 @@
 {
-	"name": "api-server",
+	"name": "bettaresume-api",
 	"version": "1.0.0",
-	"description": "BettaResume API Server (Cloudflare Worker)",
+	"description": "bettaresume API Server",
 	"main": "./src/server.ts",
 	"scripts": {
 		"deploy": "wrangler deploy",
@@ -10,9 +10,10 @@
 		"typecheck": "tsc --noEmit",
 		"cf-typegen": "wrangler types",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "wrangler d1 migrations apply bettaresume --local",
-		"db:reset": "shx rm -rf .wrangler/state && wrangler d1 migrations apply bettaresume --local",
+		"db:migrate": "shx echo 'Y' | wrangler d1 migrations apply bettaresume --local",
+		"db:reset": "shx echo 'Y' | wrangler d1 migrations apply bettaresume --local",
 		"db:seed": "wrangler d1 execute bettaresume --local --file=src/db/seed.sql",
+		"db:reset-seed": "shx echo 'Y' | wrangler d1 migrations apply bettaresume --local && wrangler d1 execute bettaresume --local --file=src/db/seed.sql && shx echo 'OK: Database reset and seeded with dummy data'",
 		"db:studio": "drizzle-kit studio"
 	},
 	"keywords": [],

@@ -38,8 +38,9 @@ interface AuthProviderProps {
 	children: React.ReactNode;
 }
 
-// Check if dev mode bypass is enabled
-const isDevBypass = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true";
+// In local development we allow bypassing Clerk so seeded demo data is visible.
+// This intentionally avoids relying solely on NEXT_PUBLIC env injection (Turbopack can be finicky).
+const isDevBypass = process.env.NODE_ENV === "development";
 
 export function AuthProvider({ children }: AuthProviderProps) {
 	const [isInitialized, setIsInitialized] = useState(false);
@@ -83,16 +84,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 	// Sync Clerk state to local store
 	useEffect(() => {
-		if (!isClerkLoaded) return;
+		// In dev bypass mode we don't need to wait for Clerk.
+		if (!isDevBypass && !isClerkLoaded) return;
 
 		const syncAuth = async () => {
 			// Dev bypass mode - use mock user
 			if (isDevBypass) {
 				console.log("[AuthProvider] Dev bypass mode enabled");
+				// Ensure we don't show cached data from a previous Clerk session.
+				queryClient.clear();
 				setUser({
-					id: "dev-user-123",
-					email: "dev@localhost.test",
-					name: "Dev User",
+					id: "user-1",
+					email: "demo@bettaresume.com",
+					name: "Demo User",
 					picture: null,
 					createdAt: new Date().toISOString(),
 					emailVerified: true,
@@ -168,6 +172,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		clearActiveResume,
 		queryClient, // Verify session with backend (non-blocking)
 		verifySession.mutate,
+		isDevBypass,
 	]);
 
 	// Show splash screen while Clerk is loading

@@ -7,8 +7,6 @@
  * Used during initial auth loading and redirects.
  */
 
-import { Loader2 } from "lucide-react";
-
 interface SplashScreenProps {
 	message?: string;
 }
@@ -29,7 +27,11 @@ export function SplashScreen({ message = "Loading..." }: SplashScreenProps) {
 
 			{/* Spinner */}
 			<div className="flex flex-col items-center gap-4">
-				<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				<div
+					className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+					aria-label="Loading"
+					role="status"
+				/>
 				<p className="text-muted-foreground text-sm">{message}</p>
 			</div>
 		</div>

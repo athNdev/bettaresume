@@ -20,6 +20,7 @@ const ResumeEditorPage = dynamic(
 );
 
 export function AppRouter() {
+	const isDevBypass = process.env.NODE_ENV === "development";
 	const { path, navigate, replace } = useHashRouter();
 	const { isAuthenticated } = useAuthStore();
 	const { isLoaded: isClerkLoaded, isSignedIn } = useClerkAuth();
@@ -31,16 +32,17 @@ export function AppRouter() {
 
 	// Handle routing after auth is ready
 	useEffect(() => {
-		if (!mounted || !isClerkLoaded) return;
+		if (!mounted) return;
+		if (!isDevBypass && !isClerkLoaded) return;
 
 		// Root path - redirect to dashboard if authenticated
-		if (path === "/" && isSignedIn && isAuthenticated) {
+		if (path === "/" && (isDevBypass || isSignedIn) && isAuthenticated) {
 			replace("/dashboard");
 		}
-	}, [path, isSignedIn, isAuthenticated, isClerkLoaded, mounted, replace]);
+	}, [path, isSignedIn, isAuthenticated, isClerkLoaded, mounted, replace, isDevBypass]);
 
-	// Don't render until mounted and Clerk is loaded
-	if (!mounted || !isClerkLoaded) {
+	// Don't render until mounted and Clerk is loaded (unless dev bypass)
+	if (!mounted || (!isDevBypass && !isClerkLoaded)) {
 		return <SplashScreen message="Loading Betta Resume..." />;
 	}
 
@@ -48,7 +50,7 @@ export function AppRouter() {
 	// If not signed in, redirect to Clerk login
 	// If signed in, redirect to dashboard (handled by useEffect above)
 	if (path === "/" || path === "/login") {
-		if (!isSignedIn) {
+		if (!isDevBypass && !isSignedIn) {
 			// Redirect to Clerk's hosted sign-in page
 			return <RedirectToSignIn />;
 		}
@@ -57,7 +59,7 @@ export function AppRouter() {
 	}
 
 	// Protected routes - require authentication
-	if (!isSignedIn) {
+	if (!isDevBypass && !isSignedIn) {
 		return <RedirectToSignIn />;
 	}
 
