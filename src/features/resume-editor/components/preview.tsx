@@ -19,6 +19,7 @@ interface PreviewProps {
 	resume: Resume;
 	scale?: number;
 	className?: string;
+	paginate?: boolean;
 }
 
 // Default settings for when metadata is null
@@ -137,7 +138,7 @@ function sameColumnPagination(
 	return true;
 }
 
-export function Preview({ resume, scale = 1, className }: PreviewProps) {
+export function Preview({ resume, scale = 1, className, paginate = true }: PreviewProps) {
 	const { metadata, sections } = resume;
 	const [paginatedSingle, setPaginatedSingle] = useState<string[][]>([]);
 	const [paginatedColumns, setPaginatedColumns] = useState<
@@ -657,6 +658,7 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 	);
 
 	useLayoutEffect(() => {
+		if (!paginate) return;
 		const headerHeight = headerMeasureRef.current?.offsetHeight ?? 0;
 		const firstPageAvailable = pageInnerHeight * scale - headerHeight;
 		const laterPageAvailable = pageInnerHeight * scale;
@@ -744,6 +746,7 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 		);
 		setPaginatedSingle((prev) => (prev.length === 0 ? prev : []));
 	}, [
+		paginate,
 		layout,
 		mainSections,
 		pageInnerHeight,
@@ -773,7 +776,7 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 
 	const renderSingleColumnPages = () => {
 		const pages =
-			paginatedSingle.length > 0
+			paginate && paginatedSingle.length > 0
 				? paginatedSingle
 				: [visibleSections.map((s) => s.id)];
 		return pages.map((ids, i) =>
@@ -793,7 +796,7 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 
 	const renderColumnPages = () => {
 		const pages =
-			paginatedColumns.length > 0
+			paginate && paginatedColumns.length > 0
 				? paginatedColumns
 				: [
 						{
@@ -852,85 +855,87 @@ export function Preview({ resume, scale = 1, className }: PreviewProps) {
 		>
 			{layout === "single-column" && renderSingleColumnPages()}
 			{(isTwoColumn || isSidebar) && renderColumnPages()}
-			<div
-				aria-hidden="true"
-				style={{
-					position: "absolute",
-					left: -100000,
-					top: 0,
-					visibility: "hidden",
-					width: pageWidth * scale,
-				}}
-			>
+			{paginate && (
 				<div
+					aria-hidden="true"
 					style={{
-						...basePageStyle,
-						height: "auto",
-						overflow: "visible",
-						boxShadow: "none",
+						position: "absolute",
+						left: -100000,
+						top: 0,
+						visibility: "hidden",
+						width: pageWidth * scale,
 					}}
 				>
-					<div ref={headerMeasureRef}>{renderPersonalInfo()}</div>
-					{layout === "single-column" && (
-						<>
-							{visibleSections.map((section) => (
-								<div
-									key={section.id}
-									ref={(el) => {
-										singleMeasureRefs.current[section.id] = el;
-									}}
-								>
-									{renderSection(section)}
-								</div>
-							))}
-						</>
-					)}
-					{(isTwoColumn || isSidebar) && (
-						<div style={{ display: "flex", gap: 20 * scale }}>
-							{isSidebar && (
-								<div style={{ width: 240 * scale }}>
-									{sideSections.map((section) => (
-										<div
-											key={section.id}
-											ref={(el) => {
-												sideMeasureRefs.current[section.id] = el;
-											}}
-										>
-											{renderSection(section)}
-										</div>
-									))}
-								</div>
-							)}
-							<div style={{ flex: 1 }}>
-								{mainSections.map((section) => (
+					<div
+						style={{
+							...basePageStyle,
+							height: "auto",
+							overflow: "visible",
+							boxShadow: "none",
+						}}
+					>
+						<div ref={headerMeasureRef}>{renderPersonalInfo()}</div>
+						{layout === "single-column" && (
+							<>
+								{visibleSections.map((section) => (
 									<div
 										key={section.id}
 										ref={(el) => {
-											mainMeasureRefs.current[section.id] = el;
+											singleMeasureRefs.current[section.id] = el;
 										}}
 									>
 										{renderSection(section)}
 									</div>
 								))}
-							</div>
-							{isTwoColumn && (
-								<div style={{ width: 220 * scale }}>
-									{sideSections.map((section) => (
+							</>
+						)}
+						{(isTwoColumn || isSidebar) && (
+							<div style={{ display: "flex", gap: 20 * scale }}>
+								{isSidebar && (
+									<div style={{ width: 240 * scale }}>
+										{sideSections.map((section) => (
+											<div
+												key={section.id}
+												ref={(el) => {
+													sideMeasureRefs.current[section.id] = el;
+												}}
+											>
+												{renderSection(section)}
+											</div>
+										))}
+									</div>
+								)}
+								<div style={{ flex: 1 }}>
+									{mainSections.map((section) => (
 										<div
 											key={section.id}
 											ref={(el) => {
-												sideMeasureRefs.current[section.id] = el;
+												mainMeasureRefs.current[section.id] = el;
 											}}
 										>
 											{renderSection(section)}
 										</div>
 									))}
 								</div>
-							)}
-						</div>
-					)}
+								{isTwoColumn && (
+									<div style={{ width: 220 * scale }}>
+										{sideSections.map((section) => (
+											<div
+												key={section.id}
+												ref={(el) => {
+													sideMeasureRefs.current[section.id] = el;
+												}}
+											>
+												{renderSection(section)}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						)}
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 }

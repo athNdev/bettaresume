@@ -11,7 +11,6 @@ import {
 	ArchiveRestore,
 	Copy,
 	Download,
-	FileText,
 	GitBranch,
 	MoreHorizontal,
 	Pencil,
@@ -41,6 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Resume } from "@/features/resume-editor/types";
 import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
+import { ResumeThumbnail } from "@/features/dashboard/components/resume-thumbnail";
 
 interface ResumeCardProps {
 	resume: Resume;
@@ -139,13 +139,7 @@ export function ResumeCard({
 				</div>
 			</CardHeader>
 			<CardContent>
-				{/* Resume Preview Placeholder */}
-				<div
-					className="flex aspect-[8.5/11] cursor-pointer items-center justify-center rounded-md border bg-muted/50 transition-colors hover:bg-muted/70"
-					onClick={onEdit}
-				>
-					<FileText className="h-12 w-12 text-muted-foreground/50" />
-				</div>
+				<ResumeThumbnail onClick={onEdit} resume={resume} />
 			</CardContent>
 			<CardFooter className="flex justify-between text-muted-foreground text-xs">
 				<span>Updated {new Date(resume.updatedAt).toLocaleDateString()}</span>

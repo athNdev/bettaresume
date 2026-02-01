@@ -18,7 +18,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { ProtectedRoute } from "@/app/protected-route";
 import { Button } from "@/components/ui/button";
 import {
@@ -141,6 +141,8 @@ function DashboardContent() {
 	const [newResumeTemplate, setNewResumeTemplate] =
 		useState<TemplateType>("modern");
 	const [showWelcomeGuide, setShowWelcomeGuide] = useState(true);
+	const [page, setPage] = useState(1);
+	const pageSize = 10;
 
 	// Data fetching via tRPC
 	const {
@@ -178,6 +180,24 @@ function DashboardContent() {
 			return true;
 		});
 	}, [resumes, searchQuery, showArchived, selectedTemplate]);
+
+	const totalPages = useMemo(
+		() => Math.max(1, Math.ceil(filteredResumes.length / pageSize)),
+		[filteredResumes.length],
+	);
+
+	useEffect(() => {
+		setPage(1);
+	}, [searchQuery, showArchived, selectedTemplate]);
+
+	useEffect(() => {
+		setPage((prev) => Math.min(Math.max(1, prev), totalPages));
+	}, [totalPages]);
+
+	const pagedResumes = useMemo(() => {
+		const start = (page - 1) * pageSize;
+		return filteredResumes.slice(start, start + pageSize);
+	}, [filteredResumes, page]);
 
 	// Get variations for a resume (resumes with baseResumeId matching this resume)
 	const getVariations = (resumeId: string) => {
@@ -440,8 +460,9 @@ function DashboardContent() {
 
 				{/* Resume Grid */}
 				{filteredResumes.length > 0 ? (
-					<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-						{filteredResumes.map((resume: Resume) => (
+					<>
+						<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+							{pagedResumes.map((resume: Resume) => (
 							<ResumeCard
 								key={resume.id}
 								onArchive={() => handleArchiveResume(resume.id)}
@@ -462,7 +483,31 @@ function DashboardContent() {
 								variations={getVariations(resume.id)}
 							/>
 						))}
-					</div>
+						</div>
+						{filteredResumes.length > pageSize && (
+							<div className="mt-8 flex items-center justify-center gap-3">
+								<Button
+									disabled={page <= 1}
+									onClick={() => setPage((p) => Math.max(1, p - 1))}
+									size="sm"
+									variant="outline"
+								>
+									Previous
+								</Button>
+								<span className="text-muted-foreground text-sm">
+									Page {page} of {totalPages}
+								</span>
+								<Button
+									disabled={page >= totalPages}
+									onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+									size="sm"
+									variant="outline"
+								>
+									Next
+								</Button>
+							</div>
+						)}
+					</>
 				) : (
 					<EmptyState
 						onCreateNew={() => setIsCreateDialogOpen(true)}
