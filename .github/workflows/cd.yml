@@ -29,7 +29,7 @@ jobs:
           cache: "npm"
 
       - name: Create .env file
-        run: echo "DATABASE_URL=${{ vars.DATABASE_URL }}" > api-server/.env
+        run: echo "DATABASE_URL=${{ vars.DATABASE_URL }}" > api/.env
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -79,7 +79,7 @@ jobs:
         run: npm run build:types
 
       - name: Set Cloudflare Worker Secrets
-        working-directory: ./api-server
+        working-directory: ./api
         run: |
           echo "${{ vars.CLERK_PUBLISHABLE_KEY }}" | npx wrangler secret put CLERK_PUBLISHABLE_KEY
           echo "${{ secrets.CLERK_SECRET_KEY }}" | npx wrangler secret put CLERK_SECRET_KEY
@@ -87,7 +87,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Deploy API to Cloudflare Workers
-        working-directory: ./api-server
+        working-directory: ./api
         run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
