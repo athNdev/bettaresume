@@ -2,16 +2,20 @@
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
+	Award,
 	Certification,
 	Education,
 	Experience,
 	Language,
 	PersonalInfo,
 	Project,
+	Publication,
+	Reference,
 	Resume,
 	ResumeSection,
 	ResumeSettings,
 	SkillCategory,
+	Volunteer,
 } from "@/features/resume-editor/types";
 import { cn } from "@/lib/utils";
 
@@ -616,6 +620,239 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 		);
 	};
 
+	const renderAwards = (section: ResumeSection) => {
+		const awards = section.content.data as Award[];
+		return (
+			<div style={{ marginBottom: sectionSpacingPx * scale }}>
+				<SectionTitle>{section.content.title || "Awards & Honors"}</SectionTitle>
+				{awards.map((award) => (
+					<div key={award.id} style={{ marginBottom: 8 * scale }}>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "flex-start",
+							}}
+						>
+							<div>
+								<div
+									style={{
+										fontSize: typography.itemTitle * scale,
+										fontWeight: 600,
+										color: colors.heading,
+									}}
+								>
+									{award.title}
+								</div>
+								<div
+									style={{
+										fontSize: typography.body * scale,
+										color: colors.secondary,
+									}}
+								>
+									{award.issuer}
+								</div>
+							</div>
+							<div
+								style={{
+									fontSize: typography.small * scale,
+									color: colors.secondary,
+								}}
+							>
+								{award.date}
+							</div>
+						</div>
+						{award.description && (
+							<p
+								style={{
+									fontSize: typography.body * scale,
+									marginTop: 4 * scale,
+								}}
+							>
+								{award.description}
+							</p>
+						)}
+					</div>
+				))}
+			</div>
+		);
+	};
+
+	const renderVolunteer = (section: ResumeSection) => {
+		const volunteers = section.content.data as Volunteer[];
+		return (
+			<div style={{ marginBottom: sectionSpacingPx * scale }}>
+				<SectionTitle>
+					{section.content.title || "Volunteer Experience"}
+				</SectionTitle>
+				{volunteers.map((vol) => (
+					<div key={vol.id} style={{ marginBottom: 10 * scale }}>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "flex-start",
+							}}
+						>
+							<div>
+								<div
+									style={{
+										fontSize: typography.itemTitle * scale,
+										fontWeight: 600,
+										color: colors.heading,
+									}}
+								>
+									{vol.role}
+								</div>
+								<div
+									style={{
+										fontSize: typography.body * scale,
+										color: colors.secondary,
+									}}
+								>
+									{vol.organization}
+									{vol.location && ` • ${vol.location}`}
+								</div>
+							</div>
+							<div
+								style={{
+									fontSize: typography.small * scale,
+									color: colors.secondary,
+								}}
+							>
+								{vol.startDate} - {vol.current ? "Present" : vol.endDate}
+							</div>
+						</div>
+						{vol.description && (
+							<p
+								style={{
+									fontSize: typography.body * scale,
+									marginTop: 4 * scale,
+								}}
+							>
+								{vol.description}
+							</p>
+						)}
+						{vol.highlights && vol.highlights.length > 0 && (
+							<ul
+								style={{
+									paddingLeft: 16 * scale,
+									marginTop: 4 * scale,
+								}}
+							>
+								{vol.highlights.map((h, i) => (
+									<li
+										key={`${vol.id}-${i}`}
+										style={{
+											fontSize: typography.body * scale,
+											marginBottom: 2 * scale,
+										}}
+									>
+										{h}
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+				))}
+			</div>
+		);
+	};
+
+	const renderPublications = (section: ResumeSection) => {
+		const pubs = section.content.data as Publication[];
+		return (
+			<div style={{ marginBottom: sectionSpacingPx * scale }}>
+				<SectionTitle>{section.content.title || "Publications"}</SectionTitle>
+				{pubs.map((pub) => (
+					<div key={pub.id} style={{ marginBottom: 8 * scale }}>
+						<div
+							style={{
+								fontSize: typography.itemTitle * scale,
+								fontWeight: 600,
+								color: colors.heading,
+							}}
+						>
+							{pub.title}
+						</div>
+						<div
+							style={{
+								fontSize: typography.body * scale,
+								color: colors.secondary,
+							}}
+						>
+							{pub.publisher} • {pub.date}
+						</div>
+						{pub.authors && pub.authors.length > 0 && (
+							<div
+								style={{
+									fontSize: typography.small * scale,
+									color: colors.secondary,
+									marginTop: 2 * scale,
+								}}
+							>
+								Authors: {pub.authors.join(", ")}
+							</div>
+						)}
+						{pub.summary && (
+							<p
+								style={{
+									fontSize: typography.body * scale,
+									marginTop: 4 * scale,
+								}}
+							>
+								{pub.summary}
+							</p>
+						)}
+					</div>
+				))}
+			</div>
+		);
+	};
+
+	const renderReferences = (section: ResumeSection) => {
+		const refs = section.content.data as Reference[];
+		return (
+			<div style={{ marginBottom: sectionSpacingPx * scale }}>
+				<SectionTitle>{section.content.title || "References"}</SectionTitle>
+				{refs
+					.filter((r) => !r.isHidden)
+					.map((ref) => (
+						<div key={ref.id} style={{ marginBottom: 8 * scale }}>
+							<div
+								style={{
+									fontSize: typography.itemTitle * scale,
+									fontWeight: 600,
+									color: colors.heading,
+								}}
+							>
+								{ref.name}
+							</div>
+							<div
+								style={{
+									fontSize: typography.body * scale,
+									color: colors.secondary,
+								}}
+							>
+								{ref.position}
+								{ref.company && ` at ${ref.company}`}
+							</div>
+							{ref.email && (
+								<div
+									style={{
+										fontSize: typography.small * scale,
+										color: colors.text,
+									}}
+								>
+									{ref.email}
+								</div>
+							)}
+						</div>
+					))}
+			</div>
+		);
+	};
+
 	const renderSection = (section: ResumeSection) => {
 		switch (section.type) {
 			case "personal-info":
@@ -633,8 +870,14 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 			case "certifications":
 				return renderCertifications(section);
 			case "languages":
-				return renderLanguages(section);
-			default:
+				return renderLanguages(section);		case "awards":
+			return renderAwards(section);
+		case "volunteer":
+			return renderVolunteer(section);
+		case "publications":
+			return renderPublications(section);
+		case "references":
+			return renderReferences(section);			default:
 				return null;
 		}
 	};

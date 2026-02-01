@@ -121,12 +121,27 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		null,
 	);
 
-	// Sync activeResume to draftResume initially
+	// Sync activeResume to draftResume when it changes or when section structure changes
 	useEffect(() => {
-		if (activeResume && !draftResume) {
-			setDraftResume(activeResume as any as ResumeWithSections);
+		if (activeResume) {
+			// Sync draft when it doesn't exist OR when section structure changes
+			// (e.g., after reordering, adding, or deleting sections)
+			const currentSectionIds =
+				draftResume?.sections.map((s) => ({ id: s.id, order: s.order })) || [];
+			const newSectionIds = activeResume.sections.map((s) => ({
+				id: s.id,
+				order: s.order,
+			}));
+
+			const structureChanged =
+				JSON.stringify(currentSectionIds) !== JSON.stringify(newSectionIds);
+
+			if (!draftResume || structureChanged) {
+				setDraftResume(activeResume as any as ResumeWithSections);
+			}
 		}
-	}, [activeResume, draftResume]);
+	}, [activeResume]); // Remove draftResume from dependencies to avoid circular updates
+
 
 	// Live updates for draft (instant, no server call)
 	const handleDraftSectionDataUpdate = useCallback(

@@ -10,15 +10,19 @@ import {
 	View,
 } from "@react-pdf/renderer";
 import type {
+	Award,
 	Certification,
 	Education,
 	Experience,
 	FontFamily,
 	Language,
 	Project,
+	Publication,
+	Reference,
 	Resume,
 	ResumeSection,
 	SkillCategory,
+	Volunteer,
 } from "@/features/resume-editor/types";
 
 // Register fonts using Google Fonts CDN URLs (TTF format required by react-pdf)
@@ -471,6 +475,122 @@ export function PDFDocument({ resume }: PDFDocumentProps) {
 		);
 	};
 
+	const renderAwards = (section: ResumeSection) => {
+		const awards = section.content.data as Award[];
+		return (
+			<View style={styles.section}>
+				<Text style={styles.sectionTitle}>
+					{section.content.title || "Awards & Honors"}
+				</Text>
+				{awards.map((award) => (
+					<View key={award.id} style={styles.itemContainer}>
+						<View style={styles.itemHeader}>
+							<View>
+								<Text style={styles.itemTitle}>{award.title}</Text>
+								<Text style={styles.itemSubtitle}>{award.issuer}</Text>
+							</View>
+							<Text style={styles.itemDate}>{award.date}</Text>
+						</View>
+						{award.description && (
+							<Text style={styles.itemDescription}>{award.description}</Text>
+						)}
+					</View>
+				))}
+			</View>
+		);
+	};
+
+	const renderVolunteer = (section: ResumeSection) => {
+		const volunteers = section.content.data as Volunteer[];
+		return (
+			<View style={styles.section}>
+				<Text style={styles.sectionTitle}>
+					{section.content.title || "Volunteer Experience"}
+				</Text>
+				{volunteers.map((vol) => (
+					<View key={vol.id} style={styles.itemContainer}>
+						<View style={styles.itemHeader}>
+							<View>
+								<Text style={styles.itemTitle}>{vol.role}</Text>
+								<Text style={styles.itemSubtitle}>
+									{vol.organization}
+									{vol.location && ` • ${vol.location}`}
+								</Text>
+							</View>
+							<Text style={styles.itemDate}>
+								{vol.startDate} - {vol.current ? "Present" : vol.endDate}
+							</Text>
+						</View>
+						{vol.description && (
+							<Text style={styles.itemDescription}>{vol.description}</Text>
+						)}
+						{vol.highlights && vol.highlights.length > 0 && (
+							<View style={styles.bulletList}>
+								{vol.highlights.map((h, i) => (
+									<Text key={`${vol.id}-${i}`} style={styles.bulletItem}>
+										• {h}
+									</Text>
+								))}
+							</View>
+						)}
+					</View>
+				))}
+			</View>
+		);
+	};
+
+	const renderPublications = (section: ResumeSection) => {
+		const pubs = section.content.data as Publication[];
+		return (
+			<View style={styles.section}>
+				<Text style={styles.sectionTitle}>
+					{section.content.title || "Publications"}
+				</Text>
+				{pubs.map((pub) => (
+					<View key={pub.id} style={styles.itemContainer}>
+						<Text style={styles.itemTitle}>{pub.title}</Text>
+						<Text style={styles.itemSubtitle}>
+							{pub.publisher} • {pub.date}
+						</Text>
+						{pub.authors && pub.authors.length > 0 && (
+							<Text style={styles.itemDescription}>
+								Authors: {pub.authors.join(", ")}
+							</Text>
+						)}
+						{pub.summary && (
+							<Text style={styles.itemDescription}>{pub.summary}</Text>
+						)}
+					</View>
+				))}
+			</View>
+		);
+	};
+
+	const renderReferences = (section: ResumeSection) => {
+		const refs = section.content.data as Reference[];
+		return (
+			<View style={styles.section}>
+				<Text style={styles.sectionTitle}>
+					{section.content.title || "References"}
+				</Text>
+				{refs
+					.filter((r) => !r.isHidden)
+					.map((ref) => (
+						<View key={ref.id} style={styles.itemContainer}>
+							<Text style={styles.itemTitle}>{ref.name}</Text>
+							<Text style={styles.itemSubtitle}>
+								{ref.position}
+								{ref.company && ` at ${ref.company}`}
+							</Text>
+							{ref.email && (
+								<Text style={styles.itemDescription}>{ref.email}</Text>
+							)}
+						</View>
+					))}
+			</View>
+		);
+	};
+
 	const renderSection = (section: ResumeSection) => {
 		switch (section.type) {
 			case "personal-info":
@@ -489,6 +609,14 @@ export function PDFDocument({ resume }: PDFDocumentProps) {
 				return renderCertifications(section);
 			case "languages":
 				return renderLanguages(section);
+			case "awards":
+				return renderAwards(section);
+			case "volunteer":
+				return renderVolunteer(section);
+			case "publications":
+				return renderPublications(section);
+			case "references":
+				return renderReferences(section);
 			default:
 				return null;
 		}
