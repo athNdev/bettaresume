@@ -17,6 +17,12 @@
 			"migrations_dir": "./drizzle"
 		}
 	],
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "placeholder"
+		}
+	],
 	"dev": {
 		"port": 4000
 	}
