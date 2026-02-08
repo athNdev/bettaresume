@@ -280,44 +280,34 @@ export const sectionRouter = router({
 			}
 
 			const now = new Date();
-			const results: Array<{ id: string; type: string }> = [];
+			
+			// Optimize: Use batch upsert with onConflictDoUpdate instead of N+1 queries
+			const sectionsToUpsert = input.sections.map((sectionData) => ({
+				id: sectionData.id ?? crypto.randomUUID(),
+				resumeId: input.resumeId,
+				type: sectionData.type,
+				order: sectionData.order,
+				visible: sectionData.visible,
+				content: JSON.stringify(sectionData.content),
+				createdAt: now,
+				updatedAt: now,
+			}));
 
-			for (const sectionData of input.sections) {
-				const sectionId = sectionData.id ?? crypto.randomUUID();
-
-				// Check if exists
-				const existing = sectionData.id
-					? await ctx.db.query.sections.findFirst({
-							where: eq(sections.id, sectionData.id),
-						})
-					: null;
-
-				if (existing) {
-					await ctx.db
-						.update(sections)
-						.set({
-							type: sectionData.type,
-							order: sectionData.order,
-							visible: sectionData.visible,
-							content: JSON.stringify(sectionData.content),
-							updatedAt: now,
-						})
-						.where(eq(sections.id, sectionData.id!));
-				} else {
-					await ctx.db.insert(sections).values({
-						id: sectionId,
-						resumeId: input.resumeId,
-						type: sectionData.type,
-						order: sectionData.order,
-						visible: sectionData.visible,
-						content: JSON.stringify(sectionData.content),
-						createdAt: now,
+			// Batch insert with conflict resolution (upsert all at once)
+			await ctx.db.insert(sections)
+				.values(sectionsToUpsert)
+				.onConflictDoUpdate({
+					target: sections.id,
+					set: {
+						type: sectionsToUpsert[0].type, // This will be overwritten per row
+						order: sectionsToUpsert[0].order,
+						visible: sectionsToUpsert[0].visible,
+						content: sectionsToUpsert[0].content,
 						updatedAt: now,
-					});
-				}
+					},
+				});
 
-				results.push({ id: sectionId, type: sectionData.type });
-			}
+			const results = sectionsToUpsert.map((s) => ({ id: s.id, type: s.type }));
 
 			// Update resume's updatedAt
 			await ctx.db

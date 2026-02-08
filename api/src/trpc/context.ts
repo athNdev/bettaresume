@@ -71,8 +71,28 @@ export async function createContext({ request, env }: CreateContextOptions) {
 
 		const { userId } = authResult.toAuth();
 
-		// Fetch the full user object
-		const user = await clerkClient.users.getUser(userId);
+		// Try to get user from KV cache first (5-minute TTL)
+		const cacheKey = `clerk_user:${userId}`;
+		let user;
+		
+		try {
+			const cached = await (env as any).CACHE?.get(cacheKey, 'json');
+			if (cached) {
+				user = cached;
+			} else {
+				// Cache miss - fetch from Clerk API
+				user = await clerkClient.users.getUser(userId);
+				
+				// Store in cache for 5 minutes (300 seconds)
+				await (env as any).CACHE?.put(cacheKey, JSON.stringify(user), {
+					expirationTtl: 300,
+				});
+			}
+		} catch (cacheError) {
+			// If KV fails, fall back to direct Clerk API call
+			console.warn('KV cache error, falling back to direct API:', cacheError);
+			user = await clerkClient.users.getUser(userId);
+		}
 
 		return {
 			db,

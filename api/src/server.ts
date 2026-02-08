@@ -42,6 +42,15 @@ export default {
 				"Access-Control-Allow-Headers",
 				"Content-Type, Authorization, x-trpc-source, trpc-accept, x-dev-mode",
 			);
+			
+			// Add HTTP caching for GET requests (tRPC queries)
+			// Use stale-while-revalidate: client gets cached data immediately while fetching fresh data in background
+			if (request.method === 'GET') {
+				headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
+			} else {
+				// POST requests (mutations) should not be cached
+				headers.set('Cache-Control', 'no-store');
+			}
 
 			return new Response(response.body, {
 				status: response.status,
