@@ -8,6 +8,21 @@ const config = {
 		// Type-checking is done separately via `npm run typecheck`
 		ignoreBuildErrors: true,
 	},
+	webpack: (config, { isServer }) => {
+		// Enable WASM support for Typst.ts
+		config.experiments = {
+			...config.experiments,
+			asyncWebAssembly: true,
+		};
+
+		// Ensure WASM files are handled correctly
+		config.module.rules.push({
+			test: /\.wasm$/,
+			type: "asset/resource",
+		});
+
+		return config;
+	},
 };
 
 export default config;

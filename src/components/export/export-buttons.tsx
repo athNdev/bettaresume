@@ -1,6 +1,5 @@
 "use client";
 
-import { pdf } from "@react-pdf/renderer";
 import { Download, FileJson, FileText, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +9,10 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getTemplateSource } from "@/features/resume-editor/templates";
 import type { Resume } from "@/features/resume-editor/types";
-import { PDFDocument } from "./pdf-document";
+import { compileToPdf } from "@/lib/typst/compiler";
+import { resumeToTypstJson } from "@/lib/typst/serialize";
 
 interface ExportButtonsProps {
 	resume: Resume;
@@ -44,8 +45,11 @@ export function ExportButtons({
 	const exportPDF = async () => {
 		setIsExporting(true);
 		try {
-			const doc = <PDFDocument resume={resume} />;
-			const blob = await pdf(doc).toBlob();
+			const templateSource = getTemplateSource(resume.template ?? "minimal");
+			const dataJson = resumeToTypstJson(resume);
+			const fontFamily = resume.metadata?.settings?.fontFamily ?? "Inter";
+			const pdfBytes = await compileToPdf(templateSource, dataJson, fontFamily);
+			const blob = new Blob([pdfBytes], { type: "application/pdf" });
 			const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
 			downloadFile(blob, filename, "application/pdf");
 		} catch (error) {

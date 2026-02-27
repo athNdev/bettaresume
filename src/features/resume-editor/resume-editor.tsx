@@ -80,8 +80,8 @@ import { useHashRouter } from "@/lib/hash-router";
 import {
 	ChangeLog,
 	FormattingToolbar,
-	Preview,
 	SectionsManager,
+	TypstPreview,
 	UniversityTemplateSelector,
 	VariationManager,
 } from "./components";
@@ -142,10 +142,12 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		}
 	}, [activeResume]); // Remove draftResume from dependencies to avoid circular updates
 
-
 	// Live updates for draft (instant, no server call)
 	const handleDraftSectionDataUpdate = useCallback(
-		(sectionId: string, data: Record<string, unknown> | unknown[] | undefined) => {
+		(
+			sectionId: string,
+			data: Record<string, unknown> | unknown[] | undefined,
+		) => {
 			setDraftResume((prev) => {
 				if (!prev) return prev;
 				// Only update if data actually changed to avoid re-render loops
@@ -371,7 +373,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 
 	const handleSectionDataChange = useCallback(
-		async (sectionId: string, data: Record<string, unknown> | unknown[] | undefined) => {
+		async (
+			sectionId: string,
+			data: Record<string, unknown> | unknown[] | undefined,
+		) => {
 			await handleSectionChange(sectionId, {
 				content: { ...selectedSection?.content, data },
 			} as Partial<ResumeSection>);
@@ -394,7 +399,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			if (!activeResume || !activeResume.metadata) return;
 			try {
 				await updateResume(activeResume.id, {
-					metadata: { ...(activeResume.metadata as ResumeMetadata), personalInfo: info },
+					metadata: {
+						...(activeResume.metadata as ResumeMetadata),
+						personalInfo: info,
+					},
 				});
 			} catch (err) {
 				console.error("Failed to update personal info:", err);
@@ -563,7 +571,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		const content = selectedSection.content as SectionContent;
 
 		switch (selectedSection.type) {
-			case "personal-info":
+			case "personal-info": {
 				// Personal info requires metadata
 				if (!activeResume.metadata) {
 					return (
@@ -598,6 +606,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						}
 					/>
 				);
+			}
 			case "summary":
 				return (
 					<div className="space-y-4">
@@ -931,7 +940,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									<CollapsibleContent>
 										<div className="px-2 pb-2">
 											<UniversityTemplateSelector
-												currentTemplate={draftResume?.domain ?? activeResume.domain ?? undefined}
+												currentTemplate={
+													draftResume?.domain ??
+													activeResume.domain ??
+													undefined
+												}
 												onSelectTemplate={handleTemplateSelect}
 											/>
 										</div>
@@ -1000,8 +1013,9 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									onSettingsChange={handleSettingsChange}
 									scale={previewScale}
 									settings={
-										(draftResume?.metadata?.settings as ResumeSettings | undefined) ??
-										activeResume.metadata.settings
+										(draftResume?.metadata?.settings as
+											| ResumeSettings
+											| undefined) ?? activeResume.metadata.settings
 									}
 								/>
 							)}
@@ -1009,7 +1023,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							{/* Preview Area */}
 							<div className="flex-1 overflow-auto">
 								<div className="flex min-h-full items-start justify-center p-8">
-									<Preview
+									<TypstPreview
 										resume={draftResume || activeResume}
 										scale={previewScale}
 									/>
