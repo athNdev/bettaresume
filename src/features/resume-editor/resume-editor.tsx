@@ -64,10 +64,13 @@ import type {
 	SectionContent,
 	SectionType,
 	SkillCategory,
+	TemplateType,
 	Volunteer,
 } from "@/features/resume-editor/types";
-import { SECTION_CONFIGS } from "@/features/resume-editor/types";
-import type { UniversityTemplate } from "@/features/resume-editor/utils/university-templates";
+import {
+	SECTION_CONFIGS,
+	TEMPLATE_CONFIGS,
+} from "@/features/resume-editor/types";
 import {
 	useActiveResumeStore,
 	useResume,
@@ -81,8 +84,8 @@ import {
 	ChangeLog,
 	FormattingToolbar,
 	SectionsManager,
+	TemplateSelector,
 	TypstPreview,
-	UniversityTemplateSelector,
 	VariationManager,
 } from "./components";
 
@@ -140,7 +143,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				setDraftResume(activeResume as any as ResumeWithSections);
 			}
 		}
-	}, [activeResume]); // Remove draftResume from dependencies to avoid circular updates
+	}, [activeResume, draftResume]); // Remove draftResume from dependencies to avoid circular updates
 
 	// Live updates for draft (instant, no server call)
 	const handleDraftSectionDataUpdate = useCallback(
@@ -216,6 +219,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 	// Stable wrappers for draft updates to prevent infinite loops
 	const selectedSectionIdRef = useRef(selectedSectionId);
+	// Debounce settings saves so rapid slider drags don't flood the API.
+	const settingsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	);
 	useEffect(() => {
 		selectedSectionIdRef.current = selectedSectionId;
 	}, [selectedSectionId]);
@@ -263,64 +270,42 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	}, [activeResume, selectedSectionId]);
 
 	// Handle template selection
-	const handleTemplateSelect = (template: UniversityTemplate) => {
+	const handleTemplateSelect = (templateId: TemplateType) => {
 		if (!activeResume?.metadata) return;
 
+		const config = TEMPLATE_CONFIGS[templateId];
 		const metadata = activeResume.metadata as ResumeMetadata;
 
-		// Create new settings by merging current settings with template settings
+		// Apply the template's default colors while preserving all other settings
 		const newSettings: PartialResumeSettings = {
 			...metadata.settings,
-			...template.settings,
-			// Ensure we preserve settings that might not be in the template
-			margins: {
-				...metadata.settings.margins,
-				...template.settings.margins,
-			},
-			typography: {
-				...metadata.settings.typography,
-				...template.settings.typography,
-			},
 			colors: {
 				...metadata.settings.colors,
-				...template.settings.colors,
+				...config.defaultColors,
 			},
 		};
 
 		setDraftResume((prev) => {
 			if (!prev || !prev.metadata) return prev;
 			const baseSettings = prev.metadata.settings;
-			const mergedSettings: ResumeSettings = {
-				...baseSettings,
-				...newSettings,
-				margins: {
-					...baseSettings.margins,
-					...(newSettings.margins ?? {}),
-				},
-				typography: {
-					...baseSettings.typography,
-					...(newSettings.typography ?? {}),
-				},
-				colors: {
-					...baseSettings.colors,
-					...(newSettings.colors ?? {}),
-				},
-			};
 			return {
 				...prev,
-				domain: template.id,
+				template: templateId,
 				metadata: {
 					...prev.metadata,
-					settings: mergedSettings,
+					settings: {
+						...baseSettings,
+						colors: { ...baseSettings.colors, ...config.defaultColors },
+					},
 				},
 				updatedAt: new Date(),
 			};
 		});
 
 		updateResume(resumeId, {
-			domain: template.id,
+			template: templateId,
 			metadata: {
-				...(activeResume.metadata as ResumeMetadata),
+				...metadata,
 				settings: newSettings,
 			},
 		});
@@ -501,29 +486,39 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					};
 				});
 
-				const mergedServerSettings: ResumeSettings = {
-					...(activeResume.metadata as ResumeMetadata).settings,
-					...settings,
-					margins: {
-						...(activeResume.metadata as ResumeMetadata).settings.margins,
-						...(settings.margins ?? {}),
-					},
-					typography: {
-						...(activeResume.metadata as ResumeMetadata).settings.typography,
-						...(settings.typography ?? {}),
-					},
-					colors: {
-						...(activeResume.metadata as ResumeMetadata).settings.colors,
-						...(settings.colors ?? {}),
-					},
-				};
-
-				await updateResume(activeResume.id, {
-					metadata: {
-						...(activeResume.metadata as ResumeMetadata),
-						settings: mergedServerSettings,
-					},
-				});
+				if (settingsSaveTimerRef.current) {
+					// Debounce the network call: only persist 600 ms after the last change.
+					clearTimeout(settingsSaveTimerRef.current);
+				}
+				settingsSaveTimerRef.current = setTimeout(async () => {
+					if (!activeResume || !activeResume.metadata) return;
+					const mergedServerSettings: ResumeSettings = {
+						...(activeResume.metadata as ResumeMetadata).settings,
+						...settings,
+						margins: {
+							...(activeResume.metadata as ResumeMetadata).settings.margins,
+							...(settings.margins ?? {}),
+						},
+						typography: {
+							...(activeResume.metadata as ResumeMetadata).settings.typography,
+							...(settings.typography ?? {}),
+						},
+						colors: {
+							...(activeResume.metadata as ResumeMetadata).settings.colors,
+							...(settings.colors ?? {}),
+						},
+					};
+					try {
+						await updateResume(activeResume.id, {
+							metadata: {
+								...(activeResume.metadata as ResumeMetadata),
+								settings: mergedServerSettings,
+							},
+						});
+					} catch (err) {
+						console.error("Failed to save settings:", err);
+					}
+				}, 600);
 			} catch (err) {
 				console.error("Failed to update settings:", err);
 			}
@@ -939,13 +934,13 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									</CollapsibleTrigger>
 									<CollapsibleContent>
 										<div className="px-2 pb-2">
-											<UniversityTemplateSelector
+											<TemplateSelector
 												currentTemplate={
-													draftResume?.domain ??
-													activeResume.domain ??
-													undefined
+													(draftResume?.template ||
+														activeResume.template ||
+														"minimal") as TemplateType
 												}
-												onSelectTemplate={handleTemplateSelect}
+												onSelect={handleTemplateSelect}
 											/>
 										</div>
 									</CollapsibleContent>

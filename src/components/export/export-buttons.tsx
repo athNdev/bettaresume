@@ -9,7 +9,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getTemplateSource } from "@/features/resume-editor/templates";
+import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import type { Resume } from "@/features/resume-editor/types";
 import { compileToPdf } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";

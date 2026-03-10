@@ -21,6 +21,12 @@ const config = {
 			type: "asset/resource",
 		});
 
+		// Load Typst source files (.typ) as raw strings
+		config.module.rules.push({
+			test: /\.typ$/,
+			type: "asset/source",
+		});
+
 		return config;
 	},
 };

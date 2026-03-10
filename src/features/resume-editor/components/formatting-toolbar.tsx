@@ -8,6 +8,7 @@ import {
 	RotateCcw,
 	Type,
 } from "lucide-react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -108,35 +109,42 @@ const COLOR_PRESETS = {
 	],
 };
 
-export function FormattingToolbar({
+export const FormattingToolbar = memo(function FormattingToolbar({
 	settings,
 	onSettingsChange,
 	scale,
 	onScaleChange,
 }: FormattingToolbarProps) {
-	const fontScale = Math.round((settings.fontScale || 1) * 100);
+	// Local buffered state – slider thumbs move at 60 fps without round-tripping to parent.
+	const [localSettings, setLocalSettings] = useState(settings);
+
+	// Sync from prop when settings change externally (template switch, initial load).
+	useEffect(() => {
+		setLocalSettings(settings);
+	}, [settings]);
+
+	const fontScale = Math.round((localSettings.fontScale || 1) * 100);
 
 	const handleFontScaleChange = (delta: number) => {
 		const newScale = Math.max(
 			0.8,
-			Math.min(1.2, (settings.fontScale || 1) + delta),
+			Math.min(1.2, (localSettings.fontScale || 1) + delta),
 		);
 		onSettingsChange({ fontScale: newScale });
 	};
 
-	const handleTypographyChange = (
-		key: keyof TypographyScale,
-		value: number,
-	) => {
-		onSettingsChange({
-			typography: {
-				...settings.typography,
-				[key]: value,
-			},
-		});
-	};
+	const handleTypographyChange = useCallback(
+		(key: keyof TypographyScale, value: number) => {
+			setLocalSettings((prev) => ({
+				...prev,
+				typography: { ...prev.typography, [key]: value },
+			}));
+		},
+		[],
+	);
 
 	const resetTypography = () => {
+		setLocalSettings((prev) => ({ ...prev, typography: DEFAULT_TYPOGRAPHY }));
 		onSettingsChange({ typography: DEFAULT_TYPOGRAPHY });
 	};
 
@@ -221,7 +229,8 @@ export function FormattingToolbar({
 										{label}
 									</Label>
 									<span className="text-xs">
-										{settings.typography?.[key] || DEFAULT_TYPOGRAPHY[key]}pt
+										{localSettings.typography?.[key] || DEFAULT_TYPOGRAPHY[key]}
+										pt
 									</span>
 								</div>
 								<Slider
@@ -233,9 +242,17 @@ export function FormattingToolbar({
 											values[0] ?? DEFAULT_TYPOGRAPHY[key],
 										)
 									}
+									onValueCommit={(values) =>
+										onSettingsChange({
+											typography: {
+												...localSettings.typography,
+												[key]: values[0] ?? DEFAULT_TYPOGRAPHY[key],
+											},
+										})
+									}
 									step={1}
 									value={[
-										settings.typography?.[key] || DEFAULT_TYPOGRAPHY[key],
+										localSettings.typography?.[key] || DEFAULT_TYPOGRAPHY[key],
 									]}
 								/>
 							</div>
@@ -264,20 +281,28 @@ export function FormattingToolbar({
 							<line x1="3" x2="21" y1="12" y2="12" />
 							<line x1="3" x2="21" y1="18" y2="18" />
 						</svg>
-						{settings.lineHeight}
+						{localSettings.lineHeight}
 					</Button>
 				</PopoverTrigger>
 				<PopoverContent align="start" className="w-56 p-4">
 					<div className="mb-2 flex items-center justify-between">
 						<Label className="text-xs">Line Height</Label>
-						<span className="text-xs">{settings.lineHeight}</span>
+						<span className="text-xs">{localSettings.lineHeight}</span>
 					</div>
 					<Slider
 						max={2}
 						min={1.2}
-						onValueChange={([v]) => onSettingsChange({ lineHeight: v })}
+						onValueChange={([v]) =>
+							setLocalSettings((prev) => ({
+								...prev,
+								lineHeight: v ?? prev.lineHeight,
+							}))
+						}
+						onValueCommit={([v]) =>
+							onSettingsChange({ lineHeight: v ?? localSettings.lineHeight })
+						}
 						step={0.1}
-						value={[settings.lineHeight]}
+						value={[localSettings.lineHeight]}
 					/>
 				</PopoverContent>
 			</Popover>
@@ -466,15 +491,27 @@ export function FormattingToolbar({
 											max={50}
 											min={5}
 											onValueChange={([v]) =>
+												setLocalSettings((prev) => ({
+													...prev,
+													margins: {
+														...prev.margins,
+														top: v ?? prev.margins.top,
+													},
+												}))
+											}
+											onValueCommit={([v]) =>
 												onSettingsChange({
-													margins: { ...settings.margins, top: v },
+													margins: {
+														...localSettings.margins,
+														top: v ?? localSettings.margins.top,
+													},
 												})
 											}
 											step={1}
-											value={[settings.margins.top]}
+											value={[localSettings.margins.top]}
 										/>
 										<span className="w-6 text-right text-xs">
-											{settings.margins.top}
+											{localSettings.margins.top}
 										</span>
 									</div>
 								</div>
@@ -488,15 +525,27 @@ export function FormattingToolbar({
 											max={50}
 											min={5}
 											onValueChange={([v]) =>
+												setLocalSettings((prev) => ({
+													...prev,
+													margins: {
+														...prev.margins,
+														right: v ?? prev.margins.right,
+													},
+												}))
+											}
+											onValueCommit={([v]) =>
 												onSettingsChange({
-													margins: { ...settings.margins, right: v },
+													margins: {
+														...localSettings.margins,
+														right: v ?? localSettings.margins.right,
+													},
 												})
 											}
 											step={1}
-											value={[settings.margins.right]}
+											value={[localSettings.margins.right]}
 										/>
 										<span className="w-6 text-right text-xs">
-											{settings.margins.right}
+											{localSettings.margins.right}
 										</span>
 									</div>
 								</div>
@@ -510,15 +559,27 @@ export function FormattingToolbar({
 											max={50}
 											min={5}
 											onValueChange={([v]) =>
+												setLocalSettings((prev) => ({
+													...prev,
+													margins: {
+														...prev.margins,
+														bottom: v ?? prev.margins.bottom,
+													},
+												}))
+											}
+											onValueCommit={([v]) =>
 												onSettingsChange({
-													margins: { ...settings.margins, bottom: v },
+													margins: {
+														...localSettings.margins,
+														bottom: v ?? localSettings.margins.bottom,
+													},
 												})
 											}
 											step={1}
-											value={[settings.margins.bottom]}
+											value={[localSettings.margins.bottom]}
 										/>
 										<span className="w-6 text-right text-xs">
-											{settings.margins.bottom}
+											{localSettings.margins.bottom}
 										</span>
 									</div>
 								</div>
@@ -532,15 +593,27 @@ export function FormattingToolbar({
 											max={50}
 											min={5}
 											onValueChange={([v]) =>
+												setLocalSettings((prev) => ({
+													...prev,
+													margins: {
+														...prev.margins,
+														left: v ?? prev.margins.left,
+													},
+												}))
+											}
+											onValueCommit={([v]) =>
 												onSettingsChange({
-													margins: { ...settings.margins, left: v },
+													margins: {
+														...localSettings.margins,
+														left: v ?? localSettings.margins.left,
+													},
 												})
 											}
 											step={1}
-											value={[settings.margins.left]}
+											value={[localSettings.margins.left]}
 										/>
 										<span className="w-6 text-right text-xs">
-											{settings.margins.left}
+											{localSettings.margins.left}
 										</span>
 									</div>
 								</div>
@@ -614,4 +687,4 @@ export function FormattingToolbar({
 			</div>
 		</div>
 	);
-}
+});

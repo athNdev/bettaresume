@@ -8,9 +8,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Resume } from "@/features/resume-editor/types";
+import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import { compileToSvgPages } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
-import { getTemplateSource } from "../templates";
 
 export interface UseTypstPreviewResult {
 	/** One SVG string per page, in order. Empty while loading. */
@@ -56,9 +56,22 @@ export function useTypstPreview(
 		try {
 			const templateSource = getTemplateSource(r.template ?? "minimal");
 			const dataJson = resumeToTypstJson(r);
-			const fontFamily = r.metadata?.settings?.fontFamily ?? "Inter";
+			const rawFont = r.metadata?.settings?.fontFamily ?? "Inter";
+			const FONT_MAP: Record<string, string> = {
+				inter: "Inter",
+				roboto: "Roboto",
+				"open sans": "Open Sans",
+				lato: "Lato",
+				montserrat: "Montserrat",
+				"playfair display": "Playfair Display",
+			};
+			const fontFamily = FONT_MAP[rawFont.toLowerCase()] ?? rawFont;
 
-			const pages = await compileToSvgPages(templateSource, dataJson, fontFamily);
+			const pages = await compileToSvgPages(
+				templateSource,
+				dataJson,
+				fontFamily,
+			);
 
 			// Only update state if this compile is still the latest
 			if (cancelTokenRef.current === token) {
@@ -90,9 +103,10 @@ export function useTypstPreview(
 
 		const token = ++cancelTokenRef.current;
 
-		setIsLoading(true);
-
 		timerRef.current = setTimeout(() => {
+			// Only show the loading indicator when a compile is actually about to run,
+			// not on every intermediary tick while the user is dragging a slider.
+			setIsLoading(true);
 			compile(token);
 		}, DEBOUNCE_MS);
 

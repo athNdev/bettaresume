@@ -1,6 +1,6 @@
 /**
  * Serializes a Resume object into a JSON string suitable for injection into
- * a Typst template via `json.decode(...)`.
+ * a Typst template via `json(...)`.
  *
  * Handles:
  * - Stripping HTML from summary sections
@@ -23,6 +23,20 @@ import type {
 	SkillCategory,
 	Volunteer,
 } from "@/features/resume-editor/types";
+
+// Canonical font names as Typst knows them (keys are lowercase for lookup)
+const CANONICAL_FONT_NAMES: Record<string, string> = {
+	inter: "Inter",
+	roboto: "Roboto",
+	"open sans": "Open Sans",
+	lato: "Lato",
+	montserrat: "Montserrat",
+	"playfair display": "Playfair Display",
+};
+
+function normalizeFont(name: string): string {
+	return CANONICAL_FONT_NAMES[name.toLowerCase()] ?? name;
+}
 
 // Default settings mirroring preview.tsx defaults
 const defaultSettings: ResumeSettings = {
@@ -116,17 +130,17 @@ function serializeSettings(settings: ResumeSettings) {
 		margins: { ...defaultSettings.margins, ...settings.margins },
 	};
 	return {
-		pageSize: merged.pageSize,
+		pageSize: merged.pageSize ?? defaultSettings.pageSize,
 		margins: {
 			top: merged.margins.top,
 			right: merged.margins.right,
 			bottom: merged.margins.bottom,
 			left: merged.margins.left,
 		},
-		fontFamily: merged.fontFamily,
-		fontSize: merged.fontSize,
-		fontScale: merged.fontScale,
-		lineHeight: merged.lineHeight,
+		fontFamily: normalizeFont(merged.fontFamily ?? defaultSettings.fontFamily),
+		fontSize: merged.fontSize ?? defaultSettings.fontSize,
+		fontScale: merged.fontScale ?? defaultSettings.fontScale,
+		lineHeight: merged.lineHeight ?? defaultSettings.lineHeight,
 		typography: {
 			name: merged.typography.name,
 			title: merged.typography.title,
@@ -356,7 +370,7 @@ function serializeSection(section: {
 }
 
 /**
- * Converts a Resume object to a JSON string safe for Typst's `json.decode()`.
+ * Converts a Resume object to a JSON string safe for Typst's `json()`.
  */
 export function resumeToTypstJson(resume: Resume): string {
 	const settings = serializeSettings(

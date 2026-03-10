@@ -23,7 +23,7 @@
 		"dev": "run-s build:types db:reset-seed dev:all",
 		"dev:all": "run-p dev:frontend dev:api",
 		"dev:api": "npm run dev -w api",
-		"dev:frontend": "next dev --turbo",
+		"dev:frontend": "next dev --webpack",
 		"postbuild": "node scripts/postbuild.js",
 		"preview": "next build && next start",
 		"start": "next start",
@@ -100,6 +100,7 @@
 		"@types/react-dom": "^19.2.3",
 		"npm-run-all2": "^7.0.2",
 		"postcss": "^8.5.6",
+		"raw-loader": "^4.0.2",
 		"shx": "^0.4.0",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3"

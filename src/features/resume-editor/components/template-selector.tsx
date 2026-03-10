@@ -38,6 +38,7 @@ export function TemplateSelector({
 								onColorChange(template.defaultColors);
 							}
 						}}
+						type="button"
 					>
 						{/* Color bar preview */}
 						<div

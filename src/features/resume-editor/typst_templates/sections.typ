@@ -1,13 +1,34 @@
-/**
- * Shared Typst section renderers.
- *
- * Exported as a raw string that every template imports at the top
- * via string concatenation (no virtual filesystem needed).
- *
- * Expects: `data`, `settings`, `colors`, `typo`, `spacing-val` to be in scope.
- */
+// ──────────────────────────────────────────────
+// Variables (must be defined before helpers)
+// ──────────────────────────────────────────────
 
-export const SHARED_RENDERERS = /* typst */ `
+#let default-settings = (
+  colors: (accent: "#2563eb", heading: "#111827", secondary: "#6b7280", background: "#ffffff", text: "#1e293b", primary: "#2563eb", divider: "#e2e8f0"),
+  typography: (name: 24, title: 14, small: 10, body: 11, itemTitle: 12, sectionHeading: 14),
+  margins: (top: 36, right: 36, bottom: 36, left: 36),
+  sectionSpacing: "normal",
+  accentStyle: "underline",
+)
+
+// `data` is always injected by the compiler preamble as:
+//   #let data = json(bytes("..."))
+// The sys.inputs path was for standalone CLI use but is NOT used in the WASM
+// browser renderer — redefining `data` here would shadow and discard the real
+// resume payload.  Read directly from the already-defined `data` binding.
+
+#let settings  = data.at("settings", default: default-settings)
+#let personal  = data.at("personalInfo", default: (:))
+#let sections  = data.at("sections", default: ())
+#let colors    = settings.at("colors", default: default-settings.colors)
+#let typo      = settings.at("typography", default: default-settings.typography)
+#let margins   = settings.at("margins", default: default-settings.margins)
+
+#let section-spacing = settings.at("sectionSpacing", default: "normal")
+#let spacing-val = if section-spacing == "compact" {
+  8pt
+} else if section-spacing == "spacious" {
+  20pt
+} else { 12pt }
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -24,7 +45,7 @@ export const SHARED_RENDERERS = /* typst */ `
 #let date-range(start, end-val, is-current) = {
   if start != "" {
     start
-    " – "
+    " - "
     if is-current { "Present" } else if end-val != "" { end-val } else { "" }
   }
 }
@@ -430,4 +451,3 @@ export const SHARED_RENDERERS = /* typst */ `
   else if t == "publications"  { render-publications(section) }
   else if t == "references"    { render-references(section) }
 }
-`;

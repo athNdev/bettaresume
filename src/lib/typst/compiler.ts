@@ -196,11 +196,12 @@ export async function compileToPdf(
 // -------------------------------------------------------
 
 function buildMainContent(templateSource: string, dataJson: string): string {
-	// Embed data as a Typst string literal parsed via json.decode().
+	// Embed data as a Typst string literal that we convert to bytes for json().
+	// In Typst 0.11+, json() expects bytes, so we need to call .bytes() on the string.
 	// JSON.stringify on a JSON string produces a valid Typst string literal
 	// because both Typst and JSON use the same escape conventions.
 	const typstStringLiteral = JSON.stringify(dataJson);
-	const preamble = `#let data = json.decode(${typstStringLiteral})\n`;
+	const preamble = `#let data = json(bytes(${typstStringLiteral}))\n`;
 	return preamble + templateSource;
 }
 
