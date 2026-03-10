@@ -1,0 +1,23 @@
+# Gitleaks configuration
+# Docs: https://github.com/gitleaks/gitleaks#configuration
+
+title = "bettaresume gitleaks config"
+
+[extend]
+# Extend from the default gitleaks ruleset
+useDefault = true
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+  # Lock files are never secrets
+  "package-lock\\.json",
+  "pnpm-lock\\.yaml",
+  "yarn\\.lock",
+  # Build artifacts
+  "^build/",
+  "^\\.next/",
+  "^out/",
+  # Example / template env files are intentional
+  "\\.env\\.example",
+]

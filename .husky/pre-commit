@@ -1,0 +1,13 @@
+# Use the locally installed binary (from scripts/setup-gitleaks.cjs), fall back to PATH
+if [ -f ".tools/gitleaks.exe" ]; then
+  GITLEAKS=".tools/gitleaks.exe"
+elif [ -f ".tools/gitleaks" ]; then
+  GITLEAKS=".tools/gitleaks"
+elif command -v gitleaks >/dev/null 2>&1; then
+  GITLEAKS="gitleaks"
+else
+  echo "gitleaks not found. Run 'npm install' to auto-install, or see https://github.com/gitleaks/gitleaks#installing"
+  exit 1
+fi
+
+exec "$GITLEAKS" protect --staged --redact --verbose
