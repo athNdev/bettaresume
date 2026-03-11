@@ -135,20 +135,8 @@ CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
 
 Get your Clerk API keys from the [Clerk Dashboard](https://dashboard.clerk.com) → **API Keys**.
 
-### 3. Set Up the Database
-
+### 3. Start Development Servers
 ```bash
-# Apply migrations to the local Cloudflare D1 database
-npm run db:migrate
-```
-
-### 4. Start Development Servers
-
-```bash
-# Recommended: resets the DB, seeds dummy data, and starts both servers
-npm run dev:seed
-
-# Or, if the database is already initialized:
 npm run dev
 ```
 
