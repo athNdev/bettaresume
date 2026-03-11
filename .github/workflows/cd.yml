@@ -89,9 +89,12 @@ jobs:
 
       - name: Deploy API to Cloudflare Workers
         working-directory: ./api
-        run: npx wrangler deploy
+        run: |
+          envsubst < wrangler.jsonc > wrangler.resolved.jsonc
+          npx wrangler deploy --config wrangler.resolved.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
           D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
           CF_WORKER_CUSTOM_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
+          ALLOWED_ORIGIN: ${{ vars.ALLOWED_ORIGIN }}
