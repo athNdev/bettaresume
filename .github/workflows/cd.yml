@@ -82,6 +82,6 @@ jobs:
           workingDirectory: ./api
           secrets: |
             CLERK_SECRET_KEY
-            CLERK_PUBLISHABLE_KEY
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
