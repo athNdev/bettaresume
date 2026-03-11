@@ -12,6 +12,7 @@ declare namespace Cloudflare {
 		CLOUDFLARE_DATABASE_ID: string;
 		CLOUDFLARE_D1_TOKEN: string;
 		LOCAL_DB_PATH: string;
+		ALLOWED_ORIGIN: string;
 		bettaresume_d1: D1Database;
 	}
 }
