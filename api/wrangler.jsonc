@@ -17,6 +17,9 @@
 			"migrations_dir": "./drizzle"
 		}
 	],
+	"vars": {
+		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY"
+	},
 	"dev": {
 		"port": 4000
 	}
