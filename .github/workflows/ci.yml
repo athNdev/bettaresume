@@ -28,3 +28,50 @@ jobs:
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
+
+  dev-server:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build types package
+        run: npm run build:types
+
+      - name: Start dev server and verify startup
+        timeout-minutes: 2
+        run: |
+          npm run dev:frontend &
+          DEV_PID=$!
+          echo "Dev server PID: $DEV_PID"
+
+          # Poll until the dev server responds or timeout
+          for i in $(seq 1 30); do
+            # Fail fast if the dev server process has already exited
+            if ! ps -p $DEV_PID > /dev/null 2>&1; then
+              echo "Dev server process exited unexpectedly"
+              exit 1
+            fi
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "Dev server is up and responding on port 3000"
+              kill -TERM $DEV_PID 2>/dev/null || true
+              exit 0
+            fi
+            echo "Waiting for dev server... attempt $i/30"
+            sleep 3
+          done
+
+          echo "Dev server failed to start within timeout"
+          kill -TERM $DEV_PID 2>/dev/null || kill -9 $DEV_PID 2>/dev/null || true
+          exit 1
