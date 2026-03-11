@@ -1,3 +1,4 @@
+import { useAuth } from "@/components/providers/auth-provider";
 import { api } from "@/lib/trpc/react";
 
 /**
@@ -5,11 +6,12 @@ import { api } from "@/lib/trpc/react";
  * Uses React Query for caching and automatic refetching.
  */
 export function useResumes(options?: { includeArchived?: boolean }) {
+	const { isInitialized } = useAuth();
 	return api.resume.list.useQuery(
 		{ includeArchived: options?.includeArchived ?? false },
 		{
-			// Only fetch when user is authenticated (token exists)
-			enabled: true,
+			// Only fetch once auth is initialized to avoid unauthenticated requests
+			enabled: isInitialized,
 		},
 	);
 }
