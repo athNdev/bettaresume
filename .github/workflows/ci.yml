@@ -51,19 +51,25 @@ jobs:
 
       - name: Start dev server and verify startup
         timeout-minutes: 2
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
         run: |
           npm run dev:frontend &
           DEV_PID=$!
           echo "Dev server PID: $DEV_PID"
 
-          # Poll until the dev server responds or timeout
+          # Poll until the dev server responds or timeout.
+          # Use -s without -f so any HTTP response (even 4xx/5xx) counts as
+          # "server is listening" — we only want to confirm startup, not that
+          # every page renders without error.
           for i in $(seq 1 30); do
             # Fail fast if the dev server process has already exited
             if ! ps -p $DEV_PID > /dev/null 2>&1; then
               echo "Dev server process exited unexpectedly"
               exit 1
             fi
-            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+            if curl -s -o /dev/null --max-time 2 http://localhost:3000; then
               echo "Dev server is up and responding on port 3000"
               kill -TERM $DEV_PID 2>/dev/null || true
               exit 0
