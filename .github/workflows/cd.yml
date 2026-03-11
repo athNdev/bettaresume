@@ -87,7 +87,11 @@ jobs:
       - name: Deploy API to Cloudflare Workers
         working-directory: ./api
         run: |
-          envsubst < wrangler.jsonc > wrangler.resolved.jsonc
+          # Use explicit variable list so envsubst does not replace $schema or other
+          # JSON/JSONC tokens that are not deployment variables.
+          envsubst '$D1_DATABASE_ID $D1_DATABASE_NAME $CF_WORKER_CUSTOM_URL $ALLOWED_ORIGIN $CLERK_PUBLISHABLE_KEY' < wrangler.jsonc > wrangler.resolved.jsonc
+          # Apply any pending D1 migrations before deploying the worker
+          npx wrangler d1 migrations apply "$D1_DATABASE_NAME" --remote --config wrangler.resolved.jsonc
           npx wrangler deploy --config wrangler.resolved.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
