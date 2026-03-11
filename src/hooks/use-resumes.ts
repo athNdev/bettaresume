@@ -1,4 +1,4 @@
-import { useAuth } from "@/components/providers/auth-provider";
+import { useAuth } from "@clerk/clerk-react";
 import { api } from "@/lib/trpc/react";
 
 /**
@@ -6,12 +6,14 @@ import { api } from "@/lib/trpc/react";
  * Uses React Query for caching and automatic refetching.
  */
 export function useResumes(options?: { includeArchived?: boolean }) {
-	const { isInitialized } = useAuth();
+	const { isLoaded, userId } = useAuth();
 	return api.resume.list.useQuery(
 		{ includeArchived: options?.includeArchived ?? false },
 		{
-			// Only fetch once auth is initialized to avoid unauthenticated requests
-			enabled: isInitialized,
+			// Only fetch once Clerk has resolved and the user is signed in.
+			// Without this guard, queries fire before a token exists, causing
+			// auth failures that React Query then retries 3× each.
+			enabled: isLoaded && !!userId,
 		},
 	);
 }
