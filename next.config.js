@@ -8,7 +8,7 @@ const config = {
 		// Type-checking is done separately via `npm run typecheck`
 		ignoreBuildErrors: true,
 	},
-	webpack: (config, { isServer }) => {
+	webpack: (config) => {
 		// Enable WASM support for Typst.ts
 		config.experiments = {
 			...config.experiments,

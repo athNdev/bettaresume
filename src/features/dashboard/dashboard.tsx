@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuthStore } from "@/features/auth/auth.store";
 import { ResumeCard } from "@/features/dashboard/components/resume-card";
 import { ThemeToggle } from "@/features/dashboard/components/theme-toggle";
 import { UserMenu } from "@/features/dashboard/components/user-menu";
@@ -57,7 +58,6 @@ import {
 } from "@/features/resume-editor/types";
 import { useActiveResumeStore, useResumeMutations, useResumes } from "@/hooks";
 import { useHashRouter } from "@/lib/hash-router";
-import { useAuthStore } from "@/features/auth/auth.store";
 
 export default function Dashboard() {
 	return (
@@ -139,7 +139,7 @@ function DashboardContent() {
 	const [resumeToDelete, setResumeToDelete] = useState<string | null>(null);
 	const [newResumeName, setNewResumeName] = useState("");
 	const [newResumeTemplate, setNewResumeTemplate] =
-		useState<TemplateType>("modern");
+		useState<TemplateType>("minimal");
 	const [showWelcomeGuide, setShowWelcomeGuide] = useState(true);
 	const [page, setPage] = useState(1);
 	const pageSize = 10;
@@ -322,7 +322,7 @@ function DashboardContent() {
 					const data = JSON.parse(text);
 					const newResume = await createResume({
 						name: data.name || "Imported Resume",
-						template: data.template || "modern",
+						template: data.template || "minimal",
 						domain: data.domain,
 						tags: data.tags,
 						metadata: data.metadata,
@@ -463,26 +463,26 @@ function DashboardContent() {
 					<>
 						<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{pagedResumes.map((resume: Resume) => (
-							<ResumeCard
-								key={resume.id}
-								onArchive={() => handleArchiveResume(resume.id)}
-								onDelete={() => {
-									setResumeToDelete(resume.id);
-									setIsDeleteDialogOpen(true);
-								}}
-								onDuplicate={() =>
-									handleDuplicateResume(resume.id, resume.name)
-								}
-								onEdit={() => {
-									setActiveResumeId(resume.id);
-									navigate(`/resume-editor/${resume.id}`);
-								}}
-								onExport={() => handleExportResume(resume.id, resume.name)}
-								onRestore={() => handleRestoreResume(resume.id)}
-								resume={resume}
-								variations={getVariations(resume.id)}
-							/>
-						))}
+								<ResumeCard
+									key={resume.id}
+									onArchive={() => handleArchiveResume(resume.id)}
+									onDelete={() => {
+										setResumeToDelete(resume.id);
+										setIsDeleteDialogOpen(true);
+									}}
+									onDuplicate={() =>
+										handleDuplicateResume(resume.id, resume.name)
+									}
+									onEdit={() => {
+										setActiveResumeId(resume.id);
+										navigate(`/resume-editor/${resume.id}`);
+									}}
+									onExport={() => handleExportResume(resume.id, resume.name)}
+									onRestore={() => handleRestoreResume(resume.id)}
+									resume={resume}
+									variations={getVariations(resume.id)}
+								/>
+							))}
 						</div>
 						{filteredResumes.length > pageSize && (
 							<div className="mt-8 flex items-center justify-center gap-3">

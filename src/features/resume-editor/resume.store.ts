@@ -905,7 +905,8 @@ export const useResumeStore = create<ResumeStore>()((set, get) => ({
 			const resumes = state.resumes.map((r) => {
 				if (r.id !== resumeId) return r;
 				const currentSettings =
-					r.metadata?.settings || createDefaultSettings(r.template || "modern");
+					r.metadata?.settings ||
+					createDefaultSettings(r.template || "minimal");
 				const mergedColors = settings.colors
 					? { ...currentSettings.colors, ...settings.colors }
 					: currentSettings.colors;

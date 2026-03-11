@@ -1,7 +1,5 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type {
 	ResumeColors,
 	TemplateType,
@@ -23,36 +21,25 @@ export function TemplateSelector({
 	const templates = Object.values(TEMPLATE_CONFIGS);
 
 	return (
-		<div className="space-y-3 px-2">
-			<div className="grid grid-cols-2 gap-2">
-				{templates.map((template) => (
-					<button
-						className={cn(
-							"rounded-md border p-2 text-left transition-all hover:bg-accent/50",
-							currentTemplate === template.id && "border-primary bg-accent",
-						)}
-						key={template.id}
-						onClick={() => {
-							onSelect(template.id);
-							if (onColorChange) {
-								onColorChange(template.defaultColors);
-							}
-						}}
-						type="button"
-					>
-						{/* Color bar preview */}
-						<div
-							className="mb-2 h-1 rounded-full"
-							style={{ backgroundColor: template.defaultColors.accent }}
-						/>
-						<span className="text-sm">{template.name}</span>
-					</button>
-				))}
-			</div>
-			<Button className="w-full gap-2" size="sm" variant="outline">
-				<Sparkles className="h-4 w-4" />
-				View All Templates
-			</Button>
+		<div className="flex flex-col gap-1 px-2">
+			{templates.map((template) => (
+				<button
+					className={cn(
+						"w-full cursor-pointer rounded-md border px-3 py-2 text-left text-sm transition-all hover:bg-accent/50",
+						currentTemplate === template.id && "border-primary bg-accent",
+					)}
+					key={template.id}
+					onClick={() => {
+						onSelect(template.id);
+						if (onColorChange) {
+							onColorChange(template.defaultColors);
+						}
+					}}
+					type="button"
+				>
+					{template.name}
+				</button>
+			))}
 		</div>
 	);
 }

@@ -9,8 +9,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import type { Resume } from "@/features/resume-editor/types";
+import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import { compileToPdf } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
 
@@ -49,7 +49,9 @@ export function ExportButtons({
 			const dataJson = resumeToTypstJson(resume);
 			const fontFamily = resume.metadata?.settings?.fontFamily ?? "Inter";
 			const pdfBytes = await compileToPdf(templateSource, dataJson, fontFamily);
-			const blob = new Blob([pdfBytes], { type: "application/pdf" });
+			const blob = new Blob([pdfBytes.buffer as ArrayBuffer], {
+				type: "application/pdf",
+			});
 			const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
 			downloadFile(blob, filename, "application/pdf");
 		} catch (error) {

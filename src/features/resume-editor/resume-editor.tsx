@@ -57,6 +57,7 @@ import type {
 	Project,
 	Publication,
 	Reference,
+	Resume,
 	ResumeMetadata,
 	ResumeSection,
 	ResumeSettings,
@@ -140,7 +141,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				JSON.stringify(currentSectionIds) !== JSON.stringify(newSectionIds);
 
 			if (!draftResume || structureChanged) {
-				setDraftResume(activeResume as any as ResumeWithSections);
+				setDraftResume(activeResume as ResumeWithSections);
 			}
 		}
 	}, [activeResume, draftResume]); // Remove draftResume from dependencies to avoid circular updates
@@ -320,7 +321,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				: activeResume.baseResumeId;
 		if (!baseId) return [];
 		return allResumes.filter(
-			(r: any) => r.baseResumeId === baseId || r.id === baseId,
+			(r: Resume) => r.baseResumeId === baseId || r.id === baseId,
 		);
 	}, [activeResume, allResumes]);
 
@@ -329,7 +330,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		if (!activeResume) return null;
 		if (activeResume.variationType === "base") return activeResume;
 		return (
-			allResumes.find((r: any) => r.id === activeResume.baseResumeId) || null
+			allResumes.find((r: Resume) => r.id === activeResume.baseResumeId) || null
 		);
 	}, [activeResume, allResumes]);
 
@@ -337,7 +338,9 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	const selectedSection = useMemo(() => {
 		if (!activeResume || !selectedSectionId) return null;
 		return (
-			activeResume.sections.find((s: any) => s.id === selectedSectionId) || null
+			activeResume.sections.find(
+				(s: ResumeSection) => s.id === selectedSectionId,
+			) || null
 		);
 	}, [activeResume, selectedSectionId]);
 
@@ -588,7 +591,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						portfolio: "",
 						professionalTitle: "",
 						photoUrl: "",
-					} as any);
+					} as PersonalInfo);
 				return (
 					<PersonalInfoForm
 						data={personalInfo}

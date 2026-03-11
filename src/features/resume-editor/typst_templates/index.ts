@@ -30,18 +30,9 @@ export const TEMPLATE_SOURCES: Record<string, string> = {
 	// ── Implemented ──────────────────────────────────────────────────────────
 	minimal: minimalSource,
 
-	// ── Custom / university variants ─────────────────────────────────────────
-	// Add content to undergrad.typ / postgrad.typ to activate these.
+	// ── University variants — falls back to minimal until .typ files are filled ─
 	undergrad: undergradSource || minimalSource,
 	postgrad: postgradSource || minimalSource,
-
-	// ── Placeholders — replace with dedicated .typ files as they are created ─
-	modern: minimalSource,
-	classic: minimalSource,
-	professional: minimalSource,
-	creative: minimalSource,
-	executive: minimalSource,
-	tech: minimalSource,
 };
 
 /**

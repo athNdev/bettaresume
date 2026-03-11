@@ -12,8 +12,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { SplashScreen } from "@/app/splash-screen";
-import { useActiveResumeStore } from "@/hooks";
 import { useAuthStore } from "@/features/auth/auth.store";
+import { useActiveResumeStore } from "@/hooks";
 import { api } from "@/lib/trpc/react";
 
 interface AuthContextValue {
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 						theme: "dark",
 						emailNotifications: false,
 						autoSave: true,
-						defaultTemplate: "modern",
+						defaultTemplate: "minimal",
 					},
 				});
 				setToken("dev-token");
@@ -132,7 +132,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 						theme: "dark",
 						emailNotifications: true,
 						autoSave: true,
-						defaultTemplate: "modern",
+						defaultTemplate: "minimal",
 					},
 				});
 
