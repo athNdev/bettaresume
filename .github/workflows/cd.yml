@@ -28,9 +28,6 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Create .env file
-        run: echo "DATABASE_URL=${{ vars.DATABASE_URL }}" > api/.env
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -78,16 +75,20 @@ jobs:
       - name: Build types package
         run: npm run build:types
 
-      - name: Set Cloudflare Worker Secrets
-        working-directory: ./api
-        run: |
-          echo "${{ vars.CLERK_PUBLISHABLE_KEY }}" | npx wrangler secret put CLERK_PUBLISHABLE_KEY
-          echo "${{ secrets.CLERK_SECRET_KEY }}" | npx wrangler secret put CLERK_SECRET_KEY
+      - name: Substitute wrangler config placeholders
+        run: envsubst < api/wrangler.jsonc > api/wrangler.tmp.jsonc && mv api/wrangler.tmp.jsonc api/wrangler.jsonc
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+          D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
+          CF_WORKER_CUSTOM_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
+          CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
 
       - name: Deploy API to Cloudflare Workers
-        working-directory: ./api
-        run: npx wrangler deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: ./api
+          secrets: |
+            CLERK_SECRET_KEY
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}

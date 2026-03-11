@@ -6,17 +6,20 @@
 	"main": "./src/server.ts",
 	"workers_dev": false,
 	"route": {
-		"pattern": "api.bettaresume.com",
+		"pattern": "$CF_WORKER_CUSTOM_URL",
 		"custom_domain": true
 	},
 	"d1_databases": [
 		{
 			"binding": "bettaresume_d1",
-			"database_name": "bettaresume",
-			"database_id": "870de713-e81b-4e96-aa87-f2b7a785820b",
+			"database_name": "$D1_DATABASE_NAME",
+			"database_id": "$D1_DATABASE_ID",
 			"migrations_dir": "./drizzle"
 		}
 	],
+	"vars": {
+		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY"
+	},
 	"dev": {
 		"port": 4000
 	}
