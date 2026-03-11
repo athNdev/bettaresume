@@ -75,6 +75,13 @@ jobs:
       - name: Build types package
         run: npm run build:types
 
+      - name: Substitute wrangler config placeholders
+        run: envsubst < api/wrangler.jsonc > api/wrangler.tmp.jsonc && mv api/wrangler.tmp.jsonc api/wrangler.jsonc
+        env:
+          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+          D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
+          CF_WORKER_CUSTOM_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
+
       - name: Deploy API to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
