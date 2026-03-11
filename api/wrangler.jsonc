@@ -10,7 +10,8 @@
 		"custom_domain": true
 	},
 	"vars": {
-		"ALLOWED_ORIGIN": "$ALLOWED_ORIGIN"
+		"ALLOWED_ORIGIN": "$ALLOWED_ORIGIN",
+		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY"
 	},
 	"d1_databases": [
 		{
