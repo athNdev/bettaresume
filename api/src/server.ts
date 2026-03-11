@@ -8,11 +8,13 @@ export default {
 		env: Env,
 		_ctx: ExecutionContext,
 	): Promise<Response> {
+		const allowedOrigin = env.ALLOWED_ORIGIN || "*";
+
 		// Handle CORS preflight
 		if (request.method === "OPTIONS") {
 			return new Response(null, {
 				headers: {
-					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Origin": allowedOrigin,
 					"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 					"Access-Control-Allow-Headers":
 						"Content-Type, Authorization, x-trpc-source, trpc-accept, x-dev-mode",
@@ -36,7 +38,7 @@ export default {
 
 			// Add CORS headers to response
 			const headers = new Headers(response.headers);
-			headers.set("Access-Control-Allow-Origin", "*");
+			headers.set("Access-Control-Allow-Origin", allowedOrigin);
 			headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 			headers.set(
 				"Access-Control-Allow-Headers",
@@ -61,7 +63,7 @@ export default {
 				{
 					headers: {
 						"Content-Type": "application/json",
-						"Access-Control-Allow-Origin": "*",
+						"Access-Control-Allow-Origin": allowedOrigin,
 					},
 				},
 			);

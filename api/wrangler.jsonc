@@ -9,6 +9,9 @@
 		"pattern": "api.bettaresume.com",
 		"custom_domain": true
 	},
+	"vars": {
+		"ALLOWED_ORIGIN": "$ALLOWED_ORIGIN"
+	},
 	"d1_databases": [
 		{
 			"binding": "bettaresume_d1",

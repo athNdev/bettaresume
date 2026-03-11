@@ -83,6 +83,7 @@ jobs:
         run: |
           echo "${{ vars.CLERK_PUBLISHABLE_KEY }}" | npx wrangler secret put CLERK_PUBLISHABLE_KEY
           echo "${{ secrets.CLERK_SECRET_KEY }}" | npx wrangler secret put CLERK_SECRET_KEY
+          echo "${{ vars.ALLOWED_ORIGIN }}" | npx wrangler secret put ALLOWED_ORIGIN
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
