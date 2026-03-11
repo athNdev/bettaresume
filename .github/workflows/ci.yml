@@ -27,7 +27,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
 
   dev-server:
     runs-on: ubuntu-latest
@@ -53,7 +53,7 @@ jobs:
         timeout-minutes: 2
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
         run: |
           npm run dev:frontend &
           DEV_PID=$!
