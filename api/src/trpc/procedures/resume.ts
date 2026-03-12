@@ -1,4 +1,11 @@
-import type { SectionType, TemplateType, ResumeMetadata, PersonalInfo, ResumeSettings, FontFamily } from "@bettaresume/types";
+import type {
+	FontFamily,
+	PersonalInfo,
+	ResumeMetadata,
+	ResumeSettings,
+	SectionType,
+	TemplateType,
+} from "@bettaresume/types";
 import {
 	createResumeInputSchema,
 	updateResumeInputSchema,
@@ -35,38 +42,167 @@ function normalizeSettings(value: unknown): ResumeSettings {
 			? (value as Record<string, unknown>)
 			: {};
 	return {
-		pageSize: (typeof settings.pageSize === "string" && (settings.pageSize === "A4" || settings.pageSize === "Letter")) ? settings.pageSize : "A4",
+		pageSize:
+			typeof settings.pageSize === "string" &&
+			(settings.pageSize === "A4" || settings.pageSize === "Letter")
+				? settings.pageSize
+				: "A4",
 		margins: {
-			top: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).top === "number" ? (settings.margins as any).top : 20,
-			right: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).right === "number" ? (settings.margins as any).right : 20,
-			bottom: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).bottom === "number" ? (settings.margins as any).bottom : 20,
-			left: typeof settings.margins === "object" && settings.margins && typeof (settings.margins as any).left === "number" ? (settings.margins as any).left : 20,
+			top:
+				typeof settings.margins === "object" &&
+				settings.margins &&
+				typeof (settings.margins as any).top === "number"
+					? (settings.margins as any).top
+					: 20,
+			right:
+				typeof settings.margins === "object" &&
+				settings.margins &&
+				typeof (settings.margins as any).right === "number"
+					? (settings.margins as any).right
+					: 20,
+			bottom:
+				typeof settings.margins === "object" &&
+				settings.margins &&
+				typeof (settings.margins as any).bottom === "number"
+					? (settings.margins as any).bottom
+					: 20,
+			left:
+				typeof settings.margins === "object" &&
+				settings.margins &&
+				typeof (settings.margins as any).left === "number"
+					? (settings.margins as any).left
+					: 20,
 		},
 		fontSize: typeof settings.fontSize === "number" ? settings.fontSize : 12,
 		fontScale: typeof settings.fontScale === "number" ? settings.fontScale : 1,
 		typography: {
-			name: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).name === "number" ? (settings.typography as any).name : 24,
-			title: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).title === "number" ? (settings.typography as any).title : 18,
-			sectionHeading: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).sectionHeading === "number" ? (settings.typography as any).sectionHeading : 14,
-			itemTitle: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).itemTitle === "number" ? (settings.typography as any).itemTitle : 12,
-			body: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).body === "number" ? (settings.typography as any).body : 10,
-			small: typeof settings.typography === "object" && settings.typography && typeof (settings.typography as any).small === "number" ? (settings.typography as any).small : 8,
+			name:
+				typeof settings.typography === "object" &&
+				settings.typography &&
+				typeof (settings.typography as any).name === "number"
+					? (settings.typography as any).name
+					: 24,
+			title:
+				typeof settings.typography === "object" &&
+				settings.typography &&
+				typeof (settings.typography as any).title === "number"
+					? (settings.typography as any).title
+					: 18,
+			sectionHeading:
+				typeof settings.typography === "object" &&
+				settings.typography &&
+				typeof (settings.typography as any).sectionHeading === "number"
+					? (settings.typography as any).sectionHeading
+					: 14,
+			itemTitle:
+				typeof settings.typography === "object" &&
+				settings.typography &&
+				typeof (settings.typography as any).itemTitle === "number"
+					? (settings.typography as any).itemTitle
+					: 12,
+			body:
+				typeof settings.typography === "object" &&
+				settings.typography &&
+				typeof (settings.typography as any).body === "number"
+					? (settings.typography as any).body
+					: 10,
+			small:
+				typeof settings.typography === "object" &&
+				settings.typography &&
+				typeof (settings.typography as any).small === "number"
+					? (settings.typography as any).small
+					: 8,
 		},
-		lineHeight: typeof settings.lineHeight === "number" ? settings.lineHeight : 1.4,
-		fontFamily: (typeof settings.fontFamily === "string" && ["Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Playfair Display", "Georgia", "Times New Roman", "Arial", "Calibri", "Garamond", "Helvetica", "Computer Modern"].includes(settings.fontFamily)) ? settings.fontFamily as FontFamily : "Inter",
+		lineHeight:
+			typeof settings.lineHeight === "number" ? settings.lineHeight : 1.4,
+		fontFamily:
+			typeof settings.fontFamily === "string" &&
+			[
+				"Inter",
+				"Roboto",
+				"Open Sans",
+				"Lato",
+				"Montserrat",
+				"Playfair Display",
+				"Georgia",
+				"Times New Roman",
+				"Arial",
+				"Calibri",
+				"Garamond",
+				"Helvetica",
+				"Computer Modern",
+			].includes(settings.fontFamily)
+				? (settings.fontFamily as FontFamily)
+				: "Inter",
 		colors: {
-			primary: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).primary === "string" ? (settings.colors as any).primary : "#000000",
-			secondary: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).secondary === "string" ? (settings.colors as any).secondary : "#666666",
-			text: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).text === "string" ? (settings.colors as any).text : "#000000",
-			heading: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).heading === "string" ? (settings.colors as any).heading : "#000000",
-			accent: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).accent === "string" ? (settings.colors as any).accent : "#007acc",
-			background: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).background === "string" ? (settings.colors as any).background : "#ffffff",
-			divider: typeof settings.colors === "object" && settings.colors && typeof (settings.colors as any).divider === "string" ? (settings.colors as any).divider : "#cccccc",
+			primary:
+				typeof settings.colors === "object" &&
+				settings.colors &&
+				typeof (settings.colors as any).primary === "string"
+					? (settings.colors as any).primary
+					: "#000000",
+			secondary:
+				typeof settings.colors === "object" &&
+				settings.colors &&
+				typeof (settings.colors as any).secondary === "string"
+					? (settings.colors as any).secondary
+					: "#666666",
+			text:
+				typeof settings.colors === "object" &&
+				settings.colors &&
+				typeof (settings.colors as any).text === "string"
+					? (settings.colors as any).text
+					: "#000000",
+			heading:
+				typeof settings.colors === "object" &&
+				settings.colors &&
+				typeof (settings.colors as any).heading === "string"
+					? (settings.colors as any).heading
+					: "#000000",
+			accent:
+				typeof settings.colors === "object" &&
+				settings.colors &&
+				typeof (settings.colors as any).accent === "string"
+					? (settings.colors as any).accent
+					: "#007acc",
+			background:
+				typeof settings.colors === "object" &&
+				settings.colors &&
+				typeof (settings.colors as any).background === "string"
+					? (settings.colors as any).background
+					: "#ffffff",
+			divider:
+				typeof settings.colors === "object" &&
+				settings.colors &&
+				typeof (settings.colors as any).divider === "string"
+					? (settings.colors as any).divider
+					: "#cccccc",
 		},
-		sectionSpacing: (typeof settings.sectionSpacing === "string" && (settings.sectionSpacing === "compact" || settings.sectionSpacing === "normal" || settings.sectionSpacing === "spacious")) ? settings.sectionSpacing : "normal",
-		showIcons: typeof settings.showIcons === "boolean" ? settings.showIcons : true,
-		dateFormat: (typeof settings.dateFormat === "string" && (settings.dateFormat === "MM/YYYY" || settings.dateFormat === "MMM YYYY" || settings.dateFormat === "MMMM YYYY" || settings.dateFormat === "YYYY")) ? settings.dateFormat : "MM/YYYY",
-		accentStyle: (typeof settings.accentStyle === "string" && (settings.accentStyle === "underline" || settings.accentStyle === "background" || settings.accentStyle === "border" || settings.accentStyle === "none")) ? settings.accentStyle : "underline",
+		sectionSpacing:
+			typeof settings.sectionSpacing === "string" &&
+			(settings.sectionSpacing === "compact" ||
+				settings.sectionSpacing === "normal" ||
+				settings.sectionSpacing === "spacious")
+				? settings.sectionSpacing
+				: "normal",
+		showIcons:
+			typeof settings.showIcons === "boolean" ? settings.showIcons : true,
+		dateFormat:
+			typeof settings.dateFormat === "string" &&
+			(settings.dateFormat === "MM/YYYY" ||
+				settings.dateFormat === "MMM YYYY" ||
+				settings.dateFormat === "MMMM YYYY" ||
+				settings.dateFormat === "YYYY")
+				? settings.dateFormat
+				: "MM/YYYY",
+		accentStyle:
+			typeof settings.accentStyle === "string" &&
+			(settings.accentStyle === "underline" ||
+				settings.accentStyle === "background" ||
+				settings.accentStyle === "border" ||
+				settings.accentStyle === "none")
+				? settings.accentStyle
+				: "underline",
 	};
 }
 
@@ -76,9 +212,17 @@ function normalizeMetadata(value: unknown): ResumeMetadata | null {
 	return {
 		personalInfo: normalizePersonalInfo(obj.personalInfo),
 		settings: normalizeSettings(obj.settings),
-		exportHistory: Array.isArray(obj.exportHistory) ? obj.exportHistory as any[] : undefined,
-		jobTarget: obj.jobTarget && typeof obj.jobTarget === "object" ? obj.jobTarget as any : undefined,
-		atsScore: obj.atsScore && typeof obj.atsScore === "object" ? obj.atsScore as any : undefined,
+		exportHistory: Array.isArray(obj.exportHistory)
+			? (obj.exportHistory as any[])
+			: undefined,
+		jobTarget:
+			obj.jobTarget && typeof obj.jobTarget === "object"
+				? (obj.jobTarget as any)
+				: undefined,
+		atsScore:
+			obj.atsScore && typeof obj.atsScore === "object"
+				? (obj.atsScore as any)
+				: undefined,
 	};
 }
 
@@ -242,7 +386,7 @@ export const resumeRouter = router({
 				variationType: input.variationType ?? "base",
 				baseResumeId: input.baseResumeId ?? null,
 				domain: input.domain ?? null,
-				template: input.template ?? "modern",
+				template: input.template ?? "minimal",
 				tags: JSON.stringify(input.tags ?? []),
 				isArchived: input.isArchived ?? false,
 				metadata: JSON.stringify(input.metadata ?? defaultMetadata),
@@ -693,7 +837,7 @@ export const resumeRouter = router({
 			const resumeDefs: Parameters<typeof createResume>[0][] = [
 				{
 					name: "Senior Software Engineer — Platform & Reliability",
-					template: "tech",
+					template: "minimal",
 					tags: ["engineering", "platform", "sre"],
 					personalInfo: {
 						fullName: "Alex Chen",
@@ -748,7 +892,7 @@ export const resumeRouter = router({
 				},
 				{
 					name: "Product Engineer — Growth & Experimentation",
-					template: "modern",
+					template: "minimal",
 					tags: ["product", "growth", "experimentation"],
 					personalInfo: {
 						fullName: "Sam Rivera",
@@ -803,7 +947,7 @@ export const resumeRouter = router({
 				},
 				{
 					name: "Consulting — Strategy & Operations",
-					template: "professional",
+					template: "minimal",
 					tags: ["consulting", "strategy", "ops"],
 					personalInfo: {
 						fullName: "Jordan Patel",

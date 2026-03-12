@@ -14,15 +14,7 @@ export const userPreferencesSchema = z.object({
 	theme: z.enum(["light", "dark", "system"]),
 	emailNotifications: z.boolean(),
 	autoSave: z.boolean(),
-	defaultTemplate: z.enum([
-		"minimal",
-		"modern",
-		"classic",
-		"professional",
-		"creative",
-		"executive",
-		"tech",
-	]),
+	defaultTemplate: z.enum(["minimal", "postgrad", "undergrad"]),
 });
 
 // ============================================
@@ -45,15 +37,7 @@ export const sectionTypeSchema = z.enum([
 	"custom",
 ]);
 
-export const templateTypeSchema = z.enum([
-	"minimal",
-	"modern",
-	"classic",
-	"professional",
-	"creative",
-	"executive",
-	"tech",
-]);
+export const templateTypeSchema = z.enum(["minimal", "postgrad", "undergrad"]);
 
 export const variationTypeSchema = z.enum(["base", "variation"]);
 
@@ -366,7 +350,7 @@ export const createResumeInputSchema = z.object({
 	variationType: variationTypeSchema.optional().default("base"),
 	baseResumeId: z.string().optional(),
 	domain: z.string().optional(),
-	template: templateTypeSchema.optional().default("modern"),
+	template: templateTypeSchema.optional().default("minimal"),
 	tags: z.array(z.string()).optional().default([]),
 	isArchived: z.boolean().optional().default(false),
 	metadata: resumeMetadataSchema.optional(),
