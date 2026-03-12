@@ -75,12 +75,24 @@ const defaultPersonalInfo: PersonalInfo = {
 };
 
 function stripHtml(html: string): string {
-	return html
+	// First normalize some common block/inline tags to text representations.
+	let text = html
 		.replace(/<br\s*\/?>/gi, "\n")
 		.replace(/<\/p>/gi, "\n")
 		.replace(/<\/li>/gi, "\n")
-		.replace(/<li>/gi, "• ")
-		.replace(/<[^>]*>/g, "")
+		.replace(/<li>/gi, "• ");
+
+	// Repeatedly strip any remaining HTML tags to avoid incomplete
+	// multi-character sanitization where earlier replacements reveal
+	// new tags (e.g. nested or overlapping constructs).
+	let previous: string;
+	do {
+		previous = text;
+		text = text.replace(/<[^>]*>/g, "");
+	} while (text !== previous);
+
+	// Decode a subset of common HTML entities to their character forms.
+	text = text
 		.replace(/&nbsp;/g, " ")
 		.replace(/&lt;/g, "<")
 		.replace(/&gt;/g, ">")
