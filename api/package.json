@@ -34,7 +34,7 @@
 		"@clerk/backend": "^2.29.1",
 		"@trpc/client": "^11.8.1",
 		"@trpc/server": "^11.8.1",
-		"@types/node": "^25.0.3",
+		"@types/node": "^25.4.0",
 		"dotenv": "^17.2.3",
 		"drizzle-orm": "^0.45.1",
 		"superjson": "^2.2.6",
