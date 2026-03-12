@@ -8,6 +8,17 @@ const config = {
 		// Type-checking is done separately via `npm run typecheck`
 		ignoreBuildErrors: true,
 	},
+	// Turbopack config (Next.js 16 default bundler)
+	// Load Typst source files (.typ) as raw strings.
+	// WASM is fetched from CDN at runtime so no bundler WASM config is needed.
+	turbopack: {
+		rules: {
+			"*.typ": {
+				loaders: ["raw-loader"],
+				as: "*.js",
+			},
+		},
+	},
 	webpack: (config) => {
 		// Enable WASM support for Typst.ts
 		config.experiments = {
