@@ -6,7 +6,7 @@ import { api } from "@/lib/trpc/react";
  */
 export function useResume(id: string | null | undefined) {
 	return api.resume.getById.useQuery(
-		{ id: id! },
+		{ id: id as string },
 		{
 			enabled: !!id,
 		},

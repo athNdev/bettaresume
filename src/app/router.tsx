@@ -20,7 +20,9 @@ const ResumeEditorPage = dynamic(
 );
 
 export function AppRouter() {
-	const isDevBypass = process.env.NODE_ENV === "development";
+	const isDevBypass =
+		process.env.NODE_ENV === "development" ||
+		process.env.NEXT_PUBLIC_DEV_MODE === "true";
 	const { path, navigate, replace } = useHashRouter();
 	const { isAuthenticated } = useAuthStore();
 	const { isLoaded: isClerkLoaded, isSignedIn } = useClerkAuth();

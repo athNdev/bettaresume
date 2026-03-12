@@ -1,6 +1,5 @@
 import type {
 	ResumeSection,
-	ResumeWithSections,
 	SectionContent,
 	SectionType,
 } from "@bettaresume/types";
@@ -45,7 +44,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 						s.id === id ? { ...s, ...data, updatedAt: new Date() } : s,
 					),
 					updatedAt: new Date(),
-				} as any);
+				} as unknown as typeof previousResume);
 			}
 
 			return { previousResume };
@@ -86,7 +85,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 					...previousResume,
 					sections: reorderedSections,
 					updatedAt: new Date(),
-				} as any);
+				} as unknown as typeof previousResume);
 			}
 
 			return { previousResume };
@@ -112,7 +111,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 					...previousResume,
 					sections: previousResume.sections.filter((s) => s.id !== id),
 					updatedAt: new Date(),
-				} as any);
+				} as unknown as typeof previousResume);
 			}
 
 			return { previousResume };

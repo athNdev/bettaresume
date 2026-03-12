@@ -232,14 +232,7 @@ export interface ResumeColors {
 // ============================================
 // Template Types
 // ============================================
-export type TemplateType =
-	| "minimal"
-	| "modern"
-	| "classic"
-	| "professional"
-	| "creative"
-	| "executive"
-	| "tech";
+export type TemplateType = "minimal" | "postgrad" | "undergrad";
 
 export type ResumeLayout = "single-column" | "two-column" | "sidebar";
 

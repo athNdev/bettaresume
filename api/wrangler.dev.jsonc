@@ -4,16 +4,13 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"name": "bettaresume-api-server",
 	"main": "./src/server.ts",
-	"workers_dev": false,
-	"route": {
-		"pattern": "$CF_WORKER_CUSTOM_URL",
-		"custom_domain": true
-	},
+	// No route / custom_domain — let wrangler dev serve on localhost directly
+	"workers_dev": true,
 	"d1_databases": [
 		{
 			"binding": "bettaresume_d1",
 			"database_name": "bettaresume",
-			"database_id": "$D1_DATABASE_ID",
+			"database_id": "local-dev",
 			"migrations_dir": "./drizzle"
 		}
 	],

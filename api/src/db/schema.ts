@@ -54,7 +54,7 @@ export const resumes = sqliteTable(
 		domain: text("domain"),
 		template: text("template")
 			.notNull()
-			.default("modern")
+			.default("minimal")
 			.$type<TemplateType>(),
 		tags: text("tags").notNull().default("[]"),
 		isArchived: integer("isArchived", { mode: "boolean" })
