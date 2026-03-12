@@ -13,6 +13,7 @@ import type { Resume } from "@/features/resume-editor/types";
 import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import { compileToPdf } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
+import { htmlToText } from "html-to-text";
 
 interface ExportButtonsProps {
 	resume: Resume;
@@ -96,7 +97,8 @@ export function ExportButtons({
 
 				if (section.type === "summary") {
 					const html = section.content.html || "";
-					text += `${html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ")}\n\n`;
+					const plainSummary = htmlToText(html, { wordwrap: false });
+					text += `${plainSummary}\n\n`;
 				} else if (Array.isArray(section.content.data)) {
 					(section.content.data as Array<Record<string, unknown>>).forEach(
 						(item) => {
