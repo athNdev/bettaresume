@@ -94,18 +94,11 @@ function stripHtml(html: string): string {
 	// Decode a subset of common HTML entities to their character forms.
 	text = text
 		.replace(/&nbsp;/g, " ")
-		.replace(/&amp;/g, "&")
 		.replace(/&lt;/g, "<")
 		.replace(/&gt;/g, ">")
 		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'");
-
-	// Finally, escape any remaining angle brackets so the returned string
-	// cannot introduce new HTML elements (e.g. "<script>") when embedded
-	// into HTML contexts.
-	return text
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
+		.replace(/&#39;/g, "'")
+		.replace(/&amp;/g, "&")
 		.trim();
 }
 
