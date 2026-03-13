@@ -22,7 +22,7 @@
 	"type": "commonjs",
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260313.1",
-		"better-sqlite3": "^12.5.0",
+		"better-sqlite3": "^12.6.2",
 		"drizzle-kit": "^0.31.8",
 		"shx": "^0.4.0",
 		"tsx": "^4.21.0",
