@@ -34,7 +34,7 @@
 		"@bettaresume/types": "*",
 		"@clerk/nextjs": "^6.36.6",
 		"@clerk/react": "^5.54.0",
-		"@clerk/themes": "^2.4.47",
+		"@clerk/themes": "^2.4.57",
 		"@dnd-kit/core": "^6.3.1",
 		"@dnd-kit/sortable": "^10.0.0",
 		"@dnd-kit/utilities": "^3.2.2",
