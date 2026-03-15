@@ -79,6 +79,7 @@
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"date-fns": "^4.1.0",
+		"html-to-text": "^9.0.5",
 		"lucide-react": "^0.562.0",
 		"next": "^16.1.6",
 		"next-themes": "^0.4.6",
@@ -90,8 +91,7 @@
 		"superjson": "^2.2.6",
 		"tailwind-merge": "^3.4.0",
 		"zod": "^4.3.6",
-		"zustand": "^5.0.9",
-		"html-to-text": "^9.0.5"
+		"zustand": "^5.0.9"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.11",
@@ -107,5 +107,8 @@
 		"tailwindcss": "^4.2.1",
 		"typescript": "^5.9.3"
 	},
-	"packageManager": "npm@11.7.0"
+	"packageManager": "npm@11.7.0",
+	"overrides": {
+		"undici": "7.24.3"
+	}
 }
