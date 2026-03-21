@@ -33,7 +33,7 @@
 		"@bettaresume/types": "*",
 		"@clerk/backend": "^3.2.0",
 		"@trpc/client": "^11.8.1",
-		"@trpc/server": "^11.8.1",
+		"@trpc/server": "^11.14.1",
 		"@types/node": "^25.5.0",
 		"dotenv": "^17.3.1",
 		"drizzle-orm": "^0.45.1",
