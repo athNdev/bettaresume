@@ -16,9 +16,7 @@ export function SplashScreen({ message = "Loading..." }: SplashScreenProps) {
 		<div className="flex min-h-screen flex-col items-center justify-center bg-background">
 			{/* Logo */}
 			<div className="mb-8">
-				<div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary shadow-lg">
-					<span className="font-bold text-4xl text-primary-foreground">B</span>
-				</div>
+				<img src="/logo.svg" alt="Betta Resume Logo" className="h-24 w-auto" />
 			</div>
 
 			{/* App Name */}
