@@ -31,7 +31,7 @@
 	},
 	"dependencies": {
 		"@bettaresume/types": "*",
-		"@clerk/backend": "^3.2.0",
+		"@clerk/backend": "^3.2.3",
 		"@trpc/client": "^11.14.1",
 		"@trpc/server": "^11.14.1",
 		"@types/node": "^25.5.0",
