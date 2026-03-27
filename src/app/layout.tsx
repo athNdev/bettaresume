@@ -8,6 +8,9 @@ export const metadata: Metadata = {
 	title: "Betta Resume - Professional Resume Builder",
 	description: "Create professional, customizable resumes with ease",
 	keywords: ["resume", "cv", "resume builder", "professional resume"],
+	icons: {
+		icon: "/logo.svg",
+	},
 };
 
 export default function RootLayout({
