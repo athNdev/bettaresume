@@ -33,7 +33,7 @@
 	"dependencies": {
 		"@bettaresume/types": "*",
 		"@clerk/nextjs": "^6.36.6",
-		"@clerk/react": "^5.54.0",
+		"@clerk/react": "^6.1.3",
 		"@clerk/themes": "^2.4.57",
 		"@dnd-kit/core": "^6.3.1",
 		"@dnd-kit/sortable": "^10.0.0",
