@@ -36,7 +36,7 @@
 		"@trpc/server": "^11.14.1",
 		"@types/node": "^25.5.0",
 		"dotenv": "^17.3.1",
-		"drizzle-orm": "^0.45.1",
+		"drizzle-orm": ">=0.45.2",
 		"superjson": "^2.2.6",
 		"zod": "^4.3.6"
 	}
