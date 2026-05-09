@@ -7,7 +7,7 @@
  * Verifies session with backend and clears React Query cache on logout.
  */
 
-import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-react";
+import { useAuth as useClerkAuth, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";

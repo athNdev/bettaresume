@@ -1,6 +1,6 @@
 "use client";
 
-import { RedirectToSignIn, useAuth as useClerkAuth } from "@clerk/clerk-react";
+import { RedirectToSignIn, useAuth as useClerkAuth } from "@clerk/react";
 // Lazy load views for code splitting
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
