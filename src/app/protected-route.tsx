@@ -7,7 +7,7 @@
  * Uses Clerk for auth state.
  */
 
-import { RedirectToSignIn, useAuth } from "@clerk/clerk-react";
+import { RedirectToSignIn, useAuth } from "@clerk/react";
 import { SplashScreen } from "@/app/splash-screen";
 
 interface ProtectedRouteProps {

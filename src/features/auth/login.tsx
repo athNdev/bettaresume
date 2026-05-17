@@ -8,7 +8,7 @@
  * This component exists only for backwards compatibility.
  */
 
-import { RedirectToSignIn } from "@clerk/clerk-react";
+import { RedirectToSignIn } from "@clerk/react";
 
 export default function Login() {
 	// Redirect to Clerk's hosted sign-in page
