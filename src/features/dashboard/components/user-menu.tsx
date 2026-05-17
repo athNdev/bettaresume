@@ -1,6 +1,6 @@
 "use client";
 
-import { useClerk } from "@clerk/clerk-react";
+import { useClerk } from "@clerk/react";
 import { LogOut, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
