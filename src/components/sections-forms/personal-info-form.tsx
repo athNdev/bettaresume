@@ -2,9 +2,9 @@
 
 import {
 	Briefcase,
-	Github,
+	GitBranch,
 	Globe,
-	Linkedin,
+	Link,
 	Mail,
 	MapPin,
 	Phone,
@@ -153,7 +153,7 @@ export function PersonalInfoForm({
 						<div>
 							<Label htmlFor="linkedin">LinkedIn</Label>
 							<div className="relative mt-1">
-								<Linkedin className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<Link className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
 									className="pl-9"
 									id="linkedin"
@@ -166,7 +166,7 @@ export function PersonalInfoForm({
 						<div>
 							<Label htmlFor="github">GitHub</Label>
 							<div className="relative mt-1">
-								<Github className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+								<GitBranch className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
 									className="pl-9"
 									id="github"
