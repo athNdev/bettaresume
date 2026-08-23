@@ -12,6 +12,7 @@
 
 		/* Strictness */
 		"strict": true,
+		"ignoreDeprecations": "6.0",
 		"noUncheckedIndexedAccess": true,
 		"checkJs": true,
 
