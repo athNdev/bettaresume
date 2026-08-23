@@ -21,13 +21,13 @@
 	"license": "ISC",
 	"type": "commonjs",
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260522.1",
+		"@cloudflare/workers-types": "^5.20260823.1",
 		"better-sqlite3": "^12.6.2",
 		"drizzle-kit": "^0.31.10",
 		"shx": "^0.4.0",
 		"tsx": "^4.22.4",
 		"typescript": "^6.0.2",
-		"wrangler": "^4.114.0"
+		"wrangler": "^4.125.0"
 	},
 	"dependencies": {
 		"@bettaresume/types": "*",

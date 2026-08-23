@@ -32,8 +32,8 @@ export function ClerkAuthProvider({ children }: ClerkAuthProviderProps) {
 	return (
 		<ClerkProvider
 			appearance={{
-				baseTheme: resolvedTheme === "dark" ? dark : undefined,
-				layout: {
+				theme: resolvedTheme === "dark" ? dark : undefined,
+				options: {
 					logoImageUrl: "/logo.svg",
 				},
 				elements: {
