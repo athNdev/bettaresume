@@ -204,3 +204,144 @@ body {
 [data-separator][data-interaction-state="dragging"] {
 	background: var(--primary);
 }
+
+/* ==========================================================================
+   Marketing site
+   --------------------------------------------------------------------------
+   Scoped under [data-marketing] so the product UI keeps its greyscale shadcn
+   tokens untouched. The app had no brand identity at all (--primary is
+   near-black in light mode, near-white in dark), which is fine for a tool and
+   wrong for a marketing surface.
+   ========================================================================== */
+
+[data-marketing] {
+	--brand-ink: oklch(0.17 0.014 268);
+	--brand-ink-soft: oklch(0.24 0.016 268);
+	--brand-accent: oklch(0.55 0.215 274);
+	--brand-accent-bright: oklch(0.66 0.205 276);
+	--brand-warm: oklch(0.78 0.155 68);
+	--brand-paper: oklch(0.985 0.002 268);
+	--brand-rule: oklch(0.9 0.006 268);
+
+	/* Fluid marketing type scale. The app had none — every size was ad-hoc. */
+	--text-display: clamp(2.75rem, 1.6rem + 4.6vw, 5.25rem);
+	--text-title: clamp(2rem, 1.35rem + 2.4vw, 3.25rem);
+	--text-subtitle: clamp(1.25rem, 1.05rem + 0.75vw, 1.75rem);
+	--text-lede: clamp(1.0625rem, 0.99rem + 0.34vw, 1.3125rem);
+
+	/* Marketing rhythm — no container primitive existed. */
+	--marketing-gutter: clamp(1.25rem, 0.6rem + 2.4vw, 3.5rem);
+	--marketing-max: 76rem;
+	--marketing-measure: 62ch;
+
+	color: var(--brand-ink);
+	background: var(--brand-paper);
+}
+
+[data-marketing] .marketing-shell {
+	width: 100%;
+	max-width: var(--marketing-max);
+	margin-inline: auto;
+	padding-inline: var(--marketing-gutter);
+}
+
+/* Optical alignment for large display type. */
+[data-marketing] .text-display {
+	font-size: var(--text-display);
+	line-height: 1.02;
+	letter-spacing: -0.035em;
+	font-weight: 700;
+	text-wrap: balance;
+}
+
+[data-marketing] .text-title {
+	font-size: var(--text-title);
+	line-height: 1.08;
+	letter-spacing: -0.028em;
+	font-weight: 700;
+	text-wrap: balance;
+}
+
+[data-marketing] .text-lede {
+	font-size: var(--text-lede);
+	line-height: 1.6;
+	max-width: var(--marketing-measure);
+	text-wrap: pretty;
+}
+
+/* Tabular figures keep dates and metrics aligned in the resume preview. */
+[data-marketing] .tnum {
+	font-variant-numeric: tabular-nums;
+}
+
+/* Gradient hairline used to separate the ink sections. */
+[data-marketing] .rule-soft {
+	border-top: 1px solid color-mix(in oklch, var(--brand-ink) 12%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Motion. All of it is gated on prefers-reduced-motion so the page stays
+   usable for users who ask for less of it.
+   -------------------------------------------------------------------------- */
+
+@keyframes marketing-rise {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes marketing-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes marketing-drift {
+	0%,
+	100% {
+		transform: translate3d(0, 0, 0);
+	}
+	50% {
+		transform: translate3d(0, -10px, 0);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	[data-marketing] [data-animate] {
+		animation: marketing-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+	}
+	[data-marketing] [data-animate-fade] {
+		animation: marketing-fade 0.9s ease backwards;
+	}
+	[data-marketing] [data-animate-drift] {
+		animation: marketing-drift 9s ease-in-out infinite;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-marketing] [data-animate],
+	[data-marketing] [data-animate-fade],
+	[data-marketing] [data-animate-drift] {
+		animation: none;
+	}
+}
+
+/* Focus ring: the app's global :focus-visible only sets outline, which is easy
+   to lose on the ink sections. */
+[data-marketing] :focus-visible {
+	outline: 2px solid var(--brand-accent);
+	outline-offset: 3px;
+	border-radius: 4px;
+}
+
+[data-marketing] :focus-visible.on-ink {
+	outline-color: var(--brand-accent-bright);
+}

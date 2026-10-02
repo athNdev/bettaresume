@@ -1,41 +1,61 @@
-"use client";
+import type { Metadata } from "next";
+import {
+	ClosingCta,
+	Faq,
+	Positioning,
+	Templates,
+	Workflow,
+	Workbench,
+} from "@/components/marketing/sections";
+import { Hero } from "@/components/marketing/hero";
+import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 
-import { useEffect, useState } from "react";
-import { AppRouter } from "@/app/router";
-import { HashRouterProvider } from "@/lib/hash-router";
+export const metadata: Metadata = {
+	title: "Betta Resume — a workbench for the resumes you actually manage",
+	description:
+		"Versioning, linked variants, a content library, and a rich editor that stays out of your way. Betta Resume does everything around writing a resume — and stops right before it.",
+	alternates: { canonical: "/" },
+	openGraph: {
+		type: "website",
+		url: "/",
+		title: "Betta Resume — a workbench for the resumes you actually manage",
+		description:
+			"Versioning, linked variants, a content library, and a rich editor that stays out of your way.",
+		siteName: "Betta Resume",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "Betta Resume — a workbench for the resumes you actually manage",
+		description:
+			"Versioning, linked variants, a content library, and a rich editor that stays out of your way.",
+	},
+};
 
 /**
- * Main entry point for the static SPA
- * Uses hash-based routing for GitHub Pages compatibility
- * All routes are handled client-side via the hash fragment
+ * Public marketing home page.
  *
- * Routes:
- * - #/login - Login page
- * - #/dashboard - Dashboard (protected)
- * - #/resume-editor/:id - Resume editor (protected)
- * - Default: redirects based on auth status
+ * Server component on purpose. It prerenders to real HTML at `/index.html`, so
+ * crawlers and link previews can see it — which the hash-routed app never
+ * could, since `#/…` is invisible to both. It also ships no client JS: the
+ * hero preview is CSS, deliberately avoiding the Typst WASM compiler that
+ * `src/lib/typst/` would otherwise pull in.
+ *
+ * The app itself moved to `/app`.
  */
-export default function Home() {
-	const [mounted, setMounted] = useState(false);
-
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	// Render a stable shell for SSR/first paint. This prevents hydration errors
-	// caused by browser extensions (e.g. Dark Reader) mutating SVG attributes
-	// before React hydrates.
-	if (!mounted) {
-		return (
-			<div className="flex min-h-screen items-center justify-center bg-background">
-				<p className="text-muted-foreground text-sm">Loading…</p>
-			</div>
-		);
-	}
-
+export default function MarketingHome() {
 	return (
-		<HashRouterProvider>
-			<AppRouter />
-		</HashRouterProvider>
+		<div data-marketing>
+			<SiteHeader />
+			<main id="main">
+				<Hero />
+				<Positioning />
+				<Workbench />
+				<Templates />
+				<Workflow />
+				<Faq />
+				<ClosingCta />
+			</main>
+			<SiteFooter />
+		</div>
 	);
 }
