@@ -255,7 +255,7 @@ describe("serializeSection — coverage across every SectionType", () => {
 			JSON.stringify(entry),
 			`Section type "${type}" serialised without its content. The serialiser ` +
 				`fell through to its default branch.`,
-		).toContain(fixture.marker);
+		).toContain(fixture!.marker);
 	});
 
 	it("has a fixture for every type and no fixture for a type that does not exist", () => {
