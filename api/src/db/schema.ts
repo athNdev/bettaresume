@@ -1,6 +1,7 @@
 import type { SectionType, TemplateType } from "@bettaresume/types";
 import { relations } from "drizzle-orm";
 import {
+	type AnySQLiteColumn,
 	index,
 	integer,
 	sqliteTable,
@@ -50,7 +51,16 @@ export const resumes = sqliteTable(
 			.notNull()
 			.default("base")
 			.$type<"base" | "variation">(),
-		baseResumeId: text("baseResumeId"),
+		// Self-referencing FK. The `(): AnySQLiteColumn` return annotation is
+		// load-bearing: without it TypeScript cannot infer the referenced column's
+		// type, because `resumes` is still being initialised when this callback
+		// runs, and the declaration becomes circular (TS7022/TS7024).
+		baseResumeId: text("baseResumeId").references(
+			(): AnySQLiteColumn => resumes.id,
+			{
+				onDelete: "set null",
+			},
+		),
 		domain: text("domain"),
 		template: text("template")
 			.notNull()
