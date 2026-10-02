@@ -86,13 +86,17 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 						const headers = new Headers();
 						headers.set("x-trpc-source", "nextjs-react");
 
-						const isLocalDev = process.env.NODE_ENV === "development";
-
-						// In local dev, force API dev-mode user so seeded data is visible.
-						if (isLocalDev) {
-							headers.set("x-dev-mode", "true");
-							return headers;
-						}
+						// NOTE: this client used to send `x-dev-mode: true` in
+						// development so seeded data was visible without signing in.
+						// That header was never more than a request: the Worker has no
+						// way to tell production from development, so it granted full
+						// `protectedProcedure` access as a hardcoded user to anyone who
+						// sent it — and CORS allow-listed it, so any site could. The
+						// header is gone from both sides.
+						//
+						// Local development now uses real Clerk dev keys and a real
+						// sign-in. That is the intended trade: convenient, but not at
+						// the cost of a production auth bypass.
 
 						// Get fresh token from Clerk for each request
 						// This handles token refresh automatically

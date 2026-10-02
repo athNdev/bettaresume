@@ -18,7 +18,10 @@
 		}
 	],
 	"vars": {
-		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY"
+		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY",
+		// Production. Explicitly NOT "development", so the x-dev-mode auth bypass in
+		// src/trpc/context.ts stays off even if a request sets the header.
+		"ENVIRONMENT": "production"
 	},
 	"dev": {
 		"port": 4000

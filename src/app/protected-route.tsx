@@ -15,10 +15,15 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-	const isDevBypass = process.env.NODE_ENV === "development";
-	if (isDevBypass) {
-		return <>{children}</>;
-	}
+	// This component used to render its children unconditionally when
+	// `NODE_ENV === "development"`. That only worked because the API also had a
+	// dev bypass, which turned out to grant unauthenticated access in production.
+	// With the API bypass gone, this shortcut produced the worse state: a
+	// dashboard that rendered with no Clerk token while every request 401'd.
+	//
+	// Local development now authenticates the same way production does, using
+	// Clerk dev keys. If you need to work without an account, seed the database
+	// and sign in — do not reintroduce a render-level bypass.
 
 	const { isLoaded, isSignedIn } = useAuth();
 
