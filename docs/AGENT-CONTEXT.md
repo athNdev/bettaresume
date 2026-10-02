@@ -34,6 +34,15 @@ which is why `src/lib/typst/serialize.ts` is lossy.
 Resolve this before building variants, custom editor nodes, or import. See
 `[DATA] Decide and write the ADR` on Plane.
 
+**Status: the ADR is written and merged** — `docs/adr/0001-content-model.md`
+(#126) — but it deliberately does **not** pick. The analysis found that only the
+"rich editor" capability needs free-form rich text; content library, versioning,
+variants, job tracking, import, ATS text and export fidelity are all better served
+by structured records. So Option B (drop TipTap) is materially cheaper and unblocks
+the workbench sooner, but it contradicts an explicit product statement, so the
+choice belongs to the owner. Recommendation is Option C (rich document canonical,
+typed records as a derived index). **Ask before building on this.**
+
 ---
 
 ## 2. Traps
@@ -142,6 +151,74 @@ fix it — it is a gate, not a suggestion.**
 corrupt.** No DB `CHECK` catches it, and `$type<TemplateType>()` is compile-time
 only — raw SQL bypasses TypeScript entirely.
 
+### 2.9 A D1 migration that adds a foreign key will delete every section row
+
+SQLite cannot `ALTER TABLE ... ADD CONSTRAINT`, so adding a FK to an existing column
+requires rebuilding the table. `drizzle-kit` emits that as `DROP TABLE <table>` —
+and `Section.resumeId` is `ON DELETE CASCADE`, so **dropping `Resume` deletes every
+section row**.
+
+`drizzle-kit` guards this with `PRAGMA foreign_keys=OFF`, but **that pragma is a
+no-op inside a transaction**, and D1 may wrap migrations in one. Measured against
+this schema with `better-sqlite3`:
+
+| migration applied… | `Section` rows |
+|---|---|
+| outside a transaction | 2 → 2 |
+| **inside a transaction** | **2 → 0** |
+
+`PRAGMA defer_foreign_keys=ON` does **not** rescue it: `DROP TABLE` fires cascade
+deletes immediately rather than deferring them.
+
+Two more traps in the same migration:
+
+- The rebuild's `INSERT ... SELECT` **aborts on any row violating the new
+  constraint**, failing the whole deploy. `ON DELETE SET NULL` only governs
+  *future* deletes; it does not repair historical rows. Repair first.
+- The generated SQL also carried an **unrelated** change — `Resume.template`'s
+  default flipping `'modern'` → `'minimal'`, pre-existing drift between
+  `schema.ts` and the committed `0000` snapshot. Read generated migrations; do not
+  trust them.
+
+The shipped fix (`api/drizzle/0001_resume_base_resume_fk.sql`) snapshots `Section`
+into the **TEMP schema** — unreachable from the main-db cascade — rebuilds, then
+restores. `api/test/resume-base-fk.test.ts` fails if that is reverted to
+`drizzle-kit`'s form.
+
+**Dry-run `wrangler d1 migrations apply` against a D1 copy before production.**
+In-memory SQLite tests cannot catch the transaction-wrapping question.
+
+### 2.10 The API test harness can apply fewer migrations than production
+
+`api/test/helpers/harness.ts` hardcoded `0000_init-schema.sql`. When `0001` added
+the `baseResumeId` FK, **the constraint did not exist in the test database at
+all** — so the FK tests passed vacuously. It now applies every `drizzle/*.sql` in
+order.
+
+Worse, it set `PRAGMA foreign_keys = ON` *before* migrating, and `0001` ends with
+`PRAGMA foreign_keys=ON`. Enforcement was therefore coming from the migration
+file, not from test control, and a test asserting "the pragma is ON" would have
+passed while proving nothing. Assert the pragma, and assert it **after** migrating.
+
+**When you add a migration, check whether the harness applies it.** A green test
+that never loaded your constraint is worse than no test, because it reads as
+coverage.
+
+### 2.11 `envsubst` expands unset variables to `""`, and CORS is default-deny
+
+`api/wrangler.jsonc` interpolates `$ALLOWED_ORIGINS`; CD fills it with `envsubst`.
+The substitution step did not pass it, so `envsubst` expanded it to `""` — and
+`api/src/cors.ts` denies **every** origin when the list is empty. The shipped
+configuration blocked the deployed site with its own browser.
+
+This is the worst failure shape in the repo: **no build error, no test failure,
+`GET /health` still returns 200**, and the worker deploys successfully. CORS is
+enforced by the browser, never by the server.
+
+`api/test/deploy-config.test.ts` now asserts CD passes the variable. The required
+GitHub Actions **repository variable** is `ALLOWED_ORIGINS` (public URL, so
+`vars`, not `secrets`) — see `CLAUDE.md`.
+
 ---
 
 ## 3. Architecture as it actually is
@@ -179,9 +256,17 @@ Several shipped controls are wired to this stub. See
 |---|---|
 | `npm run typecheck` (frontend) | **required in CI** (added #118) |
 | `npm run typecheck -w api` | **required in CI** (added #118) |
+| `npm test` (root + api) | **required in CI** (added #125/#127) — 93 tests: 24 root, 69 api |
 | `npm run build` | required |
-| `npm run check` (biome) | 84 errors / 250 warnings — **not** gated |
-| tests | **none exist** — no runner, no `test` script |
+| `npm run check` (biome) | 84 errors / 250 warnings — **still not** gated |
+| `dev-server` | required in CI |
+
+`tsconfig.json` now includes `test/**`, so tests are typechecked rather than only
+transpiled (#126). Before that they were never checked at all.
+
+Coverage is **not** broad. The 93 tests cluster on the areas most recently fixed —
+CORS, auth, IDOR, the FK, Typst serialisation. `computeCompleteness`, date/period
+formatting, section ordering and `isSectionEmpty` still have none.
 
 Node 22 is required (`wrangler@4` needs `>= 22`); CI and `engines` both say so.
 
@@ -197,7 +282,8 @@ implemented is a common mistake.
 | `Section.linkedToBase` | set client-side at `resume.store.ts:663`, not serialised, lost on reload |
 | `ResumePage` | entirely client-side page CRUD |
 | `ActivityLog` / `ActivityAction` | 14 actions + a 15-icon component wired to `const currentActivityLog: ActivityLog[] = []` (`resume-editor.tsx:348`) |
-| `Resume.variationType` / `baseResumeId` | columns exist, **no FK**, no procedures to traverse or sync |
+| `Resume.variationType` | column exists, writable via `resume.create`/`update`, but **no procedure lists or traverses variants** |
+| `Resume.baseResumeId` | column exists and now has a **real FK** to `Resume(id)` `ON DELETE SET NULL` (#127). Still no variant procedures, and the FK does **not** prevent a cross-tenant or self-referential pointer — SQLite lets a row satisfy its own immediate FK. |
 | `Resume.tags` | JSON array in a TEXT column — unindexable |
 | `Resume.metadata` | personalInfo + settings + jobTarget + atsScore + exportHistory in **one blob**, replaced wholesale on partial update |
 
