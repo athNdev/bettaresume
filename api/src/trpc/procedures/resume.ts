@@ -209,21 +209,31 @@ function normalizeSettings(value: unknown): ResumeSettings {
 function normalizeMetadata(value: unknown): ResumeMetadata | null {
 	if (!value || typeof value !== "object") return null;
 	const obj = value as Record<string, unknown>;
-	return {
+	// Build the optional branches conditionally rather than assigning
+	// `undefined`. With `exactOptionalPropertyTypes` an explicit `undefined`
+	// is not assignable, and — more importantly — writing the key at all makes
+	// the field look "present but blank" to `resume.update`, which replaces the
+	// whole metadata blob. Omitting the key keeps absent data absent.
+	const metadata: ResumeMetadata = {
 		personalInfo: normalizePersonalInfo(obj.personalInfo),
 		settings: normalizeSettings(obj.settings),
-		exportHistory: Array.isArray(obj.exportHistory)
-			? (obj.exportHistory as any[])
-			: undefined,
-		jobTarget:
-			obj.jobTarget && typeof obj.jobTarget === "object"
-				? (obj.jobTarget as any)
-				: undefined,
-		atsScore:
-			obj.atsScore && typeof obj.atsScore === "object"
-				? (obj.atsScore as any)
-				: undefined,
 	};
+	if (Array.isArray(obj.exportHistory)) {
+		metadata.exportHistory = obj.exportHistory as NonNullable<
+			ResumeMetadata["exportHistory"]
+		>;
+	}
+	if (obj.jobTarget && typeof obj.jobTarget === "object") {
+		metadata.jobTarget = obj.jobTarget as NonNullable<
+			ResumeMetadata["jobTarget"]
+		>;
+	}
+	if (obj.atsScore && typeof obj.atsScore === "object") {
+		metadata.atsScore = obj.atsScore as NonNullable<
+			ResumeMetadata["atsScore"]
+		>;
+	}
+	return metadata;
 }
 
 function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {

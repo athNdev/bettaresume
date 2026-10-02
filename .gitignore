@@ -50,3 +50,11 @@ packages/types/dist
 
 # local tool binaries (downloaded by scripts/setup-gitleaks.cjs)
 .tools/
+
+# local agent workflow tooling (Plane/cluster helper scripts)
+.agentkit/
+
+# proxmox-mcp job tracker scratch DBs (written by the MCP server into cwd)
+proxmox-jobs.sqlite3
+proxmox-jobs.sqlite3-shm
+proxmox-jobs.sqlite3-wal
