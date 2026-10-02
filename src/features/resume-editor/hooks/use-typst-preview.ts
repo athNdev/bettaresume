@@ -56,16 +56,7 @@ export function useTypstPreview(
 		try {
 			const templateSource = getTemplateSource(r.template ?? "minimal");
 			const dataJson = resumeToTypstJson(r);
-			const rawFont = r.metadata?.settings?.fontFamily ?? "Inter";
-			const FONT_MAP: Record<string, string> = {
-				inter: "Inter",
-				roboto: "Roboto",
-				"open sans": "Open Sans",
-				lato: "Lato",
-				montserrat: "Montserrat",
-				"playfair display": "Playfair Display",
-			};
-			const fontFamily = FONT_MAP[rawFont.toLowerCase()] ?? rawFont;
+			const fontFamily = r.metadata?.settings?.fontFamily ?? "Inter";
 
 			const pages = await compileToSvgPages(
 				templateSource,

@@ -17,6 +17,8 @@ import type {
 	SkillCategory,
 	Volunteer,
 } from "@/features/resume-editor/types";
+
+import { resolveTypstFont } from "@/lib/typst/fonts";
 import { cn } from "@/lib/utils";
 
 interface PreviewProps {
@@ -62,38 +64,46 @@ const defaultPersonalInfo: PersonalInfo = {
 	email: "",
 };
 
-function resolveFontFamily(fontFamily: string) {
-	switch (fontFamily) {
-		case "Inter":
-			return "var(--font-inter)";
-		case "Roboto":
-			return "var(--font-roboto)";
-		case "Open Sans":
-			return "var(--font-open-sans)";
-		case "Lato":
-			return "var(--font-lato)";
-		case "Montserrat":
-			return "var(--font-montserrat)";
-		case "Playfair Display":
-			return "var(--font-playfair)";
-		case "Georgia":
-			return "Georgia, serif";
-		case "Times New Roman":
-			return '"Times New Roman", Times, serif';
-		case "Arial":
-			return "Arial, Helvetica, sans-serif";
-		case "Calibri":
-			return "Calibri, Arial, sans-serif";
-		case "Garamond":
-			return "Garamond, Georgia, serif";
-		case "Helvetica":
-			return "Helvetica, Arial, sans-serif";
-		case "Computer Modern":
-			return "serif";
-		default:
-			return fontFamily;
+/**
+ * Resolve a family to a CSS stack for the in-browser preview.
+ *
+ * Deliberately mirrors `resolveTypstFont` in `src/lib/typst/fonts.ts`: when the
+ * PDF pipeline cannot embed a family it substitutes, and the preview must show
+ * the substitution too — otherwise the preview is not a preview of the export.
+ *
+ * The `var(--font-*)` families are self-hosted by `src/lib/fonts.ts` and are the
+ * embeddable set. Everything else follows the same substitution table, plus the
+ * local system font so the browser has something to pick before the PDF loads.
+ */
+function resolveFontFamily(fontFamily: string): string {
+	const { typstFamily, substituted } = resolveTypstFont(fontFamily);
+	if (!substituted) {
+		return CSS_FAMILY_BY_TYPST_NAME[typstFamily] ?? fontFamily;
 	}
+	const local = CSS_FAMILY_BY_REQUESTED[fontFamily] ?? fontFamily;
+	return `${local}, ${CSS_FAMILY_BY_TYPST_NAME[typstFamily] ?? "serif"}`;
 }
+
+/** Embeddable families, self-hosted as CSS variables. */
+const CSS_FAMILY_BY_TYPST_NAME: Record<string, string> = {
+	Inter: "var(--font-inter)",
+	Roboto: "var(--font-roboto)",
+	"Open Sans": "var(--font-open-sans)",
+	Lato: "var(--font-lato)",
+	Montserrat: "var(--font-montserrat)",
+	"Playfair Display": "var(--font-playfair)",
+	"New Computer Modern": "serif",
+};
+
+/** The real font, used only as a first-paint hint before substitution takes over. */
+const CSS_FAMILY_BY_REQUESTED: Record<string, string> = {
+	Georgia: "Georgia",
+	"Times New Roman": '"Times New Roman", Times',
+	Garamond: "Garamond, Georgia",
+	Arial: "Arial",
+	Helvetica: "Helvetica",
+	Calibri: "Calibri",
+};
 
 const PRIMARY_SECTION_TYPES = new Set([
 	"summary",
@@ -1024,13 +1034,11 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 				: [visibleSections.map((s) => s.id)];
 		return pages.map((ids, i) =>
 			renderPage(
-				<>
-					{ids.map((id) => {
+				ids.map((id) => {
 						const section = sectionsById.get(id);
 						if (!section) return null;
 						return <div key={id}>{renderSection(section)}</div>;
-					})}
-				</>,
+					}),
 				`page-${i}`,
 				i === 0,
 			),
@@ -1119,8 +1127,7 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 					>
 						<div ref={headerMeasureRef}>{renderPersonalInfo()}</div>
 						{layout === "single-column" && (
-							<>
-								{visibleSections.map((section) => (
+							visibleSections.map((section) => (
 									<div
 										key={section.id}
 										ref={(el) => {
@@ -1129,8 +1136,7 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 									>
 										{renderSection(section)}
 									</div>
-								))}
-							</>
+								))
 						)}
 						{(isTwoColumn || isSidebar) && (
 							<div style={{ display: "flex", gap: 20 * scale }}>
