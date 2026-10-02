@@ -4,15 +4,63 @@
  * This module provides helper functions to verify that a user owns
  * a resume before performing operations on it.
  *
- * Note: The backend procedures already enforce ownership by filtering
- * with `eq(resumes.userId, ctx.userId)`. These utilities provide
- * additional explicit checks when needed.
+ * Two distinct jobs live here:
+ *
+ * 1. `verifyResumeOwnership` / `checkResumeOwnership` — read-side helpers that
+ *    answer "does this user own this resume?". They are exported for use by
+ *    procedures that want an explicit check, but note that no procedure currently
+ *    calls them: the procedures do their own inline lookup with
+ *    `and(eq(resumes.id, ...), eq(resumes.userId, ctx.userId))`.
+ *
+ * 2. `sectionWriteScope` / `resumeWriteScope` — the WRITE-side tenant predicates.
+ *    These are used by the section and resume write procedures so that every
+ *    `UPDATE` / `DELETE` carries its tenant constraint in the `WHERE` clause
+ *    instead of relying on a preceding read to have got it right. A read-check
+ *    alone is not authorisation: the write itself must be scoped.
  */
 
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
-import { resumes } from "../../db/schema";
+import { resumes, sections } from "../../db/schema";
 import type { Context } from "../context";
+
+/**
+ * Tenant predicate for every write against a single section row.
+ *
+ * Matches only when BOTH the section id and its parent resume match, so a caller
+ * can never mutate a section that hangs off somebody else's resume — even if they
+ * supply that section's id. Same shape as the per-row predicate in
+ * `section.reorder`.
+ *
+ * Pure: no context, no database access, so it is directly unit-testable.
+ */
+export function sectionWriteScope(sectionId: string, resumeId: string) {
+	return and(eq(sections.id, sectionId), eq(sections.resumeId, resumeId));
+}
+
+/**
+ * Tenant predicate for every write against a single resume row.
+ *
+ * Pure: no context, no database access, so it is directly unit-testable.
+ */
+export function resumeWriteScope(resumeId: string, userId: string) {
+	return and(eq(resumes.id, resumeId), eq(resumes.userId, userId));
+}
+
+/**
+ * Error thrown when a caller supplies a section id that does not belong to the
+ * resume they are writing to.
+ *
+ * Deliberately NOT_FOUND rather than FORBIDDEN: answering "that id exists but
+ * belongs to someone else" would turn the endpoint into a probe for guessing
+ * other tenants' section ids. Both cases get the same answer.
+ */
+export function sectionScopeError() {
+	return new TRPCError({
+		code: "NOT_FOUND",
+		message: "Section not found in this resume",
+	});
+}
 
 /**
  * Verifies that the authenticated user owns the specified resume.

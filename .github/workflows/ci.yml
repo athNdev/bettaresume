@@ -38,6 +38,33 @@ jobs:
       - name: Typecheck api
         run: npm run typecheck -w api
 
+  test-api:
+    # The api workspace had no test runner at all (docs/AGENT-CONTEXT.md 4).
+    # These tests are the only automated guard on the tenant/ownership predicates
+    # in section.ts, resume.ts and the ownership middleware, and on the CORS and
+    # error-redaction behaviour in src/cors.ts and src/trpc/index.ts.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build types package
+        run: npm run build:types
+
+      - name: Test api
+        run: npm run test -w api
+
   build:
     runs-on: ubuntu-latest
     permissions:

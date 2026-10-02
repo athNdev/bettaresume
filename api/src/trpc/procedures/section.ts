@@ -11,6 +11,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { resumes, sections } from "../../db/schema";
 import { protectedProcedure, router } from "../index";
+import { sectionScopeError, sectionWriteScope } from "../middleware/ownership";
 
 export const sectionRouter = router({
 	/**
@@ -159,7 +160,7 @@ export const sectionRouter = router({
 			await ctx.db
 				.update(sections)
 				.set(updateData)
-				.where(eq(sections.id, input.id));
+				.where(sectionWriteScope(input.id, section.resumeId));
 
 			// Update resume's updatedAt
 			await ctx.db
@@ -210,12 +211,21 @@ export const sectionRouter = router({
 			const now = new Date();
 			const sectionId = input.id ?? crypto.randomUUID();
 
-			// Check if section exists
+			// Check if the section already exists WITHIN THIS RESUME. The resumeId
+			// scope is the authorisation boundary: without it, any authenticated
+			// caller could pass another tenant's section id and overwrite that row.
 			const existing = input.id
 				? await ctx.db.query.sections.findFirst({
-						where: eq(sections.id, input.id),
+						where: sectionWriteScope(input.id, input.resumeId),
 					})
 				: null;
+
+			// An explicit id that is not inside this resume means either a stale id or
+			// an attempt to reach across tenants. Reject instead of silently inserting
+			// under someone else's primary key.
+			if (input.id && !existing) {
+				throw sectionScopeError();
+			}
 
 			if (existing) {
 				// Update
@@ -228,7 +238,7 @@ export const sectionRouter = router({
 						content: JSON.stringify(input.content),
 						updatedAt: now,
 					})
-					.where(eq(sections.id, input.id!));
+					.where(sectionWriteScope(input.id!, input.resumeId));
 			} else {
 				// Insert
 				await ctx.db.insert(sections).values({
@@ -250,7 +260,7 @@ export const sectionRouter = router({
 				.where(eq(resumes.id, input.resumeId));
 
 			const result = await ctx.db.query.sections.findFirst({
-				where: eq(sections.id, sectionId),
+				where: sectionWriteScope(sectionId, input.resumeId),
 			});
 
 			return result
@@ -282,13 +292,29 @@ export const sectionRouter = router({
 			const now = new Date();
 			const results: Array<{ id: string; type: string }> = [];
 
+			// Validate every supplied id BEFORE writing anything. This procedure is
+			// not transactional, so a single out-of-scope id discovered mid-loop would
+			// leave the earlier entries applied. Same tenant boundary as upsert.
+			for (const sectionData of input.sections) {
+				if (!sectionData.id) continue;
+
+				const owned = await ctx.db.query.sections.findFirst({
+					where: sectionWriteScope(sectionData.id, input.resumeId),
+				});
+
+				if (!owned) {
+					throw sectionScopeError();
+				}
+			}
+
 			for (const sectionData of input.sections) {
 				const sectionId = sectionData.id ?? crypto.randomUUID();
 
-				// Check if exists
+				// Scoped to this resume: an unscoped lookup here is what let a caller
+				// overwrite another tenant's section by passing its id.
 				const existing = sectionData.id
 					? await ctx.db.query.sections.findFirst({
-							where: eq(sections.id, sectionData.id),
+							where: sectionWriteScope(sectionData.id, input.resumeId),
 						})
 					: null;
 
@@ -302,7 +328,7 @@ export const sectionRouter = router({
 							content: JSON.stringify(sectionData.content),
 							updatedAt: now,
 						})
-						.where(eq(sections.id, sectionData.id!));
+						.where(sectionWriteScope(sectionData.id!, input.resumeId));
 				} else {
 					await ctx.db.insert(sections).values({
 						id: sectionId,
@@ -391,7 +417,9 @@ export const sectionRouter = router({
 				throw new Error("Section not found or access denied");
 			}
 
-			await ctx.db.delete(sections).where(eq(sections.id, input.id));
+			await ctx.db
+				.delete(sections)
+				.where(sectionWriteScope(input.id, section.resumeId));
 
 			// Update resume's updatedAt
 			await ctx.db
