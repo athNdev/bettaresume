@@ -10,51 +10,13 @@
  *
  * Fonts are loaded from Google Fonts CDN on demand and cached per family.
  */
-
-// Font URL map — TTF files work reliably with Typst's font loader.
-// We use the variable-weight Inter file and standard TTFs for others.
-const GOOGLE_FONT_URLS: Partial<Record<string, string[]>> = {
-	Inter: [
-		"https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-2.ttf",
-		// Bold weight
-		"https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiJ-2.ttf",
-	],
-	Roboto: [
-		"https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2",
-		"https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4AMP6lQ.woff2",
-	],
-	"Open Sans": [
-		"https://fonts.gstatic.com/s/opensans/v34/memvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSCmu1aB.woff2",
-	],
-	Lato: [
-		"https://fonts.gstatic.com/s/lato/v24/S6uyw4BMUTPHjx4wXiWtFCc.woff2",
-		"https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh6UVSwiPGQ3q5d0N7w.woff2",
-	],
-	Montserrat: [
-		"https://fonts.gstatic.com/s/montserrat/v25/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Hw5aXo.woff2",
-	],
-	"Playfair Display": [
-		"https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDQ.woff2",
-	],
-};
-
-// Map FontFamily names to what Typst calls them
-// (Typst uses the actual font family name from the font file metadata)
-export const TYPST_FONT_NAMES: Record<string, string> = {
-	Inter: "Inter",
-	Roboto: "Roboto",
-	"Open Sans": "Open Sans",
-	Lato: "Lato",
-	Montserrat: "Montserrat",
-	"Playfair Display": "Playfair Display",
-	Georgia: "New Computer Modern", // fallback — Georgia isn't in Typst WASM
-	"Times New Roman": "New Computer Modern",
-	Arial: "New Computer Modern",
-	Calibri: "New Computer Modern",
-	Garamond: "New Computer Modern",
-	Helvetica: "New Computer Modern",
-	"Computer Modern": "New Computer Modern",
-};
+import {
+	type FontResolution,
+	fontSubstitutionWarning,
+	GOOGLE_FONT_URLS,
+	isEmbeddableFont,
+	resolveTypstFont,
+} from "./fonts";
 
 // Minimal typing for the @myriaddreamin/typst.ts snippet API surface we use.
 interface TypstSnippet {
@@ -117,7 +79,8 @@ async function initCompiler(): Promise<void> {
 		const snippetModule = await import(
 			"@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs"
 		);
-		const inst = (snippetModule as Record<string, unknown>).$typst as TypstSnippet;
+		const inst = (snippetModule as Record<string, unknown>)
+			.$typst as TypstSnippet;
 		$typst = inst;
 
 		// Point to the CDN-hosted WASM modules — they will be cached by the browser
@@ -163,7 +126,7 @@ export async function compileToSvgPages(
 	fontFamily = "Inter",
 ): Promise<string[]> {
 	await initCompiler();
-	await loadFontFamily(fontFamily);
+	const _font = await prepareFont(fontFamily);
 
 	const mainContent = buildMainContent(templateSource, dataJson);
 
@@ -184,7 +147,7 @@ export async function compileToPdf(
 	fontFamily = "Inter",
 ): Promise<Uint8Array> {
 	await initCompiler();
-	await loadFontFamily(fontFamily);
+	await prepareFont(fontFamily);
 
 	const mainContent = buildMainContent(templateSource, dataJson);
 	if (!$typst) throw new Error("[typst] Compiler not initialized");
@@ -195,11 +158,43 @@ export async function compileToPdf(
 // Helpers
 // -------------------------------------------------------
 
+/**
+ * Resolve a requested family, load its font file when one exists, and warn when
+ * the request cannot be honoured.
+ *
+ * Every compile path goes through here. Callers used to pass an already-resolved
+ * family, which is how the preview and the export drifted apart.
+ */
+async function prepareFont(fontFamily: string): Promise<FontResolution> {
+	const resolution = resolveTypstFont(fontFamily);
+
+	// Only families with a real font file need downloading; a substituted one
+	// resolves to either another embeddable family or Typst's builtin.
+	if (isEmbeddableFont(resolution.typstFamily)) {
+		await loadFontFamily(resolution.typstFamily);
+	}
+
+	const warning = fontSubstitutionWarning(resolution);
+	if (warning) console.warn(`[typst] ${warning}`);
+
+	return resolution;
+}
+
 function buildMainContent(templateSource: string, dataJson: string): string {
 	// Embed data as a Typst string literal that we convert to bytes for json().
 	// In Typst 0.11+, json() expects bytes, so we need to call .bytes() on the string.
-	// JSON.stringify on a JSON string produces a valid Typst string literal
-	// because both Typst and JSON use the same escape conventions.
+	//
+	// This was long flagged as a bug: JSON.stringify emits `\uXXXX` for non-ASCII
+	// and Typst wants `\u{XXXX}`. That is **not** what happens — JSON.stringify
+	// emits literal UTF-8 and only escapes `"`, `\`, and control characters, which
+	// are escaped identically in both languages. Verified:
+	//
+	//   JSON.stringify({n:"José", d:"—", c:"简历"})
+	//   -> {"n":"José","d":"—","c":"简历"}      (no \uXXXX anywhere)
+	//
+	// So accented names, em dashes and CJK all pass through untouched. The escapes
+	// that ARE emitted — \n, \t, \\, \" — are byte-identical in Typst, and
+	// double-encoding handles the embedded JSON's own quotes. Do not "fix" this.
 	const typstStringLiteral = JSON.stringify(dataJson);
 	const preamble = `#let data = json(bytes(${typstStringLiteral}))\n`;
 	return preamble + templateSource;
@@ -267,7 +262,13 @@ function splitSvgPages(rawSvg: string): string[] {
 		const vbX = parts[0] ?? 0;
 		const vbW = parts[2];
 		const vbH = parts[3];
-		if (vbW !== undefined && vbH !== undefined && Number.isFinite(vbW) && Number.isFinite(vbH) && vbH > 0) {
+		if (
+			vbW !== undefined &&
+			vbH !== undefined &&
+			Number.isFinite(vbW) &&
+			Number.isFinite(vbH) &&
+			vbH > 0
+		) {
 			// Infer page height from page width
 			const pageHeight = vbW < 600 ? 841.89 : 792;
 			const numPages = Math.max(1, Math.round(vbH / pageHeight));
