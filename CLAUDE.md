@@ -418,6 +418,27 @@ curl http://localhost:4000/trpc/resume.list \
 
 ---
 
+## Agent Context
+
+**Read [`docs/AGENT-CONTEXT.md`](docs/AGENT-CONTEXT.md) before making changes.**
+It records the traps that will otherwise cost you hours:
+
+- **Caret ranges break this repo's dependencies.** Nine `@tiptap/*` deps spanned
+  six versions because TipTap peer-deps pin exact versions. That stalled every
+  Dependabot PR with `ERESOLVE`. All lockstep packages are now pinned exactly —
+  keep them that way, and verify with the one-liner in that doc.
+- **Do not add providers to `src/app/layout.tsx`.** It wraps every route, so a
+  suspending provider (Clerk) silently breaks static prerendering of the public
+  marketing page at `/`. The provider tree lives in `src/app/app/layout.tsx`.
+- **The `x-dev-mode` header is a live production auth bypass** with no
+  environment gate, and CORS allow-lists the header. Do not build new write
+  paths on the API until it is closed.
+- `output: "export"` needs `dynamic = "force-static"` on metadata routes.
+- On ~4 GB nodes, `next build` needs `NODE_OPTIONS="--max-old-space-size=1400"`
+  or it dies with `Bus error`.
+
+Work is tracked on Plane: workspace `homelab`, project `BettaResume` (`BETA`).
+
 ## Further Reading
 
 All architecture docs are in `docs/`:
