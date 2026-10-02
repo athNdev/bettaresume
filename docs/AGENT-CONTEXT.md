@@ -219,6 +219,52 @@ enforced by the browser, never by the server.
 GitHub Actions **repository variable** is `ALLOWED_ORIGINS` (public URL, so
 `vars`, not `secrets`) — see `CLAUDE.md`.
 
+### 2.12 The Typst escape "bug" is not a bug — stop re-fixing it
+
+`buildMainContent` (`src/lib/typst/compiler.ts`) has been flagged repeatedly as
+broken on the theory that `JSON.stringify` emits `\uXXXX` for non-ASCII while
+Typst wants `\u{XXXX}`.
+
+**That is not what `JSON.stringify` does.** It emits literal UTF-8 and escapes
+only `"`, `\` and control characters — which are escaped identically in both
+languages. Verified:
+
+```
+JSON.stringify({n:"José", d:"—", c:"简历"})
+-> {"n":"José","d":"—","c":"简历"}          no \uXXXX anywhere
+```
+
+Accented names, em dashes, CJK, Cyrillic and Arabic pass through untouched. The
+inline comment was right for the wrong reason ("both use the same escape
+conventions"), which is exactly how a non-bug keeps getting re-reported.
+
+**What is still genuinely unverified:** no document containing non-ASCII has ever
+been compiled in this environment. Static analysis says it is correct; runtime
+proof is missing because the Typst WASM is CDN-loaded and CI has no browser.
+
+### 2.13 Font substitution reflows the document, so it must preserve *kind*
+
+`src/lib/typst/fonts.ts` is the single source of truth for which families the PDF
+pipeline can embed. It exists because resolution had drifted across three sites
+(`compiler.ts`, `use-typst-preview.ts`, `preview.tsx`) that disagreed — the HTML
+preview used the locally installed font while the preview and PDF substituted, so
+**the preview was not a preview of the export**.
+
+The rule: **a substitution must preserve the generic family.** The old table
+substituted by name and mapped `Arial`, `Helvetica` and `Calibri` — all
+sans-serif — to `New Computer Modern`, a serif. Changing glyph advance widths
+changes line wrapping, which changes the **page count**, silently.
+
+Metric-compatible substitutes (Tinos↔Times, Arimo↔Arial/Helvetica,
+Carlito↔Calibri) would preserve page count far better than the current
+substitutions. They are not wired because their `fonts.gstatic.com` paths are
+content-hashed and a guessed URL silently degrades back to substitution. **Do not
+add one without verifying the URL resolves.**
+
+**Rendering is unverified in CI.** No browser, and the WASM is fetched from a CDN
+at runtime, so no test here can prove a PDF's page count. Anything claiming to
+have verified PDF output from a headless node has not.
+
 ---
 
 ## 3. Architecture as it actually is
@@ -325,5 +371,10 @@ Plane `BETA`, by workstream prefix:
 | `[OPS]` | Observability & ops | request IDs, D1 backups |
 | `[WEB]` | Marketing site | template gallery (needs #119) |
 
-Do not build `[EDIT]`, `[IO] import`, or `[DATA]` content library before the ADR
-lands.
+The ADR is written and merged (#126) but **deliberately undecided** — it needs the
+owner to say whether "rich editor" is load-bearing or aspirational. Only the rich
+editor itself needs free-form rich text; content library, versioning, variants,
+job tracking, import, ATS text and export fidelity are all better served by
+structured records, and Option B (drop TipTap) is materially cheaper.
+
+**Ask before building `[EDIT]`, `[IO] import`, or the `[DATA]` content library.**
