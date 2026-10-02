@@ -45,6 +45,8 @@
 		"src/**/*.cjs",
 		"src/**/*.js",
 		"packages/types/src/**/*.ts",
+		"test/**/*.ts",
+		"vitest.config.mts",
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts"
 	],
