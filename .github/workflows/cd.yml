@@ -82,6 +82,11 @@ jobs:
           D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
           CF_WORKER_CUSTOM_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
+          # Without this, envsubst expands $ALLOWED_ORIGINS to "" and the
+          # default-deny CORS policy in api/src/cors.ts rejects every browser
+          # origin — the deployed site blocks itself. This is a public URL, not a
+          # credential, so it belongs in repository variables rather than secrets.
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
 
       - name: Deploy API to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
