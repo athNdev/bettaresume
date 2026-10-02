@@ -265,6 +265,43 @@ add one without verifying the URL resolves.**
 at runtime, so no test here can prove a PDF's page count. Anything claiming to
 have verified PDF output from a headless node has not.
 
+### 2.14 Raw SQL seed data bypasses every schema — validate it in a test
+
+`api/src/db/seed.sql` is raw SQL, so it bypasses `packages/types` entirely.
+Nothing catches violations: `Resume.template` has **no DB `CHECK`**, and
+`$type<TemplateType>()` is compile-time only.
+
+At the time of writing **all four** seeded resumes carried a `template` outside
+the union (`harvard`, `tech`, `modern`, `professional` against
+`minimal | postgrad | undergrad`), and the metadata blobs predated six now-required
+settings. `resume-1` had no `personalInfo` at all.
+
+It stayed invisible because `getTemplateSource()` **falls back to `minimal`** for an
+unrecognised template name — so a resume titled "Harvard Application" rendered as
+Minimal with no error. A silent fallback turns data corruption into a plausible
+looking demo.
+
+`api/test/seed-integrity.test.ts` applies the real migrations plus the real seed
+and asserts every row against the schemas the app enforces. **When you change a
+schema, re-run it** — that is the only thing standing between a schema change and a
+corrupt demo.
+
+Also note the vocabulary trap: three places list the template union, and all three
+had drifted (`CLAUDE.md`, a comment in `typst_templates/index.ts`, and the seed).
+`templateTypeSchema` is the only authority.
+
+### 2.15 A silent fallback hides corruption
+
+Generalisation of 2.14, because it has now bitten twice in this repo:
+
+- `getTemplateSource()` falls back to `minimal` for an unknown template.
+- Font substitution silently replaced sans-serif requests with a serif (#130).
+
+Both convert "this input is invalid" into "this output looks plausible". A
+fallback is only safe when it is **loud**. If you add one, pair it with a
+warning or a test that asserts the fallback is reachable only from a known-bad
+state.
+
 ---
 
 ## 3. Architecture as it actually is
