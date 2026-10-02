@@ -21,7 +21,12 @@
 		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY",
 		// Production. Explicitly NOT "development", so the x-dev-mode auth bypass in
 		// src/trpc/context.ts stays off even if a request sets the header.
-		"ENVIRONMENT": "production"
+		"ENVIRONMENT": "production",
+		// Comma-separated allow-list of exact browser origins. Read by src/cors.ts.
+		// DEFAULT-DENY: an empty or missing value denies every origin — it never
+		// falls back to "*". Set this to the real frontend origin, or the deployed
+		// site will be blocked by its own browser.
+		"ALLOWED_ORIGINS": "$ALLOWED_ORIGINS"
 	},
 	"dev": {
 		"port": 4000
