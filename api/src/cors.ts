@@ -31,6 +31,24 @@ export const EXPOSED_HEADERS = "x-request-id";
 export const WILDCARD = "*";
 
 /**
+ * Character code of `/`, used by the trailing-slash trim in `normalizeOrigin`.
+ * A named constant so the loop reads as what it is rather than as a magic
+ * number.
+ */
+const SLASH = 47; // "/".charCodeAt(0)
+
+/**
+ * Upper bound on the `Origin` header this module will process.
+ *
+ * `Origin` is attacker-controlled. A real `scheme://host:port` is ~30-60
+ * characters, so 256 leaves ample headroom while putting a hard ceiling on the
+ * work done per request. Anything longer cannot match the allow-list and is
+ * treated as non-matching rather than throwing — `normalizeOrigin` is called
+ * from a predicate on the hot path, so it must not be able to fail a request.
+ */
+const MAX_ORIGIN_LENGTH = 256;
+
+/**
  * Split a raw `ALLOWED_ORIGINS` binding into a list of trimmed, non-empty
  * entries. Unset, empty and whitespace-only values all yield `[]`, which means
  * "deny every origin".
@@ -52,7 +70,25 @@ export function parseAllowedOrigins(raw: string | undefined | null): string[] {
  * typos such as a trailing slash.
  */
 export function normalizeOrigin(origin: string): string {
-	return origin.trim().replace(/\/+$/, "").toLowerCase();
+	// The `Origin` header is attacker-controlled, so the work done on it is
+	// bounded rather than merely fast. `MAX_ORIGIN_LENGTH` is generous next to
+	// the ~100 characters of a real `scheme://host:port` origin.
+	if (origin.length > MAX_ORIGIN_LENGTH) {
+		return "";
+	}
+
+	const value = origin.trim();
+
+	// Strip trailing slashes without a regular expression. A `/+$` pattern is
+	// linear in practice, but CodeQL flags it as a potential ReDoS because it
+	// depends on library-controlled input, and a hand-rolled loop is both
+	// provably linear and cheaper to verify.
+	let end = value.length;
+	while (end > 0 && value.charCodeAt(end - 1) === SLASH) {
+		end -= 1;
+	}
+
+	return value.slice(0, end).toLowerCase();
 }
 
 /**

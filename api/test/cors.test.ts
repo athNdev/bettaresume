@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import server from "../src/server";
 import {
 	applyCorsHeaders,
 	isOriginAllowed,
+	normalizeOrigin,
 	parseAllowedOrigins,
 } from "../src/cors";
+import server from "../src/server";
 
 /**
  * CORS tests.
@@ -153,14 +154,22 @@ describe("applyCorsHeaders", () => {
 
 describe("worker preflight (OPTIONS)", () => {
 	it("echoes an allow-listed origin", async () => {
-		const res = await call("/trpc/resume.list", { method: "OPTIONS", origin: ORIGIN_OK }, ORIGIN_OK);
+		const res = await call(
+			"/trpc/resume.list",
+			{ method: "OPTIONS", origin: ORIGIN_OK },
+			ORIGIN_OK,
+		);
 
 		expect(res.headers.get("access-control-allow-origin")).toBe(ORIGIN_OK);
 		expect(res.headers.get("vary")).toContain("Origin");
 	});
 
 	it("emits no ACAO for a non-allow-listed origin", async () => {
-		const res = await call("/trpc/resume.list", { method: "OPTIONS", origin: ORIGIN_OTHER }, ORIGIN_OK);
+		const res = await call(
+			"/trpc/resume.list",
+			{ method: "OPTIONS", origin: ORIGIN_OTHER },
+			ORIGIN_OK,
+		);
 
 		expect(res.headers.get("access-control-allow-origin")).toBeNull();
 	});
@@ -261,5 +270,43 @@ describe("worker 404 path", () => {
 
 		expect(res.status).toBe(404);
 		expect(res.headers.get("access-control-allow-origin")).toBeNull();
+	});
+});
+
+/**
+ * `Origin` is attacker-controlled, so these bound the work done on it.
+ *
+ * CodeQL flagged the previous `/\/+$/` in `normalizeOrigin` as a potential
+ * ReDoS (`js/polynomial-redos`, high): the pattern depends on library input and
+ * could run slowly on many repetitions of `/`. It was replaced with a linear
+ * loop plus a hard length ceiling.
+ */
+describe("normalizeOrigin — attacker-controlled input is bounded", () => {
+	it("handles a long run of trailing slashes without pathological cost", () => {
+		const hostile = `https://evil.example${"/".repeat(200)}`;
+		const started = process.hrtime.bigint();
+		const result = normalizeOrigin(hostile);
+		const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+
+		expect(result).toBe("https://evil.example");
+		// Generous ceiling: the point is that it is O(n) and bounded, not that
+		// it is fast. A pathological regex would blow past this.
+		expect(elapsedMs).toBeLessThan(50);
+	});
+
+	it("refuses an origin longer than the ceiling instead of processing it", () => {
+		const tooLong = `https://evil.example/${"a".repeat(4096)}`;
+
+		expect(normalizeOrigin(tooLong)).toBe("");
+		expect(isOriginAllowed(tooLong, [tooLong])).toBe(false);
+	});
+
+	it("still accepts a realistic origin untouched", () => {
+		expect(normalizeOrigin("https://bettaresume.com")).toBe(
+			"https://bettaresume.com",
+		);
+		expect(normalizeOrigin("  https://bettaresume.com///  ")).toBe(
+			"https://bettaresume.com",
+		);
 	});
 });
