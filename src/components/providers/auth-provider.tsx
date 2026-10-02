@@ -38,10 +38,6 @@ interface AuthProviderProps {
 	children: React.ReactNode;
 }
 
-// In local development we allow bypassing Clerk so seeded demo data is visible.
-// This intentionally avoids relying solely on NEXT_PUBLIC env injection (Turbopack can be finicky).
-const isDevBypass = process.env.NODE_ENV === "development";
-
 export function AuthProvider({ children }: AuthProviderProps) {
 	const [isInitialized, setIsInitialized] = useState(false);
 	const [isBackendVerified, setIsBackendVerified] = useState(false);
@@ -84,36 +80,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 	// Sync Clerk state to local store
 	useEffect(() => {
-		// In dev bypass mode we don't need to wait for Clerk.
-		if (!isDevBypass && !isClerkLoaded) return;
+		if (!isClerkLoaded) return;
 
 		const syncAuth = async () => {
-			// Dev bypass mode - use mock user
-			if (isDevBypass) {
-				console.log("[AuthProvider] Dev bypass mode enabled");
-				// Ensure we don't show cached data from a previous Clerk session.
-				queryClient.clear();
-				setUser({
-					id: "user-1",
-					email: "demo@bettaresume.com",
-					name: "Demo User",
-					picture: null,
-					createdAt: new Date().toISOString(),
-					emailVerified: true,
-					preferences: {
-						theme: "dark",
-						emailNotifications: false,
-						autoSave: true,
-						defaultTemplate: "minimal",
-					},
-				});
-				setToken("dev-token");
-				setIsInitialized(true);
-				setIsBackendVerified(true);
-				setBackendStatus("online");
-				return;
-			}
-
+			// NOTE: a dev bypass used to fabricate a `user-1` session here and
+			// short-circuit the Clerk wait. It existed to pair with the API's
+			// `x-dev-mode` header — and once that header was closed off as a
+			// production auth bypass, this branch left the app believing it was
+			// signed in while every request 401'd. Development now signs in for
+			// real, with Clerk dev keys. See docs/AGENT-CONTEXT.md.
 			if (isSignedIn && clerkUser) {
 				// Get JWT token for API calls
 				const token = await getToken();
@@ -172,11 +147,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		clearActiveResume,
 		queryClient, // Verify session with backend (non-blocking)
 		verifySession.mutate,
-		isDevBypass,
 	]);
 
 	// Show splash screen while Clerk is loading
-	if (!isClerkLoaded && !isDevBypass) {
+	if (!isClerkLoaded) {
 		return <SplashScreen message="Initializing..." />;
 	}
 

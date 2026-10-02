@@ -15,7 +15,10 @@
 		}
 	],
 	"vars": {
-		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY"
+		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY",
+		// Unlocks the x-dev-mode auth bypass. This file is LOCAL DEV ONLY.
+		// Never set this to "development" in wrangler.jsonc (production).
+		"ENVIRONMENT": "development"
 	},
 	"dev": {
 		"port": 4000

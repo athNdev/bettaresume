@@ -20,9 +20,12 @@ const ResumeEditorPage = dynamic(
 );
 
 export function AppRouter() {
-	const isDevBypass =
-		process.env.NODE_ENV === "development" ||
-		process.env.NEXT_PUBLIC_DEV_MODE === "true";
+	// NOTE: `isDevBypass` used to short-circuit every auth check below. It only
+	// appeared to work because the API had a matching dev bypass — which turned
+	// out to hand unauthenticated callers a full session in production. With the
+	// API bypass gone, this produced a dashboard that rendered while all of its
+	// requests 401'd. Development now authenticates like production, using Clerk
+	// dev keys. See docs/AGENT-CONTEXT.md.
 	const { path, navigate, replace } = useHashRouter();
 	const { isAuthenticated } = useAuthStore();
 	const { isLoaded: isClerkLoaded, isSignedIn } = useClerkAuth();
@@ -35,16 +38,16 @@ export function AppRouter() {
 	// Handle routing after auth is ready
 	useEffect(() => {
 		if (!mounted) return;
-		if (!isDevBypass && !isClerkLoaded) return;
+		if (!isClerkLoaded) return;
 
 		// Root path - redirect to dashboard if authenticated
-		if (path === "/" && (isDevBypass || isSignedIn) && isAuthenticated) {
+		if (path === "/" && isSignedIn && isAuthenticated) {
 			replace("/dashboard");
 		}
-	}, [path, isSignedIn, isAuthenticated, isClerkLoaded, mounted, replace, isDevBypass]);
+	}, [path, isSignedIn, isAuthenticated, isClerkLoaded, mounted, replace]);
 
 	// Don't render until mounted and Clerk is loaded (unless dev bypass)
-	if (!mounted || (!isDevBypass && !isClerkLoaded)) {
+	if (!mounted || !isClerkLoaded) {
 		return <SplashScreen message="Loading Betta Resume..." />;
 	}
 
@@ -52,7 +55,7 @@ export function AppRouter() {
 	// If not signed in, redirect to Clerk login
 	// If signed in, redirect to dashboard (handled by useEffect above)
 	if (path === "/" || path === "/login") {
-		if (!isDevBypass && !isSignedIn) {
+		if (!isSignedIn) {
 			// Redirect to Clerk's hosted sign-in page
 			return <RedirectToSignIn />;
 		}
@@ -61,7 +64,7 @@ export function AppRouter() {
 	}
 
 	// Protected routes - require authentication
-	if (!isDevBypass && !isSignedIn) {
+	if (!isSignedIn) {
 		return <RedirectToSignIn />;
 	}
 

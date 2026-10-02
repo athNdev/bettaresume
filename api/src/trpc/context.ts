@@ -1,6 +1,7 @@
 import { createClerkClient } from "@clerk/backend";
-import { createDb } from "../db";
 import type { D1Database } from "@cloudflare/workers-types";
+import { TRPCError } from "@trpc/server";
+import { createDb } from "../db";
 
 export interface Env {
 	CLERK_PUBLISHABLE_KEY: string;
@@ -9,7 +10,47 @@ export interface Env {
 	CLOUDFLARE_DATABASE_ID: string;
 	CLOUDFLARE_D1_TOKEN: string;
 	LOCAL_DB_PATH: string;
+	/**
+	 * Explicit deployment environment. The dev-mode auth bypass activates ONLY when this
+	 * is exactly "development". Any other value — including unset — leaves the bypass off.
+	 */
+	ENVIRONMENT?: string;
 	bettaresume_d1: D1Database;
+}
+
+/**
+ * The single environment value that unlocks the dev-mode auth bypass.
+ * Default-deny: only this exact string activates it.
+ */
+const DEV_ENVIRONMENT = "development";
+
+/** Default-deny dev-bypass gate. */
+function isDevEnvironment(env: Env): boolean {
+	return env.ENVIRONMENT === DEV_ENVIRONMENT;
+}
+
+/**
+ * True when the caller actually presented credentials. Used to distinguish a normal
+ * logged-out request from a real authentication failure (outage / bad token).
+ */
+function hasCredentials(request: Request): boolean {
+	const authorization = request.headers.get("authorization");
+	if (authorization && authorization.trim().length > 0) {
+		return true;
+	}
+
+	for (const header of [
+		"cookie",
+		"x-clerk-auth-token",
+		"x-clerk-session-token",
+	]) {
+		const value = request.headers.get(header);
+		if (value && value.trim().length > 0) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 interface CreateContextOptions {
@@ -41,11 +82,15 @@ export async function createContext({ request, env }: CreateContextOptions) {
 	});
 
 	try {
-		// Check for dev mode bypass header
-		const isDevMode = request.headers.get("x-dev-mode") === "true";
+		// Dev mode bypass: requires BOTH the opt-in header AND an explicitly
+		// development ENVIRONMENT binding. In every other environment the header is
+		// ignored, so a stray or malicious x-dev-mode cannot fabricate a session.
+		const devBypassRequested = request.headers.get("x-dev-mode") === "true";
 
-		if (isDevMode) {
-			console.log("[createContext] Dev mode enabled via x-dev-mode header");
+		if (devBypassRequested && isDevEnvironment(env)) {
+			console.log(
+				"[createContext] Dev mode enabled via x-dev-mode header (ENVIRONMENT=development)",
+			);
 			return {
 				db,
 				user: {
@@ -57,6 +102,12 @@ export async function createContext({ request, env }: CreateContextOptions) {
 				clerkClient,
 				isDevMode: true,
 			};
+		}
+
+		if (devBypassRequested) {
+			console.warn(
+				"[createContext] Ignored x-dev-mode header: ENVIRONMENT is not 'development'",
+			);
 		}
 
 		// Use Clerk's built-in request authentication
@@ -83,7 +134,19 @@ export async function createContext({ request, env }: CreateContextOptions) {
 			isDevMode: false,
 		};
 	} catch (error) {
+		// Credentials were supplied but verification threw (Clerk outage, network
+		// failure, malformed token, ...). Do NOT silently degrade to "logged out":
+		// that hides a real outage behind a benign-looking anonymous response.
 		console.error("Error creating context:", error);
+
+		if (hasCredentials(request)) {
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Authentication verification failed",
+				cause: error,
+			});
+		}
+
 		return unauthenticatedContext();
 	}
 }

@@ -116,7 +116,6 @@ export const authRouter = router({
 			status: "ok",
 			timestamp: new Date().toISOString(),
 			isAuthenticated: !!ctx.userId,
-			isDevMode: ctx.isDevMode,
 		};
 	}),
 });
