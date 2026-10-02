@@ -388,6 +388,13 @@ npm run check:write     # Auto-fix safe issues
 - CI deploys on `main` push alongside frontend
 - Required Cloudflare secrets: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`
 - Required GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`, `CLERK_SECRET_KEY`
+- **Required GitHub Actions repository variable: `ALLOWED_ORIGINS`** — a
+  comma-separated list of exact browser origins (e.g. `https://bettaresume.com`).
+  `wrangler.jsonc` interpolates `$ALLOWED_ORIGINS` and CD fills it via
+  `envsubst`, which expands an unset variable to `""`. Because `api/src/cors.ts`
+  is default-deny, an empty value denies **every** origin and the deployed site
+  is blocked by its own browser. This fails silently: no build error, no test
+  failure. `api/test/deploy-config.test.ts` asserts CD still passes it.
 
 ---
 
