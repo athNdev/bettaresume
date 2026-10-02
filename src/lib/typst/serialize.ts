@@ -100,6 +100,8 @@ function stripHtml(html: string): string {
 		.replace(/&#39;/g, "'")
 		.replace(/&amp;/g, "&")
 		.trim();
+
+	return text;
 }
 
 function safeStr(val: unknown, fallback = ""): string {

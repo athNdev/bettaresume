@@ -2,7 +2,7 @@ import { createClerkClient } from "@clerk/backend";
 import { createDb } from "../db";
 import type { D1Database } from "@cloudflare/workers-types";
 
-interface Env {
+export interface Env {
 	CLERK_PUBLISHABLE_KEY: string;
 	CLERK_SECRET_KEY: string;
 	CLOUDFLARE_ACCOUNT_ID: string;
