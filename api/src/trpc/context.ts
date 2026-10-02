@@ -15,6 +15,15 @@ export interface Env {
 	 * is exactly "development". Any other value — including unset — leaves the bypass off.
 	 */
 	ENVIRONMENT?: string;
+	/**
+	 * Comma-separated allow-list of exact browser origins permitted to call this
+	 * API, read by src/cors.ts.
+	 *
+	 * DEFAULT-DENY: when unset or empty, no origin is granted access — there is
+	 * no fallback to "*". Local development must therefore set this explicitly
+	 * (e.g. "http://localhost:3000") or the browser will block every call.
+	 */
+	ALLOWED_ORIGINS?: string;
 	bettaresume_d1: D1Database;
 }
 

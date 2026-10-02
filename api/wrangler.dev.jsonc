@@ -18,7 +18,10 @@
 		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY",
 		// Unlocks the x-dev-mode auth bypass. This file is LOCAL DEV ONLY.
 		// Never set this to "development" in wrangler.jsonc (production).
-		"ENVIRONMENT": "development"
+		"ENVIRONMENT": "development",
+		// The frontend dev server runs on :3000 (see npm run dev). Default-deny
+		// means this must be set or the browser blocks every call from localhost.
+		"ALLOWED_ORIGINS": "http://localhost:3000"
 	},
 	"dev": {
 		"port": 4000
