@@ -14,6 +14,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { resumes, sections } from "../../db/schema";
 import { protectedProcedure, router } from "../index";
+import { resumeWriteScope } from "../middleware/ownership";
 
 function normalizePersonalInfo(value: unknown): PersonalInfo {
 	const info =
@@ -229,9 +230,7 @@ function normalizeMetadata(value: unknown): ResumeMetadata | null {
 		>;
 	}
 	if (obj.atsScore && typeof obj.atsScore === "object") {
-		metadata.atsScore = obj.atsScore as NonNullable<
-			ResumeMetadata["atsScore"]
-		>;
+		metadata.atsScore = obj.atsScore as NonNullable<ResumeMetadata["atsScore"]>;
 	}
 	return metadata;
 }
@@ -483,7 +482,7 @@ export const resumeRouter = router({
 			await ctx.db
 				.update(resumes)
 				.set(updateData)
-				.where(eq(resumes.id, input.id));
+				.where(resumeWriteScope(input.id, ctx.userId));
 
 			return ctx.db.query.resumes
 				.findFirst({

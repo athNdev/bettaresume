@@ -8,6 +8,8 @@
 		"dev": "wrangler dev --config wrangler.dev.jsonc",
 		"start": "wrangler dev",
 		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"cf-typegen": "wrangler types",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "shx echo 'Y' | wrangler d1 migrations apply bettaresume_d1 --local --config wrangler.dev.jsonc",
@@ -25,11 +27,13 @@
 	"type": "commonjs",
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20261002.1",
+		"@types/better-sqlite3": "^9.6.0",
 		"better-sqlite3": "^12.6.2",
 		"drizzle-kit": "^0.31.10",
 		"shx": "^0.4.0",
 		"tsx": "^4.23.15",
 		"typescript": "^6.0.3",
+		"vitest": "^5.0.3",
 		"wrangler": "^4.147.0"
 	},
 	"dependencies": {
