@@ -22,7 +22,7 @@ export { minimalSource, postgradSource, sectionsSource, undergradSource };
 // ── Template registry ────────────────────────────────────────────────────────
 //
 // Keys must match the TemplateType union from @bettaresume/types:
-//   "minimal" | "modern" | "classic" | "professional" | "creative" | "executive" | "tech"
+//   "minimal" | "postgrad" | "undergrad"
 //
 // Templates that don't yet have a dedicated .typ file fall back to minimalSource.
 
