@@ -65,6 +65,33 @@ jobs:
       - name: Test api
         run: npm run test -w api
 
+  test:
+    # Root workspace: serialiser, and anything else that is pure logic under
+    # `src/`. The Typst serialiser tests are the guard against a section type
+    # regressing to exporting empty — `personal-info` and `custom` both shipped
+    # that way, and the seeded demo resume demonstrated it.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build types package
+        run: npm run build:types
+
+      - name: Test root workspace
+        run: npm run test:root
+
   build:
     runs-on: ubuntu-latest
     permissions:

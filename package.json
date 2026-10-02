@@ -28,6 +28,9 @@
 		"postbuild": "node scripts/postbuild.js",
 		"preview": "next build && next start",
 		"start": "next start",
+		"test": "npm run test:root && npm run test -w api",
+		"test:root": "vitest run",
+		"test:watch": "vitest",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -106,7 +109,8 @@
 		"raw-loader": "^4.0.2",
 		"shx": "^0.4.0",
 		"tailwindcss": "^4.2.1",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"vitest": "^5.0.3"
 	},
 	"packageManager": "npm@11.7.0",
 	"engines": {
