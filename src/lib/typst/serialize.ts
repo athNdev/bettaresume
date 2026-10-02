@@ -69,11 +69,6 @@ const defaultSettings: ResumeSettings = {
 	accentStyle: "underline",
 };
 
-const defaultPersonalInfo: PersonalInfo = {
-	fullName: "",
-	email: "",
-};
-
 function stripHtml(html: string): string {
 	// First normalize some common block/inline tags to text representations.
 	let text = html
@@ -135,6 +130,70 @@ function serializePersonalInfo(pi: PersonalInfo) {
 	};
 }
 
+/**
+ * The `personal-info` SECTION type is not rendered by the Typst templates at
+ * all — the resume header is drawn from the top-level `personalInfo` payload
+ * (see `sections.typ` line 20 and the header block in `minimal.typ`). So this
+ * section is not a second place the name gets drawn; it is a second place the
+ * name gets *stored*.
+ */
+const PERSONAL_INFO_SECTION = "personal-info";
+
+/** The fields of `personalInfoSchema`, in declaration order. */
+const PERSONAL_INFO_FIELDS = [
+	"fullName",
+	"email",
+	"phone",
+	"location",
+	"linkedin",
+	"github",
+	"website",
+	"portfolio",
+	"professionalTitle",
+	"photoUrl",
+] as const;
+
+/**
+ * Resolve personal info from its two storage locations into ONE object.
+ *
+ * Personal info is stored twice: in `resume.metadata.personalInfo` and in a
+ * `personal-info` section's `content.data`. `metadata.personalInfo` is the
+ * source of truth — it is the only one the editor writes to
+ * (`resume-editor.tsx:385 handlePersonalInfoChange` calls `resume.update` with
+ * `metadata.personalInfo`, and never touches the section). The section copy is
+ * written only by `api/src/db/seed.sql`, and the seeded `resume-1` has a
+ * `personal-info` section with a full name while its `metadata` has NO
+ * `personalInfo` key at all.
+ *
+ * So neither store can be the sole answer: trust `metadata` first and fall back
+ * to the section per field. That keeps the header correct for rows written by
+ * either path. An earlier version of this bug exported `resume-1` with a blank
+ * header precisely because only `metadata` was consulted.
+ */
+function resolvePersonalInfo(
+	metadataInfo: Partial<PersonalInfo> | undefined,
+	sectionData: Record<string, unknown> | undefined,
+): PersonalInfo {
+	const resolved: Record<string, string> = {};
+
+	for (const field of PERSONAL_INFO_FIELDS) {
+		const fromMetadata = metadataInfo?.[field];
+		if (typeof fromMetadata === "string" && fromMetadata.trim() !== "") {
+			resolved[field] = fromMetadata;
+			continue;
+		}
+		// `content.data` is only an object for personal-info; a newly added
+		// personal-info section is seeded with `data: []` (see
+		// `resume-editor.tsx:412 handleAddSection`), so the array case must be
+		// handled rather than assumed away.
+		const fromSection = sectionData?.[field];
+		resolved[field] =
+			typeof fromSection === "string" ? fromSection : (fromMetadata ?? "");
+	}
+
+	return resolved as unknown as PersonalInfo;
+}
+
 function serializeSettings(settings: ResumeSettings) {
 	const merged: ResumeSettings = {
 		...defaultSettings,
@@ -180,13 +239,16 @@ function serializeSettings(settings: ResumeSettings) {
 	};
 }
 
-function serializeSection(section: {
-	id: string;
-	type: string;
-	order: number;
-	visible: boolean;
-	content: Record<string, unknown>;
-}) {
+function serializeSection(
+	section: {
+		id: string;
+		type: string;
+		order: number;
+		visible: boolean;
+		content: Record<string, unknown>;
+	},
+	resolved: { personalInfo: PersonalInfo },
+) {
 	const { type, content } = section;
 	const base = {
 		id: section.id,
@@ -378,7 +440,61 @@ function serializeSection(section: {
 			};
 		}
 
+		case "personal-info": {
+			// Resolved by the caller: `personal-info` may carry the name that
+			// `metadata.personalInfo` is missing, and vice versa. The templates do
+			// not render this section — the header comes from the top-level
+			// `personalInfo` — but it must still serialize to something real so a
+			// newly added type cannot export blank.
+			return {
+				...base,
+				personalInfo: serializePersonalInfo(resolved.personalInfo),
+			};
+		}
+
+		case "custom": {
+			// Free-form section: a title plus a rich body. `content.html` is the
+			// shape the rich-text editor produces; `content.data` is accepted as an
+			// array of blocks or a plain string.
+			const html = safeStr(content.html as string);
+			const body = stripHtml(html);
+			const raw = content.data;
+			const items: { title: string; body: string }[] = [];
+
+			if (Array.isArray(raw)) {
+				for (const entry of raw) {
+					if (typeof entry === "string") {
+						items.push({ title: "", body: stripHtml(entry) });
+					} else if (entry && typeof entry === "object") {
+						const rec = entry as Record<string, unknown>;
+						items.push({
+							title: safeStr(rec.title ?? rec.name ?? rec.heading),
+							body: stripHtml(
+								safeStr(rec.body ?? rec.content ?? rec.text ?? rec.description),
+							),
+						});
+					}
+				}
+			} else if (raw && typeof raw === "object") {
+				const rec = raw as Record<string, unknown>;
+				items.push({
+					title: safeStr(rec.title ?? rec.name ?? rec.heading),
+					body: stripHtml(
+						safeStr(rec.body ?? rec.content ?? rec.text ?? rec.description),
+					),
+				});
+			}
+
+			return { ...base, body, items };
+		}
+
 		default:
+			// Loud on purpose. Before this, an unhandled type exported as a silently
+			// empty section — which is how `personal-info` and `custom` shipped a
+			// blank header and a blank custom block with nothing in the logs.
+			console.warn(
+				`[typst] No serializer for section type "${type}" (section ${section.id}); it will export empty. Add a case to serializeSection().`,
+			);
 			return { ...base, items: [] };
 	}
 }
@@ -390,21 +506,46 @@ export function resumeToTypstJson(resume: Resume): string {
 	const settings = serializeSettings(
 		resume.metadata?.settings ?? defaultSettings,
 	);
+
+	/*
+	 * Personal info is stored twice: in `resume.metadata.personalInfo` and in a
+	 * `personal-info` section's `content.data`. Neither is a reliable sole
+	 * source. The editor only ever writes `metadata.personalInfo`
+	 * (`resume-editor.tsx` handlePersonalInfoChange), but the seed writes the
+	 * section copy and leaves `metadata.personalInfo` absent entirely. Merge
+	 * them so both kinds of row export a correct header.
+	 */
+	const personalInfoSection = resume.sections.find(
+		(s) => s.type === PERSONAL_INFO_SECTION,
+	);
+	// The section stores its personal info under `content.data` as a record.
+	// `sectionContentSchema` allows `data` to be an array too (a newly added
+	// section is seeded with `data: []`), so only a record is treated as a
+	// source.
+	const personalInfoData = (() => {
+		const raw = personalInfoSection?.content?.data;
+		return raw && typeof raw === "object" && !Array.isArray(raw)
+			? (raw as Record<string, unknown>)
+			: undefined;
+	})();
 	const personalInfo = serializePersonalInfo(
-		resume.metadata?.personalInfo ?? defaultPersonalInfo,
+		resolvePersonalInfo(resume.metadata?.personalInfo, personalInfoData),
 	);
 
 	const visibleSections = resume.sections
 		.filter((s) => s.visible)
 		.sort((a, b) => a.order - b.order)
 		.map((s) =>
-			serializeSection({
-				id: s.id,
-				type: s.type,
-				order: s.order,
-				visible: s.visible,
-				content: s.content as Record<string, unknown>,
-			}),
+			serializeSection(
+				{
+					id: s.id,
+					type: s.type,
+					order: s.order,
+					visible: s.visible,
+					content: s.content as Record<string, unknown>,
+				},
+				{ personalInfo },
+			),
 		);
 
 	const data = {
