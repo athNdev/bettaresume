@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
@@ -19,9 +20,17 @@ import type { Context } from "../../src/trpc/context";
  * generated SQL predicates are tenant-scoped, which a mocked db cannot show.
  */
 
-const MIGRATION = fileURLToPath(
-	new URL("../../drizzle/0000_init-schema.sql", import.meta.url),
-);
+const MIGRATIONS_DIR = fileURLToPath(new URL("../../drizzle", import.meta.url));
+
+/**
+ * Every generated migration, in order. Loading only the first file would leave
+ * later schema changes (such as the `Resume.baseResumeId` foreign key) unapplied
+ * and silently make constraint tests pass vacuously.
+ */
+const MIGRATIONS = readdirSync(MIGRATIONS_DIR)
+	.filter((file) => file.endsWith(".sql"))
+	.sort()
+	.map((file) => readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
 
 export const USER_A = "user-a";
 export const USER_B = "user-b";
@@ -43,24 +52,39 @@ export type TestHarness = {
 	 * synchronous inspection of rows in assertions. `db` is what procedures receive.
 	 */
 	raw: BetterSQLite3Database<typeof schema>;
+	/**
+	 * The underlying better-sqlite3 handle. Exposed so tests can assert on
+	 * connection state that Drizzle does not surface — notably
+	 * `PRAGMA foreign_keys`, without which every FK assertion would pass vacuously.
+	 */
+	sqlite: Database.Database;
 	callerAs: (userId: string) => Caller;
 	section: (id: string) => Promise<SectionRow | undefined>;
 	resume: (id: string) => Promise<ResumeRow | undefined>;
 	close: () => void;
 };
 
-/** Fresh in-memory database with the real migration applied and two tenants seeded. */
+/** Fresh in-memory database with the real migrations applied and two tenants seeded. */
 export function createHarness(): TestHarness {
 	const sqlite = new Database(":memory:");
-	// SQLite has FK enforcement off by default; the schema relies on ON DELETE CASCADE.
-	sqlite.pragma("foreign_keys = ON");
 
-	for (const statement of readFileSync(MIGRATION, "utf8")
-		.split("--> statement-breakpoint")
-		.map((s) => s.trim())
-		.filter((s) => s.length > 0)) {
-		sqlite.exec(statement);
+	for (const migration of MIGRATIONS) {
+		for (const statement of migration
+			.split("--> statement-breakpoint")
+			.map((s) => s.trim())
+			.filter((s) => s.length > 0)) {
+			sqlite.exec(statement);
+		}
 	}
+
+	// SQLite ignores FOREIGN KEY clauses unless enforcement is switched on, so the
+	// schema's ON DELETE CASCADE / ON DELETE SET NULL rules are inert without this.
+	//
+	// Set AFTER the migrations, not before: drizzle-kit emits `PRAGMA foreign_keys=ON`
+	// at the tail of a table-rebuild migration, which would otherwise silently
+	// re-enable enforcement regardless of what this harness asked for — or mask the
+	// fact that enforcement was never under test control at all.
+	sqlite.pragma("foreign_keys = ON");
 
 	const db = drizzle(sqlite, { schema });
 	const now = Date.now();
@@ -126,6 +150,7 @@ export function createHarness(): TestHarness {
 	return {
 		db: typed,
 		raw: db,
+		sqlite,
 		callerAs,
 		section: async (id) =>
 			(await db.select().from(sections).where(eq(sections.id, id)).get()) ??
