@@ -13,7 +13,6 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ContentLibraryPanel } from "@/features/resume-editor/components/content-library-panel";
 import { HistoryPanel } from "@/features/resume-editor/components/history-panel";
 import {
 	JobMatchPanel,
@@ -200,7 +199,10 @@ export function ReviewPanel({
 					  now asserts every TabsContent has a matching TabsTrigger, so the next one
 					  cannot ship dead either.
 					*/}
-						<TabsTrigger value="library">Library</TabsTrigger>
+						{/*
+						  The Library tab is gone: it moved to the editor rail, beside the
+						  Sections list it feeds. See `resume-editor.tsx`.
+						*/}
 						<TabsTrigger value="bullets">
 							Bullets
 							{bulletCount > 0 ? (
@@ -211,7 +213,11 @@ export function ReviewPanel({
 						</TabsTrigger>
 					</TabsList>
 
-					<TabsContent className="min-h-0 flex-1 px-6 pb-6" value="parse">
+					<TabsContent
+						className="min-h-0 flex-1 px-6 pb-6"
+						forceMount
+						value="parse"
+					>
 						<ScrollArea className="h-full pr-3">
 							{diagnostics.length === 0 ? (
 								<ClearState>
@@ -227,18 +233,19 @@ export function ReviewPanel({
 						</ScrollArea>
 					</TabsContent>
 
-					<TabsContent className="min-h-0 flex-1 px-6 pb-6" value="history">
+					<TabsContent
+						className="min-h-0 flex-1 px-6 pb-6"
+						forceMount
+						value="history"
+					>
 						<HistoryPanel resume={resume} />
 					</TabsContent>
 
 					<TabsContent
-						className="min-h-0 flex-1 overflow-y-auto px-6 pb-6"
-						value="library"
+						className="min-h-0 flex-1 px-6 pb-6"
+						forceMount
+						value="bullets"
 					>
-						<ContentLibraryPanel resume={resume} />
-					</TabsContent>
-
-					<TabsContent className="min-h-0 flex-1 px-6 pb-6" value="bullets">
 						<ScrollArea className="h-full pr-3">
 							{bulletReport.bullets.length === 0 ? (
 								<ClearState>No bullets to review yet.</ClearState>
@@ -294,6 +301,7 @@ export function ReviewPanel({
 					</TabsContent>
 					<TabsContent
 						className="min-h-0 flex-1 overflow-hidden px-6 pb-6"
+						forceMount
 						value="job"
 					>
 						<JobMatchPanel

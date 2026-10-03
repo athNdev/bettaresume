@@ -20,6 +20,17 @@ import { resumeToTypstJson } from "@/lib/typst/serialize";
 interface ExportButtonsProps {
 	resume: Resume;
 	variant?: "default" | "dropdown";
+	/**
+	 * Whether `resume` is an unsaved draft rather than the persisted document.
+	 *
+	 * The editor renders the draft in its preview, so this exporter is handed the draft
+	 * too — which makes the exported file match what is on screen, including edits that
+	 * have not been written to the server. That is the right trade: a file that matches
+	 * the preview but is one save behind beats a file that silently omits the edit the
+	 * user is looking at. This flag exists so the menu can say so out loud rather than
+	 * leaving the user to assume the server has a copy.
+	 */
+	hasUnsavedChanges?: boolean;
 }
 
 /**
@@ -50,6 +61,7 @@ export function toDownloadBlob(
 export function ExportButtons({
 	resume,
 	variant = "default",
+	hasUnsavedChanges = false,
 }: ExportButtonsProps) {
 	const [isExporting, setIsExporting] = useState(false);
 
@@ -197,6 +209,16 @@ export function ExportButtons({
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
+					{/*
+					 * A live region inside the menu: opening the menu with unsaved work
+					 * tells you the file will contain edits the server has not seen.
+					 */}
+					{hasUnsavedChanges ? (
+						<p className="max-w-56 px-2 py-1.5 text-muted-foreground text-xs">
+							Exports include your unsaved changes. Reload or switch away and
+							they will be lost.
+						</p>
+					) : null}
 					<DropdownMenuItem onClick={exportPDF}>
 						<FileText className="mr-2 h-4 w-4" />
 						Export as PDF
