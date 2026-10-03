@@ -351,6 +351,47 @@ is ignored; explicit `null` still wipes.
 If you add a branch to `resumeMetadataSchema`, it inherits this merge for free —
 which is the point. Do not add a second writer.
 
+### 2.18 Half the editor saves; the other half reported success and did not
+
+`SyncManager.executeSyncOperation` was a stub that logged the operation and
+returned. Every layer above read that as success, so **25 `queueSave` call sites in
+`resume.store.ts` were silently discarded** while the sync state said `synced`. The
+edit lived only in `localStorage`.
+
+What actually persists today:
+
+| path | persists? |
+|---|---|
+| `resume.update` — template, personalInfo, settings | **yes**, via `useResumeMutations` |
+| `section.upsert` / `delete` / `reorder` | **yes**, via `useSectionMutations` |
+| everything else routed through `syncManager.queueSave` | **no** — localStorage only |
+
+That asymmetry is why it survived: roughly half the editor worked, so the editor
+looked functional. Page management, variations, archive/restore and the store's own
+section mutations do not reach the backend.
+
+#142 made the failure visible — the stub now throws, queued operations are never
+dropped, and `synced` requires an empty queue. **Sync is still not wired.** If you
+are asked why a change did not persist, check this first.
+
+### 2.19 A resolved promise is not a successful write
+
+The general lesson, and it has now appeared four times in this repo: a stub that
+returns normally is indistinguishable from a real implementation to every caller
+above it.
+
+| stub | what it looked like | what it did |
+|---|---|---|
+| `executeSyncOperation` | logged, returned | discarded the write, reported `synced` |
+| `getTemplateSource` | fell back to `minimal` | rendered "Harvard Application" as Minimal |
+| font substitution | fell back to a serif | changed the page count silently |
+| `biome` ratchet | read a capped count | could not fail while appearing to gate |
+
+**If a function cannot do its job yet, it must throw.** A `TODO` that returns
+success converts a known gap into silent corruption, and the layers above are the
+ones that pay for it. This is also why every fix here was verified by trying to make
+it *fail*, not by reading it.
+
 ---
 
 ## 3. Architecture as it actually is
