@@ -1,0 +1,22 @@
+# Browser origins allowed to call the production API.
+#
+# DEFAULT-DENY: this list is the only thing that grants a browser access. An empty
+# or missing value denies every origin (api/src/cors.ts never falls back to "*").
+#
+# WHY THIS FILE EXISTS
+#
+# The production allow-list lived only as a GitHub Actions repository variable, and
+# the variable that was actually set was named `ALLOWED_ORIGIN` — singular — while
+# the code reads `ALLOWED_ORIGINS`. The two never met. Combined with envsubst
+# expanding the unset plural name to "", the deployed API denied every browser
+# origin while deploying cleanly, /health still returned 200, and no test failed.
+#
+# It is committed here so that value is reviewable in a pull request instead of
+# being invisible in settings. This is a public URL, not a credential.
+#
+# Override at deploy time with the ALLOWED_ORIGINS repository variable if a
+# preview deployment needs extra origins.
+#
+# Keep in sync with the GitHub Pages custom domain. Verify with:
+#   gh api repos/athNdev/bettaresume/pages --jq .cname
+app.bettaresume.com
