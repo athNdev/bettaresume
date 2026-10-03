@@ -62,9 +62,14 @@ jobs:
         # fails only when the count *increases*, so the backlog can shrink but
         # never grows. Drain it, then flip the comparison to `equals 0`.
         run: |
+          # `--max-diagnostics` matters. Biome caps reported diagnostics by default,
+          # so the count saturates: with the cap in place this ratchet read 16 while
+          # the real total was 376, and any growth past the cap was undetectable.
+          # Raise the cap well above the backlog so the number is honest.
+          #
           # `biome check` exits 1 when it reports findings, and the runner is
           # `bash -e`; the `|| true` keeps that from aborting before the comparison.
-          total=$(npx biome check . 2>&1 | grep -cE '^\S+:[0-9]+:[0-9]+' || true)
+          total=$(npx biome check --max-diagnostics=2000 . 2>&1 | grep -cE '^\S+:[0-9]+:[0-9]+' || true)
           baseline=$(cat .github/biome-baseline.txt)
           echo "biome findings: ${total} (baseline ${baseline})"
           if [ "$total" -gt "$baseline" ]; then

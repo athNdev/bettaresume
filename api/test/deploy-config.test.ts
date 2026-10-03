@@ -18,6 +18,7 @@ const read = (rel: string): string =>
 	readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
 
 const cd = read("../../.github/workflows/cd.yml");
+const ci = read("../../.github/workflows/ci.yml");
 const wrangler = read("../wrangler.jsonc");
 
 describe("deploy configuration", () => {
@@ -137,6 +138,19 @@ describe("the CORS allow-list is configured, not assumed", () => {
 		// And the value is exported once so the deploy and its smoke test agree.
 		expect(cd).toMatch(/PRIMARY_ORIGIN/);
 		expect(cd).toMatch(/ORIGIN="\$PRIMARY_ORIGIN"/);
+	});
+
+	it("the biome ratchet raises Biome's diagnostic cap", () => {
+		// Biome caps reported diagnostics by default. With the cap in place the
+		// ratchet read 16 while the real total was 376, so it was saturated and any
+		// growth past the cap was invisible — a gate that cannot fail.
+		expect(ci).toMatch(/--max-diagnostics=/);
+		const cap = Number(ci.match(/--max-diagnostics=(\d+)/)?.[1] ?? 0);
+		expect(cap).toBeGreaterThan(0);
+		// And the baseline must sit above the cap, or it saturates again.
+		const baseline = Number(read("../../.github/biome-baseline.txt").trim());
+		expect(baseline).toBeGreaterThan(0);
+		expect(baseline).toBeLessThan(cap);
 	});
 
 	it("sets ALLOWED_ORIGINS in exactly one place", () => {
