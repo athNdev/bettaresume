@@ -457,6 +457,15 @@ It records the traps that will otherwise cost you hours:
 
 Work is tracked on Plane: workspace `homelab`, project `BettaResume` (`BETA`).
 
+## Roadmap
+
+[`docs/ROADMAP.md`](docs/ROADMAP.md) holds the current ranked feature plan, the market
+and ATS-ingestion research behind it, and the list of things deliberately **not** being
+built (auto-apply, application tracker, hidden-keyword "ATS Hack Mode", single 0-100
+scores, LLM metric invention). Read it before proposing features.
+
+---
+
 ## Further Reading
 
 All architecture docs are in `docs/`:
