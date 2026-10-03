@@ -267,16 +267,48 @@ export interface JobTarget {
 	addedAt: string;
 }
 
+/**
+ * Parse/ATS diagnostics. Mirrors `atsScoreSchema` in ./schemas.ts — keep the two in
+ * step, they are checked against each other by the type checker.
+ */
 export interface ATSScore {
-	overall: number;
+	/**
+	 * @deprecated Intentionally not computed.
+	 *
+	 * A single headline score is the documented credibility failure of this category:
+	 * users report 94/100 on resumes human reviewers reject, and two tools disagree
+	 * 82-vs-20 on the same file. Optional rather than removed so resumes saved before
+	 * the change still validate. Use `dimensions` and `keywords`.
+	 */
+	overall?: number;
 	breakdown: {
 		keywords: number;
 		formatting: number;
 		sections: number;
 		length: number;
 	};
+	dimensions?: {
+		/** Achievements carrying evidence, versus claims without any. */
+		impact: { quantified: number; total: number };
+		/** Length signals: total words, bullets per entry. */
+		brevity: { totalWords: number; bulletsPerEntry: number[] };
+		/** Parser-constraint violations, counted rather than scored. */
+		style: { violations: number; errors: number };
+	};
+	keywords?: {
+		required: KeywordCoverage[];
+		preferred: KeywordCoverage[];
+	};
 	suggestions: ATSSuggestion[];
 	lastAnalyzed: string;
+}
+
+/** One job-description keyword and whether the resume evidences it. */
+export interface KeywordCoverage {
+	keyword: string;
+	canonical?: string;
+	covered: boolean;
+	surface?: string;
 }
 
 export interface ATSSuggestion {

@@ -305,14 +305,62 @@ export const atsSuggestionSchema = z.object({
 	priority: z.enum(["high", "medium", "low"]),
 });
 
+/**
+ * Parse/ATS diagnostics.
+ *
+ * `overall` is DEPRECATED and deliberately not computed. A single headline score is the
+ * documented credibility failure of this whole category: users report 94/100 on resumes
+ * that human reviewers reject, and two tools disagreeing 82-vs-20 on the same file. It
+ * was made optional rather than removed so existing stored resumes still validate.
+ *
+ * Use `dimensions` and `keywords` instead. Each is a separate, explainable measurement,
+ * so a user can disagree with one part without the whole number being wrong.
+ */
+/** One job-description keyword and whether the resume evidences it. */
+export const keywordCoverageSchema = z.object({
+	/** The keyword as written in the job description. */
+	keyword: z.string(),
+	/** Resolved canonical skill, when the alias map recognises it. */
+	canonical: z.string().optional(),
+	/** True when any surface form of this skill appears in the resume. */
+	covered: z.boolean(),
+	/** The exact surface form found, for showing the user why it matched. */
+	surface: z.string().optional(),
+});
+
 export const atsScoreSchema = z.object({
-	overall: z.number().min(0).max(100),
+	/** @deprecated Intentionally unpopulated. See the note above. */
+	overall: z.number().min(0).max(100).optional(),
 	breakdown: z.object({
 		keywords: z.number(),
 		formatting: z.number(),
 		sections: z.number(),
 		length: z.number(),
 	}),
+	/**
+	 * The three dimensions used by the reference implementation. Kept as discrete
+	 * measurements with counts, not percentages-of-a-score.
+	 */
+	dimensions: z
+		.object({
+			/** Achievements carrying evidence, vs claims without any. */
+			impact: z.object({ quantified: z.number(), total: z.number() }),
+			/** Length signals: total words, bullets per role. */
+			brevity: z.object({
+				totalWords: z.number(),
+				bulletsPerEntry: z.array(z.number()),
+			}),
+			/** Parser-constraint violations, counted rather than scored. */
+			style: z.object({ violations: z.number(), errors: z.number() }),
+		})
+		.optional(),
+	/** Per-keyword coverage against the job target. */
+	keywords: z
+		.object({
+			required: z.array(keywordCoverageSchema),
+			preferred: z.array(keywordCoverageSchema),
+		})
+		.optional(),
 	suggestions: z.array(atsSuggestionSchema),
 	lastAnalyzed: z.string(),
 });
