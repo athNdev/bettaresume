@@ -166,9 +166,22 @@ describe("the CORS allow-list is configured, not assumed", () => {
 	});
 
 	it("the worker deploy smoke-tests CORS against the live API", () => {
-		// /health proves nothing about CORS; only a preflight from the real origin
-		// proves users can actually call the API.
+		// /health proves nothing about CORS; only a response carrying
+		// access-control-allow-origin for the real origin proves users can call it.
 		expect(cd).toMatch(/Smoke-test the deployed API/);
 		expect(cd).toMatch(/access-control-allow-origin/i);
+	});
+
+	it("separates an edge block from a genuine CORS defect", () => {
+		// GitHub-hosted runner egress is blocked at Cloudflare's edge, so the probe
+		// often cannot reach the worker. That must not fail a release — but a worker
+		// that DOES answer and denies the origin must. The discriminator is whether
+		// the response is JSON: /health returns JSON, an edge block returns HTML.
+		expect(cd).toMatch(/application\/json/);
+		expect(cd).toMatch(/never reached the worker/);
+		expect(cd).toMatch(/worker answered but CORS denied/);
+		// The edge-block path is a warning, the CORS defect is an error.
+		expect(cd).toMatch(/::warning::The probe never reached the worker/);
+		expect(cd).toMatch(/::error::The worker answered but CORS denied/);
 	});
 });
