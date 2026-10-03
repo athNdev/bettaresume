@@ -21,7 +21,11 @@ export default defineConfig({
 	},
 	test: {
 		environment: "node",
-		include: ["test/**/*.test.ts"],
+		// `.tsx` as well as `.ts`: the import review screen is asserted by rendering it
+		// with `react-dom/server`, which needs JSX. The root vitest config is `node` with
+		// no jsdom (see the comment above), so there is nothing that renders React in a
+		// DOM here to bypass.
+		include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
 		pool: "forks",
 	},
 });

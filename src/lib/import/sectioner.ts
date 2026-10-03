@@ -156,7 +156,7 @@ function hasBulletGlyph(line: string): boolean {
  * inside the previous section for the user to rename, while a wrong heading scatters
  * their content into sections that do not exist.
  *
-* ALL-CAPS is the shape that survives that trade: it excludes role lines, date lines
+ * ALL-CAPS is the shape that survives that trade: it excludes role lines, date lines
  * and contact lines without a whitelist of its own.
  *
  * ## Why the fallback is gated on a known heading having been seen
@@ -389,7 +389,11 @@ function splitEntries(body: string[]): ExtractedEntry[] {
 function looksLikePhone(candidate: string, line: string): boolean {
 	const digits = candidate.replace(/\D/g, "");
 	if (digits.length < 7 || digits.length > 15) return false;
-	if (/\b(?:19|20)\d{2}\b\s*(?:-|–|—|to|until)\s*\b(?:19|20)\d{2}\b/i.test(candidate)) {
+	if (
+		/\b(?:19|20)\d{2}\b\s*(?:-|–|—|to|until)\s*\b(?:19|20)\d{2}\b/i.test(
+			candidate,
+		)
+	) {
 		return false;
 	}
 	if (MONTH_NAME.test(line)) return false;
