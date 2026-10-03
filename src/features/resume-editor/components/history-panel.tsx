@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PanelError } from "@/components/ui/panel-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Resume } from "@/features/resume-editor/types";
 import {
@@ -255,8 +256,23 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 
 			<div className="flex min-h-0 flex-1 gap-4">
 				<div className="w-56 shrink-0 overflow-y-auto">
+					{/*
+					 * Order matters here, and getting it wrong is a lie rather than a
+					 * cosmetic bug. `list.data` is undefined both when there is genuinely
+					 * nothing stored AND when the query failed, so an `isPending` →
+					 * `length === 0` chain falls straight through to "No saved versions
+					 * yet. Save one before a big rewrite…" on a failure. The user is
+					 * told their history is empty, and invited to take the one action that
+					 * makes the gap permanent. `isError` is checked before the empty
+					 * branch, matching `content-library-panel.tsx`.
+					 */}
 					{list.isPending ? (
 						<p className="text-muted-foreground text-sm">Loading history…</p>
+					) : list.isError ? (
+						<PanelError
+							message={`Could not load your saved versions: ${list.error.message}`}
+							onRetry={() => void list.refetch()}
+						/>
 					) : revisions.length === 0 ? (
 						<p className="text-muted-foreground text-sm">
 							No saved versions yet. Save one before a big rewrite so you can
@@ -299,6 +315,16 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 						</p>
 					) : snapshot.isPending ? (
 						<p className="text-muted-foreground text-sm">Loading version…</p>
+					) : snapshot.isError ? (
+						/*
+						 * Previously this fell through to `null`. A failed snapshot fetch
+						 * left the right-hand pane silently blank — no error, no message,
+						 * no way to tell it apart from "still loading" or "nothing to show".
+						 */
+						<PanelError
+							message={`Could not load that version: ${snapshot.error.message}`}
+							onRetry={() => void snapshot.refetch()}
+						/>
 					) : diff ? (
 						<div className="space-y-3">
 							<div className="flex items-center justify-between gap-2">
@@ -327,17 +353,16 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 											<AlertDialogTitle>
 												Replace your current resume?
 											</AlertDialogTitle>
-<AlertDialogDescription>
-										This replaces the current name, template, contact
-										details, and all {changedSections} changed section
-										{changedSections === 1 ? "" : "s"} with version #
-										{snapshot.data?.seq}. Anything you changed since then is
-										discarded from the editor.
-										{diff.changedCount > 0
-											? " Your current version is written to history as “Before restore to this version” first, so restoring it again brings you back."
-											: ""}
-									</AlertDialogDescription>
-
+											<AlertDialogDescription>
+												This replaces the current name, template, contact
+												details, and all {changedSections} changed section
+												{changedSections === 1 ? "" : "s"} with version #
+												{snapshot.data?.seq}. Anything you changed since then is
+												discarded from the editor.
+												{diff.changedCount > 0
+													? " Your current version is written to history as “Before restore to this version” first, so restoring it again brings you back."
+													: ""}
+											</AlertDialogDescription>
 										</AlertDialogHeader>
 										<AlertDialogFooter>
 											<AlertDialogCancel>Cancel</AlertDialogCancel>

@@ -185,24 +185,52 @@ describe("every tab panel is reachable", () => {
 		expect(triggers.filter((v) => !contents.includes(v))).toEqual([]);
 	});
 
-	it("the library panel is reachable and renders the content library", () => {
-		expect(panelUi).toMatch(/<TabsTrigger value="library">/);
-		expect(panelUi).toMatch(
-			/<TabsContent[^>]*value="library"[^>]*>\s*<ContentLibraryPanel/,
+	/**
+	 * The library moved out of this sheet into the editor's left rail, beside the
+	 * Sections list it feeds. It is no longer a tab, so the "no orphan TabsContent"
+	 * assertions above no longer cover it -- and reachability bugs have shipped twice
+	 * in this repo. So the invariant is asserted at its new location instead: the rail
+	 * must mount the panel behind a real disclosure control, not merely import it.
+	 */
+	it("the library is reachable from the editor rail, not a dead import", () => {
+		expect(panelUi).not.toMatch(/value="library"/);
+		expect(panelUi).not.toMatch(/ContentLibraryPanel/);
+
+		expect(editor).toMatch(/import \{ ContentLibraryPanel \}/);
+		expect(editor).toMatch(/<ContentLibraryPanel/);
+		// Inside a Collapsible, so it is behind a control the user can actually press.
+		expect(editor).toMatch(
+			/<CollapsibleContent>[\s\S]{0,200}<ContentLibraryPanel/,
 		);
-		expect(panelUi).toMatch(/import \{ ContentLibraryPanel \}/);
+		expect(editor).toMatch(/setLibraryOpen/);
 	});
 
 	it("names every panel it ships", () => {
 		// Guards against a future refactor deleting a trigger and its content together
 		// being "consistent" again.
-		expect(values("TabsContent")).toEqual([
-			"bullets",
-			"history",
-			"job",
-			"library",
-			"parse",
-		]);
+		expect(values("TabsContent")).toEqual(["bullets", "history", "job", "parse"]);
+	});
+
+	/**
+	 * Switching tabs must not destroy the panel you were working in.
+	 *
+	 * Radix unmounts an inactive `TabsContent`, so every tab switch threw away the
+	 * History panel's selected revision, its typed label, and its scroll position --
+	 * you would pick a version, glance at Parser fit, come back, and be told to
+	 * "Select a version to see what changed since then". `forceMount` on each
+	 * content keeps the subtrees alive; Radix still hides the inactive ones, so this
+	 * is not a "render everything at once" regression.
+	 */
+	it("keeps every tab panel mounted across tab switches", () => {
+		const contents = [...panelUi.matchAll(/<TabsContent\b[^>]*?>/g)].map(
+			(m) => m[0],
+		);
+		expect(contents.length).toBeGreaterThan(0);
+		const missing = contents.filter((tag) => !/\bforceMount\b/.test(tag));
+		expect(
+			missing,
+			"an inactive TabsContent without forceMount loses its state on every tab switch",
+		).toEqual([]);
 	});
 });
 

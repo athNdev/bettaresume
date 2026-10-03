@@ -6,11 +6,12 @@
  */
 
 import {
+	AlertTriangle,
 	ArrowLeft,
 	ChevronDown,
-	Clock,
 	Layers,
 	Layout,
+	Library,
 	Loader2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -43,10 +44,14 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { PanelEmpty, PanelError } from "@/components/ui/panel-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+	draftChangeCount,
+	isDraftDirty,
+} from "@/features/resume-editor/lib/draft-state";
 import type {
-	ActivityLog,
 	Award,
 	Certification,
 	Education,
@@ -81,14 +86,16 @@ import {
 } from "@/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useHashRouter } from "@/lib/hash-router";
+import { cn } from "@/lib/utils";
 import {
-	ChangeLog,
 	FormattingToolbar,
+	SaveState,
 	SectionsManager,
 	TemplateSelector,
 	TypstPreview,
 	VariationManager,
 } from "./components";
+import { ContentLibraryPanel } from "./components/content-library-panel";
 import { ReviewTrigger } from "./components/review-panel";
 
 interface ResumeEditorPageProps {
@@ -146,6 +153,35 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			}
 		}
 	}, [activeResume, draftResume]); // Remove draftResume from dependencies to avoid circular updates
+
+	/**
+	 * Does the draft hold anything the server does not?
+	 *
+	 * Drives three things that were previously disconnected: the save indicator, the
+	 * warning on the export menu, and the choice of which resume the exporter reads.
+	 */
+	const isDirty = useMemo(
+		() => isDraftDirty(draftResume, activeResume),
+		[activeResume, draftResume],
+	);
+	const changeCount = useMemo(
+		() => draftChangeCount(draftResume, activeResume),
+		[activeResume, draftResume],
+	);
+
+	/**
+	 * Failures the user has to be told about.
+	 *
+	 * Every write handler in this file used to `console.error` and return, so a
+	 * rejected mutation was invisible: the form said "Unsaved changes" forever, or
+	 * worse, a control appeared to do nothing. One surface, cleared on the next
+	 * successful write, so an error cannot sit there pretending to be current.
+	 */
+	const [editorError, setEditorError] = useState<string | null>(null);
+	const reportError = useCallback((what: string, err: unknown) => {
+		const detail = err instanceof Error ? err.message : String(err);
+		setEditorError(`${what}: ${detail}`);
+	}, []);
 
 	// Live updates for draft (instant, no server call)
 	const handleDraftSectionDataUpdate = useCallback(
@@ -249,7 +285,20 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	const [previewScale, setPreviewScale] = useState(0.7);
 	const [contentOpen, setContentOpen] = useState(true);
 	const [designOpen, setDesignOpen] = useState(true);
-	const [activityOpen, setActivityOpen] = useState(true);
+	/*
+	 * The typography controls default to collapsed so the document gets the space.
+	 * The rail's Templates disclosure keeps its own flag -- one `designOpen` driving
+	 * two disclosures on opposite sides of the screen meant opening the rail's
+	 * template list also shoved the preview's toolbar open.
+	 */
+	const [typeOpen, setTypeOpen] = useState(false);
+	const [typeControlsOpen, setTypeControlsOpen] = useState(false);
+	/*
+	 * The library is collapsed by default. It is a full panel with three queries
+	 * behind it and it competes for vertical space with the Sections list, which is
+	 * the thing you reach for constantly. Opening it is a deliberate act.
+	 */
+	const [libraryOpen, setLibraryOpen] = useState(false);
 
 	// Set active resume ID when component mounts
 	useEffect(() => {
@@ -345,9 +394,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		);
 	}, [activeResume, selectedSectionId]);
 
-	// Activity log - for now just empty (can be implemented later with backend)
-	const currentActivityLog: ActivityLog[] = [];
-
 	// Handlers
 	/**
 	 * Persist the pasted job description onto the resume.
@@ -382,10 +428,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					},
 				});
 			} catch (err) {
-				console.error("Failed to save job target:", err);
+				reportError("Could not save the job description", err);
 			}
 		},
-		[activeResume, updateResume],
+		[activeResume, reportError, updateResume],
 	);
 
 	const handleSectionChange = useCallback(
@@ -394,10 +440,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			try {
 				await updateSection(sectionId, updates);
 			} catch (err) {
-				console.error("Failed to update section:", err);
+				reportError("Could not save this section", err);
 			}
 		},
-		[activeResume, updateSection],
+		[activeResume, reportError, updateSection],
 	);
 
 	const handleSectionDataChange = useCallback(
@@ -433,10 +479,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					},
 				});
 			} catch (err) {
-				console.error("Failed to update personal info:", err);
+				reportError("Could not save your contact details", err);
 			}
 		},
-		[activeResume, updateResume],
+		[activeResume, reportError, updateResume],
 	);
 
 	const handleAddSection = useCallback(
@@ -454,10 +500,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					},
 				});
 			} catch (err) {
-				console.error("Failed to add section:", err);
+				reportError("Could not add that section", err);
 			}
 		},
-		[activeResume, createSection],
+		[activeResume, createSection, reportError],
 	);
 
 	const confirm = useConfirm();
@@ -476,11 +522,17 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						setSelectedSectionId(null);
 					}
 				} catch (err) {
-					console.error("Failed to delete section:", err);
+					reportError("Could not delete that section", err);
 				}
 			}
 		},
-		[activeResume, deleteSectionMutation, selectedSectionId, confirm],
+		[
+			activeResume,
+			confirm,
+			deleteSectionMutation,
+			reportError,
+			selectedSectionId,
+		],
 	);
 
 	const handleSectionsReorder = useCallback(
@@ -490,10 +542,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			try {
 				await reorderSections(sectionIds);
 			} catch (err) {
-				console.error("Failed to reorder sections:", err);
+				reportError("Could not save the new section order", err);
 			}
 		},
-		[activeResume, reorderSections],
+		[activeResume, reorderSections, reportError],
 	);
 
 	const handleSettingsChange = useCallback(
@@ -559,25 +611,30 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							},
 						});
 					} catch (err) {
-						console.error("Failed to save settings:", err);
+						reportError("Could not save your formatting settings", err);
 					}
 				}, 600);
 			} catch (err) {
-				console.error("Failed to update settings:", err);
+				reportError("Could not update your formatting settings", err);
 			}
 		},
-		[activeResume, updateResume],
+		[activeResume, reportError, updateResume],
 	);
 
-	const handleCreateVariation = useCallback(
-		async (name: string, domain?: string) => {
-			if (!baseResume) return;
-			// For now, use duplicate since createVariation needs to be added to backend
-			// TODO: Add proper createVariation endpoint
-			console.log("Create variation:", name, domain);
-		},
-		[baseResume],
-	);
+	/*
+	 * No `onCreateVariation` is passed to `VariationManager`.
+	 *
+	 * This used to be a `console.log` behind a complete, working-looking Create
+	 * Variation dialog: fill in a name and a domain, press the button, the dialog
+	 * closed and nothing happened — no error, no new variation, no explanation. A
+	 * control that silently does nothing is worse than an absent one, because the
+	 * user concludes the feature is broken rather than unbuilt.
+	 *
+	 * So the prop is optional and the control hides itself. Wiring this up properly
+	 * needs a `resume.createVariation` procedure that does not exist yet; the
+	 * roadmap's sequencing puts it behind the content-library work, and inventing a
+	 * mutation contract here would be worse than leaving the control out.
+	 */
 
 	const handleSelectVariation = useCallback(
 		(id: string) => {
@@ -596,10 +653,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					navigate("/dashboard");
 				}
 			} catch (err) {
-				console.error("Failed to delete variation:", err);
+				reportError("Could not delete that variation", err);
 			}
 		},
-		[deleteResume, baseResume, navigate],
+		[baseResume, deleteResume, navigate, reportError],
 	);
 
 	// Render section form based on type
@@ -904,13 +961,29 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							<VariationManager
 								baseResume={baseResume}
 								currentResumeId={activeResume.id}
-								onCreateVariation={handleCreateVariation}
 								onDeleteVariation={handleDeleteVariation}
 								onSelectVariation={handleSelectVariation}
 								variations={variations}
 							/>
 						</div>
 					)}
+
+					{/*
+					 * Save state, between the document identity and the actions.
+					 *
+					 * The preview renders the draft and the server holds the saved
+					 * resume, so "have I lost work?" had no answer anywhere on screen.
+					 * `isAnyPending` only ever surfaced as a spinner inside the Sections
+					 * collapsible header. This says which of the three true things is
+					 * happening: in flight, unsaved, or saved.
+					 */}
+					<div aria-live="polite" className="mr-2 ml-auto hidden lg:block">
+						<SaveState
+							changeCount={changeCount}
+							isDirty={isDirty}
+							isSaving={isAnyPending}
+						/>
+					</div>
 
 					{/* Right: Actions */}
 					<div className="flex items-center gap-2">
@@ -919,23 +992,71 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							onJobTargetChange={handleJobTargetChange}
 							resume={draftResume ?? activeResume}
 						/>
-						<ExportButtons resume={activeResume} variant="dropdown" />
+						{/*
+						 * The DRAFT, not `activeResume`.
+						 *
+						 * This was the single worst defect in the surface: the preview was
+						 * handed `draftResume` and the exporter was handed `activeResume`.
+						 * Type an edit, do not press Save, export — and the file you send
+						 * silently omits the edit you are looking at. A preview that does not
+						 * match the artefact teaches the user to distrust the one surface
+						 * meant to be WYSIWYG, and there is no way to notice from the outside.
+						 *
+						 * Exporting the draft makes "what you see is what you send" literally
+						 * true. The Save indicator above carries the remaining honesty: the
+						 * file is correct, but the server does not have it yet.
+						 */}
+						<ExportButtons
+							hasUnsavedChanges={isDirty}
+							resume={draftResume ?? activeResume}
+							variant="dropdown"
+						/>
 					</div>
 				</div>
 			</header>
 
+			{/*
+			 * Write failures, surfaced.
+			 *
+			 * Every mutation handler here used to `console.error` and return, so a
+			 * rejected write was invisible in the product: the form kept saying
+			 * "Unsaved changes" with no way to tell a slow network from a refusal,
+			 * and a section that failed to add simply never appeared. A console is not
+			 * an error state. `role="alert"` so it is announced, and it sits above the
+			 * panes rather than inside one, because a failed section write is not
+			 * scoped to whichever panel happens to be open.
+			 */}
+			{editorError ? (
+				<div
+					className="flex items-start gap-3 border-destructive/30 border-b bg-destructive/10 px-4 py-2.5 text-sm"
+					role="alert"
+				>
+					<AlertTriangle
+						aria-hidden
+						className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
+					/>
+					<p className="min-w-0 flex-1 text-destructive">{editorError}</p>
+					<Button
+						aria-label="Dismiss this error"
+						className="h-6 shrink-0 px-2"
+						onClick={() => setEditorError(null)}
+						size="sm"
+						variant="ghost"
+					>
+						Dismiss
+					</Button>
+				</div>
+			) : null}
+
 			{/* Main Content */}
-			<div
-				className="flex-1 overflow-hidden"
-				style={{ height: "calc(100vh - 56px)" }}
-			>
+			<div className="min-h-0 flex-1 overflow-hidden">
 				<PanelGroup
 					id="resume-editor-panels"
 					orientation="horizontal"
 					style={{ height: "100%" }}
 				>
 					{/* Left Panel - VS Code style collapsible sections */}
-					<Panel defaultSize="20%" id="left-panel" maxSize="40%" minSize="15%">
+					<Panel defaultSize="18%" id="left-panel" maxSize="32%" minSize="13%">
 						<ScrollArea className="h-full border-r">
 							<div className="flex flex-col">
 								{/* CONTENT Section */}
@@ -970,8 +1091,13 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									</CollapsibleContent>
 								</Collapsible>
 
-								{/* TEMPLATES Section */}
-								<Collapsible onOpenChange={setDesignOpen} open={designOpen}>
+								{/*
+								 * Templates. Collapsed by default: it is a one-click choice
+								 * made occasionally, and the Sections list above it is what you
+								 * reach for constantly. It was previously open by default and
+								 * shared its open flag with the preview's toolbar.
+								 */}
+								<Collapsible onOpenChange={setTypeOpen} open={typeOpen}>
 									<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
 										<div className="flex items-center gap-2">
 											<ChevronDown
@@ -995,29 +1121,32 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									</CollapsibleContent>
 								</Collapsible>
 
-								{/* ACTIVITY Section */}
-								<Collapsible onOpenChange={setActivityOpen} open={activityOpen}>
+								{/*
+								 * Library lives here, not in the Review sheet.
+								 *
+								 * It used to be the fifth tab in a sheet next to Parser fit, Job target,
+								 * History and Bullets. Those four are checks *on the document you are
+								 * looking at*; the library is the pool of content the document is
+								 * assembled from. Putting them in one flat list of five gave the
+								 * sheet no structure, and `research`/`thrust` — the thing you reach
+								 * for when writing — was as far from the Sections list as the
+								 * keyboard could put it. It is content, so it sits with content.
+								 */}
+								<Collapsible onOpenChange={setLibraryOpen} open={libraryOpen}>
 									<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
 										<div className="flex items-center gap-2">
 											<ChevronDown
-												className={`h-4 w-4 transition-transform ${activityOpen ? "" : "-rotate-90"}`}
+												className={`h-4 w-4 transition-transform ${libraryOpen ? "" : "-rotate-90"}`}
 											/>
-											<Clock className="h-4 w-4" />
-											<span>Activity</span>
+											<Library className="h-4 w-4" />
+											<span>Library</span>
 										</div>
 									</CollapsibleTrigger>
 									<CollapsibleContent>
-										<div className="px-4 pb-4">
-											<p className="mb-2 text-muted-foreground text-xs">
-												{currentActivityLog.length} changes
-											</p>
-											{currentActivityLog.length === 0 ? (
-												<p className="text-muted-foreground text-sm italic">
-													No activity yet
-												</p>
-											) : (
-												<ChangeLog logs={currentActivityLog} />
-											)}
+										<div className="px-2 pb-2">
+											<ContentLibraryPanel
+												resume={draftResume ?? activeResume}
+											/>
 										</div>
 									</CollapsibleContent>
 								</Collapsible>
@@ -1028,17 +1157,31 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
 
 					{/* Middle Panel - Form Editor */}
-					<Panel defaultSize="30%" id="form-panel" maxSize="50%" minSize="20%">
+					<Panel defaultSize="38%" id="form-panel" maxSize="60%" minSize="24%">
 						<div className="flex h-full flex-col border-r">
 							<ScrollArea className="flex-1">
 								<div className="p-4">
 									{selectedSection ? (
 										renderSectionForm()
 									) : (
-										<div className="py-12 text-center text-muted-foreground">
-											<Layout className="mx-auto mb-4 h-12 w-12 opacity-50" />
-											<p>Select a section to edit</p>
-										</div>
+										<PanelEmpty
+											action={
+												activeResume.sections.length > 0 ? (
+													<p className="text-xs">
+														Or pick one from the list on the left.
+													</p>
+												) : null
+											}
+											hint="Your form appears here, beside a live preview of the document."
+											icon={
+												<Layout aria-hidden className="h-8 w-8 opacity-40" />
+											}
+											title={
+												activeResume.sections.length > 0
+													? "Nothing selected"
+													: "This resume has no sections yet"
+											}
+										/>
 									)}
 								</div>
 							</ScrollArea>
@@ -1048,27 +1191,70 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
 
 					{/* Right Panel - Preview */}
-					<Panel defaultSize="50%" id="right-panel" minSize="20%">
+					<Panel defaultSize="44%" id="right-panel" minSize="24%">
 						<div className="flex h-full flex-col overflow-hidden bg-muted/30">
-							{/* Formatting Toolbar with all settings */}
-							{activeResume.metadata && (
-								<FormattingToolbar
-									onScaleChange={setPreviewScale}
-									onSettingsChange={handleSettingsChange}
-									scale={previewScale}
-									settings={
-										(draftResume?.metadata?.settings as
-											| ResumeSettings
-											| undefined) ?? activeResume.metadata.settings
-									}
-								/>
-							)}
+							{/*
+							 * Formatting controls, collapsed by default.
+							 *
+							 * `FormattingToolbar` is a 692-line control surface -- typography,
+							 * margins, colours, scale -- and it used to sit permanently above
+							 * the document, inside the same column. So on a laptop the thing
+							 * you open the editor to look at was permanently smaller than the
+							 * controls that shape it, and both had to be scrolled past
+							 * each other. Typography is something you set once and then look
+							 * at the result of; it does not need permanent screen space.
+							 *
+							 * The header stays put and names what the controls currently are, so
+							 * the collapsed state is still informative and reopening is one
+							 * click rather than a hunt.
+							 */}
+							{activeResume.metadata ? (
+								<Collapsible
+									onOpenChange={setTypeControlsOpen}
+									open={typeControlsOpen}
+								>
+									<div className="flex items-center gap-2 border-b bg-background px-3 py-1.5">
+										<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent/50">
+											<ChevronDown
+												aria-hidden
+												className={cn(
+													"h-3.5 w-3.5 shrink-0 transition-transform",
+													!typeControlsOpen && "-rotate-90",
+												)}
+											/>
+											<span className="font-medium">
+												Typography &amp; layout
+											</span>
+											<span className="truncate text-muted-foreground">
+												{TEMPLATE_CONFIGS[
+													(draftResume?.template ??
+														activeResume.template ??
+														"minimal") as TemplateType
+												]?.name ?? "Minimal"}
+												· {Math.round(previewScale * 100)}%
+											</span>
+										</CollapsibleTrigger>
+									</div>
+									<CollapsibleContent>
+										<FormattingToolbar
+											onScaleChange={setPreviewScale}
+											onSettingsChange={handleSettingsChange}
+											scale={previewScale}
+											settings={
+												(draftResume?.metadata?.settings as
+													| ResumeSettings
+													| undefined) ?? activeResume.metadata.settings
+											}
+										/>
+									</CollapsibleContent>
+								</Collapsible>
+							) : null}
 
 							{/* Preview Area */}
 							<div className="flex-1 overflow-auto">
-								<div className="flex min-h-full items-start justify-center p-8">
+								<div className="flex min-h-full items-start justify-center p-6">
 									<TypstPreview
-										resume={draftResume || activeResume}
+										resume={draftResume ?? activeResume}
 										scale={previewScale}
 									/>
 								</div>

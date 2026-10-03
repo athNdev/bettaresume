@@ -77,13 +77,19 @@ export {
 export { Input } from "./input";
 // Label
 export { Label } from "./label";
+// Scroll Area
+export {
+	PanelClear,
+	PanelEmpty,
+	PanelError,
+	PanelLoading,
+} from "./panel-state";
 // Popover
 export { Popover, PopoverContent, PopoverTrigger } from "./popover";
 // Progress
 export { Progress } from "./progress";
 // Radio Group
 export { RadioGroup, RadioGroupItem } from "./radio-group";
-// Scroll Area
 export { ScrollArea, ScrollBar } from "./scroll-area";
 // Select
 export {

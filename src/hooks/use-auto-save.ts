@@ -17,6 +17,34 @@ interface UseAutoSaveOptions<T> {
 	onLocalUpdate?: (data: T) => void;
 }
 
+/**
+ * Should unmount push the pending edit to the server?
+ *
+ * Extracted as a pure predicate because it is the whole of the fix and it is
+ * otherwise invisible: a `useEffect` cleanup is very hard to assert on, and the
+ * bug it prevents -- switching sections inside the debounce window and losing the
+ * edit while the preview still showed it -- is exactly the kind that ships
+ * because nothing exercises it.
+ *
+ * Three conditions, all necessary:
+ * - a debounce is genuinely pending (nothing typed, nothing to do),
+ * - auto-save is on (a disabled hook must not write on the way out),
+ * - the local data actually differs from what was last saved.
+ */
+export function shouldFlushOnUnmount({
+	hasPendingTimer,
+	enabled,
+	localJson,
+	savedJson,
+}: {
+	hasPendingTimer: boolean;
+	enabled: boolean;
+	localJson: string;
+	savedJson: string;
+}): boolean {
+	return hasPendingTimer && enabled && localJson !== savedJson;
+}
+
 interface UseAutoSaveReturn<T> {
 	/** Local data state - use this for form inputs */
 	localData: T;
@@ -81,16 +109,45 @@ export function useAutoSave<T>({
 	const savedDataRef = useRef<string>(JSON.stringify(data));
 	const isMountedRef = useRef(true);
 	const pendingSaveRef = useRef<T | null>(null);
+	// Read by the unmount flush, which must not re-subscribe to every keystroke.
+	const localDataRef = useRef<T>(data);
+	const onSaveRef = useRef<((data: T) => Promise<void>) | undefined>(onSave);
 
-	// Cleanup on unmount
+	useEffect(() => {
+		localDataRef.current = localData;
+	}, [localData]);
+
+	useEffect(() => {
+		onSaveRef.current = onSave;
+	}, [onSave]);
+
+	// Cleanup on unmount.
+	//
+	// This used to only clear the debounce timer, which silently threw away
+	// whatever the user had typed in the last `debounceMs`. Because the editor
+	// unmounts a section's form the moment you select another section -- the most
+	// common action in the app -- that made "type, click another section, come back"
+	// a data-loss path. Worse, it was invisible: `onLocalUpdate` had already pushed
+	// the edit into the draft, so the preview showed it while the server never
+	// received it.
+	//
+	// So a pending save is *flushed* on unmount rather than dropped. The network
+	// call is made, but state updates are skipped because the component is gone.
 	useEffect(() => {
 		isMountedRef.current = true;
 		return () => {
 			isMountedRef.current = false;
-			if (debounceTimerRef.current) {
-				clearTimeout(debounceTimerRef.current);
-			}
+			const flush = shouldFlushOnUnmount({
+				enabled,
+				hasPendingTimer: debounceTimerRef.current !== null,
+				localJson: JSON.stringify(localDataRef.current),
+				savedJson: savedDataRef.current,
+			});
+			debounceTimerRef.current = null;
+			if (flush) void onSaveRef.current?.(localDataRef.current);
 		};
+		// biome-ignore lint/correctness/useExhaustiveDependencies: the flush reads
+		// refs, so re-subscribing on every keystroke would defeat the purpose.
 	}, []);
 
 	// Sync local data when server data changes (only if not dirty)
@@ -215,8 +272,17 @@ export function useAutoSave<T>({
 		pendingSaveRef.current = null;
 	}, [data]);
 
-	// Computed values
-	const isDirty = status === "dirty" || status === "error";
+	/*
+	 * Dirty means the local data differs from what was last successfully saved.
+	 *
+	 * It used to be derived from `status`, which is a label for the debounce rather
+	 * than a statement about the data: for the window between "the user typed" and
+	 * "the debounce fired" the status was briefly `saved`, and `isDirty` reported
+	 * false while an edit was genuinely unsaved. `useBeforeUnload` is wired to this
+	 * value, so getting it wrong means the "you will lose work" prompt does not
+	 * appear when it should.
+	 */
+	const isDirty = JSON.stringify(localData) !== savedDataRef.current;
 	const isSaving = status === "saving";
 
 	return {

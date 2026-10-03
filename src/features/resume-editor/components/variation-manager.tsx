@@ -43,7 +43,13 @@ interface VariationManagerProps {
 	baseResume: Resume;
 	variations: Resume[];
 	currentResumeId: string;
-	onCreateVariation: (name: string, domain?: string) => void;
+	/**
+	 * Omitted when the host has no way to create a variation. The create control is
+	 * then hidden rather than shown-and-broken: `resume-editor.tsx` shipped a complete
+	 * Create Variation dialog wired to a `console.log`, so a user could fill in a name
+	 * and a domain, press the button, and watch nothing happen with no error.
+	 */
+	onCreateVariation?: (name: string, domain?: string) => void;
 	onSelectVariation: (id: string) => void;
 	onDeleteVariation: (id: string) => void;
 	onSyncWithBase?: (variationId: string) => void;
@@ -69,7 +75,7 @@ export function VariationManager({
 			: variations.find((v) => v.id === currentResumeId);
 
 	const handleCreate = () => {
-		if (!newName.trim()) return;
+		if (!newName.trim() || !onCreateVariation) return;
 		onCreateVariation(newName.trim(), newDomain.trim() || undefined);
 		setNewName("");
 		setNewDomain("");
@@ -208,50 +214,52 @@ export function VariationManager({
 				</DropdownMenu>
 			)}
 
-			{/* Create Variation Dialog */}
-			<Dialog onOpenChange={setIsCreateOpen} open={isCreateOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Create Variation</DialogTitle>
-						<DialogDescription>
-							Create a new variation of "{baseResume.name}" to customize for a
-							specific role or company.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="space-y-4 py-4">
-						<div>
-							<Label>Variation Name *</Label>
-							<Input
-								className="mt-1"
-								onChange={(e) => setNewName(e.target.value)}
-								placeholder="e.g., Software Engineer - Google"
-								value={newName}
-							/>
+			{/* Create Variation Dialog -- only reachable when a handler exists. */}
+			{onCreateVariation ? (
+				<Dialog onOpenChange={setIsCreateOpen} open={isCreateOpen}>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Create Variation</DialogTitle>
+							<DialogDescription>
+								Create a new variation of "{baseResume.name}" to customize for a
+								specific role or company.
+							</DialogDescription>
+						</DialogHeader>
+						<div className="space-y-4 py-4">
+							<div>
+								<Label>Variation Name *</Label>
+								<Input
+									className="mt-1"
+									onChange={(e) => setNewName(e.target.value)}
+									placeholder="e.g., Software Engineer - Google"
+									value={newName}
+								/>
+							</div>
+							<div>
+								<Label>Target Domain (optional)</Label>
+								<Input
+									className="mt-1"
+									onChange={(e) => setNewDomain(e.target.value)}
+									placeholder="e.g., Frontend, Backend, Full Stack"
+									value={newDomain}
+								/>
+								<p className="mt-1 text-muted-foreground text-xs">
+									Helps categorize and filter your variations
+								</p>
+							</div>
 						</div>
-						<div>
-							<Label>Target Domain (optional)</Label>
-							<Input
-								className="mt-1"
-								onChange={(e) => setNewDomain(e.target.value)}
-								placeholder="e.g., Frontend, Backend, Full Stack"
-								value={newDomain}
-							/>
-							<p className="mt-1 text-muted-foreground text-xs">
-								Helps categorize and filter your variations
-							</p>
-						</div>
-					</div>
-					<DialogFooter>
-						<Button onClick={() => setIsCreateOpen(false)} variant="outline">
-							Cancel
-						</Button>
-						<Button disabled={!newName.trim()} onClick={handleCreate}>
-							<GitBranch className="mr-2 h-4 w-4" />
-							Create Variation
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+						<DialogFooter>
+							<Button onClick={() => setIsCreateOpen(false)} variant="outline">
+								Cancel
+							</Button>
+							<Button disabled={!newName.trim()} onClick={handleCreate}>
+								<GitBranch className="mr-2 h-4 w-4" />
+								Create Variation
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			) : null}
 		</div>
 	);
 }

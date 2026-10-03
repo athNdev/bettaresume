@@ -3,6 +3,7 @@
 export { ChangeLog } from "./change-log";
 export { FormattingToolbar } from "./formatting-toolbar";
 export { Preview } from "./preview";
+export { SaveState } from "./save-state";
 export { SectionsManager } from "./sections-manager";
 export { TemplateSelector } from "./template-selector";
 export { TypstPreview } from "./typst-preview";
