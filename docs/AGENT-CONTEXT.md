@@ -394,6 +394,108 @@ it *fail*, not by reading it.
 
 ---
 
+## 2.x Never hand-write a list of what to substitute, read it from the file
+
+This one took production down twice, and the second outage was caused by the fix for
+the first. It is written up in full because the shape of the mistake is reusable.
+
+`cd.yml` runs `envsubst` over `api/wrangler.jsonc` to fill in per-deploy values. Two
+distinct traps live in that one command.
+
+### Trap 1: unscoped `envsubst` eats `$schema`
+
+`envsubst` with **no argument list** substitutes every `$VAR` in its input.
+`wrangler.jsonc` starts with a JSON Schema `$schema` key, which is not an env var, so
+it was rewritten to `""`:
+
+```console
+$ echo '{"$schema":"x","n":"y"}' | envsubst
+{"":"x","n":"y"}
+```
+
+Wrangler then warned `Unexpected fields found in top-level field: ""` on **every**
+deploy and the emitted config was no longer schema-valid.
+
+### Trap 2: the "fix" shipped two variables as literal strings
+
+Scoping the substitution means naming the variables. The hand-written list was:
+
+```
+${D1_DATABASE_ID} ${D1_DATABASE_NAME} ${CF_WORKER_CUSTOM_URL}
+```
+
+`wrangler.jsonc` actually contains **four** placeholders:
+
+```
+$ALLOWED_ORIGINS   $CF_WORKER_CUSTOM_URL   $CLERK_PUBLISHABLE_KEY   $D1_DATABASE_ID
+```
+
+So the list named one variable that does not exist (`$D1_DATABASE_NAME`) and **omitted
+two that do**. `$ALLOWED_ORIGINS` and `$CLERK_PUBLISHABLE_KEY` deployed as the literal
+strings `"$ALLOWED_ORIGINS"` and `"$CLERK_PUBLISHABLE_KEY"`. The API then matched no
+browser origin, emitted no `access-control-allow-origin` header, and the deployed app
+could not load any data — the same outage as #146, reintroduced by the fix for it.
+
+**The list is now derived from the file**, so it cannot drift:
+
+```bash
+VARS="$(grep -oE '\$\{?[A-Z_][A-Z0-9_]*\}?' api/wrangler.jsonc \
+  | tr -d '${}' | sort -u | sed 's/^/${/; s/$/}/' | tr '\n' ' ')"
+envsubst "$VARS" < api/wrangler.jsonc
+```
+
+Note the `sed`. `envsubst`'s argument is a **shell-format string**, not a list of
+names: bare `ALLOWED_ORIGINS` substitutes **nothing**, because it only expands
+references written `$NAME` or `${NAME}`. Each name must be re-wrapped in braces.
+
+### Trap 3: a step-level `env:` silently shadows `$GITHUB_ENV`
+
+The resolve step writes `ALLOWED_ORIGINS` to `$GITHUB_ENV`. If the substitute step also
+declares `ALLOWED_ORIGINS:` in its own `env:` block, that value **shadows** the exported
+one. Because `vars.ALLOWED_ORIGINS` is unset, `envsubst` expanded it to `""` and the
+worker deployed **deny-everything** — twice, under two different fixes.
+
+So `ALLOWED_ORIGINS` must reach the step by inheritance and must never appear in that
+step's `env:` block. `api/test/deploy-config.test.ts` asserts this.
+
+`CLERK_PUBLISHABLE_KEY` is the opposite case and *should* be in the step's `env:` — it
+was never in the process environment at all, so bare `envsubst` had been shipping it as
+`""`.
+
+### The guard also had to catch *unset*, not just *unsubstituted*
+
+An unset variable substitutes to `""` and leaves **no `$NAME` trace**, so a check for
+leftover placeholders passes. That is the "green build, empty D1 id, broken API" case.
+The step now also fails on `: ""`, which is safe because `wrangler.jsonc` has no
+legitimately empty value.
+
+### How this was caught, and how it was not
+
+It was caught by curling production after a deploy:
+
+```console
+$ curl -D- -H "Origin: https://app.bettaresume.com" https://api.bettaresume.com/health
+HTTP/2 200
+vary: Origin
+# no access-control-allow-origin
+```
+
+It was **not** caught by the test written alongside the fix, because that test asserted
+the author's assumption about which placeholders exist rather than reading them from the
+file. A test that encodes the bug is worse than no test.
+
+The test now extracts the `run:` block from `cd.yml` and executes it against the real
+`wrangler.jsonc` in a temp dir, so the thing under test is the thing that ships. It
+regressed for real once during development (a reimplementation in TypeScript could not
+see the workflow's own regression) — which is the argument for executing the artifact
+instead of restating it.
+
+**Rule: derive a list from the artifact, never from memory. And when a deploy step can
+break production, verify with the thing the browser checks — an `Origin` header — not
+with the build's exit code.**
+
+---
+
 ## 3. Architecture as it actually is
 
 ```
