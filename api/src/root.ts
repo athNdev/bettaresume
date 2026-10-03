@@ -6,6 +6,7 @@
 import { router } from "./trpc";
 import { authRouter } from "./trpc/procedures/auth";
 import { resumeRouter } from "./trpc/procedures/resume";
+import { revisionRouter } from "./trpc/procedures/revision";
 import { sectionRouter } from "./trpc/procedures/section";
 import { userRouter } from "./trpc/procedures/user";
 
@@ -13,6 +14,7 @@ export const appRouter = router({
 	user: userRouter,
 	resume: resumeRouter,
 	section: sectionRouter,
+	revision: revisionRouter,
 	auth: authRouter,
 });
 
