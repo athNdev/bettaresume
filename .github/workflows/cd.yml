@@ -57,6 +57,11 @@ jobs:
         uses: actions/deploy-pages@v4
 
   deploy-to-workers:
+    # Superseded pushes must not queue up behind each other: each run would
+    # otherwise apply migrations in order and deploy a stale worker last.
+    concurrency:
+      group: "workers"
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -75,6 +80,25 @@ jobs:
       - name: Build types package
         run: npm run build:types
 
+      - name: Resolve the browser origin allow-list
+        # Source of truth is the committed file, so the production allow-list is
+        # reviewable in a PR rather than hidden in repo settings. A repository
+        # variable overrides it for preview deploys. Previously the only copy was
+        # a variable named ALLOWED_ORIGIN (singular) that no code ever read, so
+        # the deployed API denied every origin while reporting success.
+        run: |
+          ORIGINS="$(tr -d '\n' < api/allowed-origins.txt)"
+          if [ -z "$ORIGINS" ]; then
+            echo "::error::api/allowed-origins.txt is empty; the API is default-deny and would block every browser origin."
+            exit 1
+          fi
+          echo "Using committed allow-list: $ORIGINS"
+          if [ -n "${{ vars.ALLOWED_ORIGINS }}" ]; then
+            echo "Overriding with the ALLOWED_ORIGINS repository variable."
+            ORIGINS="${{ vars.ALLOWED_ORIGINS }}"
+          fi
+          echo "ALLOWED_ORIGINS=$ORIGINS" >> "$GITHUB_ENV"
+
       - name: Substitute wrangler config placeholders
         run: envsubst < api/wrangler.jsonc > api/wrangler.tmp.jsonc && mv api/wrangler.tmp.jsonc api/wrangler.jsonc
         env:
@@ -88,12 +112,58 @@ jobs:
           # credential, so it belongs in repository variables rather than secrets.
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
 
+      - name: Apply D1 migrations
+        # Migrations were never applied by CI: every `*.sql` under api/drizzle
+        # reached production only when someone ran them locally. So schema.ts
+        # declared the `Resume.baseResumeId` foreign key while the live database
+        # did not have it. Applying before the deploy means the worker never
+        # serves traffic against a schema it does not match.
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ./api
+          command: d1 migrations apply ${{ vars.D1_DATABASE_NAME }} --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy API to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./api
           secrets: |
             CLERK_SECRET_KEY
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+
+      - name: Smoke-test the deployed API
+        # The failure this catches is invisible to every other check: a
+        # default-deny CORS policy with an empty allow-list still deploys, still
+        # answers /health 200, and still fails every real browser request. So
+        # assert the actual thing users depend on -- an origin preflight is
+        # permitted -- and fail the deploy rather than the user's session.
+        run: |
+          API="${{ vars.API_URL }}"
+          ORIGIN="$(tr -d '\n' < api/allowed-origins.txt)"
+          echo "GET $API/health"
+          curl -fsS --max-time 20 "$API/health" || {
+            echo "::error::$API/health did not respond"
+            exit 1
+          }
+
+          echo "OPTIONS $API/trpc/resume.list with Origin: $ORIGIN"
+          ALLOW="$(curl -sS -o /dev/null -D - --max-time 20 -X OPTIONS "$API/trpc/resume.list" \
+            -H "Origin: $ORIGIN" \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: content-type,authorization' \
+            | tr -d '\r' | grep -i '^access-control-allow-origin:' || true)"
+
+          echo "  -> ${ALLOW:-<no access-control-allow-origin header>}"
+          case "$ALLOW" in
+            *": $ORIGIN"*|*":$ORIGIN"*) echo "Origin permitted." ;;
+            *) echo "::error::CORS denied the production origin $ORIGIN. Every browser request will fail. Check ALLOWED_ORIGINS resolution and api/src/cors.ts."
+               exit 1 ;;
+          esac

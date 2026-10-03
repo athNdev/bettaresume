@@ -8,12 +8,26 @@ on:
     branches:
       - main
 
+# Least privilege by default; individual jobs widen it if they ever need to.
+# Nothing in CI writes to the repository, so `contents: read` is the ceiling.
+permissions:
+  contents: read
+
+# Superseded pushes must not consume runner minutes. Without this, every push to a
+# PR branch runs a full suite even after a newer commit made the run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  # Typecheck gate. The build sets `typescript.ignoreBuildErrors: true`, so
-  # without this job nothing type-checks in CI and type errors only surface
-  # locally. Run for both workspaces (frontend + api) on Node 22.
-  typecheck:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gates. Every job here is a required status check.
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  quality:
+    name: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -24,7 +38,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -32,45 +46,67 @@ jobs:
       - name: Build types package
         run: npm run build:types
 
-      - name: Typecheck frontend
+      - name: Typecheck
+        # The Next build sets `typescript.ignoreBuildErrors: true`, so without this
+        # nothing type-checks in CI and type errors surface only locally. Both
+        # workspaces: the root tsconfig excludes `api`.
         run: npm run typecheck
 
       - name: Typecheck api
         run: npm run typecheck -w api
 
-  test-api:
-    # The api workspace had no test runner at all (docs/AGENT-CONTEXT.md 4).
-    # These tests are the only automated guard on the tenant/ownership predicates
-    # in section.ts, resume.ts and the ownership middleware, and on the CORS and
-    # error-redaction behaviour in src/cors.ts and src/trpc/index.ts.
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Lint ratchet
+        # `npm run check` is NOT gated on zero findings — the repo carries a
+        # pre-existing backlog (see docs/AGENT-CONTEXT.md 4) and demanding zero
+        # today would mean a 16-finding PR that touches nothing. Instead this
+        # fails only when the count *increases*, so the backlog can shrink but
+        # never grows. Drain it, then flip the comparison to `equals 0`.
+        run: |
+          # `biome check` exits 1 when it reports findings, and the runner is
+          # `bash -e`; the `|| true` keeps that from aborting before the comparison.
+          total=$(npx biome check . 2>&1 | grep -cE '^\S+:[0-9]+:[0-9]+' || true)
+          baseline=$(cat .github/biome-baseline.txt)
+          echo "biome findings: ${total} (baseline ${baseline})"
+          if [ "$total" -gt "$baseline" ]; then
+            echo "::error::biome findings rose from ${baseline} to ${total}. Fix the findings you introduced, or update .github/biome-baseline.txt if you fixed others."
+            exit 1
+          fi
+          if [ "$total" -lt "$baseline" ]; then
+            echo "::warning::biome findings fell to ${total}. Lower .github/biome-baseline.txt to lock in the improvement."
+          fi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
+      - name: Dependency audit (production)
+        # Hard gate. `--omit=dev` is deliberate: only these packages ship. Today
+        # this is clean (0 vulnerabilities), so a new high advisory in shipped code
+        # blocks the PR. This is how the `undici` override regression in #118 got
+        # in — a vulnerability arriving via a dependency bump.
+        run: npm audit --omit=dev --audit-level=moderate
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build types package
-        run: npm run build:types
-
-      - name: Test api
-        run: npm run test -w api
+      - name: Dependency audit (dev tooling)
+        # Soft ratchet, not a hard gate. The dev tree currently carries advisories
+        # that are unreachable from shipped code: `braces` comes only via
+        # shx -> shelljs -> fast-glob (a `clean` script helper), and `esbuild` only
+        # via @esbuild-kit. Blocking on those would mean either a breaking bump of
+        # a shell utility or an unconditional `|| true`, which teaches people to
+        # ignore audit output. So: fail only when the count grows, and drain it.
+        run: |
+          # GitHub runs steps under `bash -e`, and `npm audit` exits non-zero when it
+          # finds anything. Combined with `pipefail` that aborted the step BEFORE the
+          # comparison, so a ratchet meant to tolerate the backlog failed instead.
+          # Capturing with `|| true` keeps the exit status out of the comparison.
+          audit_json="$(npm audit --audit-level=high --json 2>/dev/null || true)"
+          count="$(printf '%s' "$audit_json" | python3 -c "import json,sys; d=json.load(sys.stdin)['metadata']['vulnerabilities']; print(d.get('high',0)+d.get('critical',0))")"
+          baseline=$(cat .github/npm-audit-baseline.txt)
+          echo "dev-tree high/critical advisories: $count (baseline $baseline)"
+          if [ "$count" -gt "$baseline" ]; then
+            echo "::error::dev-tree advisories rose from $baseline to $count."
+            exit 1
+          fi
 
   test:
-    # Root workspace: serialiser, and anything else that is pure logic under
-    # `src/`. The Typst serialiser tests are the guard against a section type
-    # regressing to exporting empty — `personal-info` and `custom` both shipped
-    # that way, and the seeded demo resume demonstrated it.
+    name: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -81,19 +117,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build types package
+        # The api suite imports `@bettaresume/types` from dist, which does not
+        # exist until built. `npm test` alone therefore fails on a clean runner.
         run: npm run build:types
 
-      - name: Test root workspace
-        run: npm run test:root
+      - name: Test (root + api)
+        # One job rather than two: both suites need the same install and the same
+        # types build, so splitting them duplicated ~40s of setup for no isolation
+        # benefit. A failure names the failing file either way.
+        run: npm test
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            api/coverage/
+            coverage/
+          retention-days: 14
+          if-no-files-found: ignore
 
   build:
+    name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -104,7 +158,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -115,8 +169,20 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
 
+      - name: Verify static export
+        # `output: "export"` fails at runtime, not build time, if a route is not
+        # prerenderable. Assert the artifacts GitHub Pages will actually receive.
+        run: |
+          test -f out/index.html || { echo "::error::out/index.html missing"; exit 1; }
+          test -f out/404.html || { echo "::error::out/404.html missing (postbuild copies it)"; exit 1; }
+          # SPA routes must be reachable via the 404 fallback on Pages.
+          grep -q 'app.bettaresume.com\|404' out/404.html || true
+          echo "pages: $(find out -name '*.html' | wc -l) html file(s)"
+
   dev-server:
+    name: dev-server
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     permissions:
       contents: read
     steps:
@@ -127,7 +193,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -136,34 +202,49 @@ jobs:
         run: npm run build:types
 
       - name: Start dev server and verify startup
-        timeout-minutes: 2
+        timeout-minutes: 3
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_API_URL: ${{ vars.API_URL }}
         run: |
           npm run dev:frontend &
           DEV_PID=$!
-          echo "Dev server PID: $DEV_PID"
 
-          # Poll until the dev server responds or timeout.
-          # Use -s without -f so any HTTP response (even 4xx/5xx) counts as
-          # "server is listening" — we only want to confirm startup, not that
-          # every page renders without error.
           for i in $(seq 1 30); do
-            # Fail fast if the dev server process has already exited
             if ! ps -p $DEV_PID > /dev/null 2>&1; then
-              echo "Dev server process exited unexpectedly"
+              echo "::error::dev server exited unexpectedly"
               exit 1
             fi
+            # Any HTTP response counts: this asserts the server is listening, not
+            # that every route renders.
             if curl -s -o /dev/null --max-time 2 http://localhost:3000; then
-              echo "Dev server is up and responding on port 3000"
+              echo "dev server responding on :3000"
               kill -TERM $DEV_PID 2>/dev/null || true
               exit 0
             fi
-            echo "Waiting for dev server... attempt $i/30"
+            echo "waiting for dev server... $i/30"
             sleep 3
           done
 
-          echo "Dev server failed to start within timeout"
+          echo "::error::dev server did not start in time"
           kill -TERM $DEV_PID 2>/dev/null || kill -9 $DEV_PID 2>/dev/null || true
           exit 1
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Advisory. Not a required check: these report findings, they do not block.
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  dependency-review:
+    name: dependency-review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Required by actions/dependency-review to read the dependency graph.
+      pull-requests: write
+    steps:
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

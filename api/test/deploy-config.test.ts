@@ -14,13 +14,13 @@ import { describe, expect, it } from "vitest";
  * That failure mode is invisible to CI, which is exactly why it is asserted here.
  */
 
-const read = (rel: string) =>
+const read = (rel: string): string =>
 	readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
 
-describe("deploy configuration", () => {
-	const cd = read("../../.github/workflows/cd.yml");
-	const wrangler = read("../wrangler.jsonc");
+const cd = read("../../.github/workflows/cd.yml");
+const wrangler = read("../wrangler.jsonc");
 
+describe("deploy configuration", () => {
 	it("CD passes ALLOWED_ORIGINS into the envsubst step", () => {
 		// Isolate the substitution step; other steps may legitimately omit it.
 		const step = cd.slice(
@@ -39,5 +39,84 @@ describe("deploy configuration", () => {
 	it("documents the required variable, because a missing one fails silently", () => {
 		const example = read("../.env.example");
 		expect(example).toMatch(/ALLOWED_ORIGINS/);
+	});
+});
+
+/**
+ * Migration and allow-list wiring.
+ *
+ * Two production failures motivated these:
+ *
+ * 1. **Migrations were never applied.** Nothing in `cd.yml` ran
+ *    `d1 migrations apply`, so `0001_resume_base_resume_fk.sql` reached production
+ *    only when a developer ran it locally. `schema.ts` declared the
+ *    `Resume.baseResumeId` foreign key while the live database did not have it —
+ *    the app believed in a constraint the database never enforced.
+ *
+ * 2. **The allow-list was named wrongly.** The repository variable that existed
+ *    was `ALLOWED_ORIGIN` (singular); the code reads `ALLOWED_ORIGINS`. With
+ *    default-deny CORS that denied every browser origin while deploying cleanly
+ *    and answering `/health` 200. Nothing warned.
+ *
+ * Both are invisible at build time, so they are asserted here rather than trusted.
+ */
+describe("migrations are applied by the deploy pipeline", () => {
+	it("cd.yml applies D1 migrations", () => {
+		expect(cd).toMatch(/d1 migrations apply/);
+		// Must target the remote database, never a local one.
+		expect(cd).toMatch(/migrations apply[^\n]*--remote/);
+	});
+
+	it("applies migrations BEFORE deploying the worker", () => {
+		// Deploying first would serve traffic against a schema the worker assumes
+		// but the database does not have.
+		const migrate = cd.search(/d1 migrations apply/);
+		const deploy = cd.search(/name: Deploy API to Cloudflare Workers/);
+		expect(migrate).toBeGreaterThan(-1);
+		expect(deploy).toBeGreaterThan(migrate);
+	});
+
+	it("every migration file in drizzle/ is tracked by the journal", () => {
+		// A .sql file the journal does not know about is never applied.
+		const journal = JSON.parse(read("../drizzle/meta/_journal.json"));
+		const journalled = new Set(
+			(journal.entries ?? []).map((e: { tag: string }) => `${e.tag}.sql`),
+		);
+		const onDisk = ["0000_init-schema.sql", "0001_resume_base_resume_fk.sql"];
+		for (const file of onDisk) expect(journalled.has(file)).toBe(true);
+	});
+});
+
+describe("the CORS allow-list is configured, not assumed", () => {
+	it("the allow-list is committed so it is reviewable in a PR", () => {
+		const origins = read("../allowed-origins.txt");
+		expect(origins).toMatch(/app\.bettaresume\.com/);
+		// Only comments and the origin itself; a wildcard would defeat default-deny.
+		const entries = origins
+			.split("\n")
+			.map((l) => l.trim())
+			.filter((l) => l && !l.startsWith("#"));
+		expect(entries.length).toBeGreaterThan(0);
+		expect(entries.join(",")).not.toContain("*");
+	});
+
+	it("matches the GitHub Pages custom domain, not the apex", () => {
+		// The bug shipped a doc/example claiming `https://bettaresume.com` while the
+		// Pages site is served from the `app.` subdomain, so the documented value
+		// would have denied the real site.
+		const origins = read("../allowed-origins.txt");
+		expect(origins).not.toMatch(/^\s*https?:\/\/bettaresume\.com\s*$/m);
+	});
+
+	it("cd resolves the allow-list and fails loudly when it is empty", () => {
+		expect(cd).toMatch(/allowed-origins\.txt/);
+		expect(cd).toMatch(/::error::.*empty/i);
+	});
+
+	it("the worker deploy smoke-tests CORS against the live API", () => {
+		// /health proves nothing about CORS; only a preflight from the real origin
+		// proves users can actually call the API.
+		expect(cd).toMatch(/Smoke-test the deployed API/);
+		expect(cd).toMatch(/access-control-allow-origin/i);
 	});
 });
