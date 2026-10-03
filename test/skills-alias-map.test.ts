@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+	AMBIGUOUS_ALIASES,
 	buildAliasIndex,
 	canonicalizeSkill,
 	expandSkillVariants,
 	findConfidentSkills,
 	findSkillMentions,
+	isConfidentMention,
 	SKILL_ENTRIES,
 } from "../src/lib/analysis/skills";
 
@@ -196,21 +198,15 @@ describe("map integrity", () => {
 		// An ambiguous alias with no disambiguators is permanently unusable: either it
 		// fires on everything or it never fires at all.
 		//
-		// Only WORD-like aliases belong in this set. `TS`, `ML`, `CI`, `SQL` and `HCL`
-		// are deliberately excluded: once bounded they cannot match inside a longer
-		// word, and a standalone `TS` in a resume means TypeScript. Demanding context
-		// there would trade a real match for a false positive that cannot happen.
-		const ambiguous = new Set([
-			"Node",
-			"Azure",
-			"Go",
-			"R",
-			"C",
-			"REST",
-			"Rust",
-		]);
+		// Imported, not re-declared. This test used to carry its own copy of the set —
+		// `["Node", "Azure", "Go", "R", "C", "REST", "Rust"]` — which is precisely how
+		// `AWS` and `GCP` ended up guarded by a hardcoded branch at the use site while
+		// this set claimed to be the truth, and how `Go`/`R`/`C`/`REST`/`Rust` stayed
+		// in it as aliases of no entry at all.
 		for (const entry of SKILL_ENTRIES) {
-			const needs = entry.aliases.filter((a) => ambiguous.has(a));
+			const needs = entry.aliases.filter((a) =>
+				AMBIGUOUS_ALIASES.has(a),
+			);
 			if (needs.length > 0) {
 				expect(
 					entry.disambiguators?.length ?? 0,
@@ -218,6 +214,94 @@ describe("map integrity", () => {
 				).toBeGreaterThan(0);
 			}
 		}
+	});
+
+	it("every ambiguous alias belongs to an entry that declares it", () => {
+		// Kills the dead-config class: nothing can sit in the derived set without an
+		// owner, so the set cannot grow entries that guard nothing.
+		const owned = new Map<string, string>();
+		for (const entry of SKILL_ENTRIES) {
+			for (const alias of entry.aliases) owned.set(alias, entry.canonical);
+		}
+		const orphans = [...AMBIGUOUS_ALIASES].filter((a) => !owned.has(a));
+		expect(orphans).toEqual([]);
+	});
+
+	it("no entry declares disambiguators it never reads", () => {
+		// `Kubernetes`, `PostgreSQL`, `Terraform`, `Continuous Integration` and
+		// `Machine Learning` all used to declare `disambiguators` while the guard read
+		// a separate hand-maintained set, so `HCL`, `psql`, `K8s`, `CI` and `ML` were
+		// unconditionally `confident: true`. A disambiguator list nothing reads reads
+		// as an active guard when it is not one.
+		for (const entry of SKILL_ENTRIES) {
+			if (!entry.disambiguators?.length) continue;
+			expect(
+				entry.ambiguousAliases?.length ?? 0,
+				`${entry.canonical} declares disambiguators but no ambiguousAliases, so they are never read`,
+			).toBeGreaterThan(0);
+		}
+	});
+
+	it("guards the word-like aliases and leaves bounded acronyms alone", () => {
+		// The distinction is deliberate, not an oversight: `AWS` (welding), `Azure`
+		// (the colour) and `Node` (a graph node) are real words with meanings outside
+		// software. `CI`/`ML`/`HCL`/`K8s` cannot match inside another word once bounded,
+		// so guarding them costs real matches and buys nothing.
+		expect([...AMBIGUOUS_ALIASES].sort()).toEqual([
+			"AWS",
+			"Azure",
+			"GCP",
+			"Node",
+		]);
+	});
+});
+
+describe("isConfidentMention", () => {
+	it("separates the same string in a different context", () => {
+		// The narrower question `findSkillMentions` cannot answer: not "is this skill
+		// mentioned" but "is THIS hit a mention of it".
+		expect(
+			isConfidentMention(
+				"Amazon Web Services",
+				"AWS",
+				"Held an AWS certified welding inspector qualification",
+			),
+		).toBe(false);
+		expect(
+			isConfidentMention(
+				"Amazon Web Services",
+				"AWS",
+				"Migrated workloads from EC2 to AWS Lambda",
+			),
+		).toBe(true);
+	});
+
+	it("accepts an unambiguous alias without context", () => {
+		expect(
+			isConfidentMention(
+				"Amazon Web Services",
+				"Amazon Web Services",
+				"Ran workloads on Amazon Web Services",
+			),
+		).toBe(true);
+	});
+
+	it("accepts a surface that is not a declared alias", () => {
+		// Plain-English keywords resolve to no canonical at all, so there is no
+		// ambiguity to resolve.
+		expect(
+			isConfidentMention("Kubernetes", "team leadership", "Led team leadership"),
+		).toBe(true);
+	});
+
+	it("returns false for an unknown canonical rather than guessing", () => {
+		expect(isConfidentMention("Nonexistent Skill", "AWS", "AWS")).toBe(false);
+	});
+
+	it("does not find a hit in text that does not contain the surface", () => {
+		expect(
+			isConfidentMention("Amazon Web Services", "AWS", "nothing relevant here"),
+		).toBe(false);
 	});
 });
 

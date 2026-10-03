@@ -1,3 +1,4 @@
+import { buildParseAuditInput } from "@/features/resume-editor/lib/review-input";
 import type { Resume } from "@/features/resume-editor/types";
 import { analyzeHighlights } from "@/lib/analysis/metrics";
 import {
@@ -8,6 +9,7 @@ import {
 	canonicalizeSkill,
 	expandSkillVariants,
 	findConfidentSkills,
+	isConfidentMention,
 	type SkillMatch,
 } from "@/lib/analysis/skills";
 
@@ -62,15 +64,22 @@ const MARKER_LABEL_RE = new RegExp(
 	"i",
 );
 
-/** Phrases that mark a requirement as mandatory. */
+/**
+ * Phrases that mark a requirement as mandatory.
+ *
+ * The two open-ended phrases (`we are looking for`, `you have`) require a delimiter
+ * immediately after them. They used to be bare word matches, which classified the
+ * prose line "We are looking for someone who can ship." as a *requirement* and told the
+ * user it was missing — advice generated from a sentence, not from a skill.
+ */
 const REQUIRED_MARKERS = [
 	/\brequired\b/i,
 	/\bmust\b/i,
 	/\bmust-have\b/i,
 	/\bessential\b/i,
 	/\bminimum\b/i,
-	/\bwe are looking for\b/i,
-	/\byou have\b/i,
+	/\bwe are looking for\b\s*[:\-–]/i,
+	/\byou have\b\s*[:\-–]/i,
 ];
 
 /** Phrases that mark a requirement as optional. */
@@ -95,6 +104,14 @@ export interface KeywordCoverage {
 	keyword: string;
 	canonical?: string;
 	covered: boolean;
+	/**
+	 * The resume contains this keyword, but only as an ambiguous alias with no
+	 * supporting context — `AWS` in a welding qualification, `Azure` as a colour,
+	 * `Node` in a graph. Deliberately NOT counted as covered: a false "covered" sends
+	 * someone to an interview without the skill, which is the direction this whole
+	 * module is built to avoid.
+	 */
+	uncertain?: boolean;
 	surface?: string;
 	requirement: KeywordRequirement;
 }
@@ -129,6 +146,21 @@ function classifyRequirement(text: string): KeywordRequirement {
 	return "preferred";
 }
 
+/**
+ * Is this line a sentence rather than a skill or a requirement?
+ *
+ * Only consulted for lines carrying NO requirement marker. "Nice to have: some
+ * Kubernetes exposure." is a requirement that happens to end in a full stop, so marker
+ * lines are exempt; an unmarked line of that shape is prose the writer is saying out
+ * loud, and turning it into a keyword produced advice like *Required but not
+ * evidenced: "We are looking for someone who can ship."*
+ */
+function looksLikeProse(text: string): boolean {
+	const words = text.split(/\s+/).filter(Boolean);
+	if (words.length < 6) return false;
+	return /[.!?;]$/.test(text) || words.length >= 12;
+}
+
 /** Split a job description into candidate keyword phrases. */
 export function extractKeywords(description: string): string[] {
 	if (!description) return [];
@@ -138,6 +170,8 @@ export function extractKeywords(description: string): string[] {
 		.filter(Boolean);
 
 	const out = new Set<string>();
+	/** Dedupe on the *normalised* keyword, not the raw line. */
+	const seenNormalised = new Set<string>();
 	for (const chunk of chunks) {
 		// Strip a leading bullet marker and any "required:"/"preferred:" prefix,
 		// keeping the marker so the requirement can still be classified.
@@ -145,6 +179,19 @@ export function extractKeywords(description: string): string[] {
 			.replace(/^[-*–—]\s*/, "")
 			.replace(MARKER_LABEL_RE, "$1: ");
 		if (cleaned.length < 3) continue;
+
+		const bare = cleaned.replace(MARKER_LABEL_RE, "").trim();
+		if (bare.length < 3) continue;
+
+		// A job description repeating one skill under two markers ("Required: Docker"
+		// and "Must have: Docker") is one requirement, not two. Dedupe has to happen
+		// here rather than on `cleaned`, because the marker is what differed — and the
+		// UI renders each entry as its own React key and its own "n of m" count.
+		const normalised = bare.toLowerCase();
+		if (seenNormalised.has(normalised)) continue;
+
+		if (!MARKER_LABEL_RE.test(cleaned) && looksLikeProse(bare)) continue;
+		seenNormalised.add(normalised);
 		out.add(cleaned);
 	}
 	return [...out];
@@ -195,22 +242,43 @@ function countWords(text: string): number {
  * Tries, in order: the literal keyword, its canonical skill's variants, then a
  * confident alias-map match. The word-boundary fallback exists for plain-English
  * keywords ("team leadership") that no taxonomy covers.
+ *
+ * Every surface that belongs to the alias map is gated on `isConfidentMention`, not just
+ * the alias-map fallback at the end. It used to return `covered: true` on the first
+ * literal regex hit, which meant the AWS/Azure/Node disambiguation layer was never
+ * consulted on the one path that reports coverage to a user: JD "Required: AWS" against
+ * a resume reading "Held an AWS certified welding inspector qualification" was reported
+ * as fully covered while `findConfidentSkills` on the same text returns `[]`.
  */
 function findCoverage(
 	keyword: string,
 	text: string,
 	skills: SkillMatch[],
-): { covered: boolean; surface?: string; canonical?: string } {
+): {
+	covered: boolean;
+	uncertain?: boolean;
+	surface?: string;
+	canonical?: string;
+} {
+	const canonical = canonicalizeSkill(keyword);
+
+	/** Resolve a hit: confident -> covered, ambiguous -> uncertain, never covered. */
+	const accept = (surface: string) => {
+		if (canonical && !isConfidentMention(canonical, surface, text)) {
+			return { covered: false, uncertain: true, surface, canonical };
+		}
+		return { covered: true, surface, ...(canonical ? { canonical } : {}) };
+	};
+
 	const literal = new RegExp(
 		`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
 		"i",
 	);
 	const literalMatch = literal.exec(text);
 	if (literalMatch) {
-		return { covered: true, surface: literalMatch[0] };
+		return accept(literalMatch[0]);
 	}
 
-	const canonical = canonicalizeSkill(keyword);
 	if (canonical) {
 		for (const variant of expandSkillVariants(canonical)) {
 			const re = new RegExp(
@@ -218,7 +286,9 @@ function findCoverage(
 				"i",
 			);
 			const m = re.exec(text);
-			if (m) return { covered: true, surface: m[0], canonical };
+			// Gated too: a JD asking for "Amazon Web Services" must not be satisfied by
+			// the bare word "AWS" in an unrelated context.
+			if (m) return accept(m[0]);
 		}
 	}
 
@@ -256,12 +326,21 @@ export function analyzeJobMatch({
 			? jobTarget.keywords
 			: extractKeywords(jobTarget.description ?? "");
 
-	const keywords: KeywordCoverage[] = phrases.map((phrase) => {
-		const requirement = classifyRequirement(phrase);
+	// Dedupe on the normalised keyword here too, so an explicit `keywords` array gets
+	// the same treatment as a description. Two entries for one skill rendered as
+	// "2 of 2" under a single bucket and collided on the React key `Required-Docker`.
+	const seen = new Set<string>();
+	const keywords: KeywordCoverage[] = [];
+	for (const phrase of phrases) {
 		const bare = phrase.replace(MARKER_LABEL_RE, "").trim();
+		if (bare.length < 3) continue;
+		const key = bare.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		const requirement = classifyRequirement(phrase);
 		const hit = findCoverage(bare, text, skills);
-		return { keyword: bare, ...hit, requirement };
-	});
+		keywords.push({ keyword: bare, ...hit, requirement });
+	}
 
 	// Impact: bullets carrying evidence.
 	let quantified = 0;
@@ -282,16 +361,16 @@ export function analyzeJobMatch({
 		}
 	}
 
-	const diagnostics = auditParseFidelity({
-		sections: (resume.sections ?? []).map((s) => ({
-			type: s.type,
-			title: (s.content as { title?: string })?.title?.trim() || s.type,
-			visible: s.visible,
-		})),
-		dates: [],
-		dateFormat: resume.metadata?.settings?.dateFormat,
-		layout: resume.metadata?.settings?.layout,
-	});
+	// Same bridge the Review sheet uses. This used to pass `dates: []`, which made
+	// `checkDateConsistency` structurally unreachable here: one engine, two tabs, and
+	// only the Review tab could report a mixed-format timeline. Mixed date formats are
+	// the top-tier parser risk, so the Job-match panel labelling this count
+	// "parser-fit issues" was under-reporting exactly the thing it claimed to cover.
+	const diagnostics = auditParseFidelity(buildParseAuditInput(resume));
+
+	const requiredTotal = keywords.filter(
+		(k) => k.requirement === "required",
+	).length;
 
 	const missingRequired = keywords.filter(
 		(k) => k.requirement === "required" && !k.covered,
@@ -308,15 +387,30 @@ export function analyzeJobMatch({
 				? ` Write it as both "${both[0]}" and "${both[1]}" — parsers match the acronym and readers scan for the expansion.`
 				: "";
 		suggestions.push(
-			`Required but not evidenced: "${k.keyword}". If you have done it, say so with a concrete example.${hint}`,
+			k.uncertain
+				? `Required but not evidenced: "${k.keyword}". The resume mentions "${k.surface}", which here reads as something other than ${k.canonical} — if you mean the skill, name the service or tool next to it.${hint}`
+				: `Required but not evidenced: "${k.keyword}". If you have done it, say so with a concrete example.${hint}`,
 		);
 	}
 	for (const k of missingPreferred) {
-		suggestions.push(`Nice to have, not evidenced: "${k.keyword}".`);
+		suggestions.push(
+			k.uncertain
+				? `Nice to have, not evidenced: "${k.keyword}" — the resume mentions "${k.surface}", which reads as a different meaning.`
+				: `Nice to have, not evidenced: "${k.keyword}".`,
+		);
 	}
 	if (quantified < total) {
 		suggestions.push(
 			`${total - quantified} of ${total} bullets make a claim with no number. Add evidence or drop them.`,
+		);
+	}
+	// The required bucket is the half of this report a job seeker most needs, so its
+	// absence has to be explained rather than left implicit. The panel renders a count
+	// of zero and nothing else, which reads as "no requirements" rather than "nothing
+	// was marked required".
+	if (keywords.length > 0 && requiredTotal === 0) {
+		suggestions.push(
+			"Nothing in this job description was marked as required, so every keyword below is treated as preferred. Mark the must-haves (for example \"Required: …\") so the two can be weighed separately.",
 		);
 	}
 	for (const d of diagnostics) {
@@ -328,7 +422,7 @@ export function analyzeJobMatch({
 		requiredCovered: keywords.filter(
 			(k) => k.requirement === "required" && k.covered,
 		).length,
-		requiredTotal: keywords.filter((k) => k.requirement === "required").length,
+		requiredTotal,
 		preferredCovered: keywords.filter(
 			(k) => k.requirement === "preferred" && k.covered,
 		).length,

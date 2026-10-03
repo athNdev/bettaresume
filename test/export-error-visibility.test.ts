@@ -1,6 +1,20 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
+// `src/features/resume-editor/typst_templates` imports `.typ` files through webpack's
+// `asset/source` loader, which Vite does not have, so resolving the component's real
+// import graph makes Vite parse Typst as JavaScript and the whole file fails to
+// collect. Stubbed out: nothing under test reads a template. The Typst compiler itself
+// only imports the WASM snippet lazily inside `initCompiler`, so it is safe to load.
+vi.mock("@/features/resume-editor/typst_templates", () => ({
+	getTemplateSource: () => "",
+	resumeToTypstJson: () => ({}),
+	minimalSource: "",
+	postgradSource: "",
+	sectionsSource: "",
+	undergradSource: "",
+}));
+
 /**
  * Export controls must not fail silently.
  *
@@ -14,6 +28,12 @@ import { describe, expect, it, vi } from "vitest";
  * is CDN-loaded), so a render test here would be theatre. Asserting on the source is
  * weaker than a behaviour test, so the assertions are pinned tightly and the reasoning
  * is recorded inline.
+ *
+ * The one place that *can* be a behaviour test is the Blob construction, which is pure
+ * and needs no DOM — so `toDownloadBlob` is exported and exercised directly. It used to
+ * be a source-text assertion, which had the effect of pinning the corruption in place:
+ * the test asserted that `exportPDF` pre-wrapped the Typst view in `new Blob([...buffer])`,
+ * which is exactly the bug.
  */
 
 const source = (await import("node:fs")).readFileSync(
@@ -21,6 +41,11 @@ const source = (await import("node:fs")).readFileSync(
 		.pathname,
 	"utf8",
 );
+
+// Typst itself is dynamically imported inside the compiler, so importing this module in
+// Node pulls in no WASM and touches no browser API.
+const { toDownloadBlob } = await import("../src/components/export/export-buttons");
+const { DOCX_MIME } = await import("../src/lib/export/docx");
 
 const read = (p: string) =>
 	readFileSync(new URL(`../${p}`, import.meta.url).pathname, "utf8");
@@ -59,10 +84,56 @@ describe("export failures are visible to the user", () => {
 		// A regression guard on the fix itself: if the catch block swallowed the
 		// success path, every test above would still pass.
 		expect(source).toMatch(
-			/downloadFile\(blob, filename, "application\/pdf"\)/,
-		);
-		expect(source).toMatch(
 			/downloadFile\(json, filename, "application\/json"\)/,
+		);
+	});
+
+	it("hands the raw PDF bytes to downloadFile, never a pre-wrapped Blob", () => {
+		// `new Blob([pdfBytes.buffer])` was the bug: `pdfBytes` is a *view* into the
+		// Typst WASM heap, so `.buffer` is the entire heap. Asserting the old shape
+		// here would have pinned the corruption in place.
+		const handler = source.slice(
+			source.indexOf("const exportPDF"),
+			source.indexOf("const exportDocx"),
+		);
+		expect(handler).toMatch(/downloadFile\(pdfBytes, filename, "application\/pdf"\)/);
+		expect(handler).not.toMatch(/pdfBytes\.buffer/);
+		expect(handler).not.toMatch(/new Blob\(\[\s*pdfBytes/);
+	});
+
+	it("wraps a WASM-heap view as exactly the PDF bytes", async () => {
+		// Real behaviour, not source text: this is the same call `exportPDF` makes.
+		// Mirror `get_artifact`: a small view inside a large WASM memory buffer.
+		const heap = new Uint8Array(16 * 1024 * 1024);
+		const pdfStart = 12_582_912;
+		const pdf = new TextEncoder().encode("%PDF-1.7\n% fabricated bytes\n%%EOF\n");
+		heap.set(pdf, pdfStart);
+		const view = heap.subarray(pdfStart, pdfStart + pdf.byteLength);
+
+		// The trap this replaces: `.buffer` is 16 MiB even though the view is tiny.
+		expect(view.byteLength).toBe(pdf.byteLength);
+		expect(view.buffer.byteLength).toBe(16 * 1024 * 1024);
+		expect(view.byteOffset).toBe(pdfStart);
+
+		const blob = toDownloadBlob(view, "application/pdf");
+		expect(blob.type).toBe("application/pdf");
+		// Not the heap.
+		expect(blob.size).toBe(pdf.byteLength);
+		expect(blob.size).not.toBe(heap.byteLength);
+
+		const bytes = new Uint8Array(await blob.arrayBuffer());
+		expect(bytes.byteLength).toBe(pdf.byteLength);
+		expect(new TextDecoder().decode(bytes)).toBe(
+			new TextDecoder().decode(pdf),
+		);
+		// The bytes really are the PDF, read from its offset in the heap.
+		expect(new TextDecoder().decode(bytes.slice(0, 8))).toBe("%PDF-1.7");
+	});
+
+	it("gives a string export an explicit MIME type", () => {
+		// Word and browsers both fall back to octet-stream on a type-less Blob.
+		expect(toDownloadBlob("{}", "application/json").type).toBe(
+			"application/json",
 		);
 	});
 
@@ -110,9 +181,29 @@ describe("the DOCX export path is wired and honest", () => {
 	});
 
 	it("gives the Blob an explicit MIME type", () => {
-		// `new Blob([uint8array])` yields application/octet-stream, which Word
-		// refuses to open, so the parts are typed.
-		const src = read("src/components/export/export-buttons.tsx");
-		expect(src).toMatch(/content instanceof Uint8Array/);
+		// `new Blob([uint8array])` with no options yields application/octet-stream,
+		// which Word refuses to open, so every branch is typed.
+		//
+		// Asserted per branch rather than as a bare `content instanceof Uint8Array`
+		// match: that string also occurs in the DOCX path, so the old assertion passed
+		// on the strength of DOCX coverage while advertising that the PDF Blob had the
+		// same treatment. It did not — the PDF path pre-wrapped its own Blob.
+		expect(toDownloadBlob("{}", "application/json").type).toBe(
+			"application/json",
+		);
+		expect(toDownloadBlob(new Uint8Array([1, 2, 3]), DOCX_MIME).type).toBe(
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		);
+		expect(toDownloadBlob(new Uint8Array([1, 2, 3]), "application/pdf").type).toBe(
+			"application/pdf",
+		);
+	});
+
+	it("keeps the DOCX byte length, not the buffer length", () => {
+		// `resumeToDocx` hands back bytes; the same view-vs-buffer trap applies, and
+		// this file's DOCX path was the one that already got it right.
+		const heap = new Uint8Array(1024 * 1024);
+		const bytes = heap.subarray(500_000, 500_128);
+		expect(toDownloadBlob(bytes, DOCX_MIME).size).toBe(128);
 	});
 });

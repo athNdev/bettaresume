@@ -10,6 +10,17 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,6 +46,14 @@ import { api } from "@/lib/trpc/react";
  * Editing the master does NOT push to placements: it makes them look drifted, and the
  * user decides per placement. That is the non-destructive mechanism, and it is the
  * opposite of what a "save to all" button does.
+ *
+ * The per-placement "Use latest" IS destructive -- it overwrites that section's content
+ * with the master -- so it is behind a confirmation that names the section, the same way
+ * `HistoryPanel` gates its restore. Offering it in one click was a data-loss path, not a
+ * convenience.
+ *
+ * A failed read is never reported as an empty list. "Your library is empty" is a claim
+ * about the user's data, and on a transport error the panel did not have it.
  */
 
 /** Best-effort human label for a library row, whatever section shape it holds. */
@@ -77,7 +96,19 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 
 	const backfill = api.content.backfill.useMutation({
 		onSuccess: async () => {
-			await utils.content.list.invalidate();
+			// Backfill sets `contentItemId` on every unlinked section, so the resume is
+			// what changed -- not just the library list. Invalidating only `content.list`
+			// left `resume.sections` stale: the freshly linked sections kept rendering
+			// under "Not yet in the library" with a live "Save to library" button, and
+			// `content.create` has no duplicate guard, so one click there inserted a SECOND
+			// master item with an identical payload. Two masters for one achievement, free
+			// to drift. Invalidate the resume too, so the unlinked list actually empties.
+			await Promise.all([
+				utils.content.list.invalidate(),
+				utils.resume.getById.invalidate({ id: resume.id }),
+				utils.content.additions.invalidate({ resumeId: resume.id }),
+				utils.content.divergence.invalidate({ resumeId: resume.id }),
+			]);
 		},
 	});
 
@@ -107,7 +138,15 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 
 	const saveToLibrary = api.content.create.useMutation({
 		onSuccess: async () => {
-			await utils.content.list.invalidate();
+			// The resume must be refreshed too: the adopted section is now linked, so
+			// leaving the stale `resume.sections` in place keeps the "Save to library"
+			// button on screen and invites a duplicate master row for one achievement.
+			await Promise.all([
+				utils.content.list.invalidate(),
+				utils.content.additions.invalidate({ resumeId: resume.id }),
+				utils.content.divergence.invalidate({ resumeId: resume.id }),
+				utils.resume.getById.invalidate({ id: resume.id }),
+			]);
 		},
 	});
 
@@ -116,16 +155,31 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 	 *
 	 * Runs once per mount and is idempotent server-side. Without it the library looks
 	 * empty to exactly the users with the most existing content, which is backwards.
+	 *
+	 * Deps are the STABLE `backfill.mutate`, not the `backfill` result object. A
+	 * react-query result object is a new identity on every render, so listing it here
+	 * re-ran this effect on every render; the ref is what makes that harmless, and the
+	 * ref is what would quietly stop working if the guard above were ever removed.
+	 *
+	 * `library.isError` is a load-bearing guard, not defensive noise. On a failed
+	 * `content.list`, `isPending` is false and `data` is undefined -- exactly the shape
+	 * of "the library is empty" -- so a transient read error fired the backfill WRITE
+	 * the user never asked for. Leaving `requested` unset on error also means a
+	 * successful refetch can still adopt the sections.
 	 */
+	const backfillMutate = backfill.mutate;
+
 	useEffect(() => {
-		if (requested.current || library.isPending) return;
+		if (requested.current) return;
+		if (library.isPending) return;
+		if (library.isError) return;
 		// Set before the guard below, not only after: the write is async, so without a
 		// ref a re-render before it lands fires a second backfill. The server is
 		// idempotent anyway, which is why this is cheap insurance rather than a fix.
 		requested.current = true;
 		if ((library.data ?? []).length > 0) return;
-		backfill.mutate();
-	}, [library.isPending, library.data, backfill]);
+		backfillMutate();
+	}, [library.isPending, library.isError, library.data, backfillMutate]);
 
 	const drifted = new Set((divergence.data ?? []).map((d) => d.sectionId));
 	const placed = (resume.sections ?? []).filter((s) => s.contentItemId);
@@ -135,6 +189,31 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 
 	return (
 		<div className="space-y-4">
+			{/*
+			  Three reads and no error surface meant the worst combination on this panel:
+			  on a `content.list` failure the panel claimed "Your library is empty" -- a
+			  statement it could not know -- while firing the backfill write. Each query
+			  now reports its own failure, and none of them report absence of data as
+			  emptiness.
+			*/}
+			{library.isError ? (
+				<p className="text-destructive text-sm" role="alert">
+					Could not load your library: {library.error.message}
+				</p>
+			) : null}
+			{additions.isError ? (
+				<p className="text-destructive text-sm" role="alert">
+					Could not load the library content available to add:{" "}
+					{additions.error.message}
+				</p>
+			) : null}
+			{divergence.isError ? (
+				<p className="text-destructive text-sm" role="alert">
+					Could not check which sections have drifted from the library:{" "}
+					{divergence.error.message}
+				</p>
+			) : null}
+
 			{(attach.isError || propagate.isError || backfill.isError) && (
 				<p className="text-destructive text-sm" role="alert">
 					{(attach.error ?? propagate.error ?? backfill.error)?.message}
@@ -157,20 +236,58 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 					<ul className="space-y-2">
 						{placed.map((s) => {
 							const isDrifted = drifted.has(s.id);
+							const title = s.content?.title ?? s.type;
 							return (
 								<ItemRow
 									actions={
 										<>
 											{isDrifted ? (
-												<Button
-													disabled={pending}
-													onClick={() => propagate.mutate({ sectionId: s.id })}
-													size="sm"
-													variant="outline"
-												>
-													<RefreshCw aria-hidden />
-													Use latest
-												</Button>
+												/*
+												  `propagate` overwrites the section's content with the
+												  master unconditionally, so a single click used to discard
+												  whatever the user had written there with no warning -- and the
+												  panel's own contract says nothing is applied without the user
+												  deciding. `HistoryPanel` gates its equally destructive restore
+												  behind an AlertDialog; this one now matches, and names the
+												  section that will be lost.
+												*/
+												<AlertDialog>
+													<AlertDialogTrigger asChild>
+														<Button
+															disabled={pending}
+															size="sm"
+															variant="outline"
+														>
+															<RefreshCw aria-hidden />
+															Use latest
+														</Button>
+													</AlertDialogTrigger>
+													<AlertDialogContent>
+														<AlertDialogHeader>
+															<AlertDialogTitle>
+																Overwrite this section with the library version?
+															</AlertDialogTitle>
+															<AlertDialogDescription>
+																“{title}” in this resume is replaced with the
+																master copy from your library, including every
+																field in it. Anything you have edited in this
+																resume for that section is discarded and is not
+																recoverable from this panel. The library copy
+																itself is unchanged.
+															</AlertDialogDescription>
+														</AlertDialogHeader>
+														<AlertDialogFooter>
+															<AlertDialogCancel>Cancel</AlertDialogCancel>
+															<AlertDialogAction
+																onClick={() =>
+																	propagate.mutate({ sectionId: s.id })
+																}
+															>
+																Use the library version
+															</AlertDialogAction>
+														</AlertDialogFooter>
+													</AlertDialogContent>
+												</AlertDialog>
 											) : null}
 											<Button
 												aria-pressed={s.visible}
@@ -194,8 +311,8 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 										) : null
 									}
 									key={s.id}
-									subtitle={s.content?.title ?? s.type}
-									title={s.content?.title ?? s.type}
+									subtitle={title}
+									title={title}
 								/>
 							);
 						})}
@@ -244,7 +361,19 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 					<Library aria-hidden className="size-4" />
 					Library
 				</h3>
-				{items.length === 0 ? (
+				{library.isPending ? (
+					<p className="text-muted-foreground text-sm">Loading your library…</p>
+				) : library.isError ? (
+					/*
+					  Deliberately NOT "your library is empty". An error means we do not
+					  know what is in there, and telling the user it is empty invites them to
+					  re-add content that is already there.
+					*/
+					<p className="text-muted-foreground text-sm">
+						Your library could not be loaded, so this list is unavailable.
+						Nothing has been changed.
+					</p>
+				) : items.length === 0 ? (
 					<p className="text-muted-foreground text-sm">
 						Your library is empty. Save an existing section above to reuse it
 						across resumes.
@@ -293,7 +422,15 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 					Library content this resume does not use yet. Nothing is inserted
 					until you add it.
 				</p>
-				{(additions.data ?? []).length === 0 ? (
+				{additions.isPending ? (
+					<p className="text-muted-foreground text-sm">
+						Loading available content…
+					</p>
+				) : additions.isError ? (
+					<p className="text-muted-foreground text-sm">
+						This list could not be loaded. Nothing has been changed.
+					</p>
+				) : (additions.data ?? []).length === 0 ? (
 					<p className="text-muted-foreground text-sm">
 						Everything in your library is already used here.
 					</p>

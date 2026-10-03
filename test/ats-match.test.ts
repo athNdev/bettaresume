@@ -180,6 +180,120 @@ describe("keyword coverage", () => {
 		});
 		expect(r.keywords[0]?.covered).toBe(true);
 	});
+
+	it("does NOT report an ambiguous alias as covered without supporting context", () => {
+		// The literal-regex-first bug. `findCoverage` matched `\bAWS\b` and returned
+		// `covered: true` before ever asking `skills.ts`, so this resume was reported
+		// as covering AWS while `findConfidentSkills` on the same text returns `[]`.
+		// A false "covered" sends someone to an interview without the skill.
+		const r = analyzeJobMatch({
+			resume: resume([
+				exp(["Held an AWS certified welding inspector qualification"]),
+			]),
+			jobTarget: { description: "Required: AWS" },
+		});
+		expect(r.keywords[0]?.covered).toBe(false);
+		expect(r.keywords[0]?.uncertain).toBe(true);
+		expect(r.requiredCovered).toBe(0);
+		expect(r.requiredTotal).toBe(1);
+		// The match is reported, not hidden — the caller can see what matched.
+		expect(r.keywords[0]?.surface).toBe("AWS");
+	});
+
+	it("treats Azure the same way when it is a colour", () => {
+		const r = analyzeJobMatch({
+			resume: resume([exp(["Designed posters in an Azure blue palette"])]),
+			jobTarget: { description: "Required: Azure" },
+		});
+		expect(r.keywords[0]?.covered).toBe(false);
+		expect(r.keywords[0]?.uncertain).toBe(true);
+	});
+
+	it("does not let an ambiguous hit on one variant vouch for the spelled-out form", () => {
+		// Inverse direction: the JD asks for "Amazon Web Services", the only evidence is
+		// the bare word "AWS" in a welding context.
+		const r = analyzeJobMatch({
+			resume: resume([
+				exp(["Held an AWS certified welding inspector qualification"]),
+			]),
+			jobTarget: { description: "Required: Amazon Web Services" },
+		});
+		expect(r.keywords[0]?.covered).toBe(false);
+		expect(r.keywords[0]?.uncertain).toBe(true);
+	});
+
+	it("still covers an ambiguous alias once the context supports it", () => {
+		// The fix must not become a false-negative machine.
+		const r = analyzeJobMatch({
+			resume: resume([exp(["Ran serverless jobs on AWS Lambda"])]),
+			jobTarget: { description: "Required: AWS" },
+		});
+		expect(r.keywords[0]?.covered).toBe(true);
+		expect(r.keywords[0]?.uncertain).toBeUndefined();
+		expect(r.requiredCovered).toBe(1);
+	});
+
+	it("counts a repeated skill once, not once per marker", () => {
+		// Deduping on the raw line kept the marker, so "Required: Docker" and
+		// "Must have: Docker" were two entries: "2 of 2" for one skill, and two <li>
+		// sharing the React key `Required-Docker`.
+		const r = analyzeJobMatch({
+			resume: resume([exp(["Containerised everything with Docker"])]),
+			jobTarget: { description: "Required: Docker\nMust have: Docker" },
+		});
+		expect(r.keywords).toHaveLength(1);
+		expect(r.keywords[0]?.keyword).toBe("Docker");
+		expect(r.requiredTotal).toBe(1);
+		expect(r.requiredCovered).toBe(1);
+		expect(
+			new Set(r.keywords.map((k) => `${k.requirement}-${k.keyword}`)).size,
+		).toBe(r.keywords.length);
+	});
+
+	it("counts a repeated skill once in an explicit keyword list too", () => {
+		const r = analyzeJobMatch({
+			resume: resume([]),
+			jobTarget: { keywords: ["Docker", "Required: Docker"] },
+		});
+		expect(r.keywords).toHaveLength(1);
+	});
+});
+
+describe("prose is not a keyword", () => {
+	it("drops a sentence that merely contains a requirement phrase", () => {
+		// `/\bwe are looking for\b/i` used to classify this line as `required`, and the
+		// report then advised: Required but not evidenced: "We are looking for someone
+		// who can ship." Advice generated from a sentence, not from a skill.
+		const r = analyzeJobMatch({
+			resume: resume([]),
+			jobTarget: {
+				description: "We are looking for someone who can ship.\nRequired: Docker",
+			},
+		});
+		expect(r.keywords.map((k) => k.keyword)).toEqual(["Docker"]);
+		expect(r.suggestions.join("\n")).not.toMatch(/can ship/);
+	});
+
+	it("drops the same sentence via `you have`", () => {
+		expect(
+			extractKeywords("You have probably never heard of this tool before."),
+		).toEqual([]);
+	});
+
+	it("keeps a marked requirement that happens to end in a full stop", () => {
+		// Marker lines are exempt from the prose filter: this is a requirement, not a
+		// sentence the writer is saying out loud.
+		expect(extractKeywords("Nice to have: some Kubernetes exposure.")).toEqual([
+			"Nice to have: some Kubernetes exposure.",
+		]);
+	});
+
+	it("keeps a short unmarked fragment", () => {
+		// "Some experience with Rust" is the existing unmarked-is-preferred case.
+		expect(extractKeywords("Some experience with Rust")).toEqual([
+			"Some experience with Rust",
+		]);
+	});
 });
 
 describe("suggestions", () => {
@@ -210,6 +324,77 @@ describe("suggestions", () => {
 		});
 		expect(r.style.errors).toBeGreaterThan(0);
 		expect(r.suggestions.some((s) => s.startsWith("Fix:"))).toBe(true);
+	});
+
+	it("propagates a date error this test did not set up itself", () => {
+		// The heading-alias and layout errors above are enough to make
+		// `style.errors > 0` pass on their own, so this case is pinned on the specific
+		// diagnostic id. `dates: []` used to be hardcoded here, which made
+		// `checkDateConsistency` structurally unreachable in this path: the Review sheet
+		// (which passes real dates to the same engine) caught mixed date formats and
+		// this tab could not, while still calling the count "parser-fit issues".
+		const dated = (id: string, data: unknown[]) => ({
+			id,
+			type: "experience",
+			order: 0,
+			visible: true,
+			content: { title: "Work Experience", data },
+		});
+		const r = analyzeJobMatch({
+			resume: resume([
+				dated("s1", [
+					{ company: "Acme", startDate: "March 2020", endDate: "2021" },
+				]),
+				dated("s2", [{ company: "Globex", startDate: "03/2022" }]),
+			]),
+			jobTarget: { description: "Required: TypeScript" },
+		});
+		const ids = r.style.diagnostics.map((d) => d.id);
+		expect(ids).toContain("date-mixed-formats");
+		// It is an error, so it reaches the user rather than just the diagnostics list.
+		expect(r.suggestions).toContain("Fix: Dates use more than one format");
+	});
+
+	it("stays quiet about dates when they are consistent", () => {
+		// A date check that fires on everything is as useless as one that never fires.
+		const r = analyzeJobMatch({
+			resume: resume([
+				{
+					id: "s1",
+					type: "experience",
+					order: 0,
+					visible: true,
+					content: {
+						title: "Work Experience",
+						data: [{ company: "Acme", startDate: "March 2020" }],
+					},
+				},
+			]),
+			jobTarget: { description: "Required: TypeScript" },
+		});
+		expect(r.style.diagnostics.map((d) => d.id)).not.toContain(
+			"date-mixed-formats",
+		);
+	});
+
+	it("explains an empty required bucket instead of dropping it silently", () => {
+		// The panel keeps required and preferred as separate lists — the whole point of
+		// it — so a job description with no markers produced "Preferred" only, with no
+		// way to tell that from "this resume satisfies nothing". The UI branch that
+		// returns null for an empty list lives outside this module; the report has to
+		// carry the explanation.
+		const r = analyzeJobMatch({
+			resume: resume([]),
+			jobTarget: { description: "Kubernetes\nDocker\n5+ years React" },
+		});
+		expect(r.requiredTotal).toBe(0);
+		expect(r.preferredTotal).toBe(3);
+		expect(r.suggestions.some((s) => /marked as required/i.test(s))).toBe(true);
+	});
+
+	it("does not explain an empty bucket when the job description was empty", () => {
+		const r = analyzeJobMatch({ resume: resume([]), jobTarget: {} });
+		expect(r.suggestions).toEqual([]);
 	});
 
 	it("returns an empty suggestion list for a genuinely clean resume", () => {

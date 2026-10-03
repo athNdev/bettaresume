@@ -61,23 +61,35 @@ export interface HistoryDiff {
 	isIdentical: boolean;
 }
 
-/** A section as it appears on one side of the comparison. */
+/**
+ * A section as it appears on the live side of the comparison.
+ *
+ * Every field the shared projection treats as content is REQUIRED here, `contentItemId`
+ * included (nullable, but never absent). An earlier version made `metadata`, `order` and
+ * `contentItemId` optional and compared them only when supplied -- an escape hatch added
+ * for the history panel, which passed a reduced shape and therefore never compared them.
+ * The panel reported `isIdentical` for a `metadata`-only edit (where the user's name and
+ * email live), and `isIdentical` disables the Restore button, so the change was
+ * unrecoverable through the UI while the server held the older version. That is the bug
+ * the shared projection was written to kill, and the optional fields let it survive a fix
+ * aimed squarely at it.
+ *
+ * Making them required is the point: a caller that omits a field is now a compile error
+ * rather than a silently under-reported diff.
+ */
 type SideSection = {
-	id: unknown;
-	type?: unknown;
-	visible?: unknown;
-	content?: unknown;
-	order?: unknown;
-	contentItemId?: unknown;
+	id: string;
+	type: string;
+	visible: boolean;
+	content: unknown;
+	order: number;
+	contentItemId: string | null;
 };
 
-/** The projection of one side, plus what the caller actually supplied. */
+/** The projection of one side, indexed for lookup by section id. */
 interface Side {
 	projection: RevisionContentProjection;
 	byId: Map<string, RevisionContentProjection["sections"][number]>;
-	hasMetadata: boolean;
-	/** Fields the live side did not supply, so a partial caller cannot fake a difference. */
-	provided: Map<string, { order: boolean; contentItemId: boolean }>;
 }
 
 export type ParsedSnapshot = RevisionContentProjection;
@@ -163,48 +175,33 @@ function titleFor(section: { type?: unknown; content?: unknown }): string {
 	return typeof section.type === "string" ? section.type : "section";
 }
 
+/**
+ * Project one side of the comparison and index it by id.
+ *
+ * Takes the loose shape on purpose: the snapshot side arrives already projected, and a
+ * section with no usable id is skipped rather than rejected. The strictness that matters
+ * is on `diffSnapshot`'s `current` parameter, which is what a future caller controls.
+ */
 function buildSide(input: {
 	metadata?: unknown;
-	sections?: readonly SideSection[] | null;
+	sections?: readonly unknown[] | null;
 }): Side {
 	const projection = projectRevisionContent(input);
 	const byId = new Map<string, RevisionContentProjection["sections"][number]>();
 	for (const section of projection.sections) {
 		if (section.id !== null) byId.set(section.id, section);
 	}
-	const provided = new Map<
-		string,
-		{ order: boolean; contentItemId: boolean }
-	>();
-	for (const raw of input.sections ?? []) {
-		if (typeof raw.id !== "string") continue;
-		provided.set(raw.id, {
-			order: raw.order !== undefined,
-			contentItemId: raw.contentItemId !== undefined,
-		});
-	}
-	return {
-		projection,
-		byId,
-		provided,
-		hasMetadata: input.metadata !== undefined,
-	};
+	return { projection, byId };
 }
 
 /**
  * Compare a snapshot to the live resume.
  *
  * `current` takes the shape the editor already holds, not the DB row shape, so the editor
- * can diff against state it already has instead of refetching.
- *
- * ## Partial live shape
- *
- * `metadata`, and each section's `order` and `contentItemId`, are compared **only when the
- * caller supplies them**. A caller that omits a field has not asserted it is unchanged —
- * it simply has not looked — and treating "absent" as "different" would pin the Restore
- * button on permanently for every caller that passes a reduced shape. A caller that wants
- * full coverage (and the invariant that `isIdentical` implies the server dedupes) must
- * pass all of them; the history panel does not yet.
+ * can diff against state it already has instead of refetching. It must supply the FULL
+ * field set: `metadata`, and each section's `order` and `contentItemId`. Those are all
+ * content by the shared projection's definition, and `restore` writes all of them back --
+ * so omitting one silently hides a change that restoring would actually apply.
  */
 export function diffSnapshot(
 	snapshotInput: unknown,
@@ -212,23 +209,22 @@ export function diffSnapshot(
 		name?: string | null;
 		template?: string | null;
 		domain?: string | null;
-		metadata?: unknown;
-		sections?: readonly SideSection[] | null;
+		metadata: unknown;
+		sections: readonly SideSection[];
 	},
 ): HistoryDiff {
 	const snapshot = parseSnapshot(snapshotInput);
 	const before = buildSide({ sections: snapshot.sections });
 	const after = buildSide({
 		metadata: current.metadata,
-		sections: current.sections ?? [],
+		sections: current.sections,
 	});
 
 	// `metadata` is where the user's name, email and phone live, so a diff that ignored it
 	// reported "no differences" for the edit they were most likely to have made.
 	const metadataSame =
-		!after.hasMetadata ||
 		canonicalRevisionSlot(snapshot.metadata) ===
-			canonicalRevisionSlot(current.metadata);
+		canonicalRevisionSlot(current.metadata);
 
 	const fields: FieldChange[] = (["name", "template", "domain"] as const).map(
 		(key) => {
@@ -244,19 +240,17 @@ export function diffSnapshot(
 		},
 	);
 
-	if (after.hasMetadata) {
-		fields.push({
-			kind: metadataSame ? "unchanged" : "changed",
-			label: "metadata",
-			before: summariseContent(snapshot.metadata) || null,
-			after: summariseContent(current.metadata) || null,
-		});
-	}
+	fields.push({
+		kind: metadataSame ? "unchanged" : "changed",
+		label: "metadata",
+		before: summariseContent(snapshot.metadata) || null,
+		after: summariseContent(current.metadata) || null,
+	});
 
 	const snapshotIds = snapshot.sections
 		.map((s) => s.id)
 		.filter((id): id is string => id !== null);
-	const liveIds = (current.sections ?? [])
+	const liveIds = current.sections
 		.map((s) => s.id)
 		.filter((id): id is string => typeof id === "string");
 	// Snapshot order first, because that is the order the user recognises, then any
@@ -291,25 +285,17 @@ export function diffSnapshot(
 			};
 		}
 
-		// Fall back to the snapshot for any field the live side did not supply, so a
-		// partial `current` compares like-for-like instead of reporting a difference the
-		// caller never claimed. Note the fallback keys off the RAW input, not the
-		// projection: `contentItemId: null` is a real value meaning "detached from the
-		// library", and must not be mistaken for "not provided".
-		const supplied = after.provided.get(id);
+		// Like-for-like comparison: the shared projection puts `order: null` for a
+		// section with no usable number, and the live side's is always a number. Both are
+		// compared through the live value, because the caller is now required to supply
+		// it -- there is no "not provided" case to fall back from.
 		const aligned: RevisionContentProjection["sections"][number] = {
 			id: sectionAfter?.id ?? sectionBefore?.id ?? null,
 			type: sectionAfter?.type ?? sectionBefore?.type ?? null,
-			order:
-				supplied?.order === true
-					? (sectionAfter?.order ?? null)
-					: (sectionBefore?.order ?? null),
+			order: sectionAfter?.order ?? sectionBefore?.order ?? null,
 			visible: sectionAfter?.visible ?? sectionBefore?.visible ?? true,
 			content: sectionAfter?.content,
-			contentItemId:
-				supplied?.contentItemId === true
-					? (sectionAfter?.contentItemId ?? null)
-					: (sectionBefore?.contentItemId ?? null),
+			contentItemId: sectionAfter?.contentItemId ?? null,
 		};
 
 		const same =

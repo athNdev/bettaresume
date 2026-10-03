@@ -22,6 +22,31 @@ interface ExportButtonsProps {
 	variant?: "default" | "dropdown";
 }
 
+/**
+ * Wrap export content in a typed Blob.
+ *
+ * The `Uint8Array` branch matters more than it looks. `$typst.pdf()` returns a **view**
+ * into the WASM heap (`get_artifact` → `new Uint8Array(memory.buffer).subarray(...)`),
+ * so `bytes.buffer` is the whole heap — tens of megabytes — while `bytes.byteLength` is
+ * the PDF. Wrapping `.buffer` therefore saved a file with the PDF buried at some
+ * arbitrary offset inside it, which no reader can open. Passing the view itself copies
+ * only its bytes, per the BufferSource rules.
+ *
+ * `content.slice()` additionally stops the Blob from pinning the entire WASM heap alive
+ * for as long as the object URL exists, and `as ArrayBuffer` states the copy we mean:
+ * a fresh, exactly-sized buffer rather than a view onto the heap.
+ */
+export function toDownloadBlob(
+	content: string | Blob | Uint8Array,
+	type: string,
+): Blob {
+	if (content instanceof Blob) return content;
+	if (content instanceof Uint8Array) {
+		return new Blob([content.slice().buffer as ArrayBuffer], { type });
+	}
+	return new Blob([content], { type });
+}
+
 export function ExportButtons({
 	resume,
 	variant = "default",
@@ -33,14 +58,7 @@ export function ExportButtons({
 		filename: string,
 		type: string,
 	) => {
-		// Uint8Array needs its own Blob type: `new Blob([bytes])` would produce
-		// application/octet-stream unless the parts are typed.
-		const blob =
-			content instanceof Blob
-				? content
-				: content instanceof Uint8Array
-					? new Blob([content.slice().buffer as ArrayBuffer], { type })
-					: new Blob([content], { type });
+		const blob = toDownloadBlob(content, type);
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement("a");
 		link.href = url;
@@ -58,11 +76,10 @@ export function ExportButtons({
 			const dataJson = resumeToTypstJson(resume);
 			const fontFamily = resume.metadata?.settings?.fontFamily ?? "Inter";
 			const pdfBytes = await compileToPdf(templateSource, dataJson, fontFamily);
-			const blob = new Blob([pdfBytes.buffer as ArrayBuffer], {
-				type: "application/pdf",
-			});
+			// Handed over as the view, NOT pre-wrapped: wrapping the view's backing
+			// ArrayBuffer would have shipped the whole WASM heap with the PDF inside it.
 			const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
-			downloadFile(blob, filename, "application/pdf");
+			downloadFile(pdfBytes, filename, "application/pdf");
 		} catch (error) {
 			// Previously only console.error, so a failed export looked identical to a
 			// slow one: the button re-enabled and nothing happened, with no indication
