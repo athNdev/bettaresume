@@ -80,6 +80,26 @@ describe("migrations are applied by the deploy pipeline", () => {
 		expect(step).toMatch(/CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*vars\./);
 	});
 
+	it("every step that shells out to wrangler receives the credentials", () => {
+		// Both D1 steps lost their token when they were converted from
+		// `wrangler-action` to direct `npx wrangler` calls, and fixing only the
+		// first left the drift report unable to report anything. This asserts the
+		// property rather than one step, so a third cannot repeat it.
+		//
+		// `wrangler-action` receives the token via `with: apiToken:` and is
+		// unaffected; only steps that shell out need it in `env:`.
+		const steps = cd
+			.split("      - name: ")
+			.filter((s) => /npx wrangler/.test(s));
+		expect(steps.length).toBeGreaterThan(0);
+		for (const step of steps) {
+			expect(
+				step,
+				`step does not receive CLOUDFLARE_API_TOKEN: ${step.split("\n")[0]}`,
+			).toMatch(/CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\./);
+		}
+	});
+
 	it("distinguishes missing credentials from an insufficient token scope", () => {
 		// "wrangler got no token" is a workflow bug and must not be reported as
 		// schema drift. "7403" is a real scope problem on the Cloudflare side.

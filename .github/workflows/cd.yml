@@ -185,6 +185,12 @@ jobs:
         # as invisible as it was before this step existed.
         if: always()
         continue-on-error: true
+        env:
+          # Same reason as the apply step: a direct `npx wrangler` call needs the
+          # token in its OWN env. `wrangler-action` gets it via `with: apiToken:`,
+          # which is why converting these steps lost it silently.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           cd api
           log=$(npx wrangler d1 migrations list "${{ vars.D1_DATABASE_NAME }}" --remote 2>&1) || true
