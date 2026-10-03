@@ -129,6 +129,26 @@ describe("the CORS allow-list is configured, not assumed", () => {
 		expect(cd).toMatch(/::error::.*empty/i);
 	});
 
+	it("parses the allow-list comment-aware", () => {
+		// Regression: the file is mostly comments, and `tr -d '\n'` concatenated
+		// the final comment line onto the origin. The worker deployed with a garbage
+		// allow-list that matched nothing, so CORS denied every browser request.
+		// Strip comments and blank lines, then join with commas.
+		expect(cd).toMatch(/grep -vE/);
+		expect(cd).toMatch(/paste -sd, -/);
+		// The exact broken form must not come back.
+		expect(cd).not.toMatch(/tr -d '\n' < api\/allowed-origins\.txt/);
+		// And the value is exported once so the deploy and its smoke test agree.
+		expect(cd).toMatch(/PRIMARY_ORIGIN/);
+		expect(cd).toMatch(/ORIGIN="\$PRIMARY_ORIGIN"/);
+	});
+
+	it("sends the production Origin on every probe", () => {
+		// CORS is enforced by the browser. A request without an Origin header does
+		// not exercise the policy, so a bare /health probe proved nothing.
+		expect(cd).toMatch(/-H "Origin: \$ORIGIN"/);
+	});
+
 	it("the worker deploy smoke-tests CORS against the live API", () => {
 		// /health proves nothing about CORS; only a preflight from the real origin
 		// proves users can actually call the API.
