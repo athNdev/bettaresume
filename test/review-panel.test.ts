@@ -114,13 +114,141 @@ describe("keys and counts", () => {
 		// `reviewIssueCount` originally added `errors` on top of
 		// `diagnostics.length`, double-counting the errors.
 		expect(panel).toMatch(
-			/return diagnostics\.length \+ collectBulletFindings\(resume\)\.totalNeedingWork;/,
+			/total: diagnostics\.length \+ bullets\.totalNeedingWork/,
 		);
 		expect(panel).not.toMatch(/errors \+ diagnostics\.length/);
 	});
 
 	it("keys diagnostics by id AND title so distinct fixes stay distinct", () => {
 		expect(panelUi).toMatch(/key=\{`\$\{d\.id\}::\$\{d\.title\}`\}/);
+	});
+
+	it("counts `info` findings, not just errors and warnings", async () => {
+		// The header badge used `errorCount + warningCount + bulletCount`, so a resume
+		// whose only finding was `info` showed a count on the trigger and no badge in the
+		// header at all. This is the regression, in numbers rather than in source text.
+		const { reviewIssueCount, reviewFindings } = await import(
+			"../src/features/resume-editor/components/review-panel"
+		);
+		const withInfo = resume({
+			sections: [
+				{
+					id: "s1",
+					type: "summary",
+					order: 0,
+					visible: true,
+					content: { title: "Professional Summary", data: {} } as never,
+				},
+			],
+		});
+		const findings = reviewFindings(withInfo);
+		expect(findings.total).toBe(reviewIssueCount(withInfo));
+		expect(findings.total).toBe(
+			findings.diagnostics.length + findings.bulletCount,
+		);
+		// An `info`-only resume would be invisible under the old header arithmetic.
+		expect(findings.total).toBeGreaterThanOrEqual(findings.diagnostics.length);
+	});
+});
+
+/**
+ * Every panel must be reachable.
+ *
+ * PR #166 shipped `<TabsContent value="library">` with no matching
+ * `<TabsTrigger value="library">`. Radix renders an unselected TabsContent as nothing
+ * at all, so the content library and every procedure behind it -- `content.attach`,
+ * `content.propagate`, `content.backfill`, `content.create`, `content.additions`,
+ * `content.divergence` -- were unreachable from the product. A shipped feature nobody
+ * can reach.
+ *
+ * The identical trigger assertion already existed for `job`, which is why the one for
+ * `library` was never noticed: the tests enumerated the panels they knew about instead
+ * of deriving them from the markup. This one derives them.
+ */
+describe("every tab panel is reachable", () => {
+	const values = (tag: string) =>
+		[...panelUi.matchAll(new RegExp(`<${tag}\\b[^>]*?value="([^"]+)"`, "g"))]
+			.map((m) => m[1])
+			.sort();
+
+	it("every TabsContent has a TabsTrigger with the same value", () => {
+		const triggers = values("TabsTrigger");
+		const contents = values("TabsContent");
+		expect(contents.length).toBeGreaterThan(0);
+		const orphans = contents.filter((v) => !triggers.includes(v));
+		expect(orphans).toEqual([]);
+	});
+
+	it("every TabsTrigger has a TabsContent with the same value", () => {
+		const triggers = values("TabsTrigger");
+		const contents = values("TabsContent");
+		expect(triggers.filter((v) => !contents.includes(v))).toEqual([]);
+	});
+
+	it("the library panel is reachable and renders the content library", () => {
+		expect(panelUi).toMatch(/<TabsTrigger value="library">/);
+		expect(panelUi).toMatch(
+			/<TabsContent[^>]*value="library"[^>]*>\s*<ContentLibraryPanel/,
+		);
+		expect(panelUi).toMatch(/import \{ ContentLibraryPanel \}/);
+	});
+
+	it("names every panel it ships", () => {
+		// Guards against a future refactor deleting a trigger and its content together
+		// being "consistent" again.
+		expect(values("TabsContent")).toEqual([
+			"bullets",
+			"history",
+			"job",
+			"library",
+			"parse",
+		]);
+	});
+});
+
+/**
+ * Two badges, one number.
+ *
+ * The sheet header summed `errorCount + warningCount + bulletCount` while
+ * `reviewIssueCount` (the editor's trigger badge) summed `diagnostics.length + …`. The
+ * only difference is `info`, so an `info`-only resume showed "1" on the trigger and
+ * nothing in the header — the user is told there is a problem, then told there is not.
+ *
+ * Fixed by computing one breakdown and reading `total` from it in both places, so the
+ * two cannot drift apart again without this file failing.
+ */
+describe("the header count and the trigger count agree", () => {
+	it("the sheet header reads the shared breakdown, not its own arithmetic", () => {
+		expect(panelUi).toMatch(/reviewFindings\(resume\)/);
+	});
+
+	it("the trigger's count is that same `total`, by construction", () => {
+		expect(panel).toMatch(/return reviewFindings\(resume\)\.total;/);
+		expect(panel).toMatch(/reviewIssueCount\(resume\)/);
+	});
+
+	it("the header no longer sums errorCount + warningCount on its own", () => {
+		expect(panelUi).not.toMatch(/errorCount \+ warningCount/);
+		expect(panelUi).not.toMatch(/errorCount \+ warningCount \+ bulletCount/);
+	});
+
+	it("both badges render the shared total", async () => {
+		const { reviewIssueCount, reviewFindings } = await import(
+			"../src/features/resume-editor/components/review-panel"
+		);
+		const risky = resume({
+			sections: [
+				{
+					id: "s1",
+					type: "summary",
+					order: 0,
+					visible: true,
+					content: { title: "Professional Summary", data: {} } as never,
+				},
+			],
+		});
+		expect(reviewFindings(risky).total).toBe(reviewIssueCount(risky));
+		expect(reviewFindings(resume()).total).toBe(reviewIssueCount(resume()));
 	});
 });
 

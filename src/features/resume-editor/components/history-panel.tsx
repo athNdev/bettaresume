@@ -176,20 +176,38 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 
 	const diff = useMemo(() => {
 		if (!snapshot.data?.snapshot) return null;
+		// The FULL field set, deliberately. This map used to pass only
+		// `{id, type, visible, content}`, and `diffSnapshot` was correspondingly lenient
+		// about `metadata`, `order` and `contentItemId` -- so a `metadata`-only edit
+		// (where the user's name and email live) came back `isIdentical: true`, the panel
+		// said "your resume matches this version", Restore was disabled, and the change
+		// was unrecoverable while the server held the older version. `diffSnapshot` now
+		// requires every one of these, so dropping one is a type error rather than a lie.
 		return diffSnapshot(snapshot.data.snapshot, {
 			name: resume.name,
 			template: resume.template,
 			domain: resume.domain,
+			metadata: resume.metadata,
 			sections: (resume.sections ?? []).map((s) => ({
 				id: s.id,
 				type: s.type,
 				visible: s.visible,
 				content: s.content,
+				order: s.order,
+				// `contentItemId` is optional on ResumeSection but nullable on the diff's
+				// contract, and `null` is a real value here: "not linked to the library"
+				// differs from a section that IS linked, and `restore` writes it back.
+				contentItemId: s.contentItemId ?? null,
 			})),
 		});
 	}, [snapshot.data, resume]);
 
 	const revisions = list.data ?? [];
+	// `changedCount` spans scalar fields AND sections, so it cannot be used as the
+	// "changed sections" number the dialog quotes. It counts the resume's own fields
+	// too -- including `metadata`, where the user's name and email live.
+	const changedSections =
+		diff?.sections.filter((s) => s.kind !== "unchanged").length ?? 0;
 
 	return (
 		<div className="flex h-full min-h-0 flex-col gap-3">
@@ -309,16 +327,17 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 											<AlertDialogTitle>
 												Replace your current resume?
 											</AlertDialogTitle>
-											<AlertDialogDescription>
-												This replaces the current name, template, and all{" "}
-												{diff.changedCount} changed section
-												{diff.changedCount === 1 ? "" : "s"} with version #
-												{snapshot.data?.seq}. Anything you changed since then is
-												discarded from the editor.
-												{diff.changedCount > 0
-													? " The version you are on now is saved to history first, so this is reversible."
-													: ""}
-											</AlertDialogDescription>
+<AlertDialogDescription>
+										This replaces the current name, template, contact
+										details, and all {changedSections} changed section
+										{changedSections === 1 ? "" : "s"} with version #
+										{snapshot.data?.seq}. Anything you changed since then is
+										discarded from the editor.
+										{diff.changedCount > 0
+											? " Your current version is written to history as “Before restore to this version” first, so restoring it again brings you back."
+											: ""}
+									</AlertDialogDescription>
+
 										</AlertDialogHeader>
 										<AlertDialogFooter>
 											<AlertDialogCancel>Cancel</AlertDialogCancel>

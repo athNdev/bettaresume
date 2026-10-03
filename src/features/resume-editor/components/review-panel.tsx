@@ -110,6 +110,37 @@ function ClearState({ children }: { children: React.ReactNode }) {
 	);
 }
 
+/**
+ * Everything the panel needs to know about one resume, computed in one place.
+ *
+ * The header badge and the editor's trigger badge used to count independently and
+ * disagree: the header added only errors + warnings, the trigger added every
+ * diagnostic. A resume whose only finding was `info` therefore showed "1" on the
+ * trigger and no badge at all in the header. One breakdown, one `total`, used by both.
+ */
+export function reviewFindings(resume: Resume): ReviewFindings {
+	const diagnostics = auditParseFidelity(buildParseAuditInput(resume));
+	const bullets = collectBulletFindings(resume);
+	return {
+		diagnostics,
+		errorCount: diagnostics.filter((d) => d.severity === "error").length,
+		bulletReport: bullets,
+		bulletCount: bullets.totalNeedingWork,
+		// Every diagnostic regardless of severity -- a warning the user never sees is
+		// the same as a warning that does not exist. Errors are already inside
+		// `diagnostics.length`, so they are not added a second time.
+		total: diagnostics.length + bullets.totalNeedingWork,
+	};
+}
+
+export interface ReviewFindings {
+	diagnostics: ParseDiagnostic[];
+	bulletReport: ReturnType<typeof collectBulletFindings>;
+	bulletCount: number;
+	errorCount: number;
+	total: number;
+}
+
 export function ReviewPanel({
 	resume,
 	open,
@@ -117,19 +148,10 @@ export function ReviewPanel({
 	jobTarget,
 	onJobTargetChange,
 }: ReviewPanelProps) {
-	const diagnostics = useMemo(
-		() => auditParseFidelity(buildParseAuditInput(resume)),
+	const { diagnostics, bulletReport, bulletCount, errorCount, total } = useMemo(
+		() => reviewFindings(resume),
 		[resume],
 	);
-
-	const bulletReport = useMemo(() => collectBulletFindings(resume), [resume]);
-
-	const errorCount = diagnostics.filter((d) => d.severity === "error").length;
-	const warningCount = diagnostics.filter(
-		(d) => d.severity === "warning",
-	).length;
-	const bulletCount = bulletReport.totalNeedingWork;
-	const total = errorCount + warningCount + bulletCount;
 
 	return (
 		<Sheet onOpenChange={onOpenChange} open={open}>
@@ -170,6 +192,15 @@ export function ReviewPanel({
 							) : null}
 						</TabsTrigger>
 						<TabsTrigger value="history">History</TabsTrigger>
+						{/*
+					  PR #166 shipped the `library` TabsContent without its trigger, so the
+					  content library, `content.attach`/`propagate`/`backfill`/`create`, and the
+					  additions + divergence queries were unreachable from the product. A panel
+					  with no trigger is invisible however good it is. `test/review-panel.test.ts`
+					  now asserts every TabsContent has a matching TabsTrigger, so the next one
+					  cannot ship dead either.
+					*/}
+						<TabsTrigger value="library">Library</TabsTrigger>
 						<TabsTrigger value="bullets">
 							Bullets
 							{bulletCount > 0 ? (
@@ -284,10 +315,12 @@ export function ReviewPanel({
  * sees is the same as a warning that does not exist. Errors are not counted
  * separately -- they are already inside `diagnostics.length`, and adding them again
  * inflated the number.
+ *
+ * Delegates to `reviewFindings` rather than recounting, so the trigger badge and the
+ * sheet header badge are the same number by construction and cannot drift apart again.
  */
 export function reviewIssueCount(resume: Resume): number {
-	const diagnostics = auditParseFidelity(buildParseAuditInput(resume));
-	return diagnostics.length + collectBulletFindings(resume).totalNeedingWork;
+	return reviewFindings(resume).total;
 }
 
 /**

@@ -41,8 +41,30 @@ export interface SkillEntry {
 	/**
 	 * Words that, when adjacent, disambiguate an ambiguous alias.
 	 * `AWS` alone is ambiguous; `AWS` next to `Lambda` is not.
+	 *
+	 * Declared per entry rather than in a module-level list so the set of guarded
+	 * aliases and the set of disambiguators can never drift apart — see
+	 * `AMBIGUOUS_ALIASES`.
 	 */
 	disambiguators?: readonly string[];
+	/**
+	 * Which of this entry's own aliases need `disambiguators` before they may be
+	 * asserted as a skill.
+	 *
+	 * An alias belongs here only if it is **word-like**: a real word or common noun
+	 * with a meaning outside software, so a bounded match could be asserting something
+	 * the resume never said. `AWS` (American Welding Society), `Azure` (the colour),
+	 * `Node` (a graph or cluster node) qualify. `TS`, `ML`, `CI`, `SQL`, `HCL` and
+	 * `K8s` do NOT: once bounded, `\bCI\b` cannot match inside another word, and a
+	 * standalone `CI` in a resume means continuous integration. Guarding those would
+	 * trade a false positive that cannot occur for a real false negative.
+	 *
+	 * Omitting this field on an entry whose aliases are all proper nouns or bounded
+	 * acronyms (`Kubernetes`, `Terraform`) is deliberate: a disambiguator list nothing
+	 * reads is dead configuration, and it reads as if the guard is active when it is
+	 * not.
+	 */
+	ambiguousAliases?: readonly string[];
 	/** Broad grouping, used for coverage reporting. */
 	category?: string;
 }
@@ -57,12 +79,14 @@ export const SKILL_ENTRIES: readonly SkillEntry[] = [
 		canonical: "Amazon Web Services",
 		aliases: ["AWS", "Amazon Web Services", "Amazon Web Service"],
 		// "Welding" is the documented alternative meaning of AWS.
+		ambiguousAliases: ["AWS"],
 		disambiguators: ["Lambda", "EC2", "S3", "RDS", "CloudFormation", "ECS"],
 		category: "cloud",
 	},
 	{
 		canonical: "Google Cloud Platform",
 		aliases: ["GCP", "Google Cloud Platform", "Google Cloud"],
+		ambiguousAliases: ["GCP"],
 		disambiguators: ["Compute Engine", "BigQuery", "Cloud Run", "GKE"],
 		category: "cloud",
 	},
@@ -72,6 +96,7 @@ export const SKILL_ENTRIES: readonly SkillEntry[] = [
 		// "Azure" is also a colour, so it stays in the ambiguous set and needs
 		// supporting context. Without these it was permanently unmatchable, which the
 		// map-integrity test caught.
+		ambiguousAliases: ["Azure"],
 		disambiguators: [
 			"Functions",
 			"App Service",
@@ -86,7 +111,8 @@ export const SKILL_ENTRIES: readonly SkillEntry[] = [
 	{
 		canonical: "Kubernetes",
 		aliases: ["Kubernetes", "K8s", "k8s"],
-		disambiguators: ["kubectl", "Helm", "pod", "namespace"],
+		// No `ambiguousAliases`: a proper noun and two bounded acronyms. Nothing here
+		// needs disambiguating, so no disambiguators are declared.
 		category: "devops",
 	},
 	{
@@ -104,6 +130,7 @@ export const SKILL_ENTRIES: readonly SkillEntry[] = [
 		aliases: ["Node.js", "NodeJS", "Node"],
 		// "node" also appears in graph theory, cluster/network diagrams and "timeline".
 		// A backend resume that says "Node" nearly always has one of these nearby.
+		ambiguousAliases: ["Node"],
 		disambiguators: ["npm", "Express", "package.json", "runtime", "JavaScript"],
 		category: "backend",
 	},
@@ -120,16 +147,10 @@ export const SKILL_ENTRIES: readonly SkillEntry[] = [
 	{
 		canonical: "PostgreSQL",
 		aliases: ["PostgreSQL", "Postgres", "psql"],
-		// "SQL" is a substring of NoSQL, MySQL and SQLAlchemy. Bounded, but still far
-		// too common to assert without context.
-		disambiguators: [
-			"Postgres",
-			"psql",
-			"query",
-			"index",
-			"schema",
-			"migration",
-		],
+		// No `ambiguousAliases`. The worry here was `SQL`, which is a substring of
+		// NoSQL, MySQL and SQLAlchemy — but bounding already handles it, because
+		// `NoSQL` has no word boundary before `SQL`. These three aliases are a proper
+		// noun and two bounded forms, so nothing needs disambiguating.
 		category: "database",
 	},
 	{
@@ -140,14 +161,7 @@ export const SKILL_ENTRIES: readonly SkillEntry[] = [
 	{
 		canonical: "Terraform",
 		aliases: ["Terraform", "HCL"],
-		disambiguators: [
-			"provider",
-			"module",
-			"resource",
-			"plan",
-			"apply",
-			"state",
-		],
+		// No `ambiguousAliases`: a proper noun and one bounded acronym.
 		category: "devops",
 	},
 	{
@@ -158,13 +172,17 @@ export const SKILL_ENTRIES: readonly SkillEntry[] = [
 	{
 		canonical: "Continuous Integration",
 		aliases: ["CI", "Continuous Integration", "CI/CD"],
-		disambiguators: ["pipeline", "build", "deploy"],
+		// No `ambiguousAliases`: `CI` is a bounded acronym, so `\bCI\b` cannot match
+		// inside another word and a standalone `CI` in a resume means continuous
+		// integration. Demanding "pipeline"/"build"/"deploy" nearby lost real matches
+		// (someone listing "CI, Python, Docker") to protect against a false positive
+		// that bounding already makes impossible.
 		category: "devops",
 	},
 	{
 		canonical: "Machine Learning",
 		aliases: ["ML", "Machine Learning"],
-		disambiguators: ["model", "training", "inference", "dataset"],
+		// No `ambiguousAliases`, same reasoning as `CI`.
 		category: "ai",
 	},
 	{
@@ -186,23 +204,26 @@ const escapeRe = (value: string) => value.replace(ESCAPE, "\\$&");
  * Aliases that are real words in their own right, so matching them without context
  * would assert a skill the resume never claimed.
  *
- * Only genuinely word-like aliases belong here. An acronym such as `TS`, `ML`, `CI`,
- * `SQL` or `HCL` is NOT ambiguous once bounded: `\bTS\b` cannot match inside `HTML` or
- * `HTML5`, and a standalone `TS` in a resume means TypeScript. Putting those in this
- * set would trade a non-existent false positive for a real false negative -- someone
- * listing "TS, React, Node" would silently lose their TypeScript match.
+ * **Derived from the entries that declare `ambiguousAliases`**, not hand-maintained.
+ * It used to be a literal `new Set(["Node", "Azure", "Go", "R", "C", "REST", "Rust"])`
+ * plus two `|| alias === "AWS" || alias === "GCP"` branches at the use site. That had
+ * three separate failure modes, all of which are now impossible:
  *
- * `Node` and `Azure` are the real cases: graph nodes, cluster nodes, and the colour.
+ * 1. `Go`, `R`, `C`, `REST` and `Rust` are aliases of no entry at all, so they guarded
+ *    nothing while their comment claimed they did.
+ * 2. `AWS` and `GCP` were guarded by a hardcoded branch *outside* the set, so the set
+ *    was not the truth about ambiguity even for the entries that exist.
+ * 3. Five entries declared `disambiguators` that were never read, so a reader could
+ *    reasonably believe `K8s`, `psql`, `HCL`, `CI` and `ML` were context-guarded when
+ *    they were not.
+ *
+ * The word-like/acronym distinction that justifies the contents now lives on each
+ * entry as `ambiguousAliases`, next to the `disambiguators` it gates. Exported so
+ * tests assert against this set rather than re-declaring a copy that can drift.
  */
-const AMBIGUOUS_ALIASES = new Set([
-	"Node",
-	"Azure",
-	"Go",
-	"R",
-	"C",
-	"REST",
-	"Rust",
-]);
+export const AMBIGUOUS_ALIASES: ReadonlySet<string> = new Set(
+	SKILL_ENTRIES.flatMap((entry) => [...(entry.ambiguousAliases ?? [])]),
+);
 
 /**
  * Aliases that must be bounded on both sides, so they can never match inside a longer
@@ -210,8 +231,6 @@ const AMBIGUOUS_ALIASES = new Set([
  */
 const ALWAYS_BOUNDED = new Set([
 	...AMBIGUOUS_ALIASES,
-	"AWS",
-	"GCP",
 	"CI/CD",
 	"RAG",
 	"K8s",
@@ -233,6 +252,22 @@ function aliasPattern(alias: string): RegExp {
 	return new RegExp(body, "i");
 }
 
+/** How far either side of a match to look for disambiguating context. */
+const CONTEXT_WINDOW = 120;
+
+function contextWindow(text: string, index: number, length: number): string {
+	return text.slice(
+		Math.max(0, index - CONTEXT_WINDOW),
+		index + length + CONTEXT_WINDOW,
+	);
+}
+
+function hasDisambiguatorNear(entry: SkillEntry, window: string): boolean {
+	return (entry.disambiguators ?? []).some((d) =>
+		new RegExp(escapeRe(d), "i").test(window),
+	);
+}
+
 export interface SkillMatch {
 	canonical: string;
 	/** The exact surface form found in the text. */
@@ -245,7 +280,7 @@ export interface SkillMatch {
 /**
  * Find skills mentioned in a block of text.
  *
- * Ambiguous aliases (`AWS`, `TS`, `CI`…) only count when a disambiguator appears
+ * Ambiguous aliases (`AWS`, `Azure`, `Node`) only count when a disambiguator appears
  * nearby, so "AWS certified welding" does not become a cloud skill. Callers decide
  * what to do with a low-confidence match; the alternative is silently asserting
  * something the resume never said.
@@ -261,16 +296,11 @@ export function findSkillMentions(text: string): SkillMatch[] {
 			const m = re.exec(text);
 			if (!m) continue;
 
-			let confident = true;
-			if (AMBIGUOUS_ALIASES.has(alias) || alias === "AWS" || alias === "GCP") {
-				const near = text.slice(
-					Math.max(0, m.index - 120),
-					m.index + m[0].length + 120,
-				);
-				confident = (entry.disambiguators ?? []).some((d) =>
-					new RegExp(escapeRe(d), "i").test(near),
-				);
-			}
+			// Guarded by the derived set, so an alias that declares disambiguators is
+			// gated by exactly the list it ships with.
+			const confident = AMBIGUOUS_ALIASES.has(alias)
+				? hasDisambiguatorNear(entry, contextWindow(text, m.index, m[0].length))
+				: true;
 
 			const key = `${entry.canonical}::${m[0].toLowerCase()}`;
 			if (seen.has(key)) continue;
@@ -289,6 +319,41 @@ export function findSkillMentions(text: string): SkillMatch[] {
 /** Confident mentions only — the ones safe to report to a user. */
 export function findConfidentSkills(text: string): SkillMatch[] {
 	return findSkillMentions(text).filter((m) => m.confident);
+}
+
+/**
+ * Is *this particular surface form*, occurring in this text, a confident mention of the
+ * canonical skill?
+ *
+ * `findSkillMentions` answers "does this text mention the skill at all". A caller that
+ * already holds a specific hit — a regex match on a job-description keyword, or one of
+ * the expanded alias variants — needs the narrower question, because `AWS` in a welding
+ * qualification and `AWS` beside Lambda are the same string and different facts.
+ *
+ * Without this, a keyword-coverage report that greps for the literal keyword first will
+ * happily call `AWS` covered on a welding resume, and the whole disambiguation layer
+ * becomes dead code on the one path that reports to a user.
+ */
+export function isConfidentMention(
+	canonical: string,
+	surface: string,
+	text: string,
+): boolean {
+	const entry = SKILL_ENTRIES.find(
+		(e) => e.canonical.toLowerCase() === canonical.toLowerCase(),
+	);
+	if (!entry) return false;
+
+	const alias = entry.aliases.find(
+		(a) => a.toLowerCase() === surface.trim().toLowerCase(),
+	);
+	// A surface that is not a declared alias ("team leadership") carries no ambiguity
+	// to resolve, and an unambiguous alias needs no context.
+	if (!alias || !AMBIGUOUS_ALIASES.has(alias)) return true;
+
+	const m = new RegExp(`\\b${escapeRe(alias)}\\b`, "i").exec(text);
+	if (!m) return false;
+	return hasDisambiguatorNear(entry, contextWindow(text, m.index, m[0].length));
 }
 
 /**

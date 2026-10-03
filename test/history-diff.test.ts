@@ -17,7 +17,14 @@ const snapshotOf = (sections: unknown[], extra: Record<string, unknown> = {}) =>
 		name: "My Resume",
 		template: "minimal",
 		domain: null,
-		sections,
+		metadata: null,
+		// Normalise real section objects, but pass junk through untouched: one test
+		// feeds this helper nulls and strings to prove parseSnapshot survives them.
+		sections: sections.map((sec, i) =>
+			sec && typeof sec === "object"
+				? { visible: true, order: i, contentItemId: null, ...sec }
+				: sec,
+		),
 		...extra,
 	});
 
@@ -27,13 +34,28 @@ const live = (
 		type: string;
 		content?: unknown;
 		visible?: boolean;
+		// Required by the diff, and that is the point: `order` and `contentItemId` were
+		// both invisible to it while the server hashed them, which is how a reorder or
+		// a library detach could read as "identical".
+		order?: number;
+		contentItemId?: string | null;
 	}[],
 	extra: Record<string, unknown> = {},
 ) => ({
 	name: "My Resume",
 	template: "minimal",
 	domain: null,
-	sections,
+	// Required by the diff: metadata holds personalInfo, which is where the user's
+	// real name and email live, so omitting it is exactly what disabled Restore before.
+	metadata: null,
+	sections: sections.map((s, i) => ({
+		id: s.id,
+		type: s.type,
+		order: s.order ?? i,
+		visible: s.visible ?? true,
+		content: s.content ?? null,
+		contentItemId: s.contentItemId ?? null,
+	})),
 	...extra,
 });
 
@@ -307,6 +329,8 @@ describe("diffSnapshot", () => {
 			name: "My Resume",
 			template: "minimal",
 			domain: null,
+			metadata: null,
+			sections: [],
 		});
 		expect(diff.sections.every((s) => s.kind === "removed")).toBe(true);
 	});
