@@ -90,6 +90,9 @@ export async function checkBackendHealth(): Promise<BackendStatus> {
 // Unified Sync Manager
 // ============================================
 
+/** Attempts before an operation is parked as persistently failing. It is NOT dropped. */
+const MAX_SYNC_RETRIES = 3;
+
 export class SyncManager {
 	private userId: string | null = null;
 	private saveQueue: Map<string, Resume> = new Map();
@@ -355,12 +358,23 @@ export class SyncManager {
 
 		try {
 			await this.processSyncQueue();
-			this.updateSyncState({
-				status: "synced",
-				lastSyncedAt: new Date().toISOString(),
-				pendingChanges: this.syncQueue.length,
-				error: null,
-			});
+			// `processSyncQueue` returns normally when it gives up, so success must be
+			// derived from the queue actually being empty. Reporting "synced" while
+			// operations remain is the exact bug this whole path had.
+			if (this.syncQueue.length > 0) {
+				this.updateSyncState({
+					status: "error",
+					pendingChanges: this.syncQueue.length,
+					error: `${this.syncQueue.length} change(s) are queued and NOT persisted to the backend.`,
+				});
+			} else {
+				this.updateSyncState({
+					status: "synced",
+					lastSyncedAt: new Date().toISOString(),
+					pendingChanges: 0,
+					error: null,
+				});
+			}
 		} catch (error) {
 			console.error("[SyncManager] Sync failed:", error);
 			this.updateSyncState({
@@ -386,38 +400,57 @@ export class SyncManager {
 				saveToLocalStorage(SYNC_QUEUE_KEY, this.syncQueue);
 			} catch (error) {
 				op.retryCount++;
-				if (op.retryCount >= 3) {
-					// Max retries reached, log and skip
-					console.error("[SyncManager] Max retries reached for operation:", op);
-					this.syncQueue.shift();
-					saveToLocalStorage(SYNC_QUEUE_KEY, this.syncQueue);
-				} else {
-					// Will retry on next sync attempt
-					saveToLocalStorage(SYNC_QUEUE_KEY, this.syncQueue);
-					throw error;
+				saveToLocalStorage(SYNC_QUEUE_KEY, this.syncQueue);
+
+				// Keep the operation. The old code shifted it off the queue after three
+				// attempts, which discarded the user's edit with only a console.error —
+				// a second silent-loss path on top of the stub never throwing.
+				if (op.retryCount >= MAX_SYNC_RETRIES) {
+					op.retryCount = 0;
+					this.updateSyncState({
+						status: "error",
+						error:
+							`${MAX_SYNC_RETRIES} sync attempts failed for ${op.operation} ${op.entity}/${op.entityId}; ` +
+							"it is still queued and still unsaved. " +
+							(error instanceof Error ? error.message : String(error)),
+					});
+					console.error(
+						`[SyncManager] ${op.operation} ${op.entity}/${op.entityId} is queued but NOT saved to the backend.`,
+						error,
+					);
+					// Stop the loop: every remaining op would fail the same way.
+					break;
 				}
+
+				throw error;
 			}
 		}
 	}
 
 	// Execute a single sync operation via tRPC
 	private async executeSyncOperation(op: SyncOperation): Promise<void> {
-		// This will be called when we have a tRPC client
-		// For now, just log the operation
-		console.log("[SyncManager] Would execute sync operation:", op);
-
-		// TODO: Integrate with actual tRPC client when available
-		// The tRPC client needs to be injected from React context
-		// Example:
-		// if (op.entity === 'resume') {
-		//   if (op.operation === 'create') {
-		//     await trpcClient.resume.create.mutate(op.data);
-		//   } else if (op.operation === 'update') {
-		//     await trpcClient.resume.update.mutate({ id: op.entityId, data: op.data });
-		//   } else if (op.operation === 'delete') {
-		//     await trpcClient.resume.delete.mutate({ id: op.entityId });
-		//   }
-		// }
+		/**
+		 * NOT WIRED — and deliberately throwing rather than returning.
+		 *
+		 * This used to `console.log` the operation and return, which read as success:
+		 * `processSyncQueue` shifted the op off the queue, `attemptSync` then set
+		 * `status: "synced"`, and the UI reported a save that had never left the
+		 * browser. 25 call sites in `resume.store.ts` route through here, so every one
+		 * of those writes was silently discarded while claiming to be saved.
+		 *
+		 * Throwing keeps the operation queued and surfaces `status: "error"`, which is
+		 * the honest state. Wiring the tRPC client in is the real fix; until then the
+		 * gap is visible instead of invisible.
+		 *
+		 * Several paths already persist correctly and do NOT come through here:
+		 * `resume.update` (template, personalInfo, settings) via `useResumeMutations`,
+		 * and `section.upsert` / `section.delete` / `section.reorder` via
+		 * `useSectionMutations`.
+		 */
+		throw new Error(
+			`Backend sync is not wired: refusing to report "${op.operation} ${op.entity}/${op.entityId}" as saved when nothing was persisted. ` +
+				"This change exists only in localStorage.",
+		);
 	}
 
 	// Force sync with backend (fetches latest data)
