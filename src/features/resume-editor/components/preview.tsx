@@ -152,7 +152,12 @@ function sameColumnPagination(
 	return true;
 }
 
-export function Preview({ resume, scale = 1, className, paginate = true }: PreviewProps) {
+export function Preview({
+	resume,
+	scale = 1,
+	className,
+	paginate = true,
+}: PreviewProps) {
 	const { metadata, sections } = resume;
 	const [paginatedSingle, setPaginatedSingle] = useState<string[][]>([]);
 	const [paginatedColumns, setPaginatedColumns] = useState<
@@ -634,7 +639,9 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 		const awards = section.content.data as Award[];
 		return (
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
-				<SectionTitle>{section.content.title || "Awards & Honors"}</SectionTitle>
+				<SectionTitle>
+					{section.content.title || "Awards & Honors"}
+				</SectionTitle>
 				{awards.map((award) => (
 					<div key={award.id} style={{ marginBottom: 8 * scale }}>
 						<div
@@ -880,21 +887,42 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 			case "certifications":
 				return renderCertifications(section);
 			case "languages":
-				return renderLanguages(section);		case "awards":
-			return renderAwards(section);
-		case "volunteer":
-			return renderVolunteer(section);
-		case "publications":
-			return renderPublications(section);
-		case "references":
-			return renderReferences(section);			default:
+				return renderLanguages(section);
+			case "awards":
+				return renderAwards(section);
+			case "volunteer":
+				return renderVolunteer(section);
+			case "publications":
+				return renderPublications(section);
+			case "references":
+				return renderReferences(section);
+			default:
 				return null;
 		}
 	};
 
-	const layout = settings.layout || "single-column";
-	const isTwoColumn = layout === "two-column";
-	const isSidebar = layout === "sidebar";
+	/**
+	 * The preview renders SINGLE-COLUMN, unconditionally.
+	 *
+	 * `settings.layout` used to accept "two-column" and "sidebar", and this
+	 * component faithfully drew both -- but no Typst template ever read `layout`,
+	 * so the exported PDF was single-column no matter what. A user could pick
+	 * "Sidebar", watch the preview reflow into one, and export a document that
+	 * looked nothing like what they approved. That is worse than not offering the
+	 * option, because it destroys trust in the preview itself.
+	 *
+	 * Single-column is also the only correct choice here: multi-column layouts are
+	 * the single largest cause of ATS parse failure (text layers scramble by
+	 * coordinate), and the Typst pipeline's guaranteed single-column text layer is
+	 * this product's structural advantage over every browser-rendered competitor.
+	 *
+	 * The `layout` field is kept in the schema so existing stored resumes that
+	 * carry it still load; it is simply ignored here, which is what the exporter
+	 * already did.
+	 */
+	const layout = "single-column";
+	const isTwoColumn = false;
+	const isSidebar = false;
 
 	const mainSections = useMemo(
 		() =>
@@ -903,7 +931,7 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 					PRIMARY_SECTION_TYPES.has(s.type) ||
 					(!SECONDARY_SECTION_TYPES.has(s.type) && !isTwoColumn),
 			),
-		[isTwoColumn, visibleSections],
+		[visibleSections],
 	);
 	const sideSections = useMemo(
 		() => visibleSections.filter((s) => SECONDARY_SECTION_TYPES.has(s.type)),
@@ -1000,7 +1028,6 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 		setPaginatedSingle((prev) => (prev.length === 0 ? prev : []));
 	}, [
 		paginate,
-		layout,
 		mainSections,
 		pageInnerHeight,
 		scale,
@@ -1035,10 +1062,10 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 		return pages.map((ids, i) =>
 			renderPage(
 				ids.map((id) => {
-						const section = sectionsById.get(id);
-						if (!section) return null;
-						return <div key={id}>{renderSection(section)}</div>;
-					}),
+					const section = sectionsById.get(id);
+					if (!section) return null;
+					return <div key={id}>{renderSection(section)}</div>;
+				}),
 				`page-${i}`,
 				i === 0,
 			),
@@ -1126,18 +1153,17 @@ export function Preview({ resume, scale = 1, className, paginate = true }: Previ
 						}}
 					>
 						<div ref={headerMeasureRef}>{renderPersonalInfo()}</div>
-						{layout === "single-column" && (
+						{layout === "single-column" &&
 							visibleSections.map((section) => (
-									<div
-										key={section.id}
-										ref={(el) => {
-											singleMeasureRefs.current[section.id] = el;
-										}}
-									>
-										{renderSection(section)}
-									</div>
-								))
-						)}
+								<div
+									key={section.id}
+									ref={(el) => {
+										singleMeasureRefs.current[section.id] = el;
+									}}
+								>
+									{renderSection(section)}
+								</div>
+							))}
 						{(isTwoColumn || isSidebar) && (
 							<div style={{ display: "flex", gap: 20 * scale }}>
 								{isSidebar && (
