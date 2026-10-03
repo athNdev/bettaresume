@@ -13,6 +13,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ContentLibraryPanel } from "@/features/resume-editor/components/content-library-panel";
 import { HistoryPanel } from "@/features/resume-editor/components/history-panel";
 import {
 	JobMatchPanel,
@@ -197,6 +198,13 @@ export function ReviewPanel({
 
 					<TabsContent className="min-h-0 flex-1 px-6 pb-6" value="history">
 						<HistoryPanel resume={resume} />
+					</TabsContent>
+
+					<TabsContent
+						className="min-h-0 flex-1 overflow-y-auto px-6 pb-6"
+						value="library"
+					>
+						<ContentLibraryPanel resume={resume} />
 					</TabsContent>
 
 					<TabsContent className="min-h-0 flex-1 px-6 pb-6" value="bullets">
