@@ -471,9 +471,11 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
+									{/* Only single-column is offered because it is the only
+									    layout the Typst exporter can actually produce. Offering
+									    "Two column"/"Sidebar" here meant the preview showed a
+									    layout the exported PDF would never match. */}
 									<SelectItem value="single-column">Single column</SelectItem>
-									<SelectItem value="two-column">Two column</SelectItem>
-									<SelectItem value="sidebar">Sidebar</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

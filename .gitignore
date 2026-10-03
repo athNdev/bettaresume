@@ -58,3 +58,6 @@ packages/types/dist
 proxmox-jobs.sqlite3
 proxmox-jobs.sqlite3-shm
 proxmox-jobs.sqlite3-wal
+
+# Local opencode plugin runtime artifacts
+.opencode/

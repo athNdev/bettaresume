@@ -314,7 +314,7 @@ Always add new section types or templates to this package first — both API and
 4. Add a `SECTION_CONFIGS` entry in `src/features/resume-editor/types.ts` (default title, icon, etc.)
 5. Create a form component in `src/components/sections-forms/`
 6. Register it in `src/features/resume-editor/resume-editor.tsx` (section renderer)
-7. Update the Typst template in `src/lib/typst/typst_templates/` (there is no
+7. Update the Typst template in `src/features/resume-editor/typst_templates/` (there is no
    React-PDF document; the old `pdf-document.tsx` reference was stale and is removed)
 
 ---
