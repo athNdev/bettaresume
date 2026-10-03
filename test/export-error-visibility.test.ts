@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 /**
@@ -20,6 +21,9 @@ const source = (await import("node:fs")).readFileSync(
 		.pathname,
 	"utf8",
 );
+
+const read = (p: string) =>
+	readFileSync(new URL(`../${p}`, import.meta.url).pathname, "utf8");
 
 describe("export failures are visible to the user", () => {
 	it("imports the toast API that ToastProvider already mounts", () => {
@@ -84,5 +88,31 @@ describe("the toast surface is actually mounted", () => {
 		// precisely the bug class this file exists to prevent.
 		expect(provider).toMatch(/Toaster/);
 		expect(app).toMatch(/<ToastProvider\s*\/?>/);
+	});
+});
+
+describe("the DOCX export path is wired and honest", () => {
+	it("appears in the export menu, labelled for what it is good at", () => {
+		const src = read("src/components/export/export-buttons.tsx");
+		expect(src).toMatch(/<DropdownMenuItem onClick=\{exportDocx\}>/);
+		// Pagination differs between Word and Typst, so it must not be presented as
+		// interchangeable with the PDF.
+		expect(src).toMatch(/parse-optimised/);
+	});
+
+	it("surfaces a DOCX failure instead of only logging it", () => {
+		// Same rule as the PDF path: a silent failure looks like a slow export.
+		const src = read("src/components/export/export-buttons.tsx");
+		const i = src.indexOf("const exportDocx");
+		const block = src.slice(i, src.indexOf("const exportJSON"));
+		expect(block).toMatch(/toast\.error\(/);
+		expect(block).toMatch(/DOCX export failed/);
+	});
+
+	it("gives the Blob an explicit MIME type", () => {
+		// `new Blob([uint8array])` yields application/octet-stream, which Word
+		// refuses to open, so the parts are typed.
+		const src = read("src/components/export/export-buttons.tsx");
+		expect(src).toMatch(/content instanceof Uint8Array/);
 	});
 });
