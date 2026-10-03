@@ -96,6 +96,7 @@ import {
 	VariationManager,
 } from "./components";
 import { ContentLibraryPanel } from "./components/content-library-panel";
+import { ImportTrigger } from "./components/import-review-panel";
 import { ReviewTrigger } from "./components/review-panel";
 
 interface ResumeEditorPageProps {
@@ -987,6 +988,22 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 					{/* Right: Actions */}
 					<div className="flex items-center gap-2">
+						{/*
+						 * Import sits in the editor header, beside Review and Export, and not
+						 * inside the left rail with the Library.
+						 *
+						 * The rail is where content lives once it is yours. Import is the
+						 * moment before that -- a file someone else wrote, arriving as a
+						 * proposal -- and burying it in the rail hides the only feature that
+						 * takes a document as input. It is also the one trigger here that can
+						 * create work from outside the editor, so it belongs next to the other
+						 * top-level actions where its absence is obvious.
+						 *
+						 * It is a trigger and not a panel for the same reason `ReviewTrigger` is:
+						 * the sheet, the file picker and both parsers must not mount until
+						 * somebody actually opens them.
+						 */}
+						<ImportTrigger />
 						<ReviewTrigger
 							jobTarget={(draftResume ?? activeResume).metadata?.jobTarget}
 							onJobTargetChange={handleJobTargetChange}

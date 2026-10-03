@@ -2,6 +2,7 @@
 
 import {
 	ArrowDownToLine,
+	CheckCheck,
 	Download,
 	Library,
 	Loader2,
@@ -130,6 +131,26 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 		},
 	});
 
+	/**
+	 * Mark an imported item as reviewed.
+	 *
+	 * Imported items land here unreviewed, because the sectioner read them off a page
+	 * and guessed some of them. Until someone says otherwise, the row says so -- an
+	 * unreviewed item is a proposal, and a proposal that looks identical to a finished
+	 * one is how a wrong value reaches a CV unnoticed.
+	 *
+	 * Only the library write is invalidated. The resume is untouched on purpose: nothing
+	 * was ever put in it.
+	 */
+	const markReviewed = api.content.markReviewed.useMutation({
+		onSuccess: async () => {
+			await Promise.all([
+				utils.content.list.invalidate(),
+				utils.content.additions.invalidate({ resumeId: resume.id }),
+			]);
+		},
+	});
+
 	const updateSection = api.section.update.useMutation({
 		onSuccess: async () => {
 			await utils.resume.getById.invalidate({ id: resume.id });
@@ -185,7 +206,11 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 	const placed = (resume.sections ?? []).filter((s) => s.contentItemId);
 	const unlinked = (resume.sections ?? []).filter((s) => !s.contentItemId);
 	const items = library.data ?? [];
-	const pending = backfill.isPending || attach.isPending || propagate.isPending;
+	const pending =
+		backfill.isPending ||
+		attach.isPending ||
+		propagate.isPending ||
+		markReviewed.isPending;
 
 	return (
 		<div className="space-y-4">
@@ -214,9 +239,15 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 				</p>
 			) : null}
 
-			{(attach.isError || propagate.isError || backfill.isError) && (
+			{(attach.isError ||
+				propagate.isError ||
+				backfill.isError ||
+				markReviewed.isError) && (
 				<p className="text-destructive text-sm" role="alert">
-					{(attach.error ?? propagate.error ?? backfill.error)?.message}
+					{(attach.error ??
+						propagate.error ??
+						backfill.error ??
+						markReviewed.error)?.message}
 				</p>
 			)}
 
@@ -384,27 +415,61 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 							{items.map((item) => (
 								<ItemRow
 									actions={
-										<Button
-											disabled={pending}
-											onClick={() =>
-												attach.mutate({
-													contentItemId: item.id,
-													resumeId: resume.id,
-												})
-											}
-											size="sm"
-											variant="outline"
-										>
-											{attach.isPending ? (
-												<Loader2 aria-hidden className="animate-spin" />
-											) : (
-												<ArrowDownToLine aria-hidden />
-											)}
-											Add hidden
-										</Button>
+										<>
+											{/*
+											  "Add hidden" is offered on an unreviewed item too, and
+											  the placement still starts hidden. That is the point of
+											  hidden: adding to a library is a decision about
+											  availability, and visibility is the next, separate one.
+											*/}
+											<Button
+												disabled={pending}
+												onClick={() =>
+													attach.mutate({
+														contentItemId: item.id,
+														resumeId: resume.id,
+													})
+												}
+												size="sm"
+												variant="outline"
+											>
+												{attach.isPending ? (
+													<Loader2 aria-hidden className="animate-spin" />
+												) : (
+													<ArrowDownToLine aria-hidden />
+												)}
+												Add hidden
+											</Button>
+											{item.unreviewed ? (
+												<Button
+													disabled={pending}
+													onClick={() =>
+														markReviewed.mutate({
+															contentItemId: item.id,
+														})
+													}
+													size="sm"
+													variant="outline"
+												>
+													<CheckCheck aria-hidden />
+													Mark reviewed
+												</Button>
+											) : null}
+										</>
+									}
+									badge={
+										item.unreviewed ? (
+											<Badge data-library-unreviewed="" variant="secondary">
+												Unreviewed
+											</Badge>
+										) : null
 									}
 									key={item.id}
-									subtitle={item.type}
+									subtitle={
+										item.unreviewed
+											? `imported from ${item.importSource ?? "a file"} — not checked yet`
+											: item.type
+									}
 									title={labelFor(item)}
 								/>
 							))}

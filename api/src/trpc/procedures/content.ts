@@ -109,6 +109,41 @@ function parsePayload(payload: string): unknown {
 	}
 }
 
+/** The key tier-1 import writes its review state under. Mirrors `src/lib/import/library-item.ts`. */
+const IMPORT_META_KEY = "importMeta";
+
+/**
+ * Has this item been imported and not yet reviewed?
+ *
+ * Duplicated from `src/lib/import/library-item.ts` rather than imported, because this
+ * workspace must not depend on the frontend bundle: `api/` is a Cloudflare Worker with
+ * its own `tsconfig` and the shared package does not carry this module. The key is a
+ * string contract, and both sides name why they cannot share it.
+ *
+ * `null` means the item was written by the user, not by an import, so it is not
+ * "reviewed" -- it never needed to be. Only an imported item can be unreviewed.
+ */
+function isUnreviewedPayload(payload: string): boolean {
+	const meta = readImportMeta(payload);
+	return meta !== null && meta.reviewed === false;
+}
+
+/** Where an imported item came from, for the library row to name. Null if not imported. */
+function importSourceOf(payload: string): string | null {
+	return readImportMeta(payload)?.source ?? null;
+}
+
+function readImportMeta(payload: string): {
+	reviewed?: boolean;
+	source?: string;
+} | null {
+	const parsed = parsePayload(payload);
+	if (!parsed || typeof parsed !== "object") return null;
+	const meta = (parsed as Record<string, unknown>)[IMPORT_META_KEY];
+	if (!meta || typeof meta !== "object") return null;
+	return meta as { reviewed?: boolean; source?: string };
+}
+
 function summariseForTitle(type: string, content: unknown): string {
 	const c = (content ?? {}) as Record<string, unknown>;
 	if (typeof c.title === "string" && c.title.trim()) return c.title;
@@ -161,12 +196,29 @@ export const contentRouter = router({
 					archivedAt: contentItems.archivedAt,
 					createdAt: contentItems.createdAt,
 					updatedAt: contentItems.updatedAt,
+					// `payload` is selected only to read the import review state out of it.
+					//
+					// The obvious place for that state is a `reviewedAt` column, and it is
+					// not there: `CLOUDFLARE_API_TOKEN` currently lacks D1 permission, so
+					// `wrangler d1 migrations apply --remote` fails in CD with `code 7403`
+					// and migrations do not reach production. A new column would query a
+					// column the deployed database does not have -- a runtime failure on
+					// every library read, for every user, with no code change to blame.
+					//
+					// The cost is real and bounded: a personal library of resume sections
+					// is a few kilobytes per item. It is the thing to revisit the moment a
+					// migration path works.
+					payload: contentItems.payload,
 				})
 				.from(contentItems)
 				.where(and(...filters))
 				.orderBy(desc(contentItems.createdAt));
 
-			return rows;
+			return rows.map(({ payload, ...row }) => ({
+				...row,
+				unreviewed: isUnreviewedPayload(payload),
+				importSource: importSourceOf(payload),
+			}));
 		}),
 
 	/** One item with its payload parsed. */
@@ -245,6 +297,47 @@ export const contentRouter = router({
 				)
 				.returning();
 			return item;
+		}),
+
+	/**
+	 * Mark an imported item reviewed.
+	 *
+	 * A dedicated procedure rather than a client-side `get` + `update` round trip,
+	 * because the flag lives inside the payload: doing it in the browser means shipping
+	 * the whole item back over the wire to change one boolean, and two requests racing
+	 * could each write a payload the other had not seen. Here the read and the write
+	 * happen against the same row on the server.
+	 *
+	 * It refuses an item with no import state. That item was written by the user, so
+	 * "mark it reviewed" is a category error and would create a state the rest of the
+	 * library has no meaning for.
+	 */
+	markReviewed: protectedProcedure
+		.input(z.object({ contentItemId: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			const item = await assertOwnsItem(ctx, input.contentItemId);
+			const parsed = parsePayload(item.payload);
+			const meta =
+				parsed && typeof parsed === "object"
+					? (parsed as Record<string, unknown>)[IMPORT_META_KEY]
+					: null;
+			if (!meta || typeof meta !== "object") {
+				throw new Error("This item was not created by an import");
+			}
+			const next = {
+				...(parsed as Record<string, unknown>),
+				[IMPORT_META_KEY]: { ...(meta as object), reviewed: true },
+			};
+			await ctx.db
+				.update(contentItems)
+				.set({ payload: JSON.stringify(next), updatedAt: new Date() })
+				.where(
+					and(
+						eq(contentItems.id, item.id),
+						eq(contentItems.userId, ctx.userId),
+					),
+				);
+			return { reviewed: true };
 		}),
 
 	/**
