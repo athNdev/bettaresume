@@ -96,6 +96,70 @@ export const resumesRelations = relations(resumes, ({ one, many }) => ({
 }));
 
 // ============================================
+// Content Library
+// ============================================
+
+/**
+ * The master copy of a user's content, separate from where it appears.
+ *
+ * The problem this solves is the one every commercial builder gets wrong: a resume is
+ * both the thing you send and the thing you keep your work history in, so tailoring it
+ * for one job destroys the record the next job pulls from.
+ *
+ * So content lives here once, and a `Section` is a *placement* of a content item. The
+ * same achievement can sit in three resume variants without being written three times,
+ * which is what makes tailoring a toggle rather than a rewrite.
+ *
+ * `payload` is a JSON blob rather than normalised columns because the shapes differ
+ * across all fourteen section types and adding a fifteenth should not mean a migration.
+ * That trades referential integrity inside the blob for not having thirteen nullable
+ * columns that are all NULL for any given row.
+ *
+ * `archivedAt` rather than a hard delete: an archived item stays referenced by the
+ * variants that still use it, and "delete" on shared content would otherwise silently
+ * empty sections in resumes the user did not have open.
+ */
+export const contentItems = sqliteTable(
+	"content_items",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text("userId")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		/** Which section shape the payload holds: "experience", "skills", ... */
+		type: text("type").notNull().$type<SectionType>(),
+		/** Short label for the library list, e.g. a job title or skill group name. */
+		title: text("title").notNull(),
+		/** The content itself, shaped for `type`. */
+		payload: text("payload").notNull(),
+		/** Soft delete. See the table comment for why this is not a hard delete. */
+		archivedAt: integer("archivedAt", { mode: "timestamp" }),
+		createdAt: integer("createdAt", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updatedAt", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(table) => [
+		// The library view: one user's active items, newest first.
+		index("content_items_user_archived_idx").on(table.userId, table.archivedAt),
+		// Filtering the library by shape, e.g. "show me all my experience blocks".
+		index("content_items_user_type_idx").on(table.userId, table.type),
+	],
+);
+
+export const contentItemsRelations = relations(
+	contentItems,
+	({ one, many }) => ({
+		user: one(users, { fields: [contentItems.userId], references: [users.id] }),
+		sections: many(sections),
+	}),
+);
+
+// ============================================
 // Sections Table
 // ============================================
 export const sections = sqliteTable(
@@ -111,6 +175,17 @@ export const sections = sqliteTable(
 		order: integer("order").notNull().default(0),
 		visible: integer("visible", { mode: "boolean" }).notNull().default(true),
 		content: text("content").notNull(),
+		/**
+		 * The master content this section places, when it has one.
+		 *
+		 * Nullable on purpose: a section created before the library existed, or by a
+		 * path that never linked one, must still load. ON DELETE SET NULL rather than
+		 * CASCADE because losing a library item should unlink a placement, not delete
+		 * the resume content the user can still see and edit.
+		 */
+		contentItemId: text("contentItemId").references(() => contentItems.id, {
+			onDelete: "set null",
+		}),
 		createdAt: integer("createdAt", { mode: "timestamp" })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -118,13 +193,22 @@ export const sections = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	(table) => [index("Section_resumeId_idx").on(table.resumeId)],
+	(table) => [
+		index("Section_resumeId_idx").on(table.resumeId),
+		// "which placements point at this item?" drives the non-destructive divergence
+		// check, so it is the second most common query after loading a resume.
+		index("Section_contentItemId_idx").on(table.contentItemId),
+	],
 );
 
 export const sectionsRelations = relations(sections, ({ one }) => ({
 	resume: one(resumes, {
 		fields: [sections.resumeId],
 		references: [resumes.id],
+	}),
+	contentItem: one(contentItems, {
+		fields: [sections.contentItemId],
+		references: [contentItems.id],
 	}),
 }));
 
