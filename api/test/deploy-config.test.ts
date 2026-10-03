@@ -64,6 +64,29 @@ describe("migrations are applied by the deploy pipeline", () => {
 		expect(cd).toMatch(/migrations apply[^\n]*--remote/);
 	});
 
+	it("gives the migration step the Cloudflare credentials", () => {
+		// Regression. Converting this step from wrangler-action to a direct
+		// `npx wrangler` call dropped the env, so wrangler aborted with "it's
+		// necessary to set a CLOUDFLARE_API_TOKEN environment variable".
+		//
+		// This was genuinely confusing: the token IS in the repository, so the
+		// failure looked like a scope problem rather than a wiring one, and the
+		// step then reported "the database is now out of sync" as an error.
+		const step = cd.slice(
+			cd.indexOf("name: Apply D1 migrations"),
+			cd.indexOf("name: Report unapplied migrations"),
+		);
+		expect(step).toMatch(/CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\./);
+		expect(step).toMatch(/CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*vars\./);
+	});
+
+	it("distinguishes missing credentials from an insufficient token scope", () => {
+		// "wrangler got no token" is a workflow bug and must not be reported as
+		// schema drift. "7403" is a real scope problem on the Cloudflare side.
+		expect(cd).toMatch(/it's necessary to set a CLOUDFLARE_API_TOKEN/);
+		expect(cd).toMatch(/This is a workflow bug, not a token-scope problem/);
+	});
+
 	it("blocks on a SQL failure but only warns when the token lacks D1", () => {
 		// These are different problems. A wrong migration must stop the deploy. A
 		// token missing its D1 scope must not: blocking every deploy on a credential
