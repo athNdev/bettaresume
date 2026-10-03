@@ -13,6 +13,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HistoryPanel } from "@/features/resume-editor/components/history-panel";
 import {
 	JobMatchPanel,
 	type JobTargetDraft,
@@ -167,6 +168,7 @@ export function ReviewPanel({
 								</Badge>
 							) : null}
 						</TabsTrigger>
+						<TabsTrigger value="history">History</TabsTrigger>
 						<TabsTrigger value="bullets">
 							Bullets
 							{bulletCount > 0 ? (
@@ -191,6 +193,10 @@ export function ReviewPanel({
 								</ul>
 							)}
 						</ScrollArea>
+					</TabsContent>
+
+					<TabsContent className="min-h-0 flex-1 px-6 pb-6" value="history">
+						<HistoryPanel resume={resume} />
 					</TabsContent>
 
 					<TabsContent className="min-h-0 flex-1 px-6 pb-6" value="bullets">
