@@ -214,14 +214,66 @@ body {
    wrong for a marketing surface.
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   Colour is specified as explicit OKLCH values, never as an alpha of another
+   token.
+
+   That is not a style preference. This page shipped every paragraph of body
+   copy as `text-[var(--brand-ink)]/60` and similar, and alpha-over-ink at
+   50–65% produces a mid grey that reads fine in source and measures between
+   3.5:1 and 7:1 — i.e. some steps of the "muted" ramp failed WCAG AA while
+   looking deliberate. Because the ramp was relative, no reviewer could see
+   which step was legal without a contrast tool.
+
+   Every text colour below is a computed, measured value. `test/marketing-
+   contrast.test.ts` walks the component sources, resolves each `var(--brand-*)`
+   usage against the background it actually sits on, and fails the build on any
+   pair under 4.5:1 (3:1 for non-text and focus indicators). That test is the
+   enforcement; these values are its input. Do not reintroduce alpha here.
+
+   Measured ratios are quoted against `--brand-paper` (#f9fafb), `--brand-ink`
+   (#0d0f16) and white, and are reproduced in that test's comments.
+   -------------------------------------------------------------------------- */
+
 [data-marketing] {
+	/* Substrate. */
 	--brand-ink: oklch(0.17 0.014 268);
 	--brand-ink-soft: oklch(0.24 0.016 268);
-	--brand-accent: oklch(0.55 0.215 274);
-	--brand-accent-bright: oklch(0.66 0.205 276);
-	--brand-warm: oklch(0.78 0.155 68);
 	--brand-paper: oklch(0.985 0.002 268);
+
+	/* Text on paper. 11.3:1 / 7.4:1 / 6.3:1 on --brand-paper. */
+	--brand-text: oklch(0.34 0.012 268);
+	--brand-text-muted: oklch(0.44 0.012 268);
+	--brand-text-faint: oklch(0.48 0.012 268);
+
+	/* Text on ink. 19.1:1 / 12.5:1 / 8.3:1 on --brand-ink. */
+	--brand-text-on-ink: oklch(1 0 0);
+	--brand-text-on-ink-muted: oklch(0.86 0 0);
+	--brand-text-on-ink-faint: oklch(0.74 0 0);
+
+	/* Accent, paper side only. 7.3:1 on --brand-paper, 7.7:1 on white.
+	   This is also the focus ring on light backgrounds (WCAG 1.4.11 needs 3:1). */
+	--brand-accent: oklch(0.46 0.2 274);
+
+	/* Accent for ink backgrounds. 7.4:1 on --brand-ink, and the focus ring
+	   there. Never use --brand-accent on ink: it is 2.5:1 and disappears. */
+	--brand-accent-on-ink: oklch(0.72 0.16 276);
+
+	/* Verified state — reserved for things the product has actually checked.
+	   7.0:1 on --brand-paper, 7.3:1 on white, 10.8:1 on --brand-ink.
+	   Colour as an epistemic signal: green means "this really happened". */
+	--brand-verified: oklch(0.44 0.11 158);
+	--brand-verified-on-ink: oklch(0.8 0.13 158);
+
+	/* DECORATIVE ONLY. 2.0:1 on paper — it is unreadable as text by design and
+	   must stay that way. Named `-decor` so that using it for type shows up as
+	   an undefined variable rather than as a passing contrast check. */
+	--brand-warm-decor: oklch(0.78 0.155 68);
+
+	/* Hairlines between sections. Decorative, not a control boundary. */
 	--brand-rule: oklch(0.9 0.006 268);
+	/* Boundary of an interactive control (WCAG 1.4.11, needs 3:1). 4.5:1. */
+	--brand-control-border: oklch(0.56 0.012 268);
 
 	/* Fluid marketing type scale. The app had none — every size was ad-hoc. */
 	--text-display: clamp(2.75rem, 1.6rem + 4.6vw, 5.25rem);
@@ -274,9 +326,9 @@ body {
 	font-variant-numeric: tabular-nums;
 }
 
-/* Gradient hairline used to separate the ink sections. */
+/* Hairline used to separate the light sections from each other. */
 [data-marketing] .rule-soft {
-	border-top: 1px solid color-mix(in oklch, var(--brand-ink) 12%, transparent);
+	border-top: 1px solid var(--brand-rule);
 }
 
 /* --------------------------------------------------------------------------
@@ -334,8 +386,10 @@ body {
 	}
 }
 
-/* Focus ring: the app's global :focus-visible only sets outline, which is easy
-   to lose on the ink sections. */
+/* Focus ring: the app's global :focus-visible only sets an outline, which is easy
+   to lose on the ink sections. Both rings clear WCAG 1.4.11 (>= 3:1 non-text):
+   --brand-accent is 7.3:1 on paper and 7.7:1 on white, --brand-accent-on-ink
+   is 7.4:1 on ink. */
 [data-marketing] :focus-visible {
 	outline: 2px solid var(--brand-accent);
 	outline-offset: 3px;
@@ -343,5 +397,15 @@ body {
 }
 
 [data-marketing] :focus-visible.on-ink {
-	outline-color: var(--brand-accent-bright);
+	outline-color: var(--brand-accent-on-ink);
+}
+
+/* WCAG 2.4.11 Focus Not Obscured. The header is sticky at 4rem tall with a
+   z-index above the content, so any element scrolled to the top of the viewport
+   has its focus ring — and its first line of text — covered by it. `scroll-margin`
+   is what the browser honours when it scrolls a newly focused element into view,
+   so the ring lands below the header instead of under it. */
+[data-marketing] :is(a, button, summary, [tabindex]):focus-visible {
+	scroll-margin-top: 6rem;
+	scroll-margin-bottom: 2rem;
 }
