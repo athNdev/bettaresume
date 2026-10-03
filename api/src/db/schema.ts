@@ -1,5 +1,5 @@
 import type { SectionType, TemplateType } from "@bettaresume/types";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	type AnySQLiteColumn,
 	index,
@@ -198,6 +198,20 @@ export const sections = sqliteTable(
 		// "which placements point at this item?" drives the non-destructive divergence
 		// check, so it is the second most common query after loading a resume.
 		index("Section_contentItemId_idx").on(table.contentItemId),
+		// One placement per (resume, item). `content.attach` already avoids this with a
+		// read-then-insert, but that read-then-insert is exactly the shape two concurrent
+		// requests can interleave, and a duplicate placement silently doubles a section
+		// in the exported resume while `divergence` reports two rows for one placement.
+		// The database is the only place that cannot be raced, so it enforces the
+		// invariant the application code claims to hold.
+		//
+		// PARTIAL, and the predicate is load-bearing: SQLite treats NULLs as distinct in
+		// a unique index, so a plain UNIQUE(resumeId, contentItemId) would let any
+		// number of pre-library sections sit in the same resume unlinked -- which is
+		// exactly the state the column is nullable to allow.
+		uniqueIndex("Section_resume_content_item_unique")
+			.on(table.resumeId, table.contentItemId)
+			.where(sql`${table.contentItemId} is not null`),
 	],
 );
 

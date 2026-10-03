@@ -98,6 +98,23 @@ describe("cross-tenant isolation", () => {
 		).rejects.toThrow(/not found or access denied/i);
 	});
 
+	it("cannot restore another tenant's item", async () => {
+		// `restore` is the inverse of `archive` and had no tenancy test of its own. A
+		// missing scope check here is a cross-tenant *write*: B un-archives A's item so
+		// it reappears in A's working library, which is a state change on data B does
+		// not own even though nothing sensitive is disclosed.
+		const item = await addItem();
+		await asA().content.archive({ contentItemId: item.id });
+
+		await expect(
+			asB().content.restore({ contentItemId: item.id }),
+		).rejects.toThrow(/not found or access denied/i);
+
+		// And the failure left A's item archived rather than half-applied.
+		expect(await asA().content.list()).toHaveLength(0);
+		expect(await asA().content.list({ includeArchived: true })).toHaveLength(1);
+	});
+
 	it("cannot attach another tenant's item into their own resume", async () => {
 		const item = await addItem();
 		// Attaching user A's content into user B's resume would exfiltrate A's content
@@ -204,6 +221,133 @@ describe("attaching and detaching", () => {
 
 		const sections = await asA().section.listByResume({ resumeId: RESUME_A });
 		expect(sections.filter((s) => s.contentItemId === item.id)).toHaveLength(1);
+	});
+
+	it("re-attaching without `visible` does NOT hide a visible placement", async () => {
+		// Regression. `visible` used to be `.optional().default(false)`, which made
+		// `input.visible` never-undefined, which turned `input.visible ?? existing.visible`
+		// into dead code: re-attaching an already-visible placement flipped it to hidden.
+		// The user loses content from an exported resume by clicking the button twice.
+		const item = await addItem();
+		const { sectionId } = await asA().content.attach({
+			contentItemId: item.id,
+			resumeId: RESUME_A,
+			visible: true,
+		});
+		await asA().content.attach({ contentItemId: item.id, resumeId: RESUME_A });
+
+		const placed = (
+			await asA().section.listByResume({ resumeId: RESUME_A })
+		).find((s) => s.id === sectionId);
+		expect(placed?.visible).toBe(true);
+	});
+
+	it("still hides an existing placement when `visible: false` is asked for", async () => {
+		// The other half of the contract: "leave it alone unless told" must not become
+		// "never change it".
+		const item = await addItem();
+		const { sectionId } = await asA().content.attach({
+			contentItemId: item.id,
+			resumeId: RESUME_A,
+			visible: true,
+		});
+		await asA().content.attach({
+			contentItemId: item.id,
+			resumeId: RESUME_A,
+			visible: false,
+		});
+
+		const placed = (
+			await asA().section.listByResume({ resumeId: RESUME_A })
+		).find((s) => s.id === sectionId);
+		expect(placed?.visible).toBe(false);
+	});
+
+	it("a second attach naming `visible` still yields exactly one section", async () => {
+		// The duplicate-placement guard has to survive the case where the second call
+		// carries an argument, not just the case where the two calls are identical.
+		const item = await addItem();
+		const first = await asA().content.attach({
+			contentItemId: item.id,
+			resumeId: RESUME_A,
+		});
+		const second = await asA().content.attach({
+			contentItemId: item.id,
+			resumeId: RESUME_A,
+			visible: true,
+		});
+
+		expect(second.created).toBe(false);
+		expect(second.sectionId).toBe(first.sectionId);
+
+		const placed = (
+			await asA().section.listByResume({ resumeId: RESUME_A })
+		).filter((s) => s.contentItemId === item.id);
+		expect(placed).toHaveLength(1);
+		expect(placed[0]?.visible).toBe(true);
+	});
+});
+
+describe("the database enforces one placement per (resume, item)", () => {
+	/**
+	 * `attach` avoids duplicates with a read-then-insert, which is the shape two
+	 * concurrent requests interleave on: both read "no existing placement", both insert.
+	 * `Section_resume_content_item_unique` is what actually holds the line, so these
+	 * tests talk to the database directly rather than through `attach`.
+	 *
+	 * `attach` catches the resulting constraint error and re-reads, so the losing request
+	 * returns the winner's section instead of surfacing an error to a user who only
+	 * clicked a button. That catch cannot be reached from a single-threaded test, so it
+	 * is asserted here as two facts instead: the insert does throw (below), and `attach`
+	 * is idempotent and returns the same section id (the "second attach" test above).
+	 */
+	const rawPlacement = (
+		id: string,
+		resumeId: string,
+		contentItemId: string | null,
+	) =>
+		h.sqlite
+			.prepare(
+				'INSERT INTO Section (id, resumeId, type, "order", visible, content, contentItemId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			)
+			.run(id, resumeId, "experience", 99, 0, "{}", contentItemId, 0, 0);
+
+	it("rejects a second placement of the same item in the same resume", async () => {
+		const item = await addItem();
+		await asA().content.attach({
+			contentItemId: item.id,
+			resumeId: RESUME_A,
+		});
+
+		expect(() => rawPlacement("dup-1", RESUME_A, item.id)).toThrow(
+			/UNIQUE constraint failed/,
+		);
+	});
+
+	it("rejects the same item placed twice in a DIFFERENT resume", async () => {
+		// (resumeId, contentItemId) is the pair, not contentItemId alone: the whole point
+		// of the library is one item, many variants.
+		const item = await addItem();
+		await asA().content.attach({
+			contentItemId: item.id,
+			resumeId: RESUME_A,
+		});
+		const second = await asA().resume.create({ name: "A variant" });
+		if (!second) throw new Error("fixture did not create the second resume");
+
+		expect(() => rawPlacement("dup-2", second.id, item.id)).not.toThrow();
+	});
+
+	it("still allows many UNLINKED sections in one resume", async () => {
+		// The partial predicate is load-bearing: SQLite treats NULLs as distinct inside a
+		// unique index, so a plain UNIQUE(resumeId, contentItemId) would not constrain
+		// the null half -- but the null half is exactly the population that has to stay
+		// unconstrained. RESUME_A is seeded with one unlinked section already.
+		expect(
+			(await asA().section.listByResume({ resumeId: RESUME_A })).length,
+		).toBeGreaterThan(0);
+		expect(() => rawPlacement("unlinked-1", RESUME_A, null)).not.toThrow();
+		expect(() => rawPlacement("unlinked-2", RESUME_A, null)).not.toThrow();
 	});
 
 	it("places the same item into two resumes without duplicating content", async () => {
@@ -477,6 +621,42 @@ describe("backfill", () => {
 			bBefore.length +
 				(await asB().section.listByResume({ resumeId: RESUME_B })).length,
 		);
+	});
+
+	it("B's backfill touches neither A's sections nor A's library", async () => {
+		// The tight version of the test above, and the one that actually pins the
+		// tenancy PREDICATE to the query.
+		//
+		// `backfill` used to select every unlinked Section in the table and filter the
+		// other tenants' rows out in JavaScript. That gates the writes, so the test above
+		// passed either way -- but it read every tenant's `content` blobs to find out it
+		// had no business reading them. The predicate now lives in the JOIN.
+		//
+		// The counts are exact, not "greater than 0", so deleting `eq(resumes.userId,
+		// ctx.userId)` from the WHERE clause makes this fail twice over: `created` jumps
+		// to A's sections as well, and A's library grows.
+		const aSectionsBefore = await asA().section.listByResume({
+			resumeId: RESUME_A,
+		});
+		const bSectionsBefore = await asB().section.listByResume({
+			resumeId: RESUME_B,
+		});
+		expect(aSectionsBefore.length).toBeGreaterThan(0);
+		expect(bSectionsBefore.length).toBeGreaterThan(0);
+		for (const s of aSectionsBefore) expect(s.contentItemId).toBeNull();
+		expect(await asA().content.list()).toHaveLength(0);
+
+		const result = await asB().content.backfill();
+		expect(result.created).toBe(bSectionsBefore.length);
+		expect(await asB().content.list()).toHaveLength(bSectionsBefore.length);
+
+		// A's sections are still unlinked, and A still has an empty library: nothing B
+		// did created a library item owned by, or linked to, A.
+		expect(await asA().content.list()).toHaveLength(0);
+		const aSectionsAfter = await asA().section.listByResume({
+			resumeId: RESUME_A,
+		});
+		for (const s of aSectionsAfter) expect(s.contentItemId).toBeNull();
 	});
 
 	it("does not touch already-linked sections", async () => {

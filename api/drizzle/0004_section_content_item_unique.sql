@@ -1,0 +1,23 @@
+-- One placement per (resume, content item).
+--
+-- A `Section` that points at a `content_items` row is a *placement* of that item in that
+-- resume, so the same achievement appearing twice in one resume is a bug, not a choice:
+-- the exported CV shows it twice and `content.divergence` reports two rows for what is
+-- logically one placement.
+--
+-- `content.attach` already prevents this with a read-then-insert, but that read-then-
+-- insert is the exact shape two concurrent requests interleave on. An index is the only
+-- enforcement that cannot be raced, so the invariant moves into the database.
+--
+-- PARTIAL, and the predicate is load-bearing rather than an optimisation. SQLite treats
+-- NULLs as distinct inside a unique index, so a plain UNIQUE(resumeId, contentItemId)
+-- would *not* constrain the null half of the column -- which is precisely the population
+-- that has to stay unconstrained: every section created before the library existed, or
+-- by any path that never linked one, carries a NULL contentItemId, and several of them
+-- legitimately share a resume. Restricting the index to non-NULL rows constrains the
+-- linked placements and leaves the unlinked ones alone.
+--
+-- Adding this to a database that already holds a duplicate placement fails. That is
+-- intended: those duplicates are real duplication in the exports, and silently dropping
+-- one would be an unannounced edit of somebody's CV.
+CREATE UNIQUE INDEX `Section_resume_content_item_unique` ON `Section` (`resumeId`,`contentItemId`) WHERE "Section"."contentItemId" is not null;

@@ -70,7 +70,7 @@ async function assertOwnsSection(
 				resume: { userId: string };
 		  }
 		| undefined;
-	if (!section || section.resume.userId !== ctx.userId) {
+	if (!section || section?.resume?.userId !== ctx.userId) {
 		throw new Error("Section not found or access denied");
 	}
 	return section;
@@ -290,10 +290,17 @@ export const contentRouter = router({
 	/**
 	 * Place a library item into a resume.
 	 *
-	 * The placement starts hidden. A newly added item appearing visibly in every
+	 * A NEW placement starts hidden. A newly added item appearing visibly in every
 	 * variant is the "additive" mechanism done wrong: the user asked for it to be
 	 * available, not to be in their CV. Additive sync OFFERS (see `additions`); it never
 	 * turns itself on.
+	 *
+	 * `visible` is optional with NO default. Re-attaching an existing placement must not
+	 * touch its visibility unless the caller explicitly asked: a `.default(false)` here
+	 * makes `input.visible` never-undefined, which silently turns the "keep what is
+	 * there" fallback below into "hide it", and re-attaching is an ordinary double-click.
+	 * Losing a visible section to a double-click is data loss in the exported resume, not
+	 * a display bug.
 	 */
 	attach: protectedProcedure
 		.input(
@@ -301,7 +308,7 @@ export const contentRouter = router({
 				contentItemId: z.string().min(1),
 				resumeId: z.string().min(1),
 				order: z.number().int().optional(),
-				visible: z.boolean().optional().default(false),
+				visible: z.boolean().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -323,10 +330,12 @@ export const contentRouter = router({
 				),
 			});
 			if (existing) {
+				// Visibility is only written when the caller named it, so re-attaching
+				// cannot hide a placement the user can currently see and export.
 				await ctx.db
 					.update(sections)
 					.set({
-						visible: input.visible ?? existing.visible,
+						...(input.visible === undefined ? {} : { visible: input.visible }),
 						updatedAt: new Date(),
 					})
 					.where(eq(sections.id, existing.id));
@@ -341,18 +350,35 @@ export const contentRouter = router({
 			const nextOrder =
 				input.order ?? ((maxOrder[0]?.order ?? 0) as number) + 1;
 
-			const [created] = await ctx.db
-				.insert(sections)
-				.values({
-					resumeId: input.resumeId,
-					type: item.type as never,
-					order: nextOrder,
-					visible: input.visible ?? false,
-					content: item.payload,
-					contentItemId: item.id,
-				})
-				.returning();
-			return { sectionId: created?.id, created: true };
+			try {
+				const [created] = await ctx.db
+					.insert(sections)
+					.values({
+						resumeId: input.resumeId,
+						type: item.type as never,
+						order: nextOrder,
+						// The one place a default belongs: a placement that did not exist
+						// is created hidden.
+						visible: input.visible ?? false,
+						content: item.payload,
+						contentItemId: item.id,
+					})
+					.returning();
+				return { sectionId: created?.id, created: true };
+			} catch (cause) {
+				// `Section_resume_content_item_unique` is the real enforcement: two
+				// concurrent attaches both read "no existing placement" and both insert.
+				// The loser must return the winner's section rather than surfacing a
+				// constraint error to the user, who did nothing wrong by clicking.
+				const raced = await ctx.db.query.sections.findFirst({
+					where: and(
+						eq(sections.resumeId, input.resumeId),
+						eq(sections.contentItemId, input.contentItemId),
+					),
+				});
+				if (!raced) throw cause;
+				return { sectionId: raced.id, created: false };
+			}
 		}),
 
 	/** Detach a placement. The library item itself is untouched. */
@@ -501,14 +527,15 @@ export const contentRouter = router({
 	 *
 	 * Existing content is never modified: each item captures the section's content
 	 * exactly as it stands.
+	 *
+	 * The tenancy predicate is in the JOIN, not in a JS filter afterwards. Selecting
+	 * unlinked sections and discarding other tenants' rows in JavaScript still reads
+	 * every tenant's `content` blobs across the wire first -- a full table scan and an
+	 * allocation proportional to the whole table, on a request the UI fires once per user
+	 * the first time they open the library. The join lets the database throw the other
+	 * tenants' rows away before they are ever materialised.
 	 */
 	backfill: protectedProcedure.mutation(async ({ ctx }) => {
-		const owned = await ctx.db.query.resumes.findMany({
-			where: eq(resumes.userId, ctx.userId),
-		});
-		const resumeIds = owned.map((r) => r.id);
-		if (resumeIds.length === 0) return { created: 0 };
-
 		const unlinked = await ctx.db
 			.select({
 				id: sections.id,
@@ -517,13 +544,15 @@ export const contentRouter = router({
 				content: sections.content,
 			})
 			.from(sections)
-			.where(and(isNull(sections.contentItemId)));
+			.innerJoin(resumes, eq(sections.resumeId, resumes.id))
+			.where(
+				and(isNull(sections.contentItemId), eq(resumes.userId, ctx.userId)),
+			);
 
-		const mine = unlinked.filter((s) => resumeIds.includes(s.resumeId));
-		if (mine.length === 0) return { created: 0 };
+		if (unlinked.length === 0) return { created: 0 };
 
 		let created = 0;
-		for (const section of mine) {
+		for (const section of unlinked) {
 			const content = parsePayload(section.content);
 			const [item] = await ctx.db
 				.insert(contentItems)
