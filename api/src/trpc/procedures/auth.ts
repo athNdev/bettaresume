@@ -39,7 +39,9 @@ export const authRouter = router({
 			}
 
 			// Get user info from Clerk context or input
-			const clerkUser = ctx.user;
+			// The only genuine consumer of the Clerk user object in the backend.
+			// Lazy, so every other request never pays for it.
+			const clerkUser = await ctx.loadUser();
 			const email =
 				input?.email ||
 				(clerkUser &&

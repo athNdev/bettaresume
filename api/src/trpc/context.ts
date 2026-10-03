@@ -83,10 +83,13 @@ export async function createContext({ request, env }: CreateContextOptions) {
 	// Helper to return unauthenticated context
 	const unauthenticatedContext = () => ({
 		db,
-		user: null,
 		userId: null,
 		env,
 		clerkClient,
+		// No session, so there is nothing to fetch. Resolve lazily to keep the type
+		// identical to the authenticated case and avoid `user: null` checks at
+		// every call site.
+		loadUser: async () => null,
 		isDevMode: false,
 	});
 
@@ -100,15 +103,18 @@ export async function createContext({ request, env }: CreateContextOptions) {
 			console.log(
 				"[createContext] Dev mode enabled via x-dev-mode header (ENVIRONMENT=development)",
 			);
+			const devUser = {
+				id: "user-1",
+				emailAddresses: [{ emailAddress: "demo@example.com" }],
+			} as any;
 			return {
 				db,
-				user: {
-					id: "user-1",
-					emailAddresses: [{ emailAddress: "demo@example.com" }],
-				} as any,
 				userId: "user-1",
 				env,
 				clerkClient,
+				// Already in memory, so the loader is trivially satisfied and no
+				// request is made.
+				loadUser: async () => devUser,
 				isDevMode: true,
 			};
 		}
@@ -131,15 +137,31 @@ export async function createContext({ request, env }: CreateContextOptions) {
 
 		const { userId } = authResult.toAuth();
 
-		// Fetch the full user object
-		const user = await clerkClient.users.getUser(userId);
+		/**
+		 * The full Clerk user, fetched on demand.
+		 *
+		 * This used to be `await clerkClient.users.getUser(userId)` on EVERY
+		 * authenticated request. That is a network round-trip to Clerk's API, and
+		 * across the whole backend `user` was genuinely read by exactly one
+		 * procedure (`auth.upsert`, for email/name/image fallbacks) — the other two
+		 * references were `user: ctx.user` pass-throughs that `...ctx` already
+		 * performs. So every list, get, section write and export paid a Clerk
+		 * request for a field almost nothing used.
+		 *
+		 * Memoised, so a procedure that does need it still pays only once.
+		 */
+		let userPromise: ReturnType<typeof clerkClient.users.getUser> | null = null;
+		const loadUser = () => {
+			userPromise ??= clerkClient.users.getUser(userId);
+			return userPromise;
+		};
 
 		return {
 			db,
-			user,
 			userId,
 			env,
 			clerkClient,
+			loadUser,
 			isDevMode: false,
 		};
 	} catch (error) {

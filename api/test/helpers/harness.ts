@@ -140,10 +140,13 @@ export function createHarness(): TestHarness {
 	const callerAs = (userId: string) =>
 		appRouter.createCaller({
 			db: typed,
-			user: { id: userId },
 			userId,
 			env: { ENVIRONMENT: "production" },
 			clerkClient: {},
+			// Mirrors the real context: the Clerk user object is resolved on demand
+			// rather than eagerly fetched. Tests get a local stub so nothing here
+			// reaches Clerk.
+			loadUser: async () => ({ id: userId }) as never,
 			isDevMode: false,
 		} as unknown as Context);
 
