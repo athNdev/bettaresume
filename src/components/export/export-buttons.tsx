@@ -1,7 +1,7 @@
 "use client";
 
 import { htmlToText } from "html-to-text";
-import { Download, FileJson, FileText, Loader2 } from "lucide-react";
+import { Download, FileJson, FileText, FileType, Loader2 } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Resume } from "@/features/resume-editor/types";
 import { getTemplateSource } from "@/features/resume-editor/typst_templates";
+import { DOCX_MIME, resumeToDocx } from "@/lib/export/docx";
 import { compileToPdf } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
 
@@ -28,12 +29,18 @@ export function ExportButtons({
 	const [isExporting, setIsExporting] = useState(false);
 
 	const downloadFile = (
-		content: string | Blob,
+		content: string | Blob | Uint8Array,
 		filename: string,
 		type: string,
 	) => {
+		// Uint8Array needs its own Blob type: `new Blob([bytes])` would produce
+		// application/octet-stream unless the parts are typed.
 		const blob =
-			content instanceof Blob ? content : new Blob([content], { type });
+			content instanceof Blob
+				? content
+				: content instanceof Uint8Array
+					? new Blob([content.slice().buffer as ArrayBuffer], { type })
+					: new Blob([content], { type });
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement("a");
 		link.href = url;
@@ -70,6 +77,28 @@ export function ExportButtons({
 			);
 		} finally {
 			setIsExporting(false);
+		}
+	};
+
+	const exportDocx = () => {
+		// DOCX is XML with a guaranteed reading order, so it parses more reliably
+		// than a PDF whose extraction depends on the producer's text-drawing order.
+		// Labelled "parse-optimised" rather than interchangeable with PDF: Word and
+		// Typst paginate independently, so page breaks will not match.
+		try {
+			const bytes = resumeToDocx(resume);
+			const filename = `${resume.name.replace(/\s+/g, "_")}_${
+				new Date().toISOString().split("T")[0]
+			}.docx`;
+			downloadFile(bytes, filename, DOCX_MIME);
+		} catch (error) {
+			console.error("DOCX export error:", error);
+			toast.error(
+				error instanceof Error && error.message
+					? `DOCX export failed: ${error.message}`
+					: "DOCX export failed. See the browser console for details.",
+				{ duration: 8000 },
+			);
 		}
 	};
 
@@ -154,6 +183,10 @@ export function ExportButtons({
 					<DropdownMenuItem onClick={exportPDF}>
 						<FileText className="mr-2 h-4 w-4" />
 						Export as PDF
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={exportDocx}>
+						<FileType className="mr-2 h-4 w-4" />
+						Export as DOCX (parse-optimised)
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={exportJSON}>
 						<FileJson className="mr-2 h-4 w-4" />
