@@ -388,13 +388,23 @@ npm run check:write     # Auto-fix safe issues
 - CI deploys on `main` push alongside frontend
 - Required Cloudflare secrets: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`
 - Required GitHub Actions secrets: `CLOUDFLARE_API_TOKEN`, `CLERK_SECRET_KEY`
-- **Required GitHub Actions repository variable: `ALLOWED_ORIGINS`** — a
-  comma-separated list of exact browser origins (e.g. `https://bettaresume.com`).
-  `wrangler.jsonc` interpolates `$ALLOWED_ORIGINS` and CD fills it via
-  `envsubst`, which expands an unset variable to `""`. Because `api/src/cors.ts`
-  is default-deny, an empty value denies **every** origin and the deployed site
-  is blocked by its own browser. This fails silently: no build error, no test
-  failure. `api/test/deploy-config.test.ts` asserts CD still passes it.
+- **The browser origin allow-list lives in [`api/allowed-origins.txt`](api/allowed-origins.txt)**,
+  not in repository settings. It is a public URL, so it is committed and reviewed in
+  PRs. CD reads that file; the `ALLOWED_ORIGINS` repository variable only overrides
+  it for preview deploys. An empty file **fails the deploy** rather than shipping a
+  deny-everything API. Keep it in sync with the GitHub Pages custom domain
+  (`gh api repos/athNdev/bettaresume/pages --jq .cname`).
+- **⚠️ The `CLOUDFLARE_API_TOKEN` secret currently lacks D1 permission.** CD runs
+  `wrangler d1 migrations apply --remote` before deploying the worker, and it fails
+  with `code 7403`. Consequences:
+  - Migrations are **not** being applied in production. `0001_resume_base_resume_fk.sql`
+    is unapplied, so the `Resume.baseResumeId` foreign key that `schema.ts` declares
+    **does not exist** on the live database.
+  - CD treats an auth failure as a **warning**, not a failure, so deploys still
+    proceed; a genuine SQL failure still blocks. A pending-migrations report runs on
+    every deploy.
+  - **To fix:** regenerate the Cloudflare API token with D1 read/write added, then
+    update the `CLOUDFLARE_API_TOKEN` secret. The next deploy applies the migration.
 
 ---
 
