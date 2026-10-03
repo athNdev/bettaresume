@@ -89,6 +89,7 @@ import {
 	TypstPreview,
 	VariationManager,
 } from "./components";
+import { ReviewTrigger } from "./components/review-panel";
 
 interface ResumeEditorPageProps {
 	id: string;
@@ -841,11 +842,12 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					{/* Left: Back + Resume Info */}
 					<div className="flex items-center gap-4">
 						<Button
+							aria-label="Back to dashboard"
 							onClick={() => navigate("/dashboard")}
 							size="icon"
 							variant="ghost"
 						>
-							<ArrowLeft className="h-5 w-5" />
+							<ArrowLeft aria-hidden="true" className="h-5 w-5" />
 						</Button>
 						<div className="min-w-0">
 							<h1 className="truncate font-semibold text-sm">
@@ -873,6 +875,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 					{/* Right: Actions */}
 					<div className="flex items-center gap-2">
+						<ReviewTrigger resume={activeResume} />
 						<ExportButtons resume={activeResume} variant="dropdown" />
 					</div>
 				</div>
