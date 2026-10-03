@@ -227,6 +227,19 @@ jobs:
           # Reuse the value resolved above rather than re-parsing, so the deploy and
           # its own smoke test can never disagree.
           ORIGIN="$PRIMARY_ORIGIN"
+
+          # Fail fast if the allow-list lost its scheme. A bare host matches no
+          # browser Origin, so every request would be denied — and this probe would
+          # NOT notice, because it has to send a scheme to look like a browser.
+          # (That mismatch is exactly how the bare-host value shipped: the probe was
+          # verified with `Origin: app.bettaresume.com`, a shape no browser sends.)
+          case "$ORIGIN" in
+            http://*|https://*) ;;
+            *)
+              echo "::error::ALLOWED_ORIGINS entry '$ORIGIN' has no scheme. Browsers send 'scheme://host[:port]', so this denies every origin."
+              exit 1 ;;
+          esac
+
           tmp="$(mktemp)"
 
           curl -sS -o "$tmp" -D "$tmp.h" --max-time 25 "$API/health" \

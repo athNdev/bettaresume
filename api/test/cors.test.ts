@@ -71,6 +71,45 @@ describe("parseAllowedOrigins", () => {
 	});
 });
 
+describe("the shipped allow-list is usable by a real browser", () => {
+	/**
+	 * The regression that made the deployed API deny every browser request.
+	 *
+	 * `api/allowed-origins.txt` listed a bare host, `app.bettaresume.com`. A
+	 * browser's `Origin` header is always `scheme://host[:port]`, and
+	 * `isOriginAllowed` compares the whole normalised string — so the bare entry
+	 * matched nothing. Users saw an unqualified "Failed to fetch".
+	 *
+	 * This test reads the actual shipped file and checks it against the Origin
+	 * string a browser really sends, which needs no network and so cannot be
+	 * skipped when CI egress is blocked.
+	 */
+	const { readFileSync } = require("node:fs") as typeof import("node:fs");
+	const entries = readFileSync(
+		new URL("../allowed-origins.txt", import.meta.url).pathname,
+		"utf8",
+	)
+		.split("\n")
+		.map((l) => l.trim())
+		.filter((l) => l && !l.startsWith("#"));
+
+	it("permits the exact Origin header a browser sends for the Pages site", () => {
+		// What Chrome/Firefox attach to a cross-origin request to this API.
+		const browserOrigin = "https://app.bettaresume.com";
+		expect(isOriginAllowed(browserOrigin, entries)).toBe(true);
+	});
+
+	it("would have caught the bare-host entry", () => {
+		expect(
+			isOriginAllowed("https://app.bettaresume.com", ["app.bettaresume.com"]),
+		).toBe(false);
+	});
+
+	it("still denies an unrelated origin", () => {
+		expect(isOriginAllowed("https://evil.example", entries)).toBe(false);
+	});
+});
+
 describe("isOriginAllowed", () => {
 	it("denies everything when the list is empty (default-deny)", () => {
 		expect(isOriginAllowed(ORIGIN_OK, [])).toBe(false);
