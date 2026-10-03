@@ -1,3 +1,4 @@
+import { revisionContentFingerprint } from "@bettaresume/types";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../../db";
@@ -21,10 +22,18 @@ import { protectedProcedure, router } from "../index";
  *
  * ## Every query is scoped through Resume.userId
  *
- * Revisions are addressed by `resumeId`, which is user-supplied. Each procedure
+ * Revisions are addressed by `resumeId` or `revisionId`, both user-supplied. Each procedure
  * therefore joins to `Resume` and checks `userId = ctx.userId`, so a caller cannot read
- * or restore another tenant's history by guessing a resume id. This is the same
- * ownership check the section and resume routers use.
+ * or restore another tenant's history by guessing an id. This is the same ownership check
+ * the section and resume routers use.
+ *
+ * ## The hash input is not written here
+ *
+ * Which columns count as "content" — and how they are canonicalised — lives in
+ * `@bettaresume/types` (`projectRevisionContent` / `canonicalRevisionFingerprint`) and is
+ * imported by the browser's diff as well. Defining the field set in only one of the two
+ * places is what let the UI report "no differences" for a change the server was holding an
+ * older version of, with the Restore button disabled because of it.
  */
 
 export const revisionScopeError = "Resume not found or access denied";
@@ -47,27 +56,86 @@ async function assertOwnsResume(
 }
 
 /**
+ * Load a revision the caller owns, or throw the same scope error as every other refusal.
+ *
+ * The revision row and its ownership are resolved in ONE query, joined through `Resume`.
+ * A caller therefore cannot tell "this revision id does not exist" from "this revision id
+ * belongs to someone else" — a separate "Revision not found" would be a working oracle for
+ * enumerating which revision ids are real.
+ */
+async function assertOwnsRevision(
+	db: Database,
+	userId: string,
+	revisionId: string,
+) {
+	const [row] = await db
+		.select({ revision: resumeRevisions })
+		.from(resumeRevisions)
+		.innerJoin(resumes, eq(resumeRevisions.resumeId, resumes.id))
+		.where(and(eq(resumeRevisions.id, revisionId), eq(resumes.userId, userId)))
+		.limit(1);
+
+	if (!row) {
+		throw new Error(revisionScopeError);
+	}
+	return row.revision;
+}
+
+/**
+ * The snapshot document stored in `snapshotJson`.
+ *
+ * Deliberately the same shape the shared projection produces, with section `content` left
+ * as the raw JSON string the TEXT column stores, so `restore` can write it straight back
+ * without re-serialising it.
+ */
+function projectResumeForSnapshot(
+	resume: {
+		name: string;
+		template: string;
+		domain: string | null;
+		metadata: string | null;
+	},
+	resumeSections: readonly {
+		id: string;
+		type: string;
+		order: number;
+		visible: boolean;
+		content: string;
+		contentItemId: string | null;
+	}[],
+) {
+	return {
+		name: resume.name,
+		template: resume.template,
+		domain: resume.domain,
+		metadata: resume.metadata,
+		sections: resumeSections.map((s) => ({
+			id: s.id,
+			type: s.type,
+			order: s.order,
+			visible: s.visible,
+			content: s.content,
+			contentItemId: s.contentItemId ?? null,
+		})),
+	};
+}
+
+/**
  * Stable content hash for dedup.
  *
- * Uses SHA-256 over a canonical JSON serialisation. Key order is normalised so two
- * structurally identical snapshots hash the same regardless of property order --
- * otherwise an autosave that reorders keys would store a duplicate row and defeat the
- * unique index.
+ * SHA-256 over the canonical projection from `@bettaresume/types`. The projection is what
+ * excludes `createdAt`/`updatedAt`: `section.update` bumps `updatedAt` on every call, so
+ * hashing the raw rows made every autosave "different" and the dedupe — plus the
+ * `created: false` path the UI relies on — could never fire.
  */
-function contentHash(value: unknown): Promise<string> {
-	const canonical = (input: unknown): unknown => {
-		if (Array.isArray(input)) return input.map(canonical);
-		if (input && typeof input === "object") {
-			return Object.fromEntries(
-				Object.entries(input as Record<string, unknown>)
-					.filter(([, v]) => v !== undefined)
-					.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-					.map(([k, v]) => [k, canonical(v)]),
-			);
-		}
-		return input;
-	};
-	const json = JSON.stringify(canonical(value));
+async function contentHash(value: {
+	name: string;
+	template: string;
+	domain: string | null;
+	metadata: string | null;
+	sections: readonly unknown[];
+}): Promise<string> {
+	const json = revisionContentFingerprint(value);
 	return crypto.subtle
 		.digest("SHA-256", new TextEncoder().encode(json))
 		.then((buf) =>
@@ -91,29 +159,22 @@ export const revisionRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			await assertOwnsResume(ctx.db, ctx.userId, input.resumeId);
-
 			const [resume, resumeSections] = await Promise.all([
-				ctx.db.query.resumes.findFirst({
-					where: and(
-						eq(resumes.id, input.resumeId),
-						eq(resumes.userId, ctx.userId),
-					),
-				}),
+				assertOwnsResume(ctx.db, ctx.userId, input.resumeId),
 				ctx.db
 					.select()
 					.from(sections)
 					.where(eq(sections.resumeId, input.resumeId)),
 			]);
-			if (!resume) throw new Error(revisionScopeError);
 
-			const snapshot = {
-				name: resume.name,
-				template: resume.template,
-				domain: resume.domain,
-				metadata: resume.metadata,
-				sections: resumeSections,
-			};
+			// The stored snapshot is the projection, not the raw rows: it carries exactly the
+			// fields restore writes back, so a restore cannot silently drop one that was in
+			// the snapshot. `contentItemId` in particular — dropping it unlinks every
+			// placement from the content library, which then reports "no divergence" and
+			// forks into duplicates on the next backfill. Section `content` stays a raw
+			// string here because that is what the TEXT column stores; the shared
+			// canonicaliser reconciles it with the object the browser holds.
+			const snapshot = projectResumeForSnapshot(resume, resumeSections);
 			const hash = await contentHash(snapshot);
 
 			// Order by `seq`, NOT `createdAt`.
@@ -185,14 +246,13 @@ export const revisionRouter = router({
 	get: protectedProcedure
 		.input(z.object({ revisionId: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
-			const revision = await ctx.db.query.resumeRevisions.findFirst({
-				where: eq(resumeRevisions.id, input.revisionId),
-			});
-			if (!revision) throw new Error("Revision not found");
-
-			// Re-check ownership through the parent resume. The revision id alone is
-			// user-supplied and must not be a bearer token for someone else's history.
-			await assertOwnsResume(ctx.db, ctx.userId, revision.resumeId);
+			// Ownership is resolved in the same query as the lookup, so a revision that does
+			// not exist and one owned by another tenant are indistinguishable.
+			const revision = await assertOwnsRevision(
+				ctx.db,
+				ctx.userId,
+				input.revisionId,
+			);
 
 			return {
 				id: revision.id,
@@ -217,11 +277,13 @@ export const revisionRouter = router({
 	restore: protectedProcedure
 		.input(z.object({ revisionId: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
-			const revision = await ctx.db.query.resumeRevisions.findFirst({
-				where: eq(resumeRevisions.id, input.revisionId),
-			});
-			if (!revision) throw new Error("Revision not found");
-			await assertOwnsResume(ctx.db, ctx.userId, revision.resumeId);
+			// Checked before the delete, and in a single query: the ownership check must
+			// never be reachable after the sections are already gone.
+			const revision = await assertOwnsRevision(
+				ctx.db,
+				ctx.userId,
+				input.revisionId,
+			);
 
 			const snapshot = JSON.parse(revision.snapshotJson) as {
 				name?: string;
@@ -233,48 +295,77 @@ export const revisionRouter = router({
 					type: string;
 					order: number;
 					visible: boolean;
-					content: string;
-					pageId?: string | null;
+					content: unknown;
+					contentItemId?: string | null;
 				}[];
 			};
 
-			await ctx.db
-				.delete(sections)
-				.where(eq(sections.resumeId, revision.resumeId));
+			// Atomic: delete, re-insert and the resume update commit together or not at
+			// all. As separate statements a failure left the resume with zero sections, and
+			// a concurrent `section.update` landing between them was silently discarded.
+			//
+			// Explicit BEGIN/COMMIT/ROLLBACK rather than `ctx.db.transaction`, because that
+			// is the only spelling that works on BOTH drivers involved: Drizzle's D1 driver
+			// implements `transaction()` itself as exactly these statements (drizzle has no
+			// interactive transaction API on D1), while the SQLite driver used by the test
+			// harness hands the callback to better-sqlite3, which throws
+			// "Transaction function cannot return a promise" for an async body.
+			await ctx.db.run(sql.raw("begin"));
+			try {
+				await ctx.db
+					.delete(sections)
+					.where(eq(sections.resumeId, revision.resumeId));
 
-			if (snapshot.sections?.length) {
-				await ctx.db.insert(sections).values(
-					snapshot.sections.map((s) => ({
-						id: s.id,
-						resumeId: revision.resumeId,
-						type: s.type as never,
-						order: s.order,
-						visible: s.visible,
-						content: s.content,
-						pageId: s.pageId ?? null,
-					})),
-				);
+				if (snapshot.sections?.length) {
+					await ctx.db.insert(sections).values(
+						snapshot.sections.map((s) => ({
+							id: s.id,
+							resumeId: revision.resumeId,
+							type: s.type as never,
+							order: s.order,
+							visible: s.visible,
+							// `content` is a TEXT column. Snapshots store the string as-is;
+							// the object form only appears if a snapshot was hand-written, so
+							// serialise rather than write "[object Object]".
+							content:
+								typeof s.content === "string"
+									? s.content
+									: JSON.stringify(s.content ?? {}),
+							// Restoring a snapshot must not unlink the section from the
+							// content library: dropping it makes every placement look
+							// un-diverged and the next backfill forks the library.
+							contentItemId: s.contentItemId ?? null,
+						})),
+					);
+				}
+
+				await ctx.db
+					.update(resumes)
+					.set({
+						...(snapshot.name !== undefined ? { name: snapshot.name } : {}),
+						...(snapshot.template !== undefined
+							? { template: snapshot.template as never }
+							: {}),
+						...(snapshot.domain !== undefined
+							? { domain: snapshot.domain }
+							: {}),
+						...(snapshot.metadata !== undefined
+							? { metadata: snapshot.metadata }
+							: {}),
+						updatedAt: new Date(),
+					})
+					.where(
+						and(
+							eq(resumes.id, revision.resumeId),
+							eq(resumes.userId, ctx.userId),
+						),
+					);
+
+				await ctx.db.run(sql.raw("commit"));
+			} catch (err) {
+				await ctx.db.run(sql.raw("rollback"));
+				throw err;
 			}
-
-			await ctx.db
-				.update(resumes)
-				.set({
-					...(snapshot.name !== undefined ? { name: snapshot.name } : {}),
-					...(snapshot.template !== undefined
-						? { template: snapshot.template as never }
-						: {}),
-					...(snapshot.domain !== undefined ? { domain: snapshot.domain } : {}),
-					...(snapshot.metadata !== undefined
-						? { metadata: snapshot.metadata }
-						: {}),
-					updatedAt: new Date(),
-				})
-				.where(
-					and(
-						eq(resumes.id, revision.resumeId),
-						eq(resumes.userId, ctx.userId),
-					),
-				);
 
 			return { restored: revision.id, resumeId: revision.resumeId };
 		}),

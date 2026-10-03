@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "832f042b-2444-4f58-927f-d5314e930b01",
-  "prevId": "ff7a3e69-9e7a-4412-a3ae-3f51fb02dc5c",
+  "id": "86cbf2cd-5b0d-4bb7-9802-85a3b14480aa",
+  "prevId": "093006e1-f64b-4553-844a-1864ccedd775",
   "tables": {
     "Account": {
       "name": "Account",
@@ -113,6 +113,103 @@
         "Account_userId_User_id_fk": {
           "name": "Account_userId_User_id_fk",
           "tableFrom": "Account",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "content_items": {
+      "name": "content_items",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "archivedAt": {
+          "name": "archivedAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "content_items_user_archived_idx": {
+          "name": "content_items_user_archived_idx",
+          "columns": [
+            "userId",
+            "archivedAt"
+          ],
+          "isUnique": false
+        },
+        "content_items_user_type_idx": {
+          "name": "content_items_user_type_idx",
+          "columns": [
+            "userId",
+            "type"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "content_items_userId_User_id_fk": {
+          "name": "content_items_userId_User_id_fk",
+          "tableFrom": "content_items",
           "tableTo": "User",
           "columnsFrom": [
             "userId"
@@ -413,6 +510,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "contentItemId": {
+          "name": "contentItemId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "createdAt": {
           "name": "createdAt",
           "type": "integer",
@@ -435,6 +539,22 @@
             "resumeId"
           ],
           "isUnique": false
+        },
+        "Section_contentItemId_idx": {
+          "name": "Section_contentItemId_idx",
+          "columns": [
+            "contentItemId"
+          ],
+          "isUnique": false
+        },
+        "Section_resume_content_item_unique": {
+          "name": "Section_resume_content_item_unique",
+          "columns": [
+            "resumeId",
+            "contentItemId"
+          ],
+          "isUnique": true,
+          "where": "\"Section\".\"contentItemId\" is not null"
         }
       },
       "foreignKeys": {
@@ -449,6 +569,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "Section_contentItemId_content_items_id_fk": {
+          "name": "Section_contentItemId_content_items_id_fk",
+          "tableFrom": "Section",
+          "tableTo": "content_items",
+          "columnsFrom": [
+            "contentItemId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

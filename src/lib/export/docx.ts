@@ -163,9 +163,45 @@ export function buildZip(entries: ZipEntry[]): Uint8Array {
  * WordprocessingML
  * ------------------------------------------------------------------ */
 
-/** Escape text for XML content and attribute values. */
+/**
+ * Characters XML 1.0 forbids outright.
+ *
+ * `0x09` (tab), `0x0A` (LF) and `0x0D` (CR) are legal and are deliberately kept -- they
+ * are how `htmlToPlainText` represents line and list breaks. `0x7F`-`0x9F` are legal per
+ * the grammar (`[#x20-#xD7FF]`) so they are left alone. `0xFFFE`/`0xFFFF` are excluded by
+ * the spec and stripped as well.
+ */
+const XML_ILLEGAL =
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching these characters is the entire purpose -- XML 1.0 forbids them outright and Word rejects the document.
+	/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+
+/**
+ * Escape text for XML content and attribute values.
+ *
+ * ## Why the control-character strip lives here and not in `htmlToPlainText`
+ *
+ * XML 1.0 forbids `0x00`-`0x08`, `0x0B`, `0x0C` and `0x0E`-`0x1F` as *characters*:
+ * there is no escape for them, so a document containing one is not well-formed and Word
+ * refuses to open it with "unreadable content". `escapeXml` escaped `&`, `<`, `>`, `"`
+ * and `'` but passed these through untouched, and a PDF text layer or a DOCX-to-text
+ * import carries them easily -- a name is not supposed to contain a vertical tab, but
+ * nothing upstream stops one.
+ *
+ * `htmlToPlainText` is the tempting place, and it was the suggested one, but it is not
+ * actually the sink for user text. Only the rich-text fields go through it: the full
+ * name, the professional title, the contact line, section titles and a summary stored
+ * as `data.summary` all reach `document.xml` without passing through it. Fixing it there
+ * would have left the name unprotected while the test went green.
+ *
+ * `escapeXml` is on the single path from a JS string into `<w:t>` -- every paragraph
+ * routes through it -- so stripping here is both necessary and sufficient. The tests
+ * parse `word/document.xml` with a real XML parser rather than only checking that the
+ * ZIP container is intact, because a container check provably cannot see this class of
+ * bug: the ZIP was valid while the document inside it was not XML at all.
+ */
 export function escapeXml(value: string): string {
 	return value
+		.replace(XML_ILLEGAL, "")
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
 		.replace(/>/g, "&gt;")
@@ -252,9 +288,20 @@ function contactLine(personalInfo: Record<string, unknown>): string {
 		.join("  ·  ");
 }
 
+/**
+ * Join a start and end date, matching the Typst `date-range` helper.
+ *
+ * The separator is omitted entirely when there is no end value. The previous form was
+ * `` `${start} – ${...}` `` followed by `.trim()`, and `.trim()` does not remove a
+ * trailing en-dash, so `{ startDate: "Mar 2024" }` with no end date rendered as
+ * "Mar 2024 –" -- a dash pointing at nothing, in the one field an ATS reads to time-box
+ * a role.
+ */
 function dateRange(start: string, end: string, current: boolean): string {
 	if (!start) return "";
-	return `${start} – ${current ? "Present" : end || ""}`.trim();
+	const endLabel = current ? "Present" : end;
+	if (!endLabel) return start;
+	return `${start} – ${endLabel}`;
 }
 
 /** Build `word/document.xml` from a resume. */
@@ -292,8 +339,14 @@ export function buildDocumentXml(resume: Resume): string {
 		const data = content?.data;
 
 		if (section.type === "summary") {
-			const html = str(content?.html);
-			const text = htmlToPlainText(html);
+			// Read both shapes, in the same order `serialize.ts` does. A summary stored as
+			// `data.summary` with no `html` used to fall through to `continue` and produce
+			// a DOCX with the heading and no text under it -- while the PDF had the text.
+			// That is the "the two outputs cannot drift in content" promise failing on a
+			// real stored shape, not a theoretical one.
+			const stored =
+				str(content?.html) || str(asRecord(content?.data)?.summary);
+			const text = htmlToPlainText(stored);
 			if (text) body.push(paragraph(text, { size: 20 }));
 			continue;
 		}
@@ -305,9 +358,13 @@ export function buildDocumentXml(resume: Resume): string {
 			if (!entry) continue;
 
 			if (section.type === "experience" || section.type === "volunteer") {
-				const role = [str(entry.position), str(entry.company)]
+				// Location joins the company with the same "•" separator `sections.typ`
+				// uses, and the ordering below follows the Typst entry exactly:
+				// position / company • location / dates, then description, then highlights.
+				const org = [str(entry.company), str(entry.location)]
 					.filter(Boolean)
-					.join(" — ");
+					.join(" • ");
+				const role = [str(entry.position), org].filter(Boolean).join(" — ");
 				const dates = dateRange(
 					str(entry.startDate),
 					str(entry.endDate),
@@ -322,6 +379,13 @@ export function buildDocumentXml(resume: Resume): string {
 						}),
 					);
 				}
+				// `description` is in the schema and rendered by the PDF; dropping it here
+				// was silent content loss in the ATS-facing format, where it is often the
+				// only prose describing scope. Emitted before the highlights so the order
+				// matches the template. Run through `htmlToPlainText` like the other user
+				// prose in this function, which is a no-op on plain text.
+				const description = htmlToPlainText(str(entry.description));
+				if (description) body.push(paragraph(description, { size: 20 }));
 				const highlights = Array.isArray(entry.highlights)
 					? (entry.highlights as unknown[]).filter(
 							(h): h is string => typeof h === "string",

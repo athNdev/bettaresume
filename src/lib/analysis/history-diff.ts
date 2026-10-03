@@ -10,10 +10,30 @@
  *  - **No overall score.** "3 of 9 sections changed" is a count of things the user can
  *    look at, not a verdict on the quality of their resume.
  *
+ * ## The field set is not decided here
+ *
+ * Every comparison below is made through the shared projection in `@bettaresume/types`
+ * (`projectRevisionContent` / `canonicalRevisionSection` / `canonicalRevisionSlot`), which
+ * is the same projection the Worker hashes to decide whether a save is a duplicate.
+ *
+ * That sharing is the whole point. When this file compared its own smaller field list —
+ * name, template, domain, and per-section `content` + `visible` — it reported
+ * "no differences" for edits to `metadata` (where the user's name and email actually live),
+ * for a reordering, for a changed `type`, and for a changed `contentItemId`. The Restore
+ * button is `disabled` when `isIdentical` is true, so all four were also unrecoverable
+ * through the UI while the server held the older version.
+ *
  * The snapshot stores section `content` as a JSON *string* (it is a TEXT column), while
- * the live resume carries it as an already-parsed object. Every read therefore goes
- * through `parseSnapshot`, which tolerates both rather than assuming either.
+ * the live resume carries it as an already-parsed object; the shared canonicaliser
+ * normalises that so the two compare equal.
  */
+
+import {
+	canonicalRevisionSection,
+	canonicalRevisionSlot,
+	projectRevisionContent,
+	type RevisionContentProjection,
+} from "@bettaresume/types";
 
 export type ChangeKind = "added" | "removed" | "changed" | "unchanged";
 
@@ -41,42 +61,45 @@ export interface HistoryDiff {
 	isIdentical: boolean;
 }
 
-interface SnapshotSection {
-	id?: unknown;
+/** A section as it appears on one side of the comparison. */
+type SideSection = {
+	id: unknown;
 	type?: unknown;
 	visible?: unknown;
 	content?: unknown;
+	order?: unknown;
+	contentItemId?: unknown;
+};
+
+/** The projection of one side, plus what the caller actually supplied. */
+interface Side {
+	projection: RevisionContentProjection;
+	byId: Map<string, RevisionContentProjection["sections"][number]>;
+	hasMetadata: boolean;
+	/** Fields the live side did not supply, so a partial caller cannot fake a difference. */
+	provided: Map<string, { order: boolean; contentItemId: boolean }>;
 }
 
-export interface ParsedSnapshot {
-	name: string | null;
-	template: string | null;
-	domain: string | null;
-	sections: SnapshotSection[];
-}
+export type ParsedSnapshot = RevisionContentProjection;
 
-/** Accepts either a JSON string or an already-parsed object, and never throws. */
+/**
+ * Accepts either a JSON string or an already-parsed object, and never throws.
+ *
+ * The string form is what `snapshotJson` holds; the object form is what the editor's own
+ * in-memory history (if any) would hold. A corrupt snapshot degrades to "nothing to
+ * compare" rather than taking the editor down with it.
+ */
 export function parseSnapshot(input: unknown): ParsedSnapshot {
-	const raw: Record<string, unknown> =
+	const source =
 		typeof input === "string"
 			? safeParse(input)
 			: ((input ?? {}) as Record<string, unknown>);
-
-	const sections = Array.isArray(raw.sections) ? raw.sections : [];
-
-	return {
-		name: typeof raw.name === "string" ? raw.name : null,
-		template: typeof raw.template === "string" ? raw.template : null,
-		domain: typeof raw.domain === "string" ? raw.domain : null,
-		sections: sections.filter(
-			(s): s is SnapshotSection => !!s && typeof s === "object",
-		),
-	};
+	return projectRevisionContent(source);
 }
 
 function safeParse(json: string): Record<string, unknown> {
 	try {
-		const parsed = JSON.parse(json);
+		const parsed: unknown = JSON.parse(json);
 		return parsed && typeof parsed === "object"
 			? (parsed as Record<string, unknown>)
 			: {};
@@ -84,12 +107,6 @@ function safeParse(json: string): Record<string, unknown> {
 		// A corrupt snapshot must degrade to "nothing to diff", never crash the editor.
 		return {};
 	}
-}
-
-/** Section content arrives as a JSON string from the snapshot and as an object live. */
-function toContentObject(content: unknown): unknown {
-	if (typeof content === "string") return safeParse(content);
-	return content;
 }
 
 /**
@@ -104,6 +121,17 @@ export function summariseContent(content: unknown): string {
 	const parts: string[] = [];
 	collectStrings(toContentObject(content), parts, 0);
 	return parts.filter((p) => p.trim().length > 0).join(" · ");
+}
+
+/** Section content arrives as a JSON string from the snapshot and as an object live. */
+function toContentObject(content: unknown): unknown {
+	if (typeof content !== "string") return content;
+	try {
+		const parsed: unknown = JSON.parse(content);
+		return parsed && typeof parsed === "object" ? parsed : content;
+	} catch {
+		return content;
+	}
 }
 
 function collectStrings(input: unknown, out: string[], depth: number): void {
@@ -135,37 +163,48 @@ function titleFor(section: { type?: unknown; content?: unknown }): string {
 	return typeof section.type === "string" ? section.type : "section";
 }
 
-/**
- * Canonical JSON, so a key-order difference is not reported as an edit.
- *
- * This MUST agree with the canonicaliser behind the server-side content hash. If the
- * server hashes canonically and the UI compared raw `JSON.stringify`, an autosave that
- * merely reordered keys would be deduped as "unchanged" on write yet displayed as
- * "Edited" in the history — the two halves of the same feature disagreeing about
- * whether anything changed.
- */
-function canonical(value: unknown): unknown {
-	if (Array.isArray(value)) return value.map(canonical);
-	if (value && typeof value === "object") {
-		return Object.fromEntries(
-			Object.entries(value as Record<string, unknown>)
-				.filter(([, v]) => v !== undefined)
-				.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-				.map(([k, v]) => [k, canonical(v)]),
-		);
+function buildSide(input: {
+	metadata?: unknown;
+	sections?: readonly SideSection[] | null;
+}): Side {
+	const projection = projectRevisionContent(input);
+	const byId = new Map<string, RevisionContentProjection["sections"][number]>();
+	for (const section of projection.sections) {
+		if (section.id !== null) byId.set(section.id, section);
 	}
-	return value;
-}
-
-function stable(value: unknown): string {
-	return JSON.stringify(canonical(value ?? null));
+	const provided = new Map<
+		string,
+		{ order: boolean; contentItemId: boolean }
+	>();
+	for (const raw of input.sections ?? []) {
+		if (typeof raw.id !== "string") continue;
+		provided.set(raw.id, {
+			order: raw.order !== undefined,
+			contentItemId: raw.contentItemId !== undefined,
+		});
+	}
+	return {
+		projection,
+		byId,
+		provided,
+		hasMetadata: input.metadata !== undefined,
+	};
 }
 
 /**
  * Compare a snapshot to the live resume.
  *
- * `current` takes the shape the editor already holds, not the DB row shape, so the
- * editor can diff against state it already has instead of refetching.
+ * `current` takes the shape the editor already holds, not the DB row shape, so the editor
+ * can diff against state it already has instead of refetching.
+ *
+ * ## Partial live shape
+ *
+ * `metadata`, and each section's `order` and `contentItemId`, are compared **only when the
+ * caller supplies them**. A caller that omits a field has not asserted it is unchanged —
+ * it simply has not looked — and treating "absent" as "different" would pin the Restore
+ * button on permanently for every caller that passes a reduced shape. A caller that wants
+ * full coverage (and the invariant that `isIdentical` implies the server dedupes) must
+ * pass all of them; the history panel does not yet.
  */
 export function diffSnapshot(
 	snapshotInput: unknown,
@@ -173,91 +212,119 @@ export function diffSnapshot(
 		name?: string | null;
 		template?: string | null;
 		domain?: string | null;
-		sections?: {
-			id: string;
-			type: string;
-			visible?: boolean;
-			content?: unknown;
-		}[];
+		metadata?: unknown;
+		sections?: readonly SideSection[] | null;
 	},
 ): HistoryDiff {
 	const snapshot = parseSnapshot(snapshotInput);
+	const before = buildSide({ sections: snapshot.sections });
+	const after = buildSide({
+		metadata: current.metadata,
+		sections: current.sections ?? [],
+	});
+
+	// `metadata` is where the user's name, email and phone live, so a diff that ignored it
+	// reported "no differences" for the edit they were most likely to have made.
+	const metadataSame =
+		!after.hasMetadata ||
+		canonicalRevisionSlot(snapshot.metadata) ===
+			canonicalRevisionSlot(current.metadata);
 
 	const fields: FieldChange[] = (["name", "template", "domain"] as const).map(
 		(key) => {
-			const before = snapshot[key];
-			const after = current[key] ?? null;
-			const same = (before ?? null) === (after ?? null);
+			const fieldBefore = snapshot[key];
+			const fieldAfter = current[key] ?? null;
+			const same = (fieldBefore ?? null) === (fieldAfter ?? null);
 			return {
 				kind: same ? "unchanged" : "changed",
 				label: key,
-				before,
-				after,
+				before: fieldBefore,
+				after: fieldAfter,
 			};
 		},
 	);
 
-	const beforeById = new Map<string, SnapshotSection>();
-	for (const s of snapshot.sections) {
-		if (typeof s.id === "string") beforeById.set(s.id, s);
+	if (after.hasMetadata) {
+		fields.push({
+			kind: metadataSame ? "unchanged" : "changed",
+			label: "metadata",
+			before: summariseContent(snapshot.metadata) || null,
+			after: summariseContent(current.metadata) || null,
+		});
 	}
 
-	const afterById = new Map<
-		string,
-		NonNullable<typeof current.sections>[number]
-	>();
-	for (const s of current.sections ?? []) afterById.set(s.id, s);
-
-	const ids = new Set([...beforeById.keys(), ...afterById.keys()]);
-	// Section order in the snapshot is the order the user saw, which is the order they
-	// will recognise. Sorting by id instead would scramble the experience.
-	const ordered = [...ids].sort((a, b) => {
-		const ai = snapshot.sections.findIndex((s) => s.id === a);
-		const bi = snapshot.sections.findIndex((s) => s.id === b);
-		return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
-	});
+	const snapshotIds = snapshot.sections
+		.map((s) => s.id)
+		.filter((id): id is string => id !== null);
+	const liveIds = (current.sections ?? [])
+		.map((s) => s.id)
+		.filter((id): id is string => typeof id === "string");
+	// Snapshot order first, because that is the order the user recognises, then any
+	// section that exists only live.
+	const ordered = [
+		...snapshotIds,
+		...liveIds.filter((id) => !snapshotIds.includes(id)),
+	];
 
 	const sections: SectionChange[] = ordered.map((id) => {
-		const before = beforeById.get(id);
-		const after = afterById.get(id);
+		const sectionBefore = before.byId.get(id);
+		const sectionAfter = after.byId.get(id);
 
-		if (before && !after) {
+		if (sectionBefore && !sectionAfter) {
 			return {
 				kind: "removed",
 				id,
-				type: String(before.type ?? ""),
-				title: titleFor(before),
-				before: summariseContent(before.content),
+				type: sectionBefore.type ?? "section",
+				title: titleFor(sectionBefore),
+				before: summariseContent(sectionBefore.content),
 				after: null,
 			};
 		}
-		if (!before && after) {
+		if (!sectionBefore && sectionAfter) {
 			return {
 				kind: "added",
 				id,
-				type: after.type,
-				title: titleFor(after),
+				type: sectionAfter.type ?? "section",
+				title: titleFor(sectionAfter),
 				before: null,
-				after: summariseContent(after.content),
+				after: summariseContent(sectionAfter.content),
 			};
 		}
 
-		// Both sides must be parsed first: the snapshot carries `content` as a JSON
-		// string (TEXT column) while the live resume carries it as an object, so
-		// comparing them raw reports every section as edited.
-		const sameContent =
-			stable(toContentObject(before?.content)) ===
-			stable(toContentObject(after?.content));
-		const sameVisible = (before?.visible ?? true) === (after?.visible ?? true);
-		const same = !!before && !!after && sameContent && sameVisible;
+		// Fall back to the snapshot for any field the live side did not supply, so a
+		// partial `current` compares like-for-like instead of reporting a difference the
+		// caller never claimed. Note the fallback keys off the RAW input, not the
+		// projection: `contentItemId: null` is a real value meaning "detached from the
+		// library", and must not be mistaken for "not provided".
+		const supplied = after.provided.get(id);
+		const aligned: RevisionContentProjection["sections"][number] = {
+			id: sectionAfter?.id ?? sectionBefore?.id ?? null,
+			type: sectionAfter?.type ?? sectionBefore?.type ?? null,
+			order:
+				supplied?.order === true
+					? (sectionAfter?.order ?? null)
+					: (sectionBefore?.order ?? null),
+			visible: sectionAfter?.visible ?? sectionBefore?.visible ?? true,
+			content: sectionAfter?.content,
+			contentItemId:
+				supplied?.contentItemId === true
+					? (sectionAfter?.contentItemId ?? null)
+					: (sectionBefore?.contentItemId ?? null),
+		};
+
+		const same =
+			!!sectionBefore &&
+			!!sectionAfter &&
+			canonicalRevisionSection(sectionBefore) ===
+				canonicalRevisionSection(aligned);
 
 		return {
 			kind: same ? "unchanged" : "changed",
 			id,
-			type: after?.type ?? String(before?.type ?? ""),
-			title: titleFor(after ?? before ?? {}),
-			before: summariseContent(before?.content),
-			after: summariseContent(after?.content),
+			type: sectionAfter?.type ?? sectionBefore?.type ?? "section",
+			title: titleFor(sectionAfter ?? sectionBefore ?? {}),
+			before: summariseContent(sectionBefore?.content),
+			after: summariseContent(sectionAfter?.content),
 		};
 	});
 

@@ -87,7 +87,13 @@ export function createHarness(): TestHarness {
 	sqlite.pragma("foreign_keys = ON");
 
 	const db = drizzle(sqlite, { schema });
-	const now = Date.now();
+	// SECONDS, not milliseconds. Drizzle's `integer(..., { mode: "timestamp" })`
+	// serialises a Date as unix seconds and reads it back as `new Date(value * 1e3)`, so
+	// seeding Date.now() writes an epoch that is 1000x too large and every seeded row
+	// comes back dated to the year 58725. Nothing crashed while the value stayed
+	// constant, which is exactly why it survived -- but any assertion on `updatedAt`
+	// recency or on ordering between two rows would have been reading garbage.
+	const now = Math.floor(Date.now() / 1000);
 
 	const insertUser = sqlite.prepare(
 		"INSERT INTO User (id, email, name, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)",
