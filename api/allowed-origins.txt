@@ -17,6 +17,12 @@
 # Override at deploy time with the ALLOWED_ORIGINS repository variable if a
 # preview deployment needs extra origins.
 #
+# FORMAT: full origin INCLUDING the scheme. A browser's `Origin` header is always
+# `scheme://host[:port]`, and `isOriginAllowed` compares the whole normalised string,
+# so a bare `app.bettaresume.com` here matches nothing and every browser request is
+# denied — while a `curl -H 'Origin: app.bettaresume.com'` (not a shape any browser
+# sends) still passes, which is exactly how this shipped broken.
+#
 # Keep in sync with the GitHub Pages custom domain. Verify with:
 #   gh api repos/athNdev/bettaresume/pages --jq .cname
-app.bettaresume.com
+https://app.bettaresume.com

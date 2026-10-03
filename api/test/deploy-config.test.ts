@@ -144,24 +144,51 @@ describe("migrations are applied by the deploy pipeline", () => {
 });
 
 describe("the CORS allow-list is configured, not assumed", () => {
-	it("the allow-list is committed so it is reviewable in a PR", () => {
-		const origins = read("../allowed-origins.txt");
-		expect(origins).toMatch(/app\.bettaresume\.com/);
-		// Only comments and the origin itself; a wildcard would defeat default-deny.
-		const entries = origins
+	/** The allow-list entries, comments and blanks removed. */
+	function originEntries(): string[] {
+		return read("../allowed-origins.txt")
 			.split("\n")
 			.map((l) => l.trim())
 			.filter((l) => l && !l.startsWith("#"));
+	}
+
+	it("the allow-list is committed so it is reviewable in a PR", () => {
+		const entries = originEntries();
 		expect(entries.length).toBeGreaterThan(0);
 		expect(entries.join(",")).not.toContain("*");
 	});
 
+	it("every entry is a full origin INCLUDING the scheme", () => {
+		/**
+		 * The bug that shipped this broken.
+		 *
+		 * `isOriginAllowed` compares the whole normalised string, and a browser's
+		 * `Origin` header is always `scheme://host[:port]`. So a bare
+		 * `app.bettaresume.com` in the allow-list matches NOTHING and every browser
+		 * request is denied — the symptom users saw was a bare "Failed to fetch".
+		 *
+		 * It survived review because the verification used
+		 * `curl -H 'Origin: app.bettaresume.com'`, which is not a shape any browser
+		 * sends and therefore matched the bare entry. Assert the shape, not the host.
+		 */
+		for (const entry of originEntries()) {
+			expect(
+				entry,
+				`"${entry}" has no scheme, so no browser Origin can ever match it`,
+			).toMatch(/^https?:\/\/[^/]+\/?$/);
+		}
+	});
+
+	it("the allow-list is byte-identical to what a browser actually sends", () => {
+		// The strongest available check without a browser: assert the entry equals
+		// the literal Origin string a browser attaches to a cross-origin request.
+		expect(originEntries()).toContain("https://app.bettaresume.com");
+	});
+
 	it("matches the GitHub Pages custom domain, not the apex", () => {
-		// The bug shipped a doc/example claiming `https://bettaresume.com` while the
-		// Pages site is served from the `app.` subdomain, so the documented value
-		// would have denied the real site.
-		const origins = read("../allowed-origins.txt");
-		expect(origins).not.toMatch(/^\s*https?:\/\/bettaresume\.com\s*$/m);
+		// The doc/example shipped `https://bettaresume.com` while Pages is served
+		// from the `app.` subdomain, so the documented value denied the real site.
+		expect(originEntries()).not.toContain("https://bettaresume.com");
 	});
 
 	it("cd resolves the allow-list and fails loudly when it is empty", () => {
