@@ -119,7 +119,25 @@ jobs:
           echo "PRIMARY_ORIGIN=$PRIMARY" >> "$GITHUB_ENV"
 
       - name: Substitute wrangler config placeholders
-        run: envsubst < api/wrangler.jsonc > api/wrangler.tmp.jsonc && mv api/wrangler.tmp.jsonc api/wrangler.jsonc
+        # envsubst with NO argument list substitutes EVERY variable in the file.
+        # wrangler.jsonc starts with a JSON Schema `$schema` key, which is not an
+        # env var, so it was being rewritten to an empty string:
+        #   {"$schema": "...", ...}  ->  {"": "..."}
+        # Wrangler then warns "Unexpected fields found in top-level field: """
+        # on every deploy, and the config is no longer schema-valid.
+        #
+        # Restricting substitution to the three placeholders this step supplies
+        # leaves every other `$...` token untouched, and makes an unexpected new
+        # placeholder fail loudly instead of being silently blanked.
+        run: |
+          set -euo pipefail
+          envsubst '${D1_DATABASE_ID} ${D1_DATABASE_NAME} ${CF_WORKER_CUSTOM_URL}' \
+            < api/wrangler.jsonc > api/wrangler.tmp.jsonc
+          if grep -qE '\$\{?(D1_DATABASE_ID|D1_DATABASE_NAME|CF_WORKER_CUSTOM_URL)\}?' api/wrangler.tmp.jsonc; then
+            echo "::error::wrangler.jsonc still contains an unsubstituted placeholder"
+            exit 1
+          fi
+          mv api/wrangler.tmp.jsonc api/wrangler.jsonc
         env:
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
           D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
