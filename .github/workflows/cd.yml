@@ -121,20 +121,43 @@ jobs:
       - name: Substitute wrangler config placeholders
         # envsubst with NO argument list substitutes EVERY variable in the file.
         # wrangler.jsonc starts with a JSON Schema `$schema` key, which is not an
-        # env var, so it was being rewritten to an empty string:
+        # env var, so unscoped substitution rewrote it to an empty string:
         #   {"$schema": "...", ...}  ->  {"": "..."}
-        # Wrangler then warns "Unexpected fields found in top-level field: """
-        # on every deploy, and the config is no longer schema-valid.
+        # Wrangler then warned "Unexpected fields found in top-level field: \"\""
+        # on every deploy, and the config was no longer schema-valid.
         #
-        # Restricting substitution to the three placeholders this step supplies
-        # leaves every other `$...` token untouched, and makes an unexpected new
-        # placeholder fail loudly instead of being silently blanked.
+        # The variable list is DERIVED FROM THE FILE, never hand-written. A
+        # hardcoded list silently broke production once already: it named three
+        # placeholders and omitted $ALLOWED_ORIGINS and $CLERK_PUBLISHABLE_KEY, so
+        # both were deployed as the literal string "$ALLOWED_ORIGINS" /
+        # "$CLERK_PUBLISHABLE_KEY". The API then matched no browser origin, so it
+        # emitted no access-control-allow-origin header and the deployed app could
+        # not load any data at all.
         run: |
           set -euo pipefail
-          envsubst '${D1_DATABASE_ID} ${D1_DATABASE_NAME} ${CF_WORKER_CUSTOM_URL}' \
-            < api/wrangler.jsonc > api/wrangler.tmp.jsonc
-          if grep -qE '\$\{?(D1_DATABASE_ID|D1_DATABASE_NAME|CF_WORKER_CUSTOM_URL)\}?' api/wrangler.tmp.jsonc; then
+          # envsubst's argument is a SHELL-FORMAT string: bare names substitute
+          # nothing, because it only expands references written as $NAME or ${NAME}.
+          # Each name is therefore re-wrapped in braces.
+          VARS="$(grep -oE '\$\{?[A-Z_][A-Z0-9_]*\}?' api/wrangler.jsonc \
+            | tr -d '${}' | sort -u | sed 's/^/${/; s/$/}/' | tr '\n' ' ')"
+          echo "Substituting placeholders:$VARS"
+          envsubst "$VARS" < api/wrangler.jsonc > api/wrangler.tmp.jsonc
+          # A placeholder that is still present means a required variable was not
+          # supplied. Previously that shipped an empty D1 database id with a green
+          # build and a broken API.
+          if grep -qE '\$\{?[A-Z_][A-Z0-9_]*\}?' api/wrangler.tmp.jsonc; then
             echo "::error::wrangler.jsonc still contains an unsubstituted placeholder"
+            grep -oE '\$\{?[A-Z_][A-Z0-9_]*\}?' api/wrangler.tmp.jsonc >&2 || true
+            exit 1
+          fi
+          # An UNSET variable substitutes to the empty string, leaving no `$NAME`
+          # behind for the check above to find. That is the case that used to ship
+          # an empty D1 database id on a green build and break the API. wrangler.jsonc
+          # has no legitimately empty value, so any `""` here means a variable was
+          # missing.
+          if grep -qE ':[[:space:]]*""' api/wrangler.tmp.jsonc; then
+            echo "::error::wrangler.jsonc has an empty value: a required variable was unset"
+            grep -nE ':[[:space:]]*""' api/wrangler.tmp.jsonc >&2 || true
             exit 1
           fi
           mv api/wrangler.tmp.jsonc api/wrangler.jsonc
@@ -142,15 +165,15 @@ jobs:
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
           D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
           CF_WORKER_CUSTOM_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
+          # Deliberately NOT listed here: ALLOWED_ORIGINS. The resolve step writes
+          # it to $GITHUB_ENV, and a step-level `env:` entry SHADOWS that value --
+          # which deployed a deny-everything worker twice, under two different
+          # fixes. It is inherited from the process environment instead.
+          #
+          # CLERK_PUBLISHABLE_KEY is the opposite case: it was never in the process
+          # environment at all, so bare envsubst shipped it as "". Supplying it here
+          # shadows nothing and fixes that.
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
-          # ALLOWED_ORIGINS is deliberately NOT set here. It comes from
-          # $GITHUB_ENV, written by the "Resolve the browser origin allow-list"
-          # step, and a step-level `env:` entry would SHADOW that value with an
-          # empty string (vars.ALLOWED_ORIGINS is unset — the variable that exists
-          # is ALLOWED_ORIGIN, singular). envsubst would then expand
-          # $ALLOWED_ORIGINS to "" and the worker would deploy deny-everything.
-          # One mechanism only: resolve once, read it everywhere.
-
       - name: Apply D1 migrations
         # Migrations were never applied by CI: every `*.sql` under api/drizzle
         # reached production only when someone ran them locally. So schema.ts
