@@ -95,6 +95,23 @@ const HEADING_ALIASES: Record<string, string | null> = {
 	"languages & skills": "Skills",
 };
 
+/**
+ * Resolve any heading spelling to the parser-safe form, or null if there is none.
+ *
+ * Exported because the import sectioner must classify input by the *same* whitelist
+ * the audit uses. Two different heading vocabularies would mean import accepts a
+ * heading the parser then flags as unsafe, which is a confusing way to learn your
+ * import was bad.
+ */
+export function resolveHeading(raw: string): string | null {
+	const key = raw.trim().toLowerCase().replace(/\s+/g, " ");
+	if (!key) return null;
+	for (const canonical of PARSER_SAFE_HEADINGS) {
+		if (canonical.toLowerCase() === key) return canonical;
+	}
+	return HEADING_ALIASES[key] ?? null;
+}
+
 /** Date formats, ranked by observed parser tolerance. */
 export const DATE_FORMATS = {
 	"MMMM YYYY": { safe: true, example: "March 2026" },
