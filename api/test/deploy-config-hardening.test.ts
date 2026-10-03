@@ -31,6 +31,15 @@ const read = (p: string) => readFileSync(p, "utf8");
  * could not load any data.
  */
 /**
+ * The api workspace declares required bindings on `ProcessEnv` via the Workers
+ * types, so a hand-built `env` object is not assignable without a cast. The cast is
+ * safe here: these tests deliberately control the child environment, and they only
+ * ever supply the variables the CD step supplies.
+ */
+const childEnv = (extra: Record<string, string>) =>
+	({ PATH: process.env.PATH ?? "", ...extra }) as unknown as NodeJS.ProcessEnv;
+
+/**
  * Runs the CD step's ACTUAL shell block against the real wrangler.jsonc.
  *
  * The first version of this test reimplemented the derivation in TypeScript, which
@@ -55,14 +64,13 @@ function runWorkflowStep() {
 		execFileSync("bash", ["-c", m[1]], {
 			cwd: dir,
 			encoding: "utf8",
-			env: {
-				PATH: process.env.PATH ?? "",
+			env: childEnv({
 				ALLOWED_ORIGINS: "https://app.bettaresume.com",
 				CF_WORKER_CUSTOM_URL: "api.bettaresume.com",
 				CLERK_PUBLISHABLE_KEY: "pk_test_real",
 				D1_DATABASE_ID: "db-real",
 				D1_DATABASE_NAME: "bettaresume",
-			},
+			}),
 		});
 	} catch (e) {
 		// The step is expected to fail when a variable is missing; callers that
@@ -142,7 +150,7 @@ describe("the placeholder substitution does not corrupt the wrangler config", ()
 			execFileSync("bash", ["-c", body ?? ""], {
 				cwd: dir,
 				encoding: "utf8",
-				env: { PATH: process.env.PATH ?? "" },
+				env: childEnv({}),
 			});
 		} catch {
 			failed = true;
