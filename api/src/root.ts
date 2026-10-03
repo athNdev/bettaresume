@@ -5,6 +5,7 @@
 
 import { router } from "./trpc";
 import { authRouter } from "./trpc/procedures/auth";
+import { contentRouter } from "./trpc/procedures/content";
 import { resumeRouter } from "./trpc/procedures/resume";
 import { revisionRouter } from "./trpc/procedures/revision";
 import { sectionRouter } from "./trpc/procedures/section";
@@ -15,6 +16,7 @@ export const appRouter = router({
 	resume: resumeRouter,
 	section: sectionRouter,
 	revision: revisionRouter,
+	content: contentRouter,
 	auth: authRouter,
 });
 
