@@ -125,11 +125,13 @@ jobs:
           D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
           CF_WORKER_CUSTOM_URL: ${{ vars.CF_WORKER_CUSTOM_URL }}
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
-          # Without this, envsubst expands $ALLOWED_ORIGINS to "" and the
-          # default-deny CORS policy in api/src/cors.ts rejects every browser
-          # origin — the deployed site blocks itself. This is a public URL, not a
-          # credential, so it belongs in repository variables rather than secrets.
-          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+          # ALLOWED_ORIGINS is deliberately NOT set here. It comes from
+          # $GITHUB_ENV, written by the "Resolve the browser origin allow-list"
+          # step, and a step-level `env:` entry would SHADOW that value with an
+          # empty string (vars.ALLOWED_ORIGINS is unset — the variable that exists
+          # is ALLOWED_ORIGIN, singular). envsubst would then expand
+          # $ALLOWED_ORIGINS to "" and the worker would deploy deny-everything.
+          # One mechanism only: resolve once, read it everywhere.
 
       - name: Apply D1 migrations
         # Migrations were never applied by CI: every `*.sql` under api/drizzle

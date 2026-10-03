@@ -21,14 +21,10 @@ const cd = read("../../.github/workflows/cd.yml");
 const wrangler = read("../wrangler.jsonc");
 
 describe("deploy configuration", () => {
-	it("CD passes ALLOWED_ORIGINS into the envsubst step", () => {
-		// Isolate the substitution step; other steps may legitimately omit it.
-		const step = cd.slice(
-			cd.indexOf("Substitute wrangler config placeholders"),
-		);
-		const envBlock = step.slice(0, step.indexOf("Deploy API"));
-		expect(envBlock).toMatch(/ALLOWED_ORIGINS:\s*\$\{\{\s*vars\./);
-	});
+	// (The old assertion that the envsubst step's own `env:` block carried
+	// ALLOWED_ORIGINS was itself the bug — see "sets ALLOWED_ORIGINS in exactly one
+	// place" below. A step-level env shadows $GITHUB_ENV, so that entry silently
+	// re-introduced the empty allow-list.)
 
 	it("keeps CORS default-deny, so an empty value denies everything", () => {
 		expect(wrangler).toMatch(/"ALLOWED_ORIGINS":\s*"\$ALLOWED_ORIGINS"/);
@@ -141,6 +137,26 @@ describe("the CORS allow-list is configured, not assumed", () => {
 		// And the value is exported once so the deploy and its smoke test agree.
 		expect(cd).toMatch(/PRIMARY_ORIGIN/);
 		expect(cd).toMatch(/ORIGIN="\$PRIMARY_ORIGIN"/);
+	});
+
+	it("sets ALLOWED_ORIGINS in exactly one place", () => {
+		// Regression, and the subtlest bug in this file. The "Substitute" step
+		// carried its own `env:` entry with `ALLOWED_ORIGINS: ${{ vars.* }}`, and a
+		// step-level `env:` SHADOWS the value written to `$GITHUB_ENV` by the resolve
+		// step. Since `vars.ALLOWED_ORIGINS` is unset, envsubst expanded
+		// `$ALLOWED_ORIGINS` to "" and the worker deployed deny-everything — twice,
+		// under two different fixes.
+		//
+		// So: the resolve step is the only writer, and the substitute step must not
+		// mention the variable in its own env block.
+		const writes = cd.match(/ALLOWED_ORIGINS=.*>> "\$GITHUB_ENV"/g) ?? [];
+		expect(writes).toHaveLength(1);
+
+		const substitute = cd.slice(
+			cd.indexOf("Substitute wrangler config placeholders"),
+			cd.indexOf("Apply D1 migrations"),
+		);
+		expect(substitute).not.toMatch(/ALLOWED_ORIGINS:/);
 	});
 
 	it("sends the production Origin on every probe", () => {
