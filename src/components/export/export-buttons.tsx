@@ -1,7 +1,9 @@
 "use client";
 
+import { htmlToText } from "html-to-text";
 import { Download, FileJson, FileText, Loader2 } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -13,7 +15,6 @@ import type { Resume } from "@/features/resume-editor/types";
 import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import { compileToPdf } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
-import { htmlToText } from "html-to-text";
 
 interface ExportButtonsProps {
 	resume: Resume;
@@ -56,7 +57,17 @@ export function ExportButtons({
 			const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
 			downloadFile(blob, filename, "application/pdf");
 		} catch (error) {
+			// Previously only console.error, so a failed export looked identical to a
+			// slow one: the button re-enabled and nothing happened, with no indication
+			// that the PDF was never produced. Surface it, and keep the detail in the
+			// console for debugging.
 			console.error("PDF export error:", error);
+			toast.error(
+				error instanceof Error && error.message
+					? `PDF export failed: ${error.message}`
+					: "PDF export failed. See the browser console for details.",
+				{ duration: 8000 },
+			);
 		} finally {
 			setIsExporting(false);
 		}
@@ -71,7 +82,16 @@ export function ExportButtons({
 	const exportText = () => {
 		// Generate plain text version of resume
 		const { metadata, sections } = resume;
-		if (!metadata) return;
+		if (!metadata) {
+			// Previously a bare `return`: clicking "Plain text" did nothing at all,
+			// with no way to tell that from a working export.
+			console.error("[export] exportText called with no resume metadata");
+			toast.error(
+				"This resume has no contact details yet, so there is nothing to export as text.",
+				{ duration: 6000 },
+			);
+			return;
+		}
 		const { personalInfo } = metadata;
 
 		let text = `${personalInfo.fullName}\n`;
