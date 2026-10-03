@@ -162,12 +162,43 @@ describe("0001 migration does not cascade-delete sections", () => {
 		"utf8",
 	);
 
-	it("backs sections up to TEMP storage before dropping the parent table", () => {
-		// A TEMP table lives in a separate schema, which the main-db cascade cannot reach.
-		expect(migration).toMatch(/CREATE TEMP TABLE[^;]*_br_section_backup/i);
+	it("backs sections up somewhere the parent-delete cascade cannot reach", () => {
+		// The scratch table used to be `CREATE TEMP TABLE`. It is now an ORDINARY table,
+		// because TEMP requires attaching SQLite's separate temp database and miniflare's
+		// local D1 denies that outright -- `not authorized: SQLITE_AUTH` -- which broke
+		// `npm run db:reset`, and with it the documented `npm run dev` setup path, on a
+		// clean checkout. See api/test/migration-portability.test.ts.
+		//
+		// The protection is unchanged and does not come from being TEMP: the scratch
+		// table declares no foreign key, so `DROP TABLE Resume`'s cascade has nothing to
+		// reach it through. Combined with `DELETE FROM Section` running BEFORE the drop,
+		// the cascade has no child rows to remove at all.
+		// Executable statements only. The migration's comment block NAMES
+		// `CREATE TEMP TABLE` while explaining why it was removed, so matching the raw
+		// file finds the prose. A sibling test in this file hit exactly that.
+		const sql = migration
+			.split("\n")
+			.filter((line) => !line.trimStart().startsWith("--"))
+			.join("\n");
+
+		expect(sql).toMatch(/CREATE TABLE[^;]*_br_section_backup/i);
+		// It must NOT be TEMP, for the reason above.
+		expect(sql).not.toMatch(/CREATE\s+TEMP\s+TABLE/i);
 		expect(migration).toMatch(
 			/INSERT INTO [`"]?Section[`"]?\s+SELECT \* FROM [`"]?_br_section_backup/i,
 		);
+	});
+
+	it("uses a scratch table with no foreign key, so the cascade cannot reach it", () => {
+		// This is the property that actually matters, and it is what replaced the
+		// TEMP-table guarantee.
+		const sql = migration
+			.split("\n")
+			.filter((line) => !line.trimStart().startsWith("--"))
+			.join("\n");
+		const create =
+			sql.match(/CREATE TABLE[^;]*_br_section_backup[^;]*;/i)?.[0] ?? "";
+		expect(create).not.toMatch(/FOREIGN\s+KEY/i);
 	});
 
 	it("clears sections before the rebuild and restores them after", () => {

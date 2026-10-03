@@ -129,6 +129,72 @@ export const sectionsRelations = relations(sections, ({ one }) => ({
 }));
 
 // ============================================
+// Resume Revisions (append-only history)
+// ============================================
+
+/**
+ * Append-only snapshot history for a resume.
+ *
+ * There is deliberately no UPDATE path for this table anywhere in the codebase. That
+ * omission is the feature: an append-only log cannot be quietly rewritten, which is what
+ * makes a history you can trust and roll back to.
+ *
+ * `snapshotJson` is a blob rather than normalised rows because the only operations are
+ * "store a snapshot", "list snapshots newest-first" and "diff two snapshots". Diffing
+ * normalised rows would be lossier, not better.
+ *
+ * See api/drizzle/0002_resume_revisions.sql for the index rationale.
+ */
+export const resumeRevisions = sqliteTable(
+	"resume_revisions",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		resumeId: text("resumeId")
+			.notNull()
+			.references(() => resumes.id, { onDelete: "cascade" }),
+		/** Monotonic per resume. UNIQUE(resumeId, seq). */
+		seq: integer("seq").notNull(),
+		snapshotJson: text("snapshotJson").notNull(),
+		/** Dedupes identical autosaves. UNIQUE(resumeId, contentHash). */
+		contentHash: text("contentHash").notNull(),
+		label: text("label"),
+		createdAt: integer("createdAt", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(table) => [
+		// A resume's history, newest first: the only query the UI makes.
+		index("resume_revisions_resume_created_idx").on(
+			table.resumeId,
+			table.createdAt,
+		),
+		// Monotonic sequence, enforced by the database rather than by a read-then-write
+		// in application code that two concurrent requests could interleave.
+		uniqueIndex("resume_revisions_resume_seq_unique").on(
+			table.resumeId,
+			table.seq,
+		),
+		// Identical autosaves collapse instead of accumulating.
+		uniqueIndex("resume_revisions_resume_hash_unique").on(
+			table.resumeId,
+			table.contentHash,
+		),
+	],
+);
+
+export const resumeRevisionsRelations = relations(
+	resumeRevisions,
+	({ one }) => ({
+		resume: one(resumes, {
+			fields: [resumeRevisions.resumeId],
+			references: [resumes.id],
+		}),
+	}),
+);
+
+// ============================================
 // NextAuth Models
 // ============================================
 export const accounts = sqliteTable(
