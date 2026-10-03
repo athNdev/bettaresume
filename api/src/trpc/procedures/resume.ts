@@ -235,6 +235,51 @@ function normalizeMetadata(value: unknown): ResumeMetadata | null {
 	return metadata;
 }
 
+/**
+ * Recursively merge `patch` into `base`, returning a new object.
+ *
+ * Plain objects merge key-by-key at every depth, because the metadata schema is
+ * nested and partial at several levels: `settings.margins`, `settings.typography`
+ * and `settings.colors` are all `.partial()`. A shallow merge would replace
+ * `margins` wholesale when a caller meant to change only `margins.top`.
+ *
+ * Arrays replace rather than concatenate. `exportHistory` is append-only by
+ * intent, but the caller sends the array it wants stored, and silently
+ * concatenating would make an explicit shrink impossible.
+ *
+ * `undefined` in the patch is ignored, so a spread of an object with absent
+ * optional keys cannot erase stored data. An explicit `null` is kept, so a
+ * caller can still clear a single branch.
+ */
+function deepMergeMetadata(
+	base: Record<string, unknown>,
+	patch: Record<string, unknown>,
+): Record<string, unknown> {
+	const out: Record<string, unknown> = { ...base };
+
+	for (const [key, value] of Object.entries(patch)) {
+		if (value === undefined) continue;
+
+		const existing = out[key];
+		const bothPlainObjects =
+			value !== null &&
+			typeof value === "object" &&
+			!Array.isArray(value) &&
+			existing !== null &&
+			typeof existing === "object" &&
+			!Array.isArray(existing);
+
+		out[key] = bothPlainObjects
+			? deepMergeMetadata(
+					existing as Record<string, unknown>,
+					value as Record<string, unknown>,
+				)
+			: value;
+	}
+
+	return out;
+}
+
 function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
 	if (!value) return fallback;
 	try {
@@ -474,9 +519,28 @@ export const resumeRouter = router({
 			if (input.data.isArchived !== undefined)
 				updateData.isArchived = input.data.isArchived;
 			if (input.data.metadata !== undefined) {
-				updateData.metadata = input.data.metadata
-					? JSON.stringify(input.data.metadata)
-					: null;
+				if (input.data.metadata === null) {
+					// An explicit null is a deliberate wipe; keep it.
+					updateData.metadata = null;
+				} else {
+					// `updateResumeInputSchema.metadata` is `partialResumeMetadataSchema`,
+					// so callers are told partial updates are safe. Replacing the blob here
+					// made that a lie: a patch carrying only `settings` silently destroyed
+					// `personalInfo`, `jobTarget`, `atsScore` and `exportHistory`.
+					//
+					// Merge against what is actually stored, so the partial contract holds
+					// at every nesting level.
+					const stored = safeJsonParse<Record<string, unknown>>(
+						existing.metadata,
+						{},
+					);
+					updateData.metadata = JSON.stringify(
+						deepMergeMetadata(
+							stored && typeof stored === "object" ? stored : {},
+							input.data.metadata as Record<string, unknown>,
+						),
+					);
+				}
 			}
 
 			await ctx.db
