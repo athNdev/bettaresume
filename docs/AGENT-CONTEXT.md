@@ -302,6 +302,55 @@ fallback is only safe when it is **loud**. If you add one, pair it with a
 warning or a test that asserts the fallback is reachable only from a known-bad
 state.
 
+### 2.16 Biome caps its diagnostics — a count-based gate can be silently blind
+
+`npx biome check .` **caps how many diagnostics it prints.** So the number it
+appears to report is not the number of problems.
+
+```
+biome check .                              -> 16 locations listed
+biome check --max-diagnostics=2000 .       -> 376 locations listed
+biome check api/src/trpc/procedures/resume.ts -> 20 on its own
+```
+
+Those cannot all be true at once. The capped count is what a naive CI gate reads,
+so a baseline pinned at the cap **cannot rise** and the gate cannot fail while
+looking like protection. The lint ratchet in `ci.yml` raises the cap explicitly and
+its baseline (376) sits below it; `api/test/deploy-config.test.ts` asserts both, so
+it cannot silently re-saturate.
+
+**When you assert that a gate works, make it fail.** Every gate that turned out
+weaker than claimed in this repo was verified by reading it rather than by trying to
+break it:
+
+| gate | what it claimed | what it did |
+|---|---|---|
+| lint ratchet | fails when lint grows | saturated at the diagnostic cap, so it never could |
+| audit ratchet | tolerates the dev backlog | aborted before its own comparison under `bash -e` |
+| CORS allow-list | deploys the configured origin | a step-level `env:` shadowed the value and deployed `""` |
+
+### 2.17 `resume.update` merges metadata; it does not replace it
+
+`Resume.metadata` stores `personalInfo`, `settings`, `jobTarget`, `atsScore` and
+`exportHistory` in **one TEXT column**. `updateResumeInputSchema.metadata` is
+`partialResumeMetadataSchema`, so a patch is only supposed to carry the branches it
+changes.
+
+`resume.update` used to write `JSON.stringify(input.data.metadata)`, so a patch
+carrying only `settings` — which is what a font or margin change sends — destroyed
+the rest, including the ATS score and the export history. It now deep-merges (#139).
+
+**The merge is recursive** because the schema nests `.partial()` three levels deep:
+`settings.margins`, `settings.typography` and `settings.colors`. A shallow merge
+replaces `margins` wholesale when the caller meant to change `margins.top`.
+
+Rules: plain objects merge recursively; **arrays replace** (concatenating would
+duplicate `exportHistory` on every save and make a shrink impossible); `undefined`
+is ignored; explicit `null` still wipes.
+
+If you add a branch to `resumeMetadataSchema`, it inherits this merge for free —
+which is the point. Do not add a second writer.
+
 ---
 
 ## 3. Architecture as it actually is
@@ -341,7 +390,7 @@ Several shipped controls are wired to this stub. See
 | `npm run typecheck -w api` | **required in CI** (added #118) |
 | `npm test` (root + api) | **required in CI** (added #125/#127) — 93 tests: 24 root, 69 api |
 | `npm run build` | required |
-| `npm run check` (biome) | 84 errors / 250 warnings — **still not** gated |
+| `npm run check` (biome) | **376 diagnostics**, ratcheted in CI (baseline 376) — **not** gated |
 | `dev-server` | required in CI |
 
 `tsconfig.json` now includes `test/**`, so tests are typechecked rather than only
