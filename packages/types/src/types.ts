@@ -100,6 +100,13 @@ export interface ResumeSection {
 	layout?: SectionLayout;
 	pageId?: string;
 	linkedToBase?: boolean;
+	/**
+	 * The content-library item this section places, when it has one.
+	 *
+	 * Nullable: a section can predate the library, or be created by a path that never
+	 * linked one, and must still load and edit normally.
+	 */
+	contentItemId?: string | null;
 	createdAt?: string | Date;
 	updatedAt?: string | Date;
 }
@@ -168,41 +175,41 @@ export interface TypographyScale {
 }
 
 export interface ResumeSettings {
-		pageSize: "A4" | "Letter";
-		margins: { top: number; right: number; bottom: number; left: number };
-		fontSize: number;
-		fontScale: number;
-		typography: TypographyScale;
-		lineHeight: number;
-		fontFamily: FontFamily;
-		colors: ResumeColors;
-		layout?: ResumeLayout;
-		sectionSpacing: "compact" | "normal" | "spacious";
-		showIcons: boolean;
-		dateFormat: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
-		accentStyle: "underline" | "background" | "border" | "none";
-	}
+	pageSize: "A4" | "Letter";
+	margins: { top: number; right: number; bottom: number; left: number };
+	fontSize: number;
+	fontScale: number;
+	typography: TypographyScale;
+	lineHeight: number;
+	fontFamily: FontFamily;
+	colors: ResumeColors;
+	layout?: ResumeLayout;
+	sectionSpacing: "compact" | "normal" | "spacious";
+	showIcons: boolean;
+	dateFormat: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
+	accentStyle: "underline" | "background" | "border" | "none";
+}
 
 export interface PartialResumeSettings {
-		pageSize?: "A4" | "Letter";
-		margins?: Partial<{
-			top: number;
-			right: number;
-			bottom: number;
-			left: number;
-		}>;
-		fontSize?: number;
-		fontScale?: number;
-		typography?: Partial<TypographyScale>;
-		lineHeight?: number;
-		fontFamily?: FontFamily;
-		colors?: Partial<ResumeColors>;
-		layout?: ResumeLayout;
-		sectionSpacing?: "compact" | "normal" | "spacious";
-		showIcons?: boolean;
-		dateFormat?: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
-		accentStyle?: "underline" | "background" | "border" | "none";
-	}
+	pageSize?: "A4" | "Letter";
+	margins?: Partial<{
+		top: number;
+		right: number;
+		bottom: number;
+		left: number;
+	}>;
+	fontSize?: number;
+	fontScale?: number;
+	typography?: Partial<TypographyScale>;
+	lineHeight?: number;
+	fontFamily?: FontFamily;
+	colors?: Partial<ResumeColors>;
+	layout?: ResumeLayout;
+	sectionSpacing?: "compact" | "normal" | "spacious";
+	showIcons?: boolean;
+	dateFormat?: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
+	accentStyle?: "underline" | "background" | "border" | "none";
+}
 
 export type FontFamily =
 	| "Inter"
@@ -237,15 +244,15 @@ export type TemplateType = "minimal" | "postgrad" | "undergrad";
 export type ResumeLayout = "single-column" | "two-column" | "sidebar";
 
 export interface TemplateConfig {
-		id: TemplateType;
-		name: string;
-		description: string;
-		thumbnail: string;
-		features: string[];
-		defaultColors: ResumeColors;
-		supportedSections: SectionType[];
-		layout: ResumeLayout;
-	}
+	id: TemplateType;
+	name: string;
+	description: string;
+	thumbnail: string;
+	features: string[];
+	defaultColors: ResumeColors;
+	supportedSections: SectionType[];
+	layout: ResumeLayout;
+}
 
 // ============================================
 // Export & Job Target Types
