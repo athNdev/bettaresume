@@ -117,7 +117,7 @@ export const publicProcedure = t.procedure;
 
 // Protected procedure - requires authenticated user
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-	if (!ctx.user || !ctx.userId) {
+	if (!ctx.userId) {
 		throw new TRPCError({
 			code: "UNAUTHORIZED",
 			message: "You must be logged in to access this resource",
@@ -127,7 +127,10 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 	return next({
 		ctx: {
 			...ctx,
-			user: ctx.user,
+			// `userId` is re-asserted so the narrowed type survives into handlers.
+			// The Clerk user object is NOT resolved here — that would reintroduce a
+			// network round-trip on every authenticated call for a field almost
+			// nothing reads. Use `ctx.loadUser()` where the object is genuinely needed.
 			userId: ctx.userId,
 		},
 	});
