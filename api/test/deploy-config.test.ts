@@ -67,6 +67,22 @@ describe("migrations are applied by the deploy pipeline", () => {
 		expect(cd).toMatch(/migrations apply[^\n]*--remote/);
 	});
 
+	it("blocks on a SQL failure but only warns when the token lacks D1", () => {
+		// These are different problems. A wrong migration must stop the deploy. A
+		// token missing its D1 scope must not: blocking every deploy on a credential
+		// problem is worse than the drift, and the drift is reported either way.
+		expect(cd).toMatch(/7403|not authorized to access/);
+		expect(cd).toMatch(/::warning::/);
+		expect(cd).toMatch(/::error::D1 migration failed/);
+		// The step must not simply be allowed to fail unnoticed.
+		expect(cd).toMatch(/continue-on-error: true/);
+	});
+
+	it("reports unapplied migrations on every deploy", () => {
+		expect(cd).toMatch(/d1 migrations list/);
+		expect(cd).toMatch(/pending migrations/);
+	});
+
 	it("applies migrations BEFORE deploying the worker", () => {
 		// Deploying first would serve traffic against a schema the worker assumes
 		// but the database does not have.
