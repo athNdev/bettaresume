@@ -152,6 +152,14 @@ jobs:
         # Grant D1 read/write on the token to close this for real.
         id: migrate
         continue-on-error: true
+        env:
+          # Required. An earlier revision of this step dropped these when it was
+          # converted from wrangler-action to a direct `npx wrangler` call, so
+          # wrangler aborted with "it's necessary to set a CLOUDFLARE_API_TOKEN
+          # environment variable" — the token was in the repo the whole time, the
+          # step just was not receiving it.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -o pipefail
           cd api
@@ -161,6 +169,10 @@ jobs:
             exit 0
           }
           echo "$log" | tail -30
+          if echo "$log" | grep -q "it's necessary to set a CLOUDFLARE_API_TOKEN"; then
+            echo "::error::wrangler received no credentials in this step. This is a workflow bug, not a token-scope problem — check that CLOUDFLARE_API_TOKEN is in this step's env."
+            exit 1
+          fi
           if echo "$log" | grep -qE '\b7403\b|not authorized to access'; then
             echo "::warning::Cannot reach D1: the CLOUDFLARE_API_TOKEN secret lacks D1 permission (code 7403). Schema drift is possible — e.g. 0001_resume_base_resume_fk.sql is not applied, so the Resume.baseResumeId foreign key does not exist in production. Grant the token D1 read/write."
             exit 0
