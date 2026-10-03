@@ -14,6 +14,10 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+	JobMatchPanel,
+	type JobTargetDraft,
+} from "@/features/resume-editor/components/job-match-panel";
+import {
 	buildParseAuditInput,
 	collectBulletFindings,
 } from "@/features/resume-editor/lib/review-input";
@@ -41,6 +45,9 @@ interface ReviewPanelProps {
 	resume: Resume;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	/** Persisted job target, and a writer for it. */
+	jobTarget: JobTargetDraft | undefined;
+	onJobTargetChange: (next: JobTargetDraft) => void;
 }
 
 const SEVERITY_STYLE = {
@@ -101,7 +108,13 @@ function ClearState({ children }: { children: React.ReactNode }) {
 	);
 }
 
-export function ReviewPanel({ resume, open, onOpenChange }: ReviewPanelProps) {
+export function ReviewPanel({
+	resume,
+	open,
+	onOpenChange,
+	jobTarget,
+	onJobTargetChange,
+}: ReviewPanelProps) {
 	const diagnostics = useMemo(
 		() => auditParseFidelity(buildParseAuditInput(resume)),
 		[resume],
@@ -143,6 +156,14 @@ export function ReviewPanel({ resume, open, onOpenChange }: ReviewPanelProps) {
 							{diagnostics.length > 0 ? (
 								<Badge className="ml-2" variant="outline">
 									{diagnostics.length}
+								</Badge>
+							) : null}
+						</TabsTrigger>
+						<TabsTrigger value="job">
+							Job target
+							{jobTarget?.description ? (
+								<Badge className="ml-2" variant="outline">
+									set
 								</Badge>
 							) : null}
 						</TabsTrigger>
@@ -226,6 +247,16 @@ export function ReviewPanel({ resume, open, onOpenChange }: ReviewPanelProps) {
 							)}
 						</ScrollArea>
 					</TabsContent>
+					<TabsContent
+						className="min-h-0 flex-1 overflow-hidden px-6 pb-6"
+						value="job"
+					>
+						<JobMatchPanel
+							jobTarget={jobTarget}
+							onJobTargetChange={onJobTargetChange}
+							resume={resume}
+						/>
+					</TabsContent>
 				</Tabs>
 			</SheetContent>
 		</Sheet>
@@ -251,7 +282,15 @@ export function reviewIssueCount(resume: Resume): number {
  * Split from `ReviewPanel` so the editor only pays for one `Sheet` instance and the
  * count is computed once per resume change rather than on every render of the tree.
  */
-export function ReviewTrigger({ resume }: { resume: Resume }) {
+export function ReviewTrigger({
+	jobTarget,
+	onJobTargetChange,
+	resume,
+}: {
+	resume: Resume;
+	jobTarget: JobTargetDraft | undefined;
+	onJobTargetChange: (next: JobTargetDraft) => void;
+}) {
 	const [open, setOpen] = React.useState(false);
 	const count = useMemo(() => reviewIssueCount(resume), [resume]);
 
@@ -270,7 +309,13 @@ export function ReviewTrigger({ resume }: { resume: Resume }) {
 					</Badge>
 				) : null}
 			</Button>
-			<ReviewPanel onOpenChange={setOpen} open={open} resume={resume} />
+			<ReviewPanel
+				jobTarget={jobTarget}
+				onJobTargetChange={onJobTargetChange}
+				onOpenChange={setOpen}
+				open={open}
+				resume={resume}
+			/>
 		</>
 	);
 }

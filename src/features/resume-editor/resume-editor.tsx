@@ -349,6 +349,45 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	const currentActivityLog: ActivityLog[] = [];
 
 	// Handlers
+	/**
+	 * Persist the pasted job description onto the resume.
+	 *
+	 * `resume.update` already writes `metadata.jobTarget`, so this needs no new
+	 * procedure and no schema change. The draft is preferred over the saved resume so
+	 * the panel reflects unsaved edits.
+	 */
+	const handleJobTargetChange = useCallback(
+		async (next: {
+			title?: string;
+			company?: string;
+			description?: string;
+		}) => {
+			if (!activeResume) return;
+			try {
+				// `jobTargetSchema` requires a title. The panel only collects a
+				// description, and a pasted job description almost always opens with
+				// the role, so derive it rather than inventing a field the user then
+				// has to fill in separately.
+				const firstLine = (next.description ?? "")
+					.split("\n")
+					.map((l) => l.replace(/^[-*–—\s]+/, "").trim())
+					.find(Boolean);
+				await updateResume(activeResume.id, {
+					metadata: {
+						jobTarget: {
+							...next,
+							title: (firstLine || "Untitled role").slice(0, 120),
+							addedAt: new Date().toISOString(),
+						},
+					},
+				});
+			} catch (err) {
+				console.error("Failed to save job target:", err);
+			}
+		},
+		[activeResume, updateResume],
+	);
+
 	const handleSectionChange = useCallback(
 		async (sectionId: string, updates: Partial<ResumeSection>) => {
 			if (!activeResume) return;
@@ -875,7 +914,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 					{/* Right: Actions */}
 					<div className="flex items-center gap-2">
-						<ReviewTrigger resume={activeResume} />
+						<ReviewTrigger
+							jobTarget={(draftResume ?? activeResume).metadata?.jobTarget}
+							onJobTargetChange={handleJobTargetChange}
+							resume={draftResume ?? activeResume}
+						/>
 						<ExportButtons resume={activeResume} variant="dropdown" />
 					</div>
 				</div>
