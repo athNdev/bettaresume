@@ -179,8 +179,25 @@ describe("XML escaping and text extraction", () => {
 		expect(
 			htmlToPlainText("<p>Scaled <strong>40%</strong> of traffic</p>"),
 		).toBe("Scaled 40% of traffic");
-		expect(htmlToPlainText("a<br>b")).toBe("a b");
+		expect(htmlToPlainText("a<br>b")).toBe("a\nb");
 		expect(htmlToPlainText("&amp;&nbsp;&lt;")).toBe("& <");
+	});
+
+	it("drops script and style bodies entirely, not just their tags", () => {
+		// Removing only the tags would leave the JavaScript as visible text in a file
+		// the user submits to an employer.
+		const out = htmlToPlainText(
+			"<p>Before</p><script>var secret = 1;</script><p>After</p>",
+		);
+		expect(out).not.toContain("secret");
+		expect(out).toContain("Before");
+		expect(out).toContain("After");
+	});
+
+	it("drops script bodies even when the end tag has trailing whitespace", () => {
+		// The exact case CodeQL flagged in the hand-rolled version: `</script >`.
+		const out = htmlToPlainText("<p>Hi</p><script>leaked()</script >");
+		expect(out).not.toContain("leaked");
 	});
 
 	it("strips markup out of user content rather than emitting it", () => {

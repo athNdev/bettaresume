@@ -1,3 +1,4 @@
+import { convert } from "html-to-text";
 import { TEMPLATE_SECTION_HEADINGS } from "@/features/resume-editor/lib/review-input";
 import type { Resume } from "@/features/resume-editor/types";
 
@@ -172,27 +173,42 @@ export function escapeXml(value: string): string {
 		.replace(/'/g, "&apos;");
 }
 
-/** Strip tags to plain text. DOCX has no HTML, and stray markup reads as garbage. */
+/**
+ * Strip HTML to plain text.
+ *
+ * Uses `html-to-text`, which is ALREADY a dependency (export-buttons.tsx imports it),
+ * rather than a hand-rolled regex stripper.
+ *
+ * That is not tidiness. CodeQL flagged three real defects in the hand-rolled version
+ * and all three are the kind that hand-rolled sanitisation always has:
+ *
+ *   - `</script >` (space before the `>`) slipped past the script filter
+ *   - the generic `<[^>]*>` strip left a bare `<script` when no `>` followed
+ *   - decoding `&amp;` to `&` mid-pipeline read as a double-unescape hazard
+ *
+ * None of those could escape into the DOCX, because every string is XML-escaped on the
+ * way out. But a sanitiser whose safety depends on a *later* stage is a sanitiser that
+ * breaks the moment someone reuses it somewhere else. A maintained library removes the
+ * whole class, adds no bundle weight, and is not my regex to maintain.
+ */
 export function htmlToPlainText(html: string): string {
-	return (
-		html
-			// Drop <script>/<style> WITH their content. Removing only the tags would
-			// leave the JavaScript or CSS source sitting in the document as visible
-			// text, which is worse than useless in a file a user submits to an employer.
-			.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-			.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-			.replace(/<br\s*\/?>/gi, " ")
-			.replace(/<\/(p|div|li|h[1-6])>/gi, " ")
-			.replace(/<[^>]*>/g, "")
-			.replace(/&nbsp;/g, " ")
-			.replace(/&amp;/g, "&")
-			.replace(/&lt;/g, "<")
-			.replace(/&gt;/g, ">")
-			.replace(/&quot;/g, '"')
-			.replace(/&#39;/g, "'")
-			.replace(/\s+/g, " ")
-			.trim()
-	);
+	if (!html) return "";
+	return convert(html, {
+		wordwrap: false,
+		// `li` needs an explicit format, not just options -- the library rejects a
+		// selector with options but no format.
+		selectors: [
+			{ selector: "li", format: "text", options: { prefix: "• " } },
+			// Script and style bodies are dropped wholesale rather than emitted as
+			// visible text, which is what those elements are.
+			{ selector: "script", format: "skip" },
+			{ selector: "style", format: "skip" },
+		],
+	})
+		.replace(/\u00a0/g, " ")
+		.replace(/[ \t]+/g, " ")
+		.replace(/\n{3,}/g, "\n\n")
+		.trim();
 }
 
 type Align = "left" | "center" | "right";
