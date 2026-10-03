@@ -87,7 +87,11 @@ jobs:
         # a variable named ALLOWED_ORIGIN (singular) that no code ever read, so
         # the deployed API denied every origin while reporting success.
         run: |
-          ORIGINS="$(tr -d '\n' < api/allowed-origins.txt)"
+          # The file is mostly comments, so strip comments and blank lines and join
+          # with commas. Do NOT use `tr -d '\n'`: that concatenates the final
+          # comment line onto the origin, and the worker then deploys with an
+          # allow-list matching nothing.
+          ORIGINS="$(grep -vE '^[[:space:]]*(#|$)' api/allowed-origins.txt | paste -sd, -)"
           if [ -z "$ORIGINS" ]; then
             echo "::error::api/allowed-origins.txt is empty; the API is default-deny and would block every browser origin."
             exit 1
@@ -97,7 +101,22 @@ jobs:
             echo "Overriding with the ALLOWED_ORIGINS repository variable."
             ORIGINS="${{ vars.ALLOWED_ORIGINS }}"
           fi
+          # Refuse a value that still carries comment text or a newline. Cheap
+          # insurance against re-introducing the parse that shipped a broken
+          # allow-list once already.
+          case "$ORIGINS" in
+            *"#"*)
+              echo "::error::ALLOWED_ORIGINS still contains a comment marker: [$ORIGINS]"
+              exit 1 ;;
+          esac
+          if printf '%s' "$ORIGINS" | grep -q '[[:space:]]'; then
+            echo "::error::ALLOWED_ORIGINS contains whitespace, so it is not a bare origin: [$ORIGINS]"
+            exit 1
+          fi
+          # Export the primary origin for the smoke test so both steps use one value.
+          PRIMARY="${ORIGINS%%,*}"
           echo "ALLOWED_ORIGINS=$ORIGINS" >> "$GITHUB_ENV"
+          echo "PRIMARY_ORIGIN=$PRIMARY" >> "$GITHUB_ENV"
 
       - name: Substitute wrangler config placeholders
         run: envsubst < api/wrangler.jsonc > api/wrangler.tmp.jsonc && mv api/wrangler.tmp.jsonc api/wrangler.jsonc
@@ -179,19 +198,36 @@ jobs:
         # permitted -- and fail the deploy rather than the user's session.
         run: |
           API="${{ vars.API_URL }}"
-          ORIGIN="$(tr -d '\n' < api/allowed-origins.txt)"
-          echo "GET $API/health"
-          curl -fsS --max-time 20 "$API/health" || {
-            echo "::error::$API/health did not respond"
-            exit 1
+          # Reuse the value resolved above rather than re-parsing, so the deploy
+          # and its own smoke test can never disagree.
+          ORIGIN="$PRIMARY_ORIGIN"
+          # Send the production Origin on every request: CORS is enforced by the
+          # browser, so a request without it does not exercise the policy at all.
+          probe() {
+            curl -sS -o /dev/null -D - --max-time 20 "$1" \
+              -H "Origin: $ORIGIN" \
+              -H 'Access-Control-Request-Method: POST' \
+              -H 'Access-Control-Request-Headers: content-type,authorization' \
+              | tr -d '\r' | grep -i '^access-control-allow-origin:' || true
           }
 
-          echo "OPTIONS $API/trpc/resume.list with Origin: $ORIGIN"
-          ALLOW="$(curl -sS -o /dev/null -D - --max-time 20 -X OPTIONS "$API/trpc/resume.list" \
-            -H "Origin: $ORIGIN" \
-            -H 'Access-Control-Request-Method: POST' \
-            -H 'Access-Control-Request-Headers: content-type,authorization' \
-            | tr -d '\r' | grep -i '^access-control-allow-origin:' || true)"
+          # A freshly deployed worker can take a moment to serve the new config.
+          echo "GET $API/health (Origin: $ORIGIN)"
+          ok=0
+          for attempt in 1 2 3 4 5 6; do
+            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+              "$API/health" -H "Origin: $ORIGIN" || echo 000)
+            echo "  attempt $attempt: HTTP $status"
+            if [ "$status" = "200" ]; then ok=1; break; fi
+            sleep 10
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::$API/health never returned 200 from the deployed worker."
+            exit 1
+          fi
+
+          echo "OPTIONS $API/trpc/resume.list (Origin: $ORIGIN)"
+          ALLOW="$(probe "$API/trpc/resume.list")"
 
           echo "  -> ${ALLOW:-<no access-control-allow-origin header>}"
           case "$ALLOW" in
