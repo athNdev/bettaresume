@@ -3,11 +3,11 @@
 // Runs automatically via the "prepare" npm script (i.e. after npm install).
 'use strict';
 
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const { execSync, spawnSync } = require('child_process');
-const os = require('os');
+const https = require('node:https');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execSync, spawnSync } = require('node:child_process');
+const os = require('node:os');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const TOOLS_DIR = path.join(ROOT_DIR, '.tools');

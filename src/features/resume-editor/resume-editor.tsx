@@ -44,7 +44,7 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { PanelEmpty, PanelError } from "@/components/ui/panel-state";
+import { PanelEmpty } from "@/components/ui/panel-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {

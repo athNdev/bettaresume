@@ -85,7 +85,7 @@ export const userRouter = router({
 				preferences: userPreferencesSchema.partial(),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			// TODO: Store preferences in user metadata or separate table
 			// For now, just acknowledge the update
 			return {

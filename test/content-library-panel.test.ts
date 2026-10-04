@@ -68,15 +68,6 @@ function elementOf(source: string, tag: string): string {
 	return source.slice(start, end + tag.length + 3);
 }
 
-/** The whole `useEffect(() => {…}, [deps])` statement, dependency array included. */
-function effectOf(source: string): string {
-	const anchor = /useEffect\(\(\) =>/;
-	const body = blockOf(source, anchor);
-	const after = source.indexOf(body, source.search(anchor)) + body.length;
-	const end = source.indexOf(";", after);
-	return source.slice(source.search(anchor), end + 1);
-}
-
 describe("nothing destructive happens without the user confirming it", () => {
 	it("'Use latest' is an AlertDialog trigger, not a bare button", () => {
 		// It fired `propagate.mutate` from a bare `Button`. `content.propagate` does

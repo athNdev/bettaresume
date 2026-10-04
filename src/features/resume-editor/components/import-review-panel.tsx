@@ -1,7 +1,7 @@
 "use client";
 
 import type { SectionType } from "@bettaresume/types";
-import { FileUp, Loader2, Pencil, Upload } from "lucide-react";
+import { FileUp, Pencil, Upload } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +11,8 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { extractDocumentText, type ImportOk } from "@/lib/import/extractors";
-import { libraryTitleFor, toLibraryPayload } from "@/lib/import/library-item";
+import { extractDocumentText } from "@/lib/import/extractors";
+import { libraryTitleFor } from "@/lib/import/library-item";
 import { type ImportResult, sectionResumeText } from "@/lib/import/sectioner";
 import { api } from "@/lib/trpc/react";
 import { buildImportPayload, ImportReviewView } from "./import-review-view";
