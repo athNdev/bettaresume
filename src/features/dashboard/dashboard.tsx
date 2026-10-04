@@ -19,6 +19,7 @@ import {
 	X,
 } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { ProtectedRoute } from "@/app/protected-route";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +53,7 @@ import { useAuthStore } from "@/features/auth/auth.store";
 import { ResumeCard } from "@/features/dashboard/components/resume-card";
 import { ThemeToggle } from "@/features/dashboard/components/theme-toggle";
 import { UserMenu } from "@/features/dashboard/components/user-menu";
+import { greetingName } from "@/features/dashboard/greeting";
 import {
 	TEMPLATE_CONFIGS,
 	type TemplateType,
@@ -130,6 +132,12 @@ function DashboardContent() {
 
 	// State
 	const [searchQuery, setSearchQuery] = useState("");
+	/*
+	 * Which resume is mid-duplicate. `isDuplicating` from the hook is dashboard-wide, so on
+	 * its own it would spin the duplicate control on every card at once -- telling the user
+	 * about a row they did not touch. This names the one row that is actually working.
+	 */
+	const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 	const [showArchived, setShowArchived] = useState(false);
 	const [selectedTemplate, _setSelectedTemplate] = useState<
 		TemplateType | "all"
@@ -161,6 +169,7 @@ function DashboardContent() {
 		isDuplicating,
 	} = useResumeMutations();
 
+	const firstName = greetingName(user);
 	// Filtered resumes
 	const filteredResumes = useMemo(() => {
 		return resumes.filter((resume: Resume) => {
@@ -269,14 +278,33 @@ function DashboardContent() {
 	};
 
 	const handleDuplicateResume = async (id: string, name: string) => {
+		/*
+		 * The menu closes on click, so a second duplicate needs a second deliberate open.
+		 * Guarding anyway: `duplicateResume` is not idempotent, and a retry that fires while
+		 * the first copy is still being written produces two copies and no way to tell
+		 * which was intended.
+		 */
+		if (isDuplicating) return;
+
+		setDuplicatingId(id);
 		try {
 			const newResume = await duplicateResume(id, `${name} (copy)`);
 			if (newResume?.id) {
 				setActiveResumeId(newResume.id);
 				navigate(`/resume-editor/${newResume.id}`);
+			} else {
+				toast.error(`"${name}" could not be duplicated.`);
 			}
 		} catch (err) {
+			/*
+			 * Previously a bare `console.error`, which is the same as saying nothing: the
+			 * user clicked Duplicate, the menu closed, no copy appeared, and the control
+			 * showed no sign of having run at all.
+			 */
 			console.error("Failed to duplicate resume:", err);
+			toast.error(`"${name}" could not be duplicated.`);
+		} finally {
+			setDuplicatingId(null);
 		}
 	};
 
@@ -374,6 +402,25 @@ function DashboardContent() {
 
 			{/* Main content */}
 			<main className="container mx-auto px-4 py-8">
+				{/*
+
+				{/*
+				 * A page heading that says who is signed in.
+				 *
+				 * This was a live `useAuthStore()` subscription that nothing read: `UserMenu`
+				 * opens the same store itself, so the name only ever appeared as an avatar
+				 * initial and as text inside a dropdown you had to open to find. The page you
+				 * land on after signing in had no heading at all and never named you.
+				 *
+				 * Shown only once there is something to come back to. With no resumes the
+				 * welcome guide below is the heading, and two of them would compete.
+				 */}
+				{user && totalResumes > 0 ? (
+					<h1 className="mb-6 font-bold text-2xl">
+						{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+					</h1>
+				) : null}
+
 				{/* Welcome Guide */}
 				{showWelcomeGuide && totalResumes === 0 && (
 					<Card className="mb-8 border-primary/20 bg-primary/5">
@@ -464,6 +511,7 @@ function DashboardContent() {
 						<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{pagedResumes.map((resume: Resume) => (
 								<ResumeCard
+									isDuplicating={duplicatingId === resume.id}
 									key={resume.id}
 									onArchive={() => handleArchiveResume(resume.id)}
 									onDelete={() => {
