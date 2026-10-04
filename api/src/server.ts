@@ -23,7 +23,7 @@ export default {
 
 		if (request.method === "OPTIONS") {
 			const headers = new Headers();
-			applyPreflightHeaders(headers, origin, allowed);
+			applyPreflightHeaders(headers, origin, allowed, env.ENVIRONMENT);
 			return new Response(null, { headers });
 		}
 
@@ -39,7 +39,7 @@ export default {
 			});
 
 			const headers = new Headers(response.headers);
-			applyCorsHeaders(headers, origin, allowed);
+			applyCorsHeaders(headers, origin, allowed, env.ENVIRONMENT);
 
 			return new Response(response.body, {
 				status: response.status,
@@ -53,7 +53,7 @@ export default {
 			// told callers a write had been handled when nothing had been.
 			if (request.method !== "GET" && request.method !== "HEAD") {
 				const headers = new Headers({ Allow: "GET" });
-				applyCorsHeaders(headers, origin, allowed);
+				applyCorsHeaders(headers, origin, allowed, env.ENVIRONMENT);
 				return new Response("Method Not Allowed", {
 					status: 405,
 					headers,
@@ -61,7 +61,7 @@ export default {
 			}
 
 			const headers = new Headers({ "Content-Type": "application/json" });
-			applyCorsHeaders(headers, origin, allowed);
+			applyCorsHeaders(headers, origin, allowed, env.ENVIRONMENT);
 
 			return new Response(
 				JSON.stringify({
@@ -74,7 +74,7 @@ export default {
 		}
 
 		const headers = new Headers();
-		applyCorsHeaders(headers, origin, allowed);
+		applyCorsHeaders(headers, origin, allowed, env.ENVIRONMENT);
 		return new Response("Not Found", { status: 404, headers });
 	},
 };

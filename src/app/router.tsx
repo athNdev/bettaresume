@@ -1,11 +1,12 @@
 "use client";
 
-import { RedirectToSignIn, useAuth as useClerkAuth } from "@clerk/react";
+import { RedirectToSignIn } from "@clerk/react";
 // Lazy load views for code splitting
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { SplashScreen } from "@/app/splash-screen";
 import { useAuthStore } from "@/features/auth/auth.store";
+import { useAuthSession } from "@/lib/auth/use-auth-session";
 import { matchRoute, useHashRouter } from "@/lib/hash-router";
 
 const DashboardPage = dynamic(() => import("@/features/dashboard/dashboard"), {
@@ -20,15 +21,20 @@ const ResumeEditorPage = dynamic(
 );
 
 export function AppRouter() {
-	// NOTE: `isDevBypass` used to short-circuit every auth check below. It only
-	// appeared to work because the API had a matching dev bypass — which turned
-	// out to hand unauthenticated callers a full session in production. With the
-	// API bypass gone, this produced a dashboard that rendered while all of its
-	// requests 401'd. Development now authenticates like production, using Clerk
-	// dev keys. See docs/AGENT-CONTEXT.md.
+	// NOTE: `isDevBypass` used to short-circuit every auth check below, keyed on a
+	// single flag. It only appeared to work because the API had a matching dev
+	// bypass — which turned out to hand unauthenticated callers a full session in
+	// production. The lesson was not "no bypass": it was that one implicit gate
+	// is not a gate.
+	//
+	// There is no bypass check here at all now. `useAuthSession` resolves to the dev
+	// session in a local build that opted in, and to Clerk everywhere else, so
+	// `isSignedIn` is true in exactly the development case and only that case.
+	// That moves the decision to one build-time constant instead of scattering it
+	// across every route guard. See src/lib/dev-bypass.ts.
 	const { path, navigate, replace } = useHashRouter();
 	const { isAuthenticated } = useAuthStore();
-	const { isLoaded: isClerkLoaded, isSignedIn } = useClerkAuth();
+	const { isLoaded: isClerkLoaded, isSignedIn } = useAuthSession();
 	const [mounted, setMounted] = useState(false);
 
 	useEffect(() => {

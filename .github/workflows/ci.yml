@@ -184,6 +184,24 @@ jobs:
           grep -q 'app.bettaresume.com\|404' out/404.html || true
           echo "pages: $(find out -name '*.html' | wc -l) html file(s)"
 
+      - name: Assert the dev auth bypass is absent from the built bundle
+        # This is the assertion that matters, and it has to be here rather than in a
+        # test file. Source tests can show the gates are written correctly; only the
+        # built artifact can show the bundler folded them away.
+        #
+        # The bypass has to satisfy TWO build-time conditions (NEXT_PUBLIC_DEV_MODE and
+        # NODE_ENV === "development"), and CI sets neither — so the string must not
+        # survive anywhere in the JavaScript that will be served. If this ever fires, the
+        # header is reachable from production and any site could obtain a session by
+        # sending it, which is exactly how the original bypass worked.
+        run: |
+          if grep -rq --include='*.js' --include='*.html' 'x-dev-mode' out/; then
+            echo "::error::x-dev-mode is present in the production bundle. The dev auth bypass is reachable from production — see src/lib/dev-bypass.ts."
+            grep -rl --include='*.js' --include='*.html' 'x-dev-mode' out/ | head -5
+            exit 1
+          fi
+          echo "dev auth bypass absent from out/ — no x-dev-mode in any served file"
+
   dev-server:
     name: dev-server
     runs-on: ubuntu-latest

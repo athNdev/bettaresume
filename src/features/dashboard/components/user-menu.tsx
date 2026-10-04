@@ -1,6 +1,5 @@
 "use client";
 
-import { useClerk } from "@clerk/react";
 import { LogOut, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,6 +12,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/features/auth/auth.store";
+import { useSignOut } from "@/lib/auth/use-auth-session";
 
 /**
  * User Menu
@@ -22,7 +22,7 @@ import { useAuthStore } from "@/features/auth/auth.store";
  */
 export function UserMenu() {
 	const { user } = useAuthStore();
-	const { signOut } = useClerk();
+	const signOut = useSignOut();
 
 	if (!user) return null;
 
