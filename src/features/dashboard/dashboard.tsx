@@ -272,7 +272,14 @@ function DashboardContent() {
 				navigate(`/resume-editor/${newResume.id}`);
 			}
 		} catch (err) {
+			/*
+			 * `console.error` alone is the same as saying nothing: the user clicked, the
+			 * control settled back, and the thing they asked for did not happen. Reported
+			 * through the toast the rest of the app already uses; `console.error` is kept as
+			 * the developer breadcrumb, not as the user-facing half.
+			 */
 			console.error("Failed to create resume:", err);
+			toast.error("Could not create the resume.");
 		}
 	};
 
@@ -283,7 +290,12 @@ function DashboardContent() {
 				setResumeToDelete(null);
 				setIsDeleteDialogOpen(false);
 			} catch (err) {
+				/*
+				 * The dialog deliberately stays open on failure, so the user can try again
+				 * without reopening it -- which is only true if the failure is visible.
+				 */
 				console.error("Failed to delete resume:", err);
+				toast.error("Could not delete the resume.");
 			}
 		}
 	};
@@ -324,6 +336,7 @@ function DashboardContent() {
 			await archiveResume(id, true);
 		} catch (err) {
 			console.error("Failed to archive resume:", err);
+			toast.error("Could not archive the resume.");
 		}
 	};
 
@@ -332,6 +345,7 @@ function DashboardContent() {
 			await archiveResume(id, false);
 		} catch (err) {
 			console.error("Failed to restore resume:", err);
+			toast.error("Could not restore the resume.");
 		}
 	};
 
@@ -372,6 +386,7 @@ function DashboardContent() {
 					}
 				} catch (err) {
 					console.error("Failed to import resume:", err);
+					toast.error("Could not import the file.");
 				}
 			}
 		};
