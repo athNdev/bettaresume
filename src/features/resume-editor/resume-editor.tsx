@@ -285,12 +285,18 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 	const [previewScale, setPreviewScale] = useState(0.7);
 	const [contentOpen, setContentOpen] = useState(true);
-	const [designOpen, setDesignOpen] = useState(true);
 	/*
 	 * The typography controls default to collapsed so the document gets the space.
-	 * The rail's Templates disclosure keeps its own flag -- one `designOpen` driving
-	 * two disclosures on opposite sides of the screen meant opening the rail's
-	 * template list also shoved the preview's toolbar open.
+	 * The rail's Templates disclosure keeps its own flag -- one flag driving two
+	 * disclosures on opposite sides of the screen meant opening the rail's template
+	 * list also shoved the preview's toolbar open.
+	 *
+	 * It previously had two: `designOpen` drove this disclosure and its chevron, then
+	 * `typeOpen` was introduced and the disclosure was moved onto it while the chevron
+	 * was left reading `designOpen`. Nothing ever called `setDesignOpen`, so `designOpen`
+	 * was pinned `true` for the life of the component and the chevron never rotated --
+	 * it pointed down whether the panel was open or shut. Every sibling chevron here
+	 * reads the flag that drives its own `Collapsible`; this one was the exception.
 	 */
 	const [typeOpen, setTypeOpen] = useState(false);
 	const [typeControlsOpen, setTypeControlsOpen] = useState(false);
@@ -1118,7 +1124,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
 										<div className="flex items-center gap-2">
 											<ChevronDown
-												className={`h-4 w-4 transition-transform ${designOpen ? "" : "-rotate-90"}`}
+												className={`h-4 w-4 transition-transform ${typeOpen ? "" : "-rotate-90"}`}
 											/>
 											<Layout className="h-4 w-4" />
 											<span>Templates</span>
