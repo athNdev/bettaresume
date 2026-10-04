@@ -140,6 +140,11 @@ function DashboardContent() {
 	 * about a row they did not touch. This names the one row that is actually working.
 	 */
 	const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+	/*
+	 * Which resume is mid-archive. Archive and restore share one mutation, so one id covers
+	 * both -- `isArchiving` alone is dashboard-wide, exactly as `isDuplicating` was.
+	 */
+	const [archivingId, setArchivingId] = useState<string | null>(null);
 	const [showArchived, setShowArchived] = useState(false);
 	const [selectedTemplate, _setSelectedTemplate] = useState<
 		TemplateType | "all"
@@ -170,6 +175,7 @@ function DashboardContent() {
 		isCreating,
 		isDeleting,
 		isDuplicating,
+		isArchiving,
 	} = useResumeMutations();
 
 	const firstName = greetingName(user);
@@ -331,21 +337,34 @@ function DashboardContent() {
 		}
 	};
 
-	const handleArchiveResume = async (id: string) => {
-		try {
-			await archiveResume(id, true);
-		} catch (err) {
-			console.error("Failed to archive resume:", err);
-			toast.error("Could not archive the resume.");
-		}
-	};
+	/*
+	 * Archive and restore share one handler because they are one mutation with a different
+	 * argument, and they share the same in-flight concern: both flip a row's archived state,
+	 * so a double invocation is either a duplicated write or a second write that undoes the
+	 * first. `isArchiving` is the re-entry guard and `archivingId` says which row.
+	 */
+	const handleArchiveResume = async (
+		id: string,
+		archived: boolean,
+		name: string,
+	) => {
+		if (isArchiving) return;
 
-	const handleRestoreResume = async (id: string) => {
+		setArchivingId(id);
 		try {
-			await archiveResume(id, false);
+			await archiveResume(id, archived);
 		} catch (err) {
-			console.error("Failed to restore resume:", err);
-			toast.error("Could not restore the resume.");
+			console.error(
+				`Failed to ${archived ? "archive" : "restore"} resume:`,
+				err,
+			);
+			toast.error(
+				archived
+					? `"${name}" could not be archived.`
+					: `"${name}" could not be restored.`,
+			);
+		} finally {
+			setArchivingId(null);
 		}
 	};
 
@@ -559,9 +578,12 @@ function DashboardContent() {
 						<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{pagedResumes.map((resume: Resume) => (
 								<ResumeCard
+									isArchiving={archivingId === resume.id}
 									isDuplicating={duplicatingId === resume.id}
 									key={resume.id}
-									onArchive={() => handleArchiveResume(resume.id)}
+									onArchive={() =>
+										handleArchiveResume(resume.id, true, resume.name)
+									}
 									onDelete={() => {
 										setResumeToDelete(resume.id);
 										setIsDeleteDialogOpen(true);
@@ -574,7 +596,9 @@ function DashboardContent() {
 										navigate(`/resume-editor/${resume.id}`);
 									}}
 									onExport={() => handleExportResume(resume.id, resume.name)}
-									onRestore={() => handleRestoreResume(resume.id)}
+									onRestore={() =>
+										handleArchiveResume(resume.id, false, resume.name)
+									}
 									resume={resume}
 									variations={getVariations(resume.id)}
 								/>

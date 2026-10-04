@@ -34,3 +34,42 @@ export function codeOf(relativePath: string): string {
 		.replace(/\/\*[\s\S]*?\*\//g, "")
 		.replace(/^([\t ]*)\/\/[^\n]*/gm, "$1");
 }
+
+/**
+ * The body of every `catch (err) {` block, by brace matching.
+ *
+ * An earlier version of this split the file on the literal `catch (err) {` and took each
+ * segment as a body. That is wrong twice over: a segment runs to the *next* handler rather
+ * than to the end of its own block, so one handler's toast can appear inside another's, and a
+ * `console.error(` wrapped onto the next line does not contain the substring being searched
+ * for. Both mistakes were found by this test failing on correct code.
+ *
+ * Comments are stripped by the caller first, so braces inside them cannot unbalance the count.
+ */
+export function catchBodies(code: string): string[] {
+	const bodies: string[] = [];
+	const marker = /catch \(err\) \{/g;
+
+	// A plain loop rather than `while ((match = marker.exec(code)) !== null)`: the
+	// assignment-in-condition trips `noAssignInExpressions`, and this file is read by every
+	// source-asserting test, so it should not be the thing that raises the lint baseline.
+	for (;;) {
+		const match = marker.exec(code);
+		if (match === null) break;
+
+		const start = match.index + match[0].length;
+		let depth = 1;
+		let i = start;
+
+		for (; i < code.length && depth > 0; i++) {
+			if (code[i] === "{") depth++;
+			else if (code[i] === "}") depth--;
+		}
+
+		bodies.push(code.slice(start, i - 1));
+		// Resume past this block, so a `catch` nested inside it is not reported twice.
+		marker.lastIndex = i;
+	}
+
+	return bodies;
+}
