@@ -404,24 +404,38 @@ success converts a known gap into silent corruption, and the layers above are th
 ones that pay for it. This is also why every fix here was verified by trying to make
 it *fail*, not by reading it.
 
-### 2.20 Seven lint findings are load-bearing — do not "clean them up"
+### 2.20 Seven lint findings were load-bearing — all seven now closed
 
-Seven `noUnusedVariables` / `noUnusedFunctionParameters` findings are deliberately left
-in the tree. They are not dead code. Each is a value the code **computes and then never
-shows**, and deleting the binding silences the lint while leaving the defect exactly
-where it was.
+Seven `noUnusedVariables` / `noUnusedFunctionParameters` findings sat in the tree for
+months. They were not dead code: each was a value the code **computed and then never
+showed**, and deleting the binding would have silenced the lint while leaving the defect
+exactly where it was. All seven are now fixed at the rendering layer, and each fix removed
+its finding on its own — never the other way round.
 
-| Finding | What is really wrong |
-|---|---|
-| `rich-text-editor.tsx` destructures `status` and `error` from `useAutoSave` and uses neither | the editor renders no save state at all |
-| `save-status-indicator.tsx` accepts `error` and never renders it | its own doc comment promises `"Save failed"` with a retry button |
-| `import-review-panel.tsx` holds `error` state, calls `setError`, never reads it | import failures are recorded and never displayed |
-| `resume-editor.tsx` calls `useState` for `designOpen`, never `setDesignOpen` | the design rail's chevron (`resume-editor.tsx:1121`) can never rotate |
-| `dashboard.tsx` reads `user` and `isDuplicating`, uses neither | no user identity, no duplicate-pending state |
+| Was | What was really wrong | Fixed in |
+|---|---|---|
+| `rich-text-editor.tsx` destructured `status` and `error` from `useAutoSave` | the only section form of nine that autosaved with no visible state at all | #182 |
+| `save-status-indicator.tsx` accepted `error` and never rendered it | the one thing distinguishing a network blip from a validation rejection never reached the screen | #182 |
+| `import-review-panel.tsx` held `error`, called `setError`, never read it | a row could turn red with no way to learn why and no way to retry that row | #183 |
+| `resume-editor.tsx` called `useState` for `designOpen`, never `setDesignOpen` | half a migration left the Templates chevron reading a flag with no writer, so it could never rotate | #184 |
+| `dashboard.tsx` read `user`, used nowhere | redundant store subscription; the dashboard had no heading and never named you | #185 |
+| `dashboard.tsx` read `isDuplicating`, used nowhere | a slow duplicate and a failed duplicate were indistinguishable, and a failure was only a `console.error` | #185 |
 
-**Fix the rendering, not the lint.** Wire the value into the UI and the finding
-disappears on its own. Deleting the binding is the one change that makes the number go
-down while the user still sees nothing.
+**The rule still stands for the next one.** When lint reports an unused binding, check
+whether something *computes* it before deleting it. If a value is produced by a hook, a
+store, or a `setState` and then dropped on the floor, the finding is the only thing
+reporting a real defect. Wire the value into the UI and the finding disappears by itself.
+
+Two things this sequence taught that are worth keeping:
+
+- **A test can be wrong in the direction that hides the bug.** The chevron guard
+  (`test/disclosure-affordances.test.ts`) matched setter names in raw source, so the prose
+  documenting the defect satisfied it. Identifiers are now matched in code only, comments
+  stripped. And when a test disagreed with a fix, the first thing to verify is the
+  *reproduction* — two attempts to reintroduce the bug silently changed nothing, and the
+  resulting failure was easy to misread as the guard being broken.
+- **Verifying the verifier is not optional.** Each guard here was re-run against a
+  deliberately reintroduced defect. A test never observed to fail is not evidence.
 
 Two related traps from the same cleanup:
 
@@ -576,7 +590,7 @@ Several shipped controls are wired to this stub. See
 | `npm run typecheck -w api` | **required in CI** (added #118) |
 | `npm test` (root + api) | **required in CI** (added #125/#127) — **1031 tests**: 812 root, 219 api |
 | `npm run build` | required |
-| `npm run check` (biome) | **321 diagnostics**, ratcheted in CI (baseline 321, lowered from 376) — **not** gated. Tighten it whenever the count falls, or the improvement is spendable again. Seven findings in it are load-bearing — see §2.20. |
+| `npm run check` (biome) | **312 diagnostics**, ratcheted in CI (baseline 312, lowered from 376) — **not** gated. Tighten it whenever the count falls, or the improvement is spendable again. The seven findings that were load-bearing are now closed at the rendering layer — see §2.20. |
 | `dev-server` | required in CI |
 
 `tsconfig.json` now includes `test/**`, so tests are typechecked rather than only

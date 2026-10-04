@@ -58,6 +58,24 @@ difference between a product that reports its state and one that silently swallo
 | A4 | `resume-editor.tsx` | `useState` for `designOpen` with no `setDesignOpen` call — the design rail's chevron can never rotate | Either wire the disclosure to the setter, or drop the state and the chevron. Not both, and not neither |
 | A5 | `dashboard.tsx` | `user` from the auth store and `isDuplicating` from the mutation hook are both unused | Show who is signed in; surface duplicate-in-progress on the control that triggers it |
 
+> **Phase A is complete (PRs #182–#185).** Every row above is closed at the rendering layer
+> and every one of the seven §2.20 findings is zero *because the value is now rendered* — not
+> because a binding was deleted. Biome `321 → 312`, `1107` tests passing.
+>
+> Two rows did not survive contact with the code as written, and the difference is worth
+> recording:
+>
+> - **A5's `user` was not unwired, it was redundant.** `UserMenu` opens the same auth store
+>   itself, so the dashboard's subscription was duplicative. The defect was not "the name is
+>   unavailable" but "the page has no heading and never names you" — which the plan had not
+>   noticed. Fixed by rendering a greeting (`greetingName()` in `dashboard/greeting.ts`), with
+>   the email local part as fallback for social logins that carry no name.
+> - **A5's `isDuplicating` could not be used as specified.** The plan says "surface
+>   duplicate-in-progress on the control that triggers it", but the hook's boolean is
+>   dashboard-wide: wired alone it would spin the duplicate control on *every* card at once.
+>   It is now used to guard re-entry, with a per-row `duplicatingId` deciding which control
+>   shows it. That also closed a real hole — `duplicateResume` is not idempotent.
+
 **Acceptance:** after Phase A, the seven lint findings in `docs/AGENT-CONTEXT.md` §2.20 are
 zero, and each is zero *because the value is now rendered*. A test asserts each of the five
 surfaces carries the state, not that a variable is unused.
