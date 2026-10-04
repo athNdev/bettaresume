@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { greetingName } from "@/features/dashboard/greeting";
 import { plural, resultSummary } from "@/features/dashboard/result-summary";
-import { codeOf } from "./helpers/code-source";
+import { catchBodies, codeOf } from "./helpers/code-source";
 
 // Comments stripped: several assertions below are about an identifier being *absent*, and
 // prose describing a fix must not be able to satisfy or break them.
@@ -215,20 +215,20 @@ describe("no dashboard mutation fails silently", () => {
 	/**
 	 * Every `catch (err)` body that logs a failure must also report it.
 	 *
-	 * Splitting on `catch (err) {` means each segment runs from one handler's opening brace
-	 * to the next handler's, which is exactly the span a toast has to appear in. This is the
-	 * invariant rather than a list of the six sites, so a seventh mutation added later is
-	 * covered without anyone remembering to extend a table.
+	 * This is the invariant rather than a list of the six sites, so a seventh mutation added
+	 * later is covered without anyone remembering to extend a table. Bodies come from
+	 * `catchBodies`, which brace-matches: splitting on the literal marker made a segment run
+	 * to the next handler instead of the end of its own block.
 	 */
-	const handlers = dashboard
-		.split("catch (err) {")
-		.slice(1)
-		.filter((segment) => segment.includes('console.error("Failed to'));
+	const handlers = catchBodies(dashboard).filter((body) =>
+		/console\.error\([\s\S]{0,60}Failed to/.test(body),
+	);
 
 	it("finds the handlers that log a failure", () => {
 		// Guards against the split silently matching nothing and every assertion below
-		// passing over an empty list.
-		expect(handlers.length).toBeGreaterThanOrEqual(6);
+		// passing over an empty list. Five, not six: archive and restore share one handler
+		// because they are one mutation with a different argument.
+		expect(handlers.length).toBeGreaterThanOrEqual(5);
 	});
 
 	it("has a toast in every one of them", () => {
@@ -262,18 +262,77 @@ describe("no dashboard mutation fails silently", () => {
 	});
 
 	it("covers create, delete, archive, restore and import, not just the ones that were broken", () => {
-		for (const verb of [
-			"create resume",
-			"delete resume",
-			"archive resume",
-			"restore resume",
-			"import resume",
+		// Keyed off the toast wording rather than the logged wording. Merging archive and
+		// restore into one handler turned their `console.error` calls into a template
+		// literal, so a test that looked for `Failed to archive resume:` was asserting on
+		// the source's phrasing rather than on the behaviour.
+		for (const message of [
+			"Could not create the resume.",
+			"Could not delete the resume.",
+			"could not be archived",
+			"could not be restored",
+			"Could not import the file.",
 		]) {
-			const segment = handlers.find((h) =>
-				h.includes(`console.error("Failed to ${verb}:`),
-			);
-			expect(segment, `no handler logs "${verb}"`).toBeDefined();
+			const segment = handlers.find((h) => h.includes(message));
+			expect(segment, `no handler reports "${message}"`).toBeDefined();
 			expect(segment).toContain("toast.error");
 		}
+	});
+});
+
+describe("archiving and restoring a resume report progress", () => {
+	it("uses the pending flag the hook already exposes", () => {
+		// #188 claimed the hook had nothing for archiving. It does — `isArchiving` was there
+		// the whole time, next to the other three. The claim was wrong and this asserts the
+		// fact instead of repeating the claim.
+		const hook = codeOf("src/hooks/use-resume-mutations.ts");
+
+		expect(hook).toContain("isArchiving: archive.isPending");
+		expect(dashboard).toMatch(/\bisArchiving,\n\t\} = useResumeMutations\(\);/);
+	});
+
+	it("shares one handler for archive and restore", () => {
+		// They are one mutation with a different argument, and they carry the same risk: both
+		// flip a row's archived state, so a double invocation either duplicates the write or
+		// undoes the first one.
+		expect(dashboard).toMatch(
+			/const handleArchiveResume = async \(\s*id: string,\s*archived: boolean,\s*name: string,?\s*\) => \{/,
+		);
+		expect(dashboard).not.toContain("handleRestoreResume");
+	});
+
+	it("names the row that is working rather than dimming all of them", () => {
+		expect(dashboard).toContain("archivingId");
+		expect(dashboard).toMatch(/isArchiving=\{archivingId === resume\.id\}/);
+	});
+
+	it("refuses a second archive while one is in flight", () => {
+		expect(dashboard).toMatch(/if \(isArchiving\) return;/);
+	});
+
+	it("clears the marker whether it worked or not", () => {
+		const handler = dashboard.match(
+			/const handleArchiveResume[\s\S]*?\n\t};/,
+		)?.[0];
+
+		expect(handler).toContain("finally");
+		expect(handler).toContain("setArchivingId(null)");
+	});
+
+	it("distinguishes the two failures in the message", () => {
+		// "Could not archive" shown for a failed restore is the wrong sentence about the
+		// user's own data, and it is the one they will read twice.
+		const handler = dashboard.match(
+			/const handleArchiveResume[\s\S]*?\n\t};/,
+		)?.[0];
+
+		expect(handler).toMatch(/could not be archived/);
+		expect(handler).toMatch(/could not be restored/);
+	});
+
+	it("spins and disables both menu items", () => {
+		expect(card).toMatch(/<DropdownMenuItem\s+disabled=\{isArchiving\}/);
+		expect(card).toContain('"Archiving…"');
+		expect(card).toContain('"Restoring…"');
 	});
 });

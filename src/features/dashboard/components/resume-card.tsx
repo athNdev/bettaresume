@@ -52,6 +52,8 @@ interface ResumeCardProps {
 	isDuplicating?: boolean;
 	onExport: () => void;
 	onArchive: () => void;
+	/** This card's own archive/restore is in flight. */
+	isArchiving?: boolean;
 	onRestore: () => void;
 	onDelete: () => void;
 }
@@ -64,6 +66,7 @@ export function ResumeCard({
 	isDuplicating = false,
 	onExport,
 	onArchive,
+	isArchiving = false,
 	onRestore,
 	onDelete,
 }: ResumeCardProps) {
@@ -128,14 +131,22 @@ export function ResumeCard({
 							</DropdownMenuItem>
 							<DropdownMenuSeparator />
 							{resume.isArchived ? (
-								<DropdownMenuItem onClick={onRestore}>
-									<ArchiveRestore className="mr-2 h-4 w-4" />
-									Restore
+								<DropdownMenuItem disabled={isArchiving} onClick={onRestore}>
+									{isArchiving ? (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									) : (
+										<ArchiveRestore className="mr-2 h-4 w-4" />
+									)}
+									{isArchiving ? "Restoring…" : "Restore"}
 								</DropdownMenuItem>
 							) : (
-								<DropdownMenuItem onClick={onArchive}>
-									<Archive className="mr-2 h-4 w-4" />
-									Archive
+								<DropdownMenuItem disabled={isArchiving} onClick={onArchive}>
+									{isArchiving ? (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									) : (
+										<Archive className="mr-2 h-4 w-4" />
+									)}
+									{isArchiving ? "Archiving…" : "Archive"}
 								</DropdownMenuItem>
 							)}
 							<DropdownMenuSeparator />
