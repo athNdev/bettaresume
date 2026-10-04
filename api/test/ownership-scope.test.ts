@@ -12,7 +12,6 @@ import {
 	SECTION_A,
 	SECTION_B,
 	USER_A,
-	USER_B,
 } from "./helpers/harness";
 
 /**

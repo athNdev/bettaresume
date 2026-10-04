@@ -1,7 +1,6 @@
 ﻿import type {
 	CreateResumeInput,
 	Resume,
-	ResumeWithSections,
 	UpdateResumeInput,
 } from "@bettaresume/types";
 import { api } from "@/lib/trpc/react";
