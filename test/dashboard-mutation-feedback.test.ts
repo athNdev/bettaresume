@@ -210,3 +210,70 @@ describe("the dashboard announces what the filter did", () => {
 		expect(dashboard).toContain("<PanelError");
 	});
 });
+
+describe("no dashboard mutation fails silently", () => {
+	/**
+	 * Every `catch (err)` body that logs a failure must also report it.
+	 *
+	 * Splitting on `catch (err) {` means each segment runs from one handler's opening brace
+	 * to the next handler's, which is exactly the span a toast has to appear in. This is the
+	 * invariant rather than a list of the six sites, so a seventh mutation added later is
+	 * covered without anyone remembering to extend a table.
+	 */
+	const handlers = dashboard
+		.split("catch (err) {")
+		.slice(1)
+		.filter((segment) => segment.includes('console.error("Failed to'));
+
+	it("finds the handlers that log a failure", () => {
+		// Guards against the split silently matching nothing and every assertion below
+		// passing over an empty list.
+		expect(handlers.length).toBeGreaterThanOrEqual(6);
+	});
+
+	it("has a toast in every one of them", () => {
+		const silent = handlers.filter(
+			(segment) => !segment.includes("toast.error"),
+		);
+
+		expect(
+			silent,
+			`${silent.length} handler(s) log a failure without telling the user`,
+		).toEqual([]);
+	});
+
+	it("does not report a success as a failure", () => {
+		// The wording is the user-facing half, so it is worth pinning: "Could not" on a
+		// successful action trains people to ignore toasts.
+		expect(dashboard).not.toMatch(/toast\.error\((["'`])(?:Created|Deleted)/);
+	});
+
+	it("keeps the delete dialog open on failure, and says why", () => {
+		// The dialog staying open is only useful if the user can tell the difference between
+		// "still working" and "it did not work".
+		const del = dashboard.match(/const handleDeleteResume[\s\S]*?\n\t};/)?.[0];
+
+		expect(del).toBeDefined();
+		// Cleared only on the success path.
+		expect(del).toMatch(
+			/await deleteResume[\s\S]{0,120}setIsDeleteDialogOpen\(false\)/,
+		);
+		expect(del).toContain("toast.error");
+	});
+
+	it("covers create, delete, archive, restore and import, not just the ones that were broken", () => {
+		for (const verb of [
+			"create resume",
+			"delete resume",
+			"archive resume",
+			"restore resume",
+			"import resume",
+		]) {
+			const segment = handlers.find((h) =>
+				h.includes(`console.error("Failed to ${verb}:`),
+			);
+			expect(segment, `no handler logs "${verb}"`).toBeDefined();
+			expect(segment).toContain("toast.error");
+		}
+	});
+});
