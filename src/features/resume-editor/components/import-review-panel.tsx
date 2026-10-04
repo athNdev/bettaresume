@@ -4,6 +4,7 @@ import type { SectionType } from "@bettaresume/types";
 import { FileUp, Pencil, Upload } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PanelError } from "@/components/ui/panel-state";
 import {
 	Sheet,
 	SheetContent,
@@ -40,6 +41,14 @@ export function ImportPanel({
 		Record<number, "pending" | "added" | "error">
 	>({});
 	const [error, setError] = useState<string | undefined>();
+	/*
+	 * Which section failed, so Retry retries *that* section rather than telling the user to
+	 * start over. Without it the only honest retry is "try again" on something the user
+	 * cannot see, which is the same dead-end affordance this error was.
+	 */
+	const [failedSectionIndex, setFailedSectionIndex] = useState<
+		number | undefined
+	>();
 
 	const utils = api.useUtils();
 	const create = api.content.create.useMutation({
@@ -54,11 +63,13 @@ export function ImportPanel({
 		setRemoved({});
 		setAdded({});
 		setError(undefined);
+		setFailedSectionIndex(undefined);
 	}, []);
 
 	const onFile = useCallback(async (file: File) => {
 		setBusy(true);
 		setError(undefined);
+		setFailedSectionIndex(undefined);
 		setOverrides({});
 		setRemoved({});
 		setAdded({});
@@ -100,6 +111,7 @@ export function ImportPanel({
 					onError: (cause) => {
 						setAdded((prev) => ({ ...prev, [sectionIndex]: "error" }));
 						setError(cause.message);
+						setFailedSectionIndex(sectionIndex);
 					},
 				},
 			);
@@ -149,6 +161,36 @@ export function ImportPanel({
 
 					{busy ? (
 						<p className="text-muted-foreground text-sm">Reading the file…</p>
+					) : null}
+
+					{/*
+					  The save failure, which used to be recorded in state and never shown.
+
+					  The panel already distinguishes three outcomes — reading the file, refusing
+					  to read it, and reviewing what was found — and the refusal case below has a
+					  full explanation. A section that then failed to save had *no* surface at
+					  all: the row was marked "error" by a colour and a badge, and the message
+					  the server sent was captured into state and dropped. Someone watching a row
+					  turn red had no way to find out why, and no way to retry that row.
+
+					  `PanelError` is the component the editor already uses for exactly this
+					  shape, so this reuses it rather than inventing a second error style. Its
+					  `role="alert"` means it is announced, which the per-row badge is not.
+					*/}
+					{error ? (
+						<PanelError
+							className="mb-4"
+							message={error}
+							onRetry={
+								failedSectionIndex === undefined
+									? undefined
+									: () => {
+											setError(undefined);
+											handleAdd(failedSectionIndex);
+										}
+							}
+							retryLabel="Save this section again"
+						/>
 					) : null}
 
 					{outcome && !outcome.ok ? (
