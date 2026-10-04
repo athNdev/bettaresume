@@ -57,6 +57,13 @@ jobs:
       - name: Build the static export
         # The same command CD runs. 16 GB runners do not need the heap cap that local
         # 4 GB nodes do (docs/AGENT-CONTEXT.md §2.6).
+        #
+        # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required: `/app` is statically prerendered
+        # and `clerk-provider.tsx` throws at module scope without it, so the export fails
+        # with "Missing Clerk Publishable Key". The main CI `build` job already injects it;
+        # this workflow has to as well. Found by this workflow failing on its first run.
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
         run: npm run build
 
       - name: Install Playwright without touching the lockfile
