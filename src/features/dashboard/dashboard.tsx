@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PanelError } from "@/components/ui/panel-state";
 import {
 	Select,
 	SelectContent,
@@ -54,6 +55,7 @@ import { ResumeCard } from "@/features/dashboard/components/resume-card";
 import { ThemeToggle } from "@/features/dashboard/components/theme-toggle";
 import { UserMenu } from "@/features/dashboard/components/user-menu";
 import { greetingName } from "@/features/dashboard/greeting";
+import { resultSummary } from "@/features/dashboard/result-summary";
 import {
 	TEMPLATE_CONFIGS,
 	type TemplateType,
@@ -158,6 +160,7 @@ function DashboardContent() {
 		isLoading,
 		isError,
 		error,
+		refetch,
 	} = useResumes({ includeArchived: true });
 	const {
 		createResume,
@@ -224,24 +227,32 @@ function DashboardContent() {
 		return <DashboardSkeleton />;
 	}
 
-	// Show error state
+	/*
+	 * A failed load, rendered with the same primitive the editor uses.
+	 *
+	 * This was hand-rolled and had drifted from `PanelError` in two ways that mattered:
+	 *
+	 * - No `role="alert"`, so the failure only changed pixels. A screen-reader user was
+	 *   left on a page that had silently become empty -- indistinguishable from an account
+	 *   with no resumes, which is the exact confusion `panel-state.tsx` exists to prevent.
+	 * - Retry called `window.location.reload()`, throwing away the whole app to re-run one
+	 *   query. It also lost anything the user had typed, and looked like a crash-and-recover
+	 *   rather than a refetch.
+	 *
+	 * `refetch` is what the query was already doing behind a cache; a failed request is
+	 * exactly what it is for.
+	 */
 	if (isError) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-background">
-				<Card className="max-w-md">
-					<CardHeader>
-						<CardTitle className="text-destructive">
-							Error Loading Resumes
-						</CardTitle>
-						<CardDescription>
-							{error?.message ||
-								"Failed to load your resumes. Please try again."}
-						</CardDescription>
-					</CardHeader>
-					<CardFooter>
-						<Button onClick={() => window.location.reload()}>Retry</Button>
-					</CardFooter>
-				</Card>
+			<div className="flex min-h-screen items-center justify-center bg-background p-4">
+				<PanelError
+					className="max-w-md border-solid"
+					message={
+						error?.message || "Failed to load your resumes. Please try again."
+					}
+					onRetry={() => void refetch()}
+					retryLabel="Retry"
+				/>
 			</div>
 		);
 	}
@@ -508,6 +519,28 @@ function DashboardContent() {
 				{/* Resume Grid */}
 				{filteredResumes.length > 0 ? (
 					<>
+						{/*
+						 * Says what the filter did, and is announced when it changes.
+						 *
+						 * The search filters client-side on every keystroke, so the grid changes
+						 * without focus ever moving. Nothing said so: the input reported the query
+						 * and the list silently shrank, which a screen-reader user cannot detect
+						 * and a sighted user has to count for themselves.
+						 *
+						 * Visually this is also the answer to "why is only one card showing" when
+						 * the filter is narrow or the list is paginated.
+						 */}
+						<p
+							aria-live="polite"
+							className="mb-4 text-muted-foreground text-sm"
+							role="status"
+						>
+							{resultSummary({
+								matched: filteredResumes.length,
+								query: searchQuery,
+								total: totalResumes,
+							})}
+						</p>
 						<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{pagedResumes.map((resume: Resume) => (
 								<ResumeCard

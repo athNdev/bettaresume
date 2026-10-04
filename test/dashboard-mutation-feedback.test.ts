@@ -5,21 +5,15 @@
  * `isDuplicating` from the mutation hook, and `user` from the auth store. In each case the
  * value was already there and correct — what was missing was anywhere to put it.
  */
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { greetingName } from "@/features/dashboard/greeting";
+import { plural, resultSummary } from "@/features/dashboard/result-summary";
+import { codeOf } from "./helpers/code-source";
 
-const dashboard = readFileSync(
-	new URL("../src/features/dashboard/dashboard.tsx", import.meta.url),
-	"utf8",
-);
-const card = readFileSync(
-	new URL(
-		"../src/features/dashboard/components/resume-card.tsx",
-		import.meta.url,
-	),
-	"utf8",
-);
+// Comments stripped: several assertions below are about an identifier being *absent*, and
+// prose describing a fix must not be able to satisfy or break them.
+const dashboard = codeOf("src/features/dashboard/dashboard.tsx");
+const card = codeOf("src/features/dashboard/components/resume-card.tsx");
 
 describe("greetingName", () => {
 	it("uses the first word of a full name", () => {
@@ -128,5 +122,91 @@ describe("duplicating a resume reports what happened", () => {
 		expect(card).toMatch(/<DropdownMenuItem\s+disabled=\{isDuplicating\}/);
 		expect(card).toContain('"Duplicating…"');
 		expect(card).toContain("animate-spin");
+	});
+});
+
+describe("plural", () => {
+	it("does not pluralise a single item", () => {
+		expect(plural(1, "resume")).toBe("resume");
+		expect(plural(0, "resume")).toBe("resumes");
+		expect(plural(2, "resume")).toBe("resumes");
+	});
+
+	it("accepts an irregular plural", () => {
+		expect(plural(2, "match", "matches")).toBe("matches");
+		expect(plural(1, "match", "matches")).toBe("match");
+	});
+});
+
+describe("resultSummary", () => {
+	it("counts everything when nothing is filtered", () => {
+		expect(resultSummary({ matched: 12, total: 12 })).toBe("12 resumes");
+		expect(resultSummary({ matched: 1, total: 1 })).toBe("1 resume");
+	});
+
+	it("counts of-and-when a search is active", () => {
+		// A bare "3 matches" reads as "this account has three resumes" — true of the
+		// query, false of the data.
+		expect(resultSummary({ matched: 3, total: 12, query: "react" })).toBe(
+			'3 of 12 resumes match "react"',
+		);
+	});
+
+	it("agrees with itself on both counts at once", () => {
+		expect(resultSummary({ matched: 1, total: 2, query: "cv" })).toBe(
+			'1 of 2 resumes match "cv"',
+		);
+		expect(resultSummary({ matched: 2, total: 1, query: "cv" })).toBe(
+			'2 of 1 resume match "cv"',
+		);
+	});
+
+	it("ignores a query that is only whitespace", () => {
+		// A stray space in the box is not a search; reporting "0 of 12 match ''" would be.
+		expect(resultSummary({ matched: 12, total: 12, query: "   " })).toBe(
+			"12 resumes",
+		);
+	});
+
+	it("trims the query it echoes back", () => {
+		expect(resultSummary({ matched: 1, total: 1, query: "  cv  " })).toBe(
+			'1 of 1 resume match "cv"',
+		);
+	});
+
+	it("says nothing when there is nothing to show", () => {
+		// Zero is already covered by the empty state; a second statement about the same
+		// fact is noise, and "0 of 12 match" next to "No resumes match" reads as a bug.
+		expect(resultSummary({ matched: 0, total: 12, query: "zzz" })).toBe("");
+		expect(resultSummary({ matched: 0, total: 0 })).toBe("");
+	});
+});
+
+describe("the dashboard announces what the filter did", () => {
+	it("puts the count in a live region", () => {
+		// The search filters on every keystroke without moving focus, so without this the
+		// grid changes silently.
+		expect(dashboard).toMatch(
+			/<p\s+aria-live="polite"[\s\S]{0,200}role="status"/,
+		);
+		expect(dashboard).toContain("resultSummary({");
+	});
+
+	it("counts against the unfiltered total, not the page it happens to show", () => {
+		expect(dashboard).toMatch(/matched: filteredResumes\.length/);
+		expect(dashboard).toMatch(/total: totalResumes/);
+	});
+
+	it("retries a failed load by refetching, not by reloading the page", () => {
+		// `window.location.reload()` threw away the whole app to re-run one query, and lost
+		// anything the user had typed.
+		expect(dashboard).toMatch(/onRetry=\{\(\) => void refetch\(\)\}/);
+		expect(dashboard).not.toContain("window.location.reload()");
+	});
+
+	it("uses the shared error primitive rather than a hand-rolled card", () => {
+		// The hand-rolled version had no role="alert", so a failed load only changed pixels
+		// and was indistinguishable from an account with no resumes.
+		expect(dashboard).toContain("<PanelError");
 	});
 });

@@ -9,13 +9,10 @@
  * These assert the invariant that would have caught the defect, rather than the single
  * instance of it.
  */
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { codeOf } from "./helpers/code-source";
 
-const source = readFileSync(
-	new URL("../src/features/resume-editor/resume-editor.tsx", import.meta.url),
-	"utf8",
-);
+const source = codeOf("src/features/resume-editor/resume-editor.tsx");
 
 /** Every `const [flag, setFlag] = useState(...)` declaration in the file. */
 function declarations(code: string): { flag: string; setter: string }[] {
@@ -25,22 +22,12 @@ function declarations(code: string): { flag: string; setter: string }[] {
 }
 
 /**
- * The source reduced to executable code: comments and `useState` declarations removed.
- *
- * Both removals are load-bearing, and the second one was found by checking this test against
- * the bug it claims to catch.
- *
- * Declarations: a setter's *declaration* is not evidence that it is ever used, so counting
- * occurrences in the raw source makes every flag look driven.
- *
- * Comments: this file documents the defect in prose, and that prose names `setDesignOpen` —
- * which satisfied the check and let the bug pass. A guard that a code comment can switch off
- * is not a guard, so identifiers are only ever matched in code.
+ * Comments stripped, because a code comment can satisfy a check about an identifier.
+ * See `helpers/code-source.ts` — this is the second time this has mattered.
  */
 const codeOnly = source
 	.replace(/\/\*[\s\S]*?\*\//g, "")
-	.replace(/(^|[^:])\/\/[^\n]*/g, "$1")
-	.replace(/const \[\w+, set\w+\] = useState\([^;]*\);/g, "");
+	.replace(/^([\t ]*)\/\/[^\n]*/gm, "$1");
 
 /** Whether a setter is ever referenced beyond its own declaration. */
 function isWritten(setter: string): boolean {
