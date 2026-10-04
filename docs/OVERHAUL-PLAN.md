@@ -91,13 +91,45 @@ files, and the visual audit shows the states.
 The dashboard's job: get a person to a finished, tailored resume with the least friction.
 Today it lists resumes and offers mutations. It does not answer "what should I do next".
 
+> **Phase B1–B4 are complete (PRs #187–#189).** B5 (layout) is the only part of Phase B
+> left. What each row actually turned out to be, where it differed from the prediction:
+>
+> - **B1 was already done by A5.** The plan still described `user` as "already fetched and
+>   unused" in Phase B, but A5 had already rendered the greeting. Phase B was written before
+>   Phase A was executed, and not updated afterwards.
+> - **B2 was a drift problem, not a missing state.** The dashboard had a loading skeleton and an
+>   error card; they had simply fallen behind `PanelError` in two ways — no `role="alert"`, and
+>   a Retry that called `window.location.reload()` instead of `refetch()`. Converging the two
+>   surfaces was the whole job.
+> - **B3 was five defects, not one.** `isDuplicating` was the only one lint could see. Create,
+>   delete, archive, restore and import all caught into `console.error` and stopped, which is a
+>   no-op: in three of the five the grid does not change either, so the page looks exactly as it
+>   did before the click. All six are now reported, and all six mutations have pending state.
+> - **B4 was half wrong.** "An empty result with no explanation reads as a broken list" was
+>   already handled — `No resumes match "react". Try a different search term.` What was missing
+>   was the *count* and the announcement, so the filter now announces itself in a live region.
+>
+> Two corrections worth carrying forward, because both were mine:
+>
+> - **A lint-clean binding is not a finished feature.** #188 reported that the mutations hook
+>   "exposes `isCreating`, `isDeleting` and `isDuplicating` but nothing for archiving". It does:
+>   `isArchiving` was there all along, on the line above `isAnyPending`. I asserted a
+>   limitation without reading the file, and the change turned out to be a few lines. There is
+>   now a test that pins the flag's existence.
+> - **A test can be wrong about correct code.** The handler-body extractor split the file on
+>   `catch (err) {` and treated each segment as a block, which mis-attributed one handler's toast
+>   to another and missed a wrapped `console.error(` entirely. It is now brace-matched. Twice in
+>   this phase a failing test meant the test was wrong, not the code.
+
 ### B1. Orientation — who am I, what do I have
+**Done in #185.**
 `user` is already fetched and unused. The header carries a user menu; the identity is
 invisible until you open it. Put identity and resume count in the header, and an empty
 state on the list that says what to do when there are no resumes (currently the difference
 between "nothing here" and "not loaded yet" is not visible).
 
 ### B2. Empty and loading states, distinguished
+**Done in #187.**
 The repo's hardest-won lesson (`docs/AGENT-CONTEXT.md` §2.15, §2.19) is that a fallback
 that renders successfully hides corruption. The dashboard must distinguish, visually and in
 the DOM:
@@ -110,12 +142,14 @@ Today `PanelEmpty`/`PanelError` exist and are used in the editor. The dashboard 
 the same primitives so the two surfaces cannot drift.
 
 ### B3. Mutation feedback on every control
+**Done in #188, finished in #189.**
 `isDuplicating` is unused, so duplicating a resume gives no feedback and no way to tell a
 slow duplicate from a failed one. Every mutation (`createResume`, `deleteResume`,
 `duplicateResume`, `archiveResume`) gets: disabled-while-pending, an announced result, and
 a surfaced failure. This is Phase A5 extended to all four.
 
 ### B4. Search and filtering that announces itself
+**Done in #187.**
 `searchQuery` filters the list client-side. It must declare how many results matched, and
 what happens when the query matches nothing — an empty result with no explanation reads as
 a broken list.
