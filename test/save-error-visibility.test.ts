@@ -126,3 +126,40 @@ describe("the rich-text editor reports its save state like every other form", ()
 		expect(indicatorIndex).toBeLessThan(toolbarIndex);
 	});
 });
+
+describe("the import panel surfaces a section that failed to save", () => {
+	const source = read(
+		"../src/features/resume-editor/components/import-review-panel.tsx",
+	);
+
+	it("renders the captured error rather than only holding it in state", () => {
+		// The panel has three outcomes — reading, refusing to read, reviewing — and the
+		// refusal case has a full explanation. A section that then failed to *save* had no
+		// surface at all: the row turned red and the server's message was dropped.
+		expect(source).toContain("<PanelError");
+		expect(source).toContain("message={error}");
+	});
+
+	it("offers a retry that re-saves that specific section", () => {
+		expect(source).toContain("failedSectionIndex");
+		expect(source).toMatch(
+			/onRetry=\{[\s\S]{0,320}handleAdd\(failedSectionIndex\)/,
+		);
+		// A retry that cannot name what it is retrying is an affordance with no action.
+		expect(source).toContain("Save this section again");
+	});
+
+	it("forgets the failed section when the error is cleared", () => {
+		// Otherwise a later, unrelated failure would inherit a retry target from an earlier
+		// one and re-save the wrong section.
+		const cleared = source.match(/setError\(undefined\);/g) ?? [];
+		expect(cleared.length).toBeGreaterThan(0);
+		expect(source).toContain("setFailedSectionIndex(undefined)");
+	});
+
+	it("records the failing index at the point of failure", () => {
+		expect(source).toMatch(
+			/onError:[\s\S]{0,200}setFailedSectionIndex\(sectionIndex\)/,
+		);
+	});
+});
