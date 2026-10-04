@@ -28,6 +28,25 @@ interface SaveStatusIndicatorProps {
  * - saved: "Saved ✓" (fades after 2s)
  * - error: "Save failed" with retry button
  */
+/**
+ * The failure text to show, or null when there is nothing to add.
+ *
+ * Extracted so the decision is testable. The component cannot be verified by rendering
+ * it: `displayState` starts as `"hidden"` and only becomes `"error"` inside an effect, so
+ * a server render always produces the hidden markup and would pass regardless of whether
+ * the message is ever displayed. That is the same trap as
+ * `renderToStaticMarkup` and the duplicate-key warning — the thing to assert on is not
+ * reachable from the render that a test can perform.
+ *
+ * `useAutoSave` sets `error` to a string, and callers have been known to pass an `Error`
+ * or a multi-line stack, neither of which belongs in a 40-character toolbar slot.
+ */
+export function errorMessageToShow(error: unknown): string | null {
+	if (typeof error !== "string") return null;
+	const collapsed = error.replace(/\s+/g, " ").trim();
+	return collapsed.length > 0 ? collapsed : null;
+}
+
 export function SaveStatusIndicator({
 	status,
 	error,
@@ -117,6 +136,31 @@ export function SaveStatusIndicator({
 						<span className="whitespace-nowrap text-destructive">
 							Save failed
 						</span>
+						{/*
+						 * The message the hook captured, shown because a bare "Save failed"
+						 * tells the user nothing actionable. `useAutoSave` goes to real trouble
+						 * to produce this string, every section form passes it in, and until now
+						 * it was destructured and never rendered — so the one piece of
+						 * information that would let someone tell a network blip from a
+						 * validation rejection never reached the screen.
+						 *
+						 * Clamped with a line clamp so a long backend message cannot push the
+						 * toolbar around, and the full text stays reachable via `title` for
+						 * pointer users. It is inside the existing live region, so it is
+						 * announced with the failure rather than needing its own.
+						 */}
+						{(() => {
+							const message = errorMessageToShow(error);
+							if (!message) return null;
+							return (
+								<span
+									className="max-w-40 truncate text-muted-foreground text-xs sm:max-w-72"
+									title={message}
+								>
+									{message}
+								</span>
+							);
+						})()}
 						{onRetry && (
 							<Button
 								className="h-6 px-2 text-xs"

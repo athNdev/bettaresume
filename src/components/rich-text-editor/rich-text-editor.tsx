@@ -38,6 +38,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { SaveStatusIndicator } from "@/components/ui/save-status-indicator";
 import {
 	Select,
 	SelectContent,
@@ -372,11 +373,17 @@ export function RichTextEditor({
 	showToolbar = true,
 	toolbarPosition = "top",
 }: RichTextEditorProps) {
-	const { localData, setLocalData, status, error, isDirty } = useAutoSave({
-		data: content,
-		onSave: async (val) => onChange(val),
-		onLocalUpdate,
-	});
+	// `status`, `error` and `retrySave` used to be destructured and ignored, which made
+	// this the only section form in the app that autosaved with no visible state: every
+	// sibling (languages, awards, experience, ...) renders `SaveStatusIndicator` in its
+	// header. A user editing a summary was told nothing about whether it saved, and if it
+	// failed to save, nothing at all — while the sections above and below reported both.
+	const { localData, setLocalData, status, error, isDirty, retrySave } =
+		useAutoSave({
+			data: content,
+			onSave: async (val) => onChange(val),
+			onLocalUpdate,
+		});
 
 	useBeforeUnload(isDirty);
 
@@ -430,6 +437,19 @@ export function RichTextEditor({
 				className,
 			)}
 		>
+			{/*
+			 * The save state lives in its own strip rather than inside `MenuBar`, because
+			 * `MenuBar` is the formatting toolbar and can be hidden entirely with
+			 * `showToolbar={false}`. Save state is not optional, so it must not share a
+			 * visibility flag with formatting.
+			 */}
+			<div className="flex min-h-8 items-center justify-end border-b px-2 py-1">
+				<SaveStatusIndicator
+					error={error}
+					onRetry={retrySave}
+					status={status}
+				/>
+			</div>
 			{showToolbar && toolbarPosition === "top" && <MenuBar editor={editor} />}
 			<EditorContent editor={editor} />
 			{showToolbar && toolbarPosition === "bottom" && (
@@ -439,4 +459,4 @@ export function RichTextEditor({
 	);
 }
 
-export { useEditor, Editor };
+export { Editor, useEditor };
