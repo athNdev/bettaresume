@@ -1,12 +1,13 @@
 "use client";
 
-import { useAuth } from "@clerk/react";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchStreamLink, loggerLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useRef, useState } from "react";
 import SuperJSON from "superjson";
+import { useAuthSession } from "@/lib/auth/use-auth-session";
+import { DEV_BYPASS_ACTIVE } from "@/lib/dev-bypass";
 // Import AppRouter directly from api (type-only, no runtime code)
 import type { AppRouter } from "../../../api/src/root";
 import { createQueryClient } from "./query-client";
@@ -65,7 +66,7 @@ function getBaseUrl() {
  */
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
 	const queryClient = getQueryClient();
-	const { getToken } = useAuth();
+	const { getToken } = useAuthSession();
 
 	// Store getToken in a ref so the tRPC client can access the latest version
 	const getTokenRef = useRef(getToken);
@@ -86,17 +87,22 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 						const headers = new Headers();
 						headers.set("x-trpc-source", "nextjs-react");
 
-						// NOTE: this client used to send `x-dev-mode: true` in
-						// development so seeded data was visible without signing in.
-						// That header was never more than a request: the Worker has no
-						// way to tell production from development, so it granted full
-						// `protectedProcedure` access as a hardcoded user to anyone who
-						// sent it — and CORS allow-listed it, so any site could. The
-						// header is gone from both sides.
+						// The dev bypass sends `x-dev-mode: true` so a local build can talk
+						// to a local Worker without Clerk keys. It is safe because the API
+						// grants it only when `ENVIRONMENT === "development"` *and* the header
+						// is present, and because `DEV_BYPASS_ACTIVE` is false in any build
+						// made by CI — see `src/lib/dev-bypass.ts`.
 						//
-						// Local development now uses real Clerk dev keys and a real
-						// sign-in. That is the intended trade: convenient, but not at
-						// the cost of a production auth bypass.
+						// This header was previously the worst bug in the repo: it was sent
+						// unconditionally in development, the Worker had no way to tell
+						// production from development, and CORS allow-listed it, so any site
+						// on the internet could obtain a full session by sending one header.
+						// Two independent build-time gates now stand in front of it, and
+						// `test/dev-bypass.test.ts` asserts the string is absent from the
+						// production bundle rather than trusting this comment.
+						if (DEV_BYPASS_ACTIVE) {
+							headers.set("x-dev-mode", "true");
+						}
 
 						// Get fresh token from Clerk for each request
 						// This handles token refresh automatically

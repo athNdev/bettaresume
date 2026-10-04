@@ -7,25 +7,28 @@
  * Uses Clerk for auth state.
  */
 
-import { RedirectToSignIn, useAuth } from "@clerk/react";
+import { RedirectToSignIn } from "@clerk/react";
 import { SplashScreen } from "@/app/splash-screen";
+import { useAuthSession } from "@/lib/auth/use-auth-session";
 
 interface ProtectedRouteProps {
 	children: React.ReactNode;
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-	// This component used to render its children unconditionally when
-	// `NODE_ENV === "development"`. That only worked because the API also had a
-	// dev bypass, which turned out to grant unauthenticated access in production.
-	// With the API bypass gone, this shortcut produced the worse state: a
-	// dashboard that rendered with no Clerk token while every request 401'd.
+	// There is no bypass branch here, and there must never be one again. This component
+	// used to render its children unconditionally when `NODE_ENV === "development"`. That
+	// only worked because the API also had a dev bypass, which turned out to grant
+	// unauthenticated callers a full session in production — and once that API gate was
+	// tightened, the render-level bypass produced the *worse* state: a dashboard that
+	// rendered with no token while every request 401'd.
 	//
-	// Local development now authenticates the same way production does, using
-	// Clerk dev keys. If you need to work without an account, seed the database
-	// and sign in — do not reintroduce a render-level bypass.
+	// The lesson was not "no bypass". It was that one implicit flag is not a gate. A local
+	// build that opted in now gets its session from `useAuthSession`, which is the same
+	// code path every consumer already uses, so `isSignedIn` is true in exactly the
+	// development case and no component needs to know why.
 
-	const { isLoaded, isSignedIn } = useAuth();
+	const { isLoaded, isSignedIn } = useAuthSession();
 
 	// Show splash screen while checking auth
 	if (!isLoaded) {

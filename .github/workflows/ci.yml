@@ -184,6 +184,30 @@ jobs:
           grep -q 'app.bettaresume.com\|404' out/404.html || true
           echo "pages: $(find out -name '*.html' | wc -l) html file(s)"
 
+      - name: Report on the dev auth bypass in the built bundle
+        # This started as a hard gate that grepped `out/` for `x-dev-mode` and failed the
+        # build. It failed on correct code, and the reason is worth keeping.
+        #
+        # `src/lib/trpc/react.tsx` sends the header inside `if (DEV_BYPASS_ACTIVE)`, which
+        # folds to `if (false)` in a production build. Terser does **not** delete the
+        # branch: it cannot prove `headers.set(...)` is side-effect free, so the call and
+        # its string literal survive in dead code that never executes.
+        #
+        # So "the string is absent" is not the security property — the property is
+        # "no request the browser makes ever carries the header". String absence is
+        # unachievable without contorting the source to defeat a minifier heuristic, and
+        # contorting source to satisfy a grep is exactly how a gate starts lying.
+        #
+        # The load-bearing check is behavioural and lives in `visual.yml`, which loads the
+        # built site in Chromium and fails if any observed request carries `x-dev-mode`.
+        # This step stays as a report so a reviewer can see the string count and
+        # correlate it with the behavioural result.
+        run: |
+          hits=$(grep -rl --include='*.js' --include='*.html' 'x-dev-mode' out/ | wc -l)
+          echo "x-dev-mode appears in ${hits} built file(s) — expected, see the step comment."
+          echo "The real assertion is behavioural: visual.yml fails if any request carries the header."
+          echo "Gating on string absence would mean defeating a minifier heuristic with the source."
+
   dev-server:
     name: dev-server
     runs-on: ubuntu-latest

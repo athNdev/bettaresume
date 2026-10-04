@@ -7,13 +7,13 @@
  * Verifies session with backend and clears React Query cache on logout.
  */
 
-import { useAuth as useClerkAuth, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { SplashScreen } from "@/app/splash-screen";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { useActiveResumeStore } from "@/hooks";
+import { useAuthSession, useSessionUser } from "@/lib/auth/use-auth-session";
 import { api } from "@/lib/trpc/react";
 
 interface AuthContextValue {
@@ -34,6 +34,19 @@ export function useAuth() {
 	return useContext(AuthContext);
 }
 
+/**
+ * One timestamp representation, whatever the session source gave us.
+ *
+ * Clerk hands back a `Date`; the dev session in `src/lib/dev-bypass.ts` is a plain string
+ * so it survives `JSON.stringify` without a serialisation round-trip. Normalising at the
+ * boundary means no caller has to branch on which one it received.
+ */
+function normaliseTimestamp(value: Date | string | null | undefined): string {
+	if (value instanceof Date) return value.toISOString();
+	if (typeof value === "string" && value) return value;
+	return new Date().toISOString();
+}
+
 interface AuthProviderProps {
 	children: React.ReactNode;
 }
@@ -45,9 +58,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		"online" | "offline" | "unknown"
 	>("unknown");
 
-	// Clerk hooks
-	const { isLoaded: isClerkLoaded, isSignedIn, getToken } = useClerkAuth();
-	const { user: clerkUser } = useUser();
+	// One session source for the whole app: Clerk, or the local dev session in a build
+	// that opted into the bypass. See src/lib/auth/use-auth-session.ts.
+	const { isLoaded: isClerkLoaded, isSignedIn, getToken } = useAuthSession();
+	const clerkUser = useSessionUser();
 
 	// React Query client for cache clearing
 	const queryClient = useQueryClient();
@@ -83,12 +97,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		if (!isClerkLoaded) return;
 
 		const syncAuth = async () => {
-			// NOTE: a dev bypass used to fabricate a `user-1` session here and
-			// short-circuit the Clerk wait. It existed to pair with the API's
-			// `x-dev-mode` header — and once that header was closed off as a
-			// production auth bypass, this branch left the app believing it was
-			// signed in while every request 401'd. Development now signs in for
-			// real, with Clerk dev keys. See docs/AGENT-CONTEXT.md.
+			// No bypass branch here. In a local build that opted in, `useSessionUser`
+			// returns DEV_USER and the API grants the matching session, so this code
+			// runs its ordinary path against a dev identity instead of special-casing
+			// one. The earlier version of this branch fabricated a session while the API
+			// had no matching bypass, which produced the worse state: a dashboard that
+			// rendered while every one of its requests 401'd.
 			if (isSignedIn && clerkUser) {
 				// Get JWT token for API calls
 				const token = await getToken();
@@ -99,8 +113,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 					email: clerkUser.primaryEmailAddress?.emailAddress || "",
 					name: clerkUser.fullName || clerkUser.firstName || "User",
 					picture: clerkUser.imageUrl || null,
-					createdAt:
-						clerkUser.createdAt?.toISOString() || new Date().toISOString(),
+					// `createdAt` arrives as a Date from Clerk and as a string from the dev
+					// session. Normalising here keeps one representation downstream instead of
+					// calling `.toISOString()` on a value that may already be a string.
+					createdAt: normaliseTimestamp(clerkUser.createdAt),
 					emailVerified:
 						clerkUser.primaryEmailAddress?.verification?.status === "verified",
 					preferences: {

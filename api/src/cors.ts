@@ -18,6 +18,37 @@ export const ALLOWED_REQUEST_HEADERS =
 	"Content-Type, Authorization, x-trpc-source, trpc-accept";
 
 /**
+ * The header the local development auth bypass travels on. **Not** in
+ * `ALLOWED_REQUEST_HEADERS`, on purpose.
+ *
+ * A custom request header forces a CORS preflight, so leaving it out of the allow-list
+ * means no cross-origin browser can send it at all. That was the second half of the
+ * original bypass: the Worker honoured the header, *and* CORS permitted it, so any site
+ * on the internet could have obtained a session with one request.
+ *
+ * `requestHeadersFor` adds it only when `ENVIRONMENT === "development"`, which exists
+ * solely in `api/wrangler.dev.jsonc` for the local Worker. Production keeps the exact
+ * four headers above, so the header is unreachable from a browser even if it somehow
+ * reached the origin.
+ */
+const DEV_ONLY_REQUEST_HEADERS = "x-dev-mode";
+
+/** The single environment value that unlocks local development behaviour. */
+const DEV_ENVIRONMENT = "development";
+
+/**
+ * The `Access-Control-Allow-Headers` value for this request.
+ *
+ * Exported so a test can assert the production list without going through a request.
+ */
+export function requestHeadersFor(environment: string | undefined): string {
+	if (environment === DEV_ENVIRONMENT) {
+		return `${ALLOWED_REQUEST_HEADERS}, ${DEV_ONLY_REQUEST_HEADERS}`;
+	}
+	return ALLOWED_REQUEST_HEADERS;
+}
+
+/**
  * Response headers a cross-origin browser client is allowed to read.
  *
  * `x-request-id` is not emitted yet — emitting it is the separate request-id
@@ -129,10 +160,11 @@ export function applyCorsHeaders(
 	headers: Headers,
 	origin: string | null,
 	allowed: readonly string[],
+	environment?: string,
 ): void {
 	headers.append("Vary", "Origin");
 	headers.set("Access-Control-Allow-Methods", ALLOWED_METHODS);
-	headers.set("Access-Control-Allow-Headers", ALLOWED_REQUEST_HEADERS);
+	headers.set("Access-Control-Allow-Headers", requestHeadersFor(environment));
 	headers.set("Access-Control-Expose-Headers", EXPOSED_HEADERS);
 
 	if (isOriginAllowed(origin, allowed)) {
@@ -150,8 +182,9 @@ export function applyPreflightHeaders(
 	headers: Headers,
 	origin: string | null,
 	allowed: readonly string[],
+	environment?: string,
 ): void {
-	applyCorsHeaders(headers, origin, allowed);
+	applyCorsHeaders(headers, origin, allowed, environment);
 	headers.set("Access-Control-Max-Age", "86400");
 }
 

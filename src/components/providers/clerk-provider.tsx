@@ -11,10 +11,14 @@
 import { ClerkProvider } from "@clerk/react";
 import { dark } from "@clerk/themes";
 import { useTheme } from "next-themes";
+import { DEV_BYPASS_ACTIVE } from "@/lib/dev-bypass";
 
 const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-if (!PUBLISHABLE_KEY) {
+// A local development build that opted into the bypass needs no Clerk key and must not
+// reach Clerk at all. The previous version threw unconditionally, which is why the bypass
+// could not be used to look at the app without provisioning keys first.
+if (!PUBLISHABLE_KEY && !DEV_BYPASS_ACTIVE) {
 	throw new Error(
 		"Missing Clerk Publishable Key. Add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to your .env file.",
 	);
@@ -28,6 +32,14 @@ interface ClerkAuthProviderProps {
 
 export function ClerkAuthProvider({ children }: ClerkAuthProviderProps) {
 	const { resolvedTheme } = useTheme();
+
+	// No ClerkProvider in a bypass build. `useAuthSession` and `useSessionUser` resolve to
+	// their dev implementations there, so nothing reaches for Clerk's context and no
+	// network call is made. `useTheme` is still called above unconditionally, so hook
+	// order does not depend on this branch.
+	if (DEV_BYPASS_ACTIVE) {
+		return <>{children}</>;
+	}
 
 	return (
 		<ClerkProvider
