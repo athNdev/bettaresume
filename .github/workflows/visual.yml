@@ -1,0 +1,92 @@
+name: Visual
+
+# Loads the built site in a real browser and fails on console errors.
+#
+# Why this is a separate workflow rather than another vitest file: React keys are not
+# present in HTML output and `renderToStaticMarkup` does not validate them, so neither a
+# duplicate-key collision nor a hydration mismatch is reachable from a unit test. Both
+# shipped to production through a green suite — the landing page served six
+# `Encountered two children with the same key, 1` errors and a minified React #418 on
+# every load.
+#
+# This workflow is therefore the only gate in the repo that observes the rendered page.
+# It is intentionally NOT added to the branch ruleset's required checks yet: it needs a
+# week of green runs first, because a flaky gate that blocks every PR gets deleted, and
+# a gate that is ignored is worse than no gate.
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/app/**"
+      - "src/components/marketing/**"
+      - "src/styles/**"
+      - "scripts/visual-audit.mjs"
+      - ".github/workflows/visual.yml"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  console-errors:
+    name: visual-console
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the static export
+        # The same command CD runs. 16 GB runners do not need the heap cap that local
+        # 4 GB nodes do (docs/AGENT-CONTEXT.md §2.6).
+        #
+        # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required: `/app` is statically prerendered
+        # and `clerk-provider.tsx` throws at module scope without it, so the export fails
+        # with "Missing Clerk Publishable Key". The main CI `build` job already injects it;
+        # this workflow has to as well. Found by this workflow failing on its first run.
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
+        run: npm run build
+
+      - name: Install Playwright without touching the lockfile
+        # §2.1: caret ranges in this repo stalled every Dependabot PR with ERESOLVE, and
+        # browser automation is not needed to build or ship the product. So it is
+        # installed here, at an exact version, and never added to package.json.
+        # 1.63.0 is the version whose bundled Chromium revision is already pinned here.
+        run: npm install --no-save --no-audit --no-fund playwright@1.63.0
+
+      - name: Install Chromium and its system libraries
+        run: npx playwright install --with-deps chromium
+
+      - name: Audit the rendered page
+        # `--serve ./out` starts the script's own static server on an ephemeral port, so
+        # there is no extra dependency to serve files and no port to collide.
+        run: node scripts/visual-audit.mjs --serve ./out --paths "/" --out audit-output
+
+      - name: Upload the screenshot and report
+        # The screenshot is the artefact a human looks at when the gate fails and nobody
+        # can tell why from the log.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-audit
+          path: audit-output
+          retention-days: 14

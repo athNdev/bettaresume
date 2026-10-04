@@ -441,8 +441,8 @@ function TemplateThumb({ density }: { density: Density }) {
 			<div className="h-3 w-2/3 rounded-sm bg-[var(--brand-ink)]/80" />
 			<div className="h-[3px] w-1/2 rounded-sm bg-[var(--brand-ink)]/25" />
 			<div className="mt-1 h-[3px] w-full rounded-sm bg-[var(--brand-accent)]/60" />
-			{[1, 1, 1].map((row) => (
-				<div className="flex flex-col gap-1" key={row}>
+			{[0, 1, 2].map((row) => (
+				<div className="flex flex-col gap-1" key={`skeleton-row-${row}`}>
 					<div
 						className={cn(line, "w-1/3 rounded-sm bg-[var(--brand-ink)]/45")}
 					/>
