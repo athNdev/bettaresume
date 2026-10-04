@@ -1,0 +1,51 @@
+-- Drop the NextAuth/Auth.js legacy tables: Account, Session, VerificationToken.
+--
+-- WHY THESE EXISTED. They are not product tables. They were declared in schema.ts as
+-- part of the initial create-t3-app scaffold and then carried forward verbatim when
+-- `api-server/src/db/schema.ts` was moved to `api/src/db/schema.ts` (5cd5b65). Because
+-- drizzle-kit generates DDL from the schema, 0000_init-schema.sql created them in every
+-- environment -- so they have been present in production D1 since day one, always empty.
+--
+-- WHY NOTHING EVER WROTE TO THEM. Three independent facts, any one of which is sufficient:
+--
+--   1. The Cloudflare Worker has never imported next-auth. `git log -S'next-auth' -- api/`
+--      returns nothing: no commit in the api workspace ever referenced the package. It is
+--      not a dependency of any package.json in the repo today.
+--   2. The only host NextAuth ever had was the pre-monorepo SSR Next.js app, and that app
+--      used Prisma with DATABASE_URL="file:./db.sqlite" -- a local file. It never pointed
+--      at D1. Its `[...nextauth]` route handler existed for three days (44d595b 2026-01-02
+--      -> fb7acbc 2026-01-05) and was deleted when the app became a static export, where
+--      an Auth.js route handler could not run at all.
+--   3. No runtime module ever imported these symbols. The only file naming `accounts`,
+--      `sessions` or `verificationTokens` is schema.ts itself, and `seed.sql` inserts only
+--      into User, Resume and Section.
+--
+-- WHY THE DATA CANNOT MATTER EVEN IF A ROW EXISTED. `User.id` holds a Clerk user id
+-- (`user.upsert` writes `id: ctx.userId`), whereas NextAuth minted its own ids. So any row
+-- in these tables would have had to reference a Clerk id, which NextAuth could not have
+-- produced against D1. Per table, worst case:
+--
+--   - Session: a NextAuth session token. Clerk replaced auth months ago; a token held here
+--     grants access to nothing. Retaining it is the larger risk, not the smaller one.
+--   - VerificationToken: email-verification/magic-link tokens carrying their own `expires`.
+--     Every row is expired by construction.
+--   - Account: OAuth grants (the scaffold's provider was Discord) including access_token,
+--     refresh_token and id_token. Stale, and stale third-party credentials are a liability
+--     to retain rather than a record worth keeping.
+--
+-- SAFETY. Both Account and Session declare a foreign key TO User; nothing references them,
+-- so these DROPs cannot cascade into any product row. User, Resume, Section, content_items
+-- and resume_revisions are untouched, and no statement here is a PRAGMA or a TEMP table --
+-- the two constructs miniflare's local D1 denies with SQLITE_AUTH (see 0001).
+--
+-- REVERSIBILITY. This is the one irreversible migration in the repo. To restore the tables
+-- afterwards, re-apply the CREATE TABLE / CREATE INDEX statements from
+-- 0000_init-schema.sql; they are still present in git history. To confirm emptiness before
+-- deploying, run against production:
+--
+--   SELECT 'Account' t, count(*) FROM Account
+--   UNION ALL SELECT 'Session', count(*) FROM Session
+--   UNION ALL SELECT 'VerificationToken', count(*) FROM VerificationToken;
+DROP TABLE `Account`;--> statement-breakpoint
+DROP TABLE `Session`;--> statement-breakpoint
+DROP TABLE `VerificationToken`;
