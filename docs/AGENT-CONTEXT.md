@@ -135,6 +135,18 @@ and pass).
 NODE_OPTIONS="--max-old-space-size=1400" npm run build
 ```
 
+**There is a second, distinct local-build failure: Turbopack cannot resolve
+`next/font/google` on this node.** `next build` exits 1 with 36 errors —
+`Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`
+plus `next/font/google queries have exactly one entry` — on a run with a clean heap
+cap and Google Fonts reachable from the same shell (`fonts.googleapis.com` 200, the
+`fonts.gstatic.com` file 200 / 123 KB). Clearing `.next` does not help.
+
+Do **not** chase this as a code defect and do not "fix" it by changing font code.
+CI's `build` job is the authority and passes. Verify with a curl to both font hosts
+before assuming the network is the cause — here it was not. Build evidence from this
+node is worthless; push a branch and let CI answer.
+
 ### 2.7 `npm run typecheck` used to lie
 
 It never ran. `tsconfig.json` had a `baseUrl` deprecation error that made `tsc`
@@ -392,6 +404,37 @@ success converts a known gap into silent corruption, and the layers above are th
 ones that pay for it. This is also why every fix here was verified by trying to make
 it *fail*, not by reading it.
 
+### 2.20 Seven lint findings are load-bearing — do not "clean them up"
+
+Seven `noUnusedVariables` / `noUnusedFunctionParameters` findings are deliberately left
+in the tree. They are not dead code. Each is a value the code **computes and then never
+shows**, and deleting the binding silences the lint while leaving the defect exactly
+where it was.
+
+| Finding | What is really wrong |
+|---|---|
+| `rich-text-editor.tsx` destructures `status` and `error` from `useAutoSave` and uses neither | the editor renders no save state at all |
+| `save-status-indicator.tsx` accepts `error` and never renders it | its own doc comment promises `"Save failed"` with a retry button |
+| `import-review-panel.tsx` holds `error` state, calls `setError`, never reads it | import failures are recorded and never displayed |
+| `resume-editor.tsx` calls `useState` for `designOpen`, never `setDesignOpen` | the design rail's chevron (`resume-editor.tsx:1121`) can never rotate |
+| `dashboard.tsx` reads `user` and `isDuplicating`, uses neither | no user identity, no duplicate-pending state |
+
+**Fix the rendering, not the lint.** Wire the value into the UI and the finding
+disappears on its own. Deleting the binding is the one change that makes the number go
+down while the user still sees nothing.
+
+Two related traps from the same cleanup:
+
+- **`noUnusedImports` reports one finding per import *statement*, not per symbol.** Its
+  span points into the statement, so mapping span→symbol by eye removes the wrong
+  binding. That removed `UpdateResumeInput` and `CheckCircle2`, both genuinely used;
+  `tsc` caught both (`TS2552`, `TS2304`). Always let typecheck arbitrate.
+- **Never run `biome check --write .` here.** It reformats the generated drizzle
+  snapshots (~5,200 lines), rewrites `public/logo.svg` and `public/404.html`, and mixes
+  all of that with real changes into an unreviewable diff. `--only=lint/correctness`
+  does not help — `check --write` runs the formatter regardless of the filter. Fix
+  findings by exact-string edit instead.
+
 ---
 
 ## 2.x Never hand-write a list of what to substitute, read it from the file
@@ -531,15 +574,15 @@ Several shipped controls are wired to this stub. See
 |---|---|
 | `npm run typecheck` (frontend) | **required in CI** (added #118) |
 | `npm run typecheck -w api` | **required in CI** (added #118) |
-| `npm test` (root + api) | **required in CI** (added #125/#127) — 93 tests: 24 root, 69 api |
+| `npm test` (root + api) | **required in CI** (added #125/#127) — **1031 tests**: 812 root, 219 api |
 | `npm run build` | required |
-| `npm run check` (biome) | **376 diagnostics**, ratcheted in CI (baseline 376) — **not** gated |
+| `npm run check` (biome) | **321 diagnostics**, ratcheted in CI (baseline 321, lowered from 376) — **not** gated. Tighten it whenever the count falls, or the improvement is spendable again. Seven findings in it are load-bearing — see §2.20. |
 | `dev-server` | required in CI |
 
 `tsconfig.json` now includes `test/**`, so tests are typechecked rather than only
 transpiled (#126). Before that they were never checked at all.
 
-Coverage is **not** broad. The 93 tests cluster on the areas most recently fixed —
+Coverage is **not** broad. The tests cluster on the areas most recently fixed —
 CORS, auth, IDOR, the FK, Typst serialisation. `computeCompleteness`, date/period
 formatting, section ordering and `isSectionEmpty` still have none.
 
