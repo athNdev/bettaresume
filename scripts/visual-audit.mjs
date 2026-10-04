@@ -140,6 +140,17 @@ for (const path of SHOTS) {
 		const text = String(e);
 		if (!allowed(text)) errors.push(text);
 	});
+	// The behavioural half of the dev-bypass gate. String presence in the bundle proves
+	// nothing: Terser keeps `if (false) { headers.set("x-dev-mode", ...) }` because it
+	// cannot prove `headers.set` is pure. What matters is whether any request the browser
+	// actually issues carries the header, so this observes the wire instead of the source.
+	const devModeRequests = [];
+	page.on("request", (r) => {
+		if (r.headers()["x-dev-mode"] !== undefined) {
+			devModeRequests.push(`${r.method()} ${r.url().slice(0, 160)}`);
+		}
+	});
+
 	page.on("requestfailed", (r) => {
 		const text = `${r.method()} ${r.url()} :: ${r.failure()?.errorText}`;
 		if (!allowed(text)) errors.push(text);
@@ -156,7 +167,7 @@ for (const path of SHOTS) {
 	});
 
 	const url = new URL(path, target).toString();
-	const entry = { path, url, errors, warnings, status: null };
+	const entry = { path, url, errors, warnings, status: null, devModeRequests };
 
 	try {
 		const resp = await page.goto(url, { waitUntil: "load", timeout: 45000 });
@@ -190,6 +201,12 @@ for (const path of SHOTS) {
 	if (entry.status !== null && entry.status >= 400) {
 		entry.errors.push(`page returned HTTP ${entry.status}`);
 	}
+	if (devModeRequests.length > 0) {
+		entry.errors.push(
+			`the production page issued ${devModeRequests.length} request(s) carrying x-dev-mode, which means the dev auth bypass is live: ${devModeRequests.join(" | ")}`,
+		);
+	}
+
 	if ((entry.textLength ?? 0) < 200) {
 		entry.errors.push(
 			`page rendered only ${entry.textLength ?? 0} characters of text — it is probably blank or an error page`,
