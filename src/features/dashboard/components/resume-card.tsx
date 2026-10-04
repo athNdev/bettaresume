@@ -12,6 +12,7 @@ import {
 	Copy,
 	Download,
 	GitBranch,
+	Loader2,
 	MoreHorizontal,
 	Pencil,
 	Trash2,
@@ -38,15 +39,17 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ResumeThumbnail } from "@/features/dashboard/components/resume-thumbnail";
 import type { Resume } from "@/features/resume-editor/types";
 import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
-import { ResumeThumbnail } from "@/features/dashboard/components/resume-thumbnail";
 
 interface ResumeCardProps {
 	resume: Resume;
 	variations: Resume[];
 	onEdit: () => void;
 	onDuplicate: () => void;
+	/** This card's own duplicate is in flight; only that card should say so. */
+	isDuplicating?: boolean;
 	onExport: () => void;
 	onArchive: () => void;
 	onRestore: () => void;
@@ -58,12 +61,14 @@ export function ResumeCard({
 	variations,
 	onEdit,
 	onDuplicate,
+	isDuplicating = false,
 	onExport,
 	onArchive,
 	onRestore,
 	onDelete,
 }: ResumeCardProps) {
-	const templateName = TEMPLATE_CONFIGS[resume.template as keyof typeof TEMPLATE_CONFIGS]?.name;
+	const templateName =
+		TEMPLATE_CONFIGS[resume.template as keyof typeof TEMPLATE_CONFIGS]?.name;
 
 	return (
 		<Card
@@ -109,9 +114,13 @@ export function ResumeCard({
 								<Pencil className="mr-2 h-4 w-4" />
 								Edit
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={onDuplicate}>
-								<Copy className="mr-2 h-4 w-4" />
-								Duplicate
+							<DropdownMenuItem disabled={isDuplicating} onClick={onDuplicate}>
+								{isDuplicating ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<Copy className="mr-2 h-4 w-4" />
+								)}
+								{isDuplicating ? "Duplicating…" : "Duplicate"}
 							</DropdownMenuItem>
 							<DropdownMenuItem onClick={onExport}>
 								<Download className="mr-2 h-4 w-4" />
