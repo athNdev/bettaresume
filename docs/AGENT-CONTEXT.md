@@ -451,6 +451,59 @@ Two related traps from the same cleanup:
 
 ---
 
+### 2.21 The dev bypass is verified working — here is the probe that proved it
+
+`api/wrangler.dev.jsonc` sets `ENVIRONMENT=development`, and `api/src/trpc/context.ts` grants the
+bypass on exactly that string. Verified end to end against a local `wrangler dev` (2026-10-04),
+which had never actually been run before — the bypass shipped in #181 on code inspection and CI
+string-checks alone.
+
+Queries need **GET**, not POST; a POST to a query path returns `405 -32005`, which looks like an
+auth failure and is not:
+
+```sh
+cd api && npx wrangler dev --config wrangler.dev.jsonc     # must be run from api/
+U='http://localhost:4000/trpc/resume.list?input=%7B%22json%22%3A%7B%7D%7D'
+
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Origin: http://localhost:3000' -H 'x-dev-mode: true' "$U"   # 200
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Origin: http://localhost:3000'                     "$U"   # 401
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Origin: http://localhost:3000' -H 'x-dev-mode: false' "$U" # 401
+```
+
+`api/.dev.vars` needs a `CLERK_SECRET_KEY` for `createClerkClient` to construct, but **any
+placeholder works** — the bypass returns before any token is verified, so no real credential is
+needed locally. `.dev.vars` is gitignored; do not commit a real key to make it work.
+
+**The assertion that matters is CORS, not the status code.** A foreign origin still *executes* the
+request and gets `200` — that is how CORS works, and it is not a leak. What stops a browser reading
+it is the missing `Access-Control-Allow-Origin`, so check the header:
+
+```sh
+curl -s -D- -o /dev/null -H 'Origin: http://localhost:3000' -H 'x-dev-mode: true' "$U" | grep -i access-control-allow-origin
+curl -s -D- -o /dev/null -H 'Origin: https://evil.example'    -H 'x-dev-mode: true' "$U" | grep -i access-control-allow-origin
+```
+
+First prints the origin; second prints **nothing**. Confirmed. If that second one ever starts
+printing a header, the bypass has escaped its dev origin and needs fixing before anything else.
+
+### 2.22 This node cannot host Chromium and both dev servers
+
+~4.9 GB total. `wrangler dev` + `next dev` leave roughly **900 MB** available, and headless Chromium
+is OOM-killed at that point — it dies with `Target page, context or browser has been closed`, which
+reads like a Playwright bug and is not.
+
+So: **the dashboard and editor cannot be verified visually on this node.** Not "hard" — cannot.
+Public-page visual checks work in CI (`.github/workflows/visual.yml`) because that is static files
+plus one headless Chromium and nothing else.
+
+Do not spend four attempts rediscovering this. Two consequences to respect:
+
+- **Any layout or visual change (OVERHAUL-PLAN Phase B5 and Phase C) needs either more RAM than
+  this node has, or a human looking at it.** Shipping a visual change verified only by
+  source-asserted tests means asserting that class names are present — which proves nothing about
+  whether it looks right.
+- Prefer, for behaviour: pure-function unit tests and `curl` probes, both of which work here.
+
 ## 2.x Never hand-write a list of what to substitute, read it from the file
 
 This one took production down twice, and the second outage was caused by the fix for
