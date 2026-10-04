@@ -27,5 +27,19 @@ export default defineConfig({
 		// DOM here to bypass.
 		include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
 		pool: "forks",
+		// Vitest's default per-test timeout is 5s. That is too tight for the tests here
+		// whose first act is a dynamic `import()` of a whole component tree — the
+		// review-panel test pays the transform cost for the entire editor graph, and on
+		// a ~5 GB node running 29 workers in parallel that alone can exceed 5s.
+		//
+		// It surfaced as an intermittent red on a suite that was otherwise 100% green,
+		// which is the worst kind of gate failure: it trains people to re-run instead of
+		// read, and it eventually trains them to ignore the suite. The honest fix is a
+		// timeout that reflects what these tests actually cost, not a re-run.
+		//
+		// 20s is generous for every current test (the slowest is well under 3s in
+		// isolation) and still fails a genuine hang in a reasonable time.
+		testTimeout: 20_000,
+		hookTimeout: 20_000,
 	},
 });

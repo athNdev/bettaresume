@@ -58,32 +58,37 @@ beforeEach(() => {
 		join(dir, "public", "404.html"),
 		"<!doctype html><html><head></head><body>custom 404</body></html>",
 	);
-
-	process.chdir(dir);
 });
 
 afterEach(() => {
-	process.chdir("/home/prox/bettaresume");
 	rmSync(dir, { recursive: true, force: true });
 });
 
 /**
- * Run the real script as a subprocess, the same way `npm run postbuild` does.
+ * Run the real script as a subprocess against the fixture, passing the directories it
+ * should operate on.
  *
- * An in-process import was the first attempt and it was wrong twice over: the module
- * caches after the first import so a second run would be a no-op, and it captures the
- * working directory at import time rather than at call time. A subprocess is the only way
- * to test what the build actually executes, and it is what makes the idempotency test
- * meaningful.
+ * Two earlier attempts were wrong and both are worth not repeating:
+ *
+ *   1. Importing the module in-process. It caches after the first import, so a second run
+ *      is a no-op, which made the idempotency test meaningless.
+ *   2. `process.chdir()` into a fixture with a hardcoded absolute repo path. Green on one
+ *      node, `ENOENT: chdir` on every CI runner, because the checkout lives elsewhere --
+ *      and it also mutates shared process state for every other test file in the worker.
+ *
+ * A subprocess with explicit paths tests what the build actually executes and touches
+ * nothing outside the fixture.
  */
 function run() {
-	// Absolute path to the script, with `cwd` set to the fixture: the script uses
-	// relative paths ("out/", "public/") exactly as npm invokes it, so it must be
-	// executed with its working directory set rather than copied into the fixture.
-	execFileSync(process.execPath, [join(repoRoot, "scripts/postbuild.js")], {
-		cwd: dir,
-		stdio: "pipe",
-	});
+	execFileSync(
+		process.execPath,
+		[
+			join(repoRoot, "scripts/postbuild.js"),
+			join(dir, "out"),
+			join(dir, "public"),
+		],
+		{ cwd: dir, stdio: "pipe" },
+	);
 }
 
 describe("postbuild disables Cloudflare email obfuscation", () => {

@@ -1,5 +1,6 @@
 import {
 	copyFileSync,
+	existsSync,
 	readdirSync,
 	readFileSync,
 	statSync,
@@ -7,9 +8,27 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
+/**
+ * Post-build fixups for the static export.
+ *
+ * Usage: node scripts/postbuild.js [outDir] [publicDir]
+ *
+ * The directories are arguments rather than hardcoded names so this can be pointed at a
+ * fixture. Hardcoding `out/` and `public/` forced the first version of its test to
+ * `process.chdir()` into a hardcoded absolute repo path -- green on one machine, `ENOENT:
+ * chdir` on every CI runner, because the checkout lives somewhere else. Taking the paths
+ * as arguments removes the need to move the process at all.
+ */
+const [, , outDirArg, publicDirArg] = process.argv;
+const OUT_DIR = outDirArg ?? "out";
+const PUBLIC_DIR = publicDirArg ?? "public";
+
 // Copy custom 404.html for GitHub Pages SPA support
-copyFileSync("public/404.html", "out/404.html");
-console.log("✓ Copied 404.html for GitHub Pages SPA redirect");
+const custom404 = join(PUBLIC_DIR, "404.html");
+if (existsSync(custom404)) {
+	copyFileSync(custom404, join(OUT_DIR, "404.html"));
+	console.log("✓ Copied 404.html for GitHub Pages SPA redirect");
+}
 
 /**
  * Disable Cloudflare Email Address Obfuscation on the generated pages.
@@ -66,7 +85,7 @@ function htmlFiles(dir) {
 	return found;
 }
 
-const pages = htmlFiles("out");
+const pages = existsSync(OUT_DIR) ? htmlFiles(OUT_DIR) : [];
 let patched = 0;
 
 for (const page of pages) {
