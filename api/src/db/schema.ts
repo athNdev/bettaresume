@@ -29,8 +29,6 @@ export const users = sqliteTable("User", {
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
-	accounts: many(accounts),
-	sessions: many(sessions),
 	resumes: many(resumes),
 }));
 
@@ -290,70 +288,4 @@ export const resumeRevisionsRelations = relations(
 			references: [resumes.id],
 		}),
 	}),
-);
-
-// ============================================
-// NextAuth Models
-// ============================================
-export const accounts = sqliteTable(
-	"Account",
-	{
-		id: text("id")
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		userId: text("userId")
-			.notNull()
-			.references(() => users.id, { onDelete: "cascade" }),
-		type: text("type").notNull(),
-		provider: text("provider").notNull(),
-		providerAccountId: text("providerAccountId").notNull(),
-		refresh_token: text("refresh_token"),
-		access_token: text("access_token"),
-		expires_at: integer("expires_at"),
-		token_type: text("token_type"),
-		scope: text("scope"),
-		id_token: text("id_token"),
-		session_state: text("session_state"),
-		refresh_token_expires_in: integer("refresh_token_expires_in"),
-	},
-	(table) => [
-		uniqueIndex("Account_provider_providerAccountId_key").on(
-			table.provider,
-			table.providerAccountId,
-		),
-	],
-);
-
-export const accountsRelations = relations(accounts, ({ one }) => ({
-	user: one(users, { fields: [accounts.userId], references: [users.id] }),
-}));
-
-export const sessions = sqliteTable("Session", {
-	id: text("id")
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
-	sessionToken: text("sessionToken").notNull().unique(),
-	userId: text("userId")
-		.notNull()
-		.references(() => users.id, { onDelete: "cascade" }),
-	expires: integer("expires", { mode: "timestamp" }).notNull(),
-});
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-	user: one(users, { fields: [sessions.userId], references: [users.id] }),
-}));
-
-export const verificationTokens = sqliteTable(
-	"VerificationToken",
-	{
-		identifier: text("identifier").notNull(),
-		token: text("token").notNull().unique(),
-		expires: integer("expires", { mode: "timestamp" }).notNull(),
-	},
-	(table) => [
-		uniqueIndex("VerificationToken_identifier_token_key").on(
-			table.identifier,
-			table.token,
-		),
-	],
 );
