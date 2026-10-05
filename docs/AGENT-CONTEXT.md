@@ -458,6 +458,13 @@ bypass on exactly that string. Verified end to end against a local `wrangler dev
 which had never actually been run before — the bypass shipped in #181 on code inspection and CI
 string-checks alone.
 
+> **Correction (2026-10-05): this verified reads only.** The probe below is entirely `resume.list`
+> and CORS header checks. It never issued a **write**, and the bypass could not write: it returned
+> `userId: "user-1"` without creating the matching `User` row, so `resume.create` died on a foreign
+> key. Fixed in #195. The lesson is not about this bug — it is that a bypass which reads but cannot
+> write is indistinguishable from a working one until you try to create something. **Any future
+> bypass verification must include a write**, because the whole point of it is writing.
+
 Queries need **GET**, not POST; a POST to a query path returns `405 -32005`, which looks like an
 auth failure and is not:
 
@@ -627,6 +634,39 @@ break production, verify with the thing the browser checks — an `Origin` heade
 with the build's exit code.**
 
 ---
+
+## 2.23 A tRPC POST with its input only in `?input=` fails as a *server* error
+
+Mutations take their input in the **request body**; queries take it in the query string. A POST
+that puts its input only in `?input=` returns:
+
+```
+HTTP 400 {"message":"Unexpected end of JSON input","code":-32600}
+```
+
+This is genuinely expensive to diagnose, because the message blames the response, not the request:
+
+- `curl --data-binary '{"json":{...}}'` to the same URL **works**, so "the server is broken" is the
+  obvious and wrong conclusion.
+- Node's `fetch` to the same URL **fails**, so switching HTTP client appears to fix nothing.
+- The only real difference is that one of them sends a body.
+
+Both shapes in one place, which is all you need:
+
+```ts
+const isQuery = method === "GET";
+const url = isQuery
+  ? `${API}/trpc/${path}?input=${encodeURIComponent(JSON.stringify({ json: input }))}`
+  : `${API}/trpc/${path}`;                      // no input in the URL
+const res = await fetch(url, {
+  method,
+  headers: H,
+  ...(isQuery ? {} : { body: JSON.stringify({ json: input }) }),
+});
+```
+
+Related: §2.21's "queries need GET, not POST" is the same rule seen from the other side. A POST to a
+query path gives `405 -32005`, which reads like an auth failure.
 
 ## 3. Architecture as it actually is
 
