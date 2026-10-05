@@ -1,8 +1,10 @@
 # Persona Fit Report
 
-Status: **in progress** — API and data layers verified, visual rendering verification
-blocked on a production build. This report records what is proven, what is not, and the
-one real bug the exercise found.
+Status: **partially complete.** API and data layers verified end to end. Editor rendering
+verified in Chromium for 3 of 6 personas; the other 3 are untested rather than known-broken,
+because this node runs out of memory. This report records what is proven, what is not, the
+one real bug the exercise found, and two measurement mistakes that produced convincing
+false findings.
 
 The four personas themselves are in [`USER-STORIES.md`](./USER-STORIES.md). This document
 covers whether the product can actually carry them.
@@ -75,37 +77,72 @@ Two reasons it was worth fixing rather than working around:
 
 ## Not yet verified
 
-**Visual rendering of the editor for these personas.** Stated plainly because it is the
-part of "does the product fit" that matters most, and it is not done.
+**Visual rendering of 3 of the 6 personas.** Stated plainly because it is the part of
+"does the product fit" that matters most, and it is not finished.
 
-What is known:
+**Verified in Chromium at 1280×900:**
 
-- The editor route loads and renders correctly for some résumés — a 6-section student
-  résumé renders in ~5s.
-- Other résumés hang indefinitely at the `next/dynamic` chunk-loading fallback
-  (`"Loading editor..."`, `src/app/router.tsx:19`), **before any tRPC request for the résumé
-  is issued**. A probe recorded exactly one API call, `auth.verifySession`, and no
-  `resume.getById`.
+| Résumé | Sections | Load | Horizontal overflow |
+| --- | --- | --- | --- |
+| Tomas Beck — Backend Internship | 6 | 7.8s | none (1280/1280) |
+| Tomas Beck — Data Internship | 6 | 32.1s | none (1280/1280) |
+| Nadia Haddad — Junior Data Analyst | 9 | 91.0s | none (1280/1280) |
 
-That last point is what makes this an environment problem rather than a data problem. The
-hang happens before any section-specific code executes, so no section shape or content
-value can cause it. The server itself is responsive — a direct chunk request returned in
-18ms.
+Each rendered its full editor chrome — résumé name, template, `Base` badge, and
+"All changes saved". Three of six proven, no layout regression at 1280.
 
-The most likely cause is resource exhaustion on this node: **4.9 GB total with ~226 MB free**
-while running `next dev`, `wrangler dev`/`workerd`, and headless Chromium concurrently.
-Repeated Chromium contexts plus webpack's on-demand compilation produce exactly this
-signature — a stall before the app's own data layer runs, varying run to run, with no
-console or page errors.
+**Unverified:** Amara (8 sections), Priya (8 sections), Tomas — Software Engineering Intern
+(6 sections).
 
-Honest status: **unresolved.** A production build is the only trustworthy way to separate
-"the product cannot render these personas" from "this box cannot render them", and the local
-build is still compiling. Until that passes, the editor's fit for dense and academic
-résumés is an open question, not a finding.
+The unverified three failed alongside `resume.getById` timing out against the API, on a
+node down to **267 MB free** while running `next dev`, `workerd`, and headless Chromium
+together. One measured page operation took 231s. Those are the symptoms of resource
+exhaustion, not of the product: Tomas — Software Engineering Intern has the same 6-section
+shape as the two variants that *did* pass, and a product that could not render it would not
+have rendered those two either.
+
+### Two measurement mistakes worth recording
+
+**A hang that was not a hang.** An early probe reported `certifications` and `awards` as
+hanging the editor indefinitely. They are not broken. The app redirects `/` → `/app/`
+before the editor mounts, which destroys the Playwright execution context mid-poll; the
+poll then read nothing, exhausted its budget, and reported a hang. Both render correctly.
+Nothing about `certifications` or `awards` is defective, and no fix is warranted — the
+lesson is that a poll which cannot survive a navigation will manufacture a hang out of
+ordinary routing.
+
+**A `pkill` that killed its own shell.** `pkill -f "next build"` matches any process whose
+command line contains that string, including the shell running the `pkill` itself. This
+silently killed the invoking shell, which is why the dev stack repeatedly appeared to die
+between turns. `pkill -f "[n]ext build"` is the fix. This cost several diagnostic
+detours, because the symptom — services vanishing for no reason — pointed at the app.
+
+### Why the remaining three need a different machine
+
+This node has 4.9 GB total. The editor's real cost is the Typst WASM preview compile plus
+webpack's on-demand route compilation, and load times degraded monotonically across a
+single session: **7.8s → 32.1s → 91.0s → failure.** That curve is the box running out of
+memory, not the app getting slower with more sections — the two heaviest résumés did not
+produce the slowest load.
+
+A local production build, which would settle this cleanly, **wedges rather than fails**: it
+sat at "Creating an optimized production build ..." for 35 minutes with 0% CPU and no
+compiler process. `CLAUDE.md` already warns that `next build` needs
+`NODE_OPTIONS="--max-old-space-size=1400"` on ~4 GB nodes; on this node it is not viable at
+all. GitHub's `build` job passes in ~1m14s, so the build is reproducible elsewhere.
+
+The honest position: **the editor is proven to render a 9-section résumé with no layout
+regression, and the three remaining personas are untested rather than known-broken.**
+Closing that gap needs either a less loaded node or a visual CI job for authenticated
+pages, which does not exist yet.
 
 ## Product observations worth acting on
 
 These came out of building the personas, independent of the environment problem.
+
+**The `/` → `/app/` redirect is a real navigation cost.** Every editor visit pays it. It
+is invisible to a user and cheap to a real browser, but it is the thing that broke automated
+verification twice, so it belongs in the record.
 
 **The section model fits the academic case well.** Priya's 8 sections — grants,
 publications, awards, languages — map cleanly onto the existing types. `publications` and
