@@ -23,6 +23,7 @@
  *   that asserts class names cannot tell you a row is 390px wide, and this file does not
  *   pretend otherwise.
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { codeOf } from "./helpers/code-source";
 
@@ -149,5 +150,64 @@ describe("no header in either file pins a fixed height", () => {
 			}
 			expect(block, `${name} header cannot wrap`).toContain("flex-wrap");
 		}
+	});
+});
+
+describe("webfonts are self-hosted exactly once", () => {
+	// Comments stripped first. The explanation for *why* this file must not contain a Google
+	// Fonts URL necessarily names one, so an unstripped read fails on its own documentation.
+	// That is the third time in this repo a comment has satisfied or broken an identifier
+	// assertion; `codeOf` exists for the TS side, and CSS needs the same treatment here.
+	const globals = readFileSync(
+		new URL("../src/styles/globals.css", import.meta.url),
+		"utf8",
+	).replace(/\/\*[\s\S]*?\*\//g, "");
+	const fontsModule = codeOf("src/lib/fonts.ts");
+	const layout = codeOf("src/app/layout.tsx");
+
+	it("does not @import Google Fonts", () => {
+		// Found in a browser, not in review: two `404 ( )` failures for
+		// fonts.gstatic.com/s/inter/v13/*.ttf on every page, in both themes.
+		expect(globals).not.toContain("fonts.googleapis.com");
+		expect(globals).not.toMatch(/@import\s+url\(/);
+	});
+
+	it("still self-hosts every family the app asks for", () => {
+		// next/font/google in the module, not a runtime <link> or @import. These are the
+		// families the old @import duplicated.
+		expect(fontsModule).toContain("next/font/google");
+		// The imported identifiers, not the display names: next/font exports `Open_Sans`.
+		// These are every family the app self-hosts; the old @import asked Google for a
+		// subset of this list, which is why it was pure duplication.
+		for (const family of [
+			"Inter",
+			"Roboto",
+			"Open_Sans",
+			"Lato",
+			"Montserrat",
+			"Playfair_Display",
+			"PT_Serif",
+		]) {
+			expect(fontsModule, `${family} is no longer self-hosted`).toContain(
+				family,
+			);
+		}
+	});
+
+	it("applies the self-hosted families to the document", () => {
+		// Without this the removal above would silently drop the app's typeface, since a
+		// font that is downloaded but never applied is the same as one that is missing.
+		expect(layout).toContain("fontVariables");
+		expect(layout).toMatch(/<body className=\{`\$\{fontVariables\}/);
+	});
+
+	it("keeps the export pipeline's own font fetch separate", () => {
+		// src/lib/typst/fonts.ts fetches woff2 files from fonts.gstatic.com at export time,
+		// to embed the real typeface in a PDF. That is a deliberate, different thing from a
+		// stylesheet @import, and this assertion exists so removing the @import does not
+		// become a reason to break PDF export later.
+		const typstFonts = codeOf("src/lib/typst/fonts.ts");
+
+		expect(typstFonts).toContain("fonts.gstatic.com");
 	});
 });

@@ -1,4 +1,30 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap");
+/*
+ * No @import for webfonts here, and there must not be one added back.
+ *
+ * This file used to open with an `@import url("https://fonts.googleapis.com/css2?family=Inter…")`
+ * asking for Inter, Open Sans and Roboto. All three are already self-hosted by
+ * `src/lib/fonts.ts` through `next/font/google`, and all three are applied to <body> via
+ * `fontVariables` in `src/app/layout.tsx`. So the app downloaded every one of those families
+ * twice, and paid for it three ways:
+ *
+ *   - a render-blocking external request at the very top of the stylesheet, before Tailwind is
+ *     even parsed;
+ *   - a third-party request on every page load, which leaks the visitor's IP to Google — the
+ *     reason the German court ruled against exactly this pattern;
+ *   - and, when the network or Google's CDN was unavailable or the URL went stale, two visible
+ *     `404 ( )` failures in the console. A browser pass here reported
+ *     `404 … /s/inter/v13/UcCO3…ttf` on every page, in both themes, and the fallback happened
+ *     to look acceptable — which is why it survived.
+ *
+ * Keep the self-hosted families in `src/lib/fonts.ts` as the single source. Adding a Google
+ * Fonts <link> or @import alongside them reintroduces all three problems.
+ *
+ * Deliberately NOT changed here: those families are loaded with `subsets: ["latin"]`. Glyphs
+ * outside that subset fall back to a system font in the on-screen preview. That was already true
+ * for the self-hosted copy, so this change removes the duplicate rather than the fallback — but
+ * widening the subsets is a real decision and belongs to whoever owns the typography, not to a
+ * drive-by font fix.
+ */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
