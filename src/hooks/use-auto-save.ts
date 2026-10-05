@@ -237,11 +237,22 @@ export function useAutoSave<T>({
 		};
 	}, [localData, enabled, debounceMs, performSave, status]);
 
-	// Trigger onLocalUpdate for real-time preview
+	/*
+	 * Report local edits for the live preview, but only actual edits.
+	 *
+	 * `localData` is seeded from `data`, so on mount it reports a value the user never
+	 * typed, and the editor would claim unsaved work on a résumé nobody had touched. The
+	 * test is the same one `isDirty` already uses — does the draft differ from what was
+	 * last known to be saved — rather than counting calls, which would also skip a
+	 * legitimate first edit.
+	 *
+	 * This surfaced once personal info began resolving from two stores, so the form's
+	 * initial value legitimately differs from `metadata`; see `resolvePersonalInfo`.
+	 */
 	useEffect(() => {
-		if (onLocalUpdate) {
-			onLocalUpdate(localData);
-		}
+		if (!onLocalUpdate) return;
+		if (JSON.stringify(localData) === savedDataRef.current) return;
+		onLocalUpdate(localData);
 	}, [localData, onLocalUpdate]);
 
 	// Manual save (bypasses debounce)
