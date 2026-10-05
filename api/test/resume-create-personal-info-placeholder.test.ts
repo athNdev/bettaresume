@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createHarness, USER_A } from "./helpers/harness";
+import { createHarness, type TestHarness, USER_A } from "./helpers/harness";
 
 /**
  * `resume.create` must not seed placeholder text as if it were user data.
@@ -27,16 +27,24 @@ import { createHarness, USER_A } from "./helpers/harness";
  * The placeholder belongs to the input element, not to the database.
  */
 
+/**
+ * `resume.create` is typed as nullable, so every call site has to deal with it.
+ * Concentrated here rather than repeated in each test.
+ */
+async function createResume(h: TestHarness, name: string): Promise<string> {
+	const created = await h.callerAs(USER_A).resume.create({ name, template: "minimal" });
+	expect(created, "resume.create returned nothing").not.toBeNull();
+	if (!created) throw new Error("unreachable: asserted above");
+	return created.id;
+}
+
 describe("resume.create default metadata", () => {
 	it("stores an empty fullName, not the placeholder string", async () => {
 		const h = createHarness();
 
-		const created = await h.callerAs(USER_A).resume.create({
-			name: "Fresh resume",
-			template: "minimal",
-		});
+		const id = await createResume(h, "Fresh resume");
 
-		const stored = await h.resume(created.id);
+		const stored = await h.resume(id);
 		const metadata = JSON.parse(stored?.metadata ?? "{}") as {
 			personalInfo?: Record<string, unknown>;
 		};
@@ -50,12 +58,9 @@ describe("resume.create default metadata", () => {
 	it("leaves no personal-info field holding placeholder text", async () => {
 		const h = createHarness();
 
-		const created = await h.callerAs(USER_A).resume.create({
-			name: "Another fresh resume",
-			template: "minimal",
-		});
+		const id = await createResume(h, "Another fresh resume");
 
-		const stored = await h.resume(created.id);
+		const stored = await h.resume(id);
 		const metadata = JSON.parse(stored?.metadata ?? "{}") as {
 			personalInfo?: Record<string, unknown>;
 		};
@@ -72,14 +77,11 @@ describe("resume.create default metadata", () => {
 	it("keeps settings intact so the resolver can fall through to the section", async () => {
 		const h = createHarness();
 
-		const created = await h.callerAs(USER_A).resume.create({
-			name: "Resume with a section-only name",
-			template: "minimal",
-		});
+		const id = await createResume(h, "Resume with a section-only name");
 
 		// Write the name the way an API-driven generator does: into the section.
 		await h.callerAs(USER_A).section.upsert({
-			resumeId: created.id,
+			resumeId: id,
 			type: "personal-info",
 			order: 0,
 			visible: true,
@@ -89,7 +91,7 @@ describe("resume.create default metadata", () => {
 			},
 		});
 
-		const stored = await h.resume(created.id);
+		const stored = await h.resume(id);
 		const metadata = JSON.parse(stored?.metadata ?? "{}") as {
 			personalInfo?: Record<string, unknown>;
 		};
