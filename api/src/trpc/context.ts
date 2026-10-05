@@ -2,6 +2,7 @@ import { createClerkClient } from "@clerk/backend";
 import type { D1Database } from "@cloudflare/workers-types";
 import { TRPCError } from "@trpc/server";
 import { createDb } from "../db";
+import { users } from "../db/schema";
 
 export interface Env {
 	CLERK_PUBLISHABLE_KEY: string;
@@ -103,6 +104,37 @@ export async function createContext({ request, env }: CreateContextOptions) {
 			console.log(
 				"[createContext] Dev mode enabled via x-dev-mode header (ENVIRONMENT=development)",
 			);
+			/*
+			 * Make the dev user actually exist.
+			 *
+			 * The bypass hands out `userId: "user-1"` and used to assume a matching `User`
+			 * row was already there — true only when the seed had just run. Against a local
+			 * D1 that had been recreated, every read worked and every write failed:
+			 *
+			 *     POST /trpc/resume.create -> 500
+			 *     D1_ERROR: FOREIGN KEY constraint failed: SQLITE_CONSTRAINT_FOREIGNKEY
+			 *
+			 * because `Resume.userId` references `User.id`. In other words the bypass was
+			 * read-only in practice, which is the worst possible shape for a tool whose
+			 * purpose is writing.
+			 *
+			 * Production has no such step because `user.upsert` runs on sign-in, which
+			 * `CLAUDE.md` already documents as the reason resume creation works at all. The
+			 * bypass has to stand in for that login, and this is standing in for it.
+			 *
+			 * `onConflictDoNothing` keeps it to one row for the life of the database, so this
+			 * costs nothing on every subsequent request. It runs only when the bypass is
+			 * active, which requires both the opt-in header and ENVIRONMENT=development.
+			 */
+			await db
+				.insert(users)
+				.values({
+					id: "user-1",
+					email: "demo@example.com",
+					name: "Demo User",
+				})
+				.onConflictDoNothing();
+
 			const devUser = {
 				id: "user-1",
 				emailAddresses: [{ emailAddress: "demo@example.com" }],
