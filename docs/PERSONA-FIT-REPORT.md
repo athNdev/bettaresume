@@ -1,10 +1,10 @@
 # Persona Fit Report
 
-Status: **partially complete.** API and data layers verified end to end. Editor rendering
-verified in Chromium for 3 of 6 personas; the other 3 are untested rather than known-broken,
-because this node runs out of memory. This report records what is proven, what is not, the
-one real bug the exercise found, and two measurement mistakes that produced convincing
-false findings.
+Status: **API and data layers verified end to end; all six personas render in Chromium with
+no layout regression.** One real bug was found and fixed. Two measurement mistakes produced
+convincing false findings and are recorded, because both would otherwise have shipped as
+"fixes" to code that was never broken. The one remaining gap is that all browser evidence is
+webpack dev mode — nobody has rendered these personas against a production bundle.
 
 The four personas themselves are in [`USER-STORIES.md`](./USER-STORIES.md). This document
 covers whether the product can actually carry them.
@@ -75,66 +75,62 @@ Two reasons it was worth fixing rather than working around:
 2. The 500 body is `"Something went wrong"`, which points at the server rather than at the
    missing row. Cost real time to diagnose from the response alone.
 
-## Not yet verified
+## Verified in the browser
 
-**Visual rendering of 3 of the 6 personas.** Stated plainly because it is the part of
-"does the product fit" that matters most, and it is not finished.
+**All six personas render in Chromium at 1280×900 with no horizontal overflow.**
 
-**Verified in Chromium at 1280×900:**
+| Résumé | Sections | Template | Load | Overflow |
+| --- | --- | --- | --- | --- |
+| Tomas Beck — Backend Internship | 6 | `undergrad` | 7.8s | none (1280/1280) |
+| Tomas Beck — Data Internship | 6 | `undergrad` | 32.1s | none (1280/1280) |
+| Nadia Haddad — Junior Data Analyst | 9 | `minimal` | 91.0s | none (1280/1280) |
+| Amara Okafor — Senior Platform Engineer | 8 | `minimal` | 104.0s | none (1280/1280) |
+| Priya Raghunathan — Computational Biology | 8 | `postgrad` | 8.1s | none (1280/1280) |
+| Tomas Beck — Software Engineering Intern | 6 | `undergrad` | 57.5s | none (1280/1280) |
 
-| Résumé | Sections | Load | Horizontal overflow |
-| --- | --- | --- | --- |
-| Tomas Beck — Backend Internship | 6 | 7.8s | none (1280/1280) |
-| Tomas Beck — Data Internship | 6 | 32.1s | none (1280/1280) |
-| Nadia Haddad — Junior Data Analyst | 9 | 91.0s | none (1280/1280) |
+Each rendered its full editor chrome — résumé name, template, `Base`/`variation` badge, and
+"All changes saved". Section counts in the table were read back from the API, not inferred
+from the render, so the render and the data are independently confirmed to agree.
 
-Each rendered its full editor chrome — résumé name, template, `Base` badge, and
-"All changes saved". Three of six proven, no layout regression at 1280.
+Load times are **not** a signal about section count. The two heaviest résumés (9 and 8
+sections) were not the slowest, and the fastest 8-section load came *after* the two slowest
+runs — the spread tracks how warm the webpack route cache was, not how much data was in the
+résumé.
 
-**Unverified:** Amara (8 sections), Priya (8 sections), Tomas — Software Engineering Intern
-(6 sections).
+### What the earlier failures actually were
 
-The unverified three failed alongside `resume.getById` timing out against the API, on a
-node down to **267 MB free** while running `next dev`, `workerd`, and headless Chromium
-together. One measured page operation took 231s. Those are the symptoms of resource
-exhaustion, not of the product: Tomas — Software Engineering Intern has the same 6-section
-shape as the two variants that *did* pass, and a product that could not render it would not
-have rendered those two either.
+Three of these six first appeared to hang. All three passed once the box had nothing else
+competing for memory — before verification the node was down to **267 MB free** with
+`next dev`, `workerd`, and headless Chromium all resident, and one measured page operation
+took 231s. Killing the competing processes and re-running was sufficient; no code changed.
 
-### Two measurement mistakes worth recording
+Two measurement mistakes produced convincing false findings, and both are worth keeping:
 
 **A hang that was not a hang.** An early probe reported `certifications` and `awards` as
-hanging the editor indefinitely. They are not broken. The app redirects `/` → `/app/`
-before the editor mounts, which destroys the Playwright execution context mid-poll; the
-poll then read nothing, exhausted its budget, and reported a hang. Both render correctly.
-Nothing about `certifications` or `awards` is defective, and no fix is warranted — the
-lesson is that a poll which cannot survive a navigation will manufacture a hang out of
-ordinary routing.
+hanging the editor indefinitely. They are not broken. The app redirects `/` → `/app/` before
+the editor mounts, which destroys the Playwright execution context mid-poll; the poll read
+nothing, exhausted its budget, and reported a hang. Both render correctly. **No fix was
+made, because there was nothing to fix.** The lesson is that a poll which cannot survive a
+navigation will manufacture a hang out of ordinary routing — and navigating straight to
+`/app/#/resume-editor/<id>` removes it entirely.
 
 **A `pkill` that killed its own shell.** `pkill -f "next build"` matches any process whose
-command line contains that string, including the shell running the `pkill` itself. This
+command line contains that string, including the shell running the `pkill` itself. That
 silently killed the invoking shell, which is why the dev stack repeatedly appeared to die
-between turns. `pkill -f "[n]ext build"` is the fix. This cost several diagnostic
-detours, because the symptom — services vanishing for no reason — pointed at the app.
+between turns for no reason. `pkill -f "[n]ext build"` is the fix. This cost several
+detours because the symptom pointed at the app.
 
-### Why the remaining three need a different machine
+### Not verifiable on this node
 
-This node has 4.9 GB total. The editor's real cost is the Typst WASM preview compile plus
-webpack's on-demand route compilation, and load times degraded monotonically across a
-single session: **7.8s → 32.1s → 91.0s → failure.** That curve is the box running out of
-memory, not the app getting slower with more sections — the two heaviest résumés did not
-produce the slowest load.
+A **local production build wedges rather than fails**: it sat at "Creating an optimized
+production build ..." for 35 minutes with 0% CPU and no compiler process. `CLAUDE.md` already
+warns that `next build` needs `NODE_OPTIONS="--max-old-space-size=1400"` on ~4 GB nodes; on
+this node it is not viable. GitHub's `build` job passes in ~1m14s, so the build is
+reproducible elsewhere.
 
-A local production build, which would settle this cleanly, **wedges rather than fails**: it
-sat at "Creating an optimized production build ..." for 35 minutes with 0% CPU and no
-compiler process. `CLAUDE.md` already warns that `next build` needs
-`NODE_OPTIONS="--max-old-space-size=1400"` on ~4 GB nodes; on this node it is not viable at
-all. GitHub's `build` job passes in ~1m14s, so the build is reproducible elsewhere.
-
-The honest position: **the editor is proven to render a 9-section résumé with no layout
-regression, and the three remaining personas are untested rather than known-broken.**
-Closing that gap needs either a less loaded node or a visual CI job for authenticated
-pages, which does not exist yet.
+That leaves one genuine gap: **all browser evidence above is webpack dev mode.** Nobody has
+rendered these personas against a production bundle. Closing it needs either a less loaded
+node or a visual CI job for authenticated pages, which does not exist yet.
 
 ## Product observations worth acting on
 
