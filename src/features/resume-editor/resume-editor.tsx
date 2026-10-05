@@ -941,9 +941,21 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		<div className="flex h-screen flex-col bg-background">
 			{/* Header */}
 			<header className="z-50 border-b bg-background/95 backdrop-blur">
-				<div className="flex h-14 items-center justify-between px-4">
+				{/*
+				 * `min-h-14` + wrap, for the same reason as the dashboard header and worse:
+				 * at 390px this row measured Back, the resume identity, Import, Review and
+				 * Export — 558px of content in a 390px viewport, so the page scrolled
+				 * sideways and Export sat 168px off the edge where it could not be reached
+				 * without scrolling the whole document.
+				 *
+				 * Wrapping is containment, not design: the row now stays inside the viewport
+				 * at any width. Collapsing these three actions to icons on small screens is
+				 * still worth doing, and is deliberately left as a separate change rather than
+				 * folded in here.
+				 */}
+				<div className="flex min-h-14 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					{/* Left: Back + Resume Info */}
-					<div className="flex items-center gap-4">
+					<div className="flex min-w-0 items-center gap-4">
 						<Button
 							aria-label="Back to dashboard"
 							onClick={() => navigate("/dashboard")}
@@ -993,7 +1005,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					</div>
 
 					{/* Right: Actions */}
-					<div className="flex items-center gap-2">
+					<div className="flex flex-wrap items-center justify-end gap-2">
 						{/*
 						 * Import sits in the editor header, beside Review and Export, and not
 						 * inside the left rail with the Library.
