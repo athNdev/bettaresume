@@ -211,3 +211,62 @@ describe("webfonts are self-hosted exactly once", () => {
 		expect(typstFonts).toContain("fonts.gstatic.com");
 	});
 });
+
+describe("the resume card grid declares its own track", () => {
+	/**
+	 * FOUND BY MEASUREMENT, not by reading.
+	 *
+	 * After the header fix the dashboard still overflowed at 390px: `scrollWidth 513` against
+	 * `innerWidth 390`, and the widest overflowing node was the `ResumeCard` itself — not the
+	 * header, which the earlier fix had already cured.
+	 *
+	 * The cause is the grid, not the card's contents. `grid gap-6 sm:grid-cols-2 …` emits **no
+	 * `grid-template-columns` at all** below `sm`, so there is a single *implicit* column and
+	 * implicit columns are `auto`-sized — that is, max-content. The card contains a document
+	 * preview with an explicit pixel width (`preview.tsx` sets `width: pageWidth * scale`, and
+	 * Letter is 816px), so that intrinsic width widened the track, which widened the
+	 * container, which raised `scale` via the thumbnail's ResizeObserver. It settled at 513px.
+	 *
+	 * So these assert the mechanism. They do **not** prove the layout fits — only a viewport
+	 * does that, and the before/after numbers above came from one.
+	 */
+	const card = codeOf("src/features/dashboard/components/resume-card.tsx");
+
+	it("gives the single-column base an explicit track", () => {
+		const grid = dashboard.match(/<div className="grid[^"]*gap-6[^"]*"/g) ?? [];
+
+		expect(grid.length).toBeGreaterThan(0);
+		for (const g of grid) {
+			// Without `grid-cols-1` there is no `grid-template-columns` below `sm` and the
+			// implicit column is max-content sized.
+			expect(g, `grid has no explicit base track: ${g}`).toContain(
+				"grid-cols-1",
+			);
+		}
+	});
+
+	it("keeps every card grid on the same track definition", () => {
+		// Two grids exist (the main list and one inside a dialog). If only one is corrected the
+		// overflow just moves.
+		const grids = dashboard.match(/grid grid-cols-1 gap-6[^"]*/g) ?? [];
+
+		expect(grids.length).toBe(2);
+		for (const g of grids) {
+			expect(g).toBe(grids[0]);
+		}
+	});
+
+	it("lets a card shrink below its own max-content", () => {
+		// A grid item defaults to `min-width: auto`, which floors it at the widest child. The
+		// widest child is a pixel-width document preview, so without this the `minmax(0, …)`
+		// track cannot actually shrink.
+		expect(card).toMatch(/className=\{`group relative min-w-0/);
+	});
+
+	it("still uses a shrinkable track, not a bare 1fr", () => {
+		// Tailwind's `grid-cols-1` is `repeat(1, minmax(0, 1fr))`; the `minmax(0, …)` is what
+		// allows shrinking below content. Asserting the utility name rather than the emitted CSS
+		// is the tractable half of this; the measured numbers are the other half.
+		expect(dashboard).not.toMatch(/grid gap-6 sm:grid-cols-2/);
+	});
+});
