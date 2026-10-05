@@ -16,8 +16,8 @@ against the local Worker, then read back and compared against what was sent. A r
 the database accepts is not the same as a résumé a user can work with, so the round trip is
 the first gate, not the last.
 
-Builder: `agent_setup/verify/build-persona-resumes.mjs` (outside the repo, deliberately —
-it is a dogfooding tool, not shipped code).
+Builder: `/home/prox/agent_setup/verify/build-persona-resumes.mjs` — outside the repo,
+deliberately, since it is dogfooding tooling rather than shipped code.
 
 | Persona | Résumés | Template | Sections | Distinctive load |
 | --- | --- | --- | --- | --- |
@@ -165,16 +165,35 @@ save". That gap is exactly what the round-trip check in this report had to do by
 
 ## Reproduction
 
-```sh
-# API + frontend
-cd api && npx wrangler dev --config wrangler.dev.jsonc   # port 4000
-npx next dev --webpack                                    # port 3000
+The harness lives **outside this repo**, at `/home/prox/agent_setup/verify/` — deliberately,
+since it is dogfooding tooling rather than shipped code. Paths are absolute because a
+repo-relative `agent_setup/...` does not resolve.
 
-# Build the personas, then read them back
-node agent_setup/verify/build-persona-resumes.mjs
-node agent_setup/verify/verify-personas.mjs
+```sh
+# Bring up the stack and wait for both to answer health checks
+/home/prox/agent_setup/verify/orchestrate.sh          # wrangler :4000 + next dev :3000
+
+# Build the six resumes, then read them back through the API
+node /home/prox/agent_setup/verify/build-persona-resumes.mjs
+node /home/prox/agent_setup/verify/verify-personas.mjs
+
+# Verify rendering; ONLY filters by resume-name substring
+ONLY="Amara,Priya" node /home/prox/agent_setup/verify/verify-all.mjs
+
+# Re-running the builder duplicates rows rather than mutating them
+node /home/prox/agent_setup/verify/dedupe-personas.mjs
 ```
+
+If the box has other work resident, free it first: on a 4.9 GB node these renders degrade
+from seconds to failure purely on memory pressure. See `CLAUDE.md` for the `next build` heap
+cap, and note that on this node a production build wedges rather than failing.
 
 Both requests need the dev-mode headers; mutations are POST with a JSON body, queries are
 GET. A POST that puts its input only in `?input=` returns
 `400 "Unexpected end of JSON input"`, which reads like a server fault and is not one.
+
+Navigate to `/app/#/resume-editor/<id>`, not `/#/resume-editor/<id>`: the redirect from `/`
+destroys a Playwright execution context mid-poll and will be misread as a hang.
+
+Progress and the open gaps are tracked in
+[`PERSONA-DOGFOODING-STATUS.md`](./PERSONA-DOGFOODING-STATUS.md).
