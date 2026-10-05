@@ -45,6 +45,30 @@ export function shouldFlushOnUnmount({
 	return hasPendingTimer && enabled && localJson !== savedJson;
 }
 
+/**
+ * Should this draft be reported to `onLocalUpdate`?
+ *
+ * `onLocalUpdate` drives the live preview and the editor's dirty banner, so it must
+ * fire for real edits and not for hydration. `localData` is seeded from `data`, so on
+ * mount it holds a value the user never typed; reporting it made the editor announce
+ * unsaved work on a resume nobody had touched.
+ *
+ * The test is "does the draft differ from what was last known to be saved", the same
+ * predicate as `isDirty` and `shouldFlushOnUnmount` above. Counting calls would have
+ * been simpler and wrong in a second way: it would also swallow a genuine first edit.
+ *
+ * This became visible only once personal info started resolving from two stores
+ * (`Resume.metadata.personalInfo` and the `personal-info` section), which made the
+ * form's initial value legitimately differ from the draft's baseline. See
+ * `resolvePersonalInfo` in `src/lib/typst/serialize.ts`.
+ */
+export function shouldReportLocalEdit(
+	localJson: string,
+	savedJson: string,
+): boolean {
+	return localJson !== savedJson;
+}
+
 interface UseAutoSaveReturn<T> {
 	/** Local data state - use this for form inputs */
 	localData: T;
@@ -251,7 +275,11 @@ export function useAutoSave<T>({
 	 */
 	useEffect(() => {
 		if (!onLocalUpdate) return;
-		if (JSON.stringify(localData) === savedDataRef.current) return;
+		if (
+			!shouldReportLocalEdit(JSON.stringify(localData), savedDataRef.current)
+		) {
+			return;
+		}
 		onLocalUpdate(localData);
 	}, [localData, onLocalUpdate]);
 
