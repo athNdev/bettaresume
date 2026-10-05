@@ -46,6 +46,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { isSectionEmpty } from "@/features/resume-editor/section-state";
 import type {
 	ResumePage,
 	ResumeSection,
@@ -173,10 +174,28 @@ function SortableSectionItem({
 					{SECTION_ICONS[section.type]}
 				</span>
 				<span className="flex-1 truncate text-sm">{title}</span>
+				{/*
+				 * Say which sections are actually empty.
+				 *
+				 * Without this, an empty section and one that failed to save are
+				 * indistinguishable in the outline: both are just a row you click. Since a
+				 * resume is mostly this list, "my Experience section disappeared" had no
+				 * visible answer anywhere in the UI.
+				 *
+				 * Dotted outline = visible but empty. A hidden section already says so, and
+				 * showing both would be noise, so the dot is suppressed there.
+				 */}
 				{!section.visible ? (
 					<span className="shrink-0 text-[10px] text-muted-foreground uppercase">
 						Hidden
 					</span>
+				) : isSectionEmpty(section) ? (
+					<span
+						aria-label="This section is empty"
+						className="h-1.5 w-1.5 shrink-0 rounded-full border border-muted-foreground/70 border-dashed"
+						role="img"
+						title="This section is empty"
+					/>
 				) : null}
 			</button>
 
