@@ -79,14 +79,20 @@ function DashboardSkeleton() {
 	return (
 		<div className="min-h-screen bg-background">
 			<header className="border-b bg-card">
-				<div className="container mx-auto flex h-16 items-center justify-between px-4">
+				<div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					<div className="flex items-center gap-4">
 						<Skeleton className="h-7 w-32" />
 						<Skeleton className="hidden h-6 w-20 sm:block" />
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="flex flex-wrap items-center justify-end gap-2">
 						<Skeleton className="h-9 w-24" />
-						<Skeleton className="h-9 w-32" />
+						{/*
+						 * The second placeholder is dropped below `sm`. Two of them plus the
+						 * wordmark came to ~392px before padding, so the loading state overflowed
+						 * a 390px viewport too -- and the loading state is exactly what a phone
+						 * user sees first.
+						 */}
+						<Skeleton className="hidden h-9 w-32 sm:block" />
 					</div>
 				</div>
 			</header>
@@ -416,28 +422,46 @@ function DashboardContent() {
 		<div className="min-h-screen bg-background">
 			{/* Header */}
 			<header className="border-b bg-card">
-				<div className="container mx-auto flex h-16 items-center justify-between px-4">
+				{/*
+				 * `min-h-16` + `flex-wrap`, not a fixed `h-16`.
+				 *
+				 * At 390px this row held the wordmark plus Import, New Resume, the theme
+				 * toggle and the avatar: 575px of content in a 390px viewport, so the avatar
+				 * hung 49px off the right edge and the page scrolled sideways. Nothing
+				 * shrank and nothing wrapped, because a fixed height gives wrapping nowhere
+				 * to go. Wrapping is the backstop; the labels collapsing below is what
+				 * actually fixes it.
+				 */}
+				<div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					<div className="flex items-center gap-4">
 						<button className="font-bold text-xl" onClick={() => navigate("/")}>
 							Betta Resume
 						</button>
 					</div>
 					<div className="flex items-center gap-2">
-						<Button onClick={handleImportResume} size="sm" variant="outline">
-							<Upload className="mr-2 h-4 w-4" />
-							Import
+						<Button
+							aria-label="Import resume"
+							onClick={handleImportResume}
+							size="sm"
+							title="Import resume"
+							variant="outline"
+						>
+							<Upload className="h-4 w-4 sm:mr-2" />
+							<span className="hidden sm:inline">Import</span>
 						</Button>
 						<Button
+							aria-label="New resume"
 							disabled={isCreating}
 							onClick={() => setIsCreateDialogOpen(true)}
 							size="sm"
+							title="New resume"
 						>
 							{isCreating ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								<Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
 							) : (
-								<Plus className="mr-2 h-4 w-4" />
+								<Plus className="h-4 w-4 sm:mr-2" />
 							)}
-							New Resume
+							<span className="hidden sm:inline">New Resume</span>
 						</Button>
 						<ThemeToggle />
 						<UserMenu />

@@ -486,23 +486,45 @@ curl -s -D- -o /dev/null -H 'Origin: https://evil.example'    -H 'x-dev-mode: tr
 First prints the origin; second prints **nothing**. Confirmed. If that second one ever starts
 printing a header, the bypass has escaped its dev origin and needs fixing before anything else.
 
-### 2.22 This node cannot host Chromium and both dev servers
+### 2.22 Visual verification: not on this node, but offloadable — here is the working recipe
 
-~4.9 GB total. `wrangler dev` + `next dev` leave roughly **900 MB** available, and headless Chromium
-is OOM-killed at that point — it dies with `Target page, context or browser has been closed`, which
-reads like a Playwright bug and is not.
+Locally, `wrangler dev` + `next dev` leave roughly **900 MB**, and headless Chromium is OOM-killed
+there — it dies with `Target page, context or browser has been closed`, which reads like a Playwright
+bug and is not.
 
-So: **the dashboard and editor cannot be verified visually on this node.** Not "hard" — cannot.
-Public-page visual checks work in CI (`.github/workflows/visual.yml`) because that is static files
-plus one headless Chromium and nothing else.
+**But that is a scheduling problem, not a hardware wall.** An earlier version of this section
+concluded visual verification was impossible and said so too firmly. It is not: the fleet has idle
+nodes with 3–4 GB free. Clone onto one, run the servers and the browser there, and read the result
+back as text. Do that before concluding a visual change cannot be verified.
 
-Do not spend four attempts rediscovering this. Two consequences to respect:
+What the offload has already produced: the dashboard renders `Welcome back, Demo` with a
+`7 resumes` count line, no console errors and no horizontal scroll at 1280px. The greeting and the
+count line had only ever been unit-tested and source-asserted before that.
 
-- **Any layout or visual change (OVERHAUL-PLAN Phase B5 and Phase C) needs either more RAM than
-  this node has, or a human looking at it.** Shipping a visual change verified only by
-  source-asserted tests means asserting that class names are present — which proves nothing about
-  whether it looks right.
-- Prefer, for behaviour: pure-function unit tests and `curl` probes, both of which work here.
+Five traps, each of which cost an agent a run:
+
+1. **Never wait for `networkidle`.** `next dev` holds an HMR websocket open forever, so it never
+   fires and the navigation hangs until timeout. Use `waitUntil: "domcontentloaded"` then a fixed
+   `waitForTimeout(9000)`.
+2. **ESM resolves `import "playwright"` from the *script's* directory, not your cwd.** A script
+   written to `/tmp` cannot see `/tmp/pw/node_modules`. Put the script *in* the Playwright directory.
+3. **`/home/prox/agent_setup/verify` does not have Playwright.** `/tmp/pw` does.
+4. **`wrangler dev --config wrangler.dev.jsonc` only resolves from inside `api/`.** From the repo
+   root: `Could not read file: wrangler.dev.jsonc`.
+5. **Start servers with `setsid nohup … < /dev/null &`.** Otherwise they die with the agent's shell —
+   which looks like the server crashing.
+
+And one that is *not* a trap: **`net::ERR_ABORTED` on an RSC prefetch or the tRPC batch is expected**
+here. The hash route cancels them and the data still arrives. Reporting those as failures trains
+everyone to ignore the error list. Only escalate them if content actually failed to render.
+
+Scope the delegated task tightly and **require it to report before exploring.** Two runs were lost
+to turns that did the work and died before answering; the successful one asked for a short reply and
+got it in 2.5 minutes. Have the delegate report exact strings and numbers — you cannot see its
+images, so its text is the only evidence you will get. Then verify its structural claims against the
+source: one report here claimed eight `<h1>` on the dashboard, and the dashboard has exactly one.
+
+For behaviour, prefer pure-function unit tests and `curl` probes — both work on this node.
 
 ## 2.x Never hand-write a list of what to substitute, read it from the file
 
