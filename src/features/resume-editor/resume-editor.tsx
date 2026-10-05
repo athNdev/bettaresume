@@ -86,6 +86,7 @@ import {
 } from "@/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useHashRouter } from "@/lib/hash-router";
+import { resolvePersonalInfo } from "@/lib/typst/serialize";
 import { cn } from "@/lib/utils";
 import {
 	FormattingToolbar,
@@ -682,20 +683,23 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						</div>
 					);
 				}
-				const personalInfo =
-					activeResume.metadata.personalInfo ??
-					({
-						fullName: "",
-						email: "",
-						phone: "",
-						location: "",
-						linkedin: "",
-						github: "",
-						website: "",
-						portfolio: "",
-						professionalTitle: "",
-						photoUrl: "",
-					} as PersonalInfo);
+				const personalInfoSectionData = ((
+					selectedSection.content as SectionContent | undefined
+				)?.data ?? {}) as Record<string, unknown>;
+				/*
+				 * Resolve through the same function the exporter uses.
+				 *
+				 * The form used to read `metadata.personalInfo` and nothing else, while
+				 * `resolvePersonalInfo` prefers metadata but falls through to the
+				 * personal-info section per field. The two therefore disagreed: a resume
+				 * whose name lived only in the section displayed an empty name field while
+				 * the exported PDF carried the real one. The user could not see, or edit,
+				 * what was actually in their resume. One resolver, one answer.
+				 */
+				const personalInfo = resolvePersonalInfo(
+					activeResume.metadata.personalInfo,
+					personalInfoSectionData,
+				);
 				return (
 					<PersonalInfoForm
 						data={personalInfo}

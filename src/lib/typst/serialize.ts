@@ -170,7 +170,15 @@ const PERSONAL_INFO_FIELDS = [
  * either path. An earlier version of this bug exported `resume-1` with a blank
  * header precisely because only `metadata` was consulted.
  */
-function resolvePersonalInfo(
+/**
+ * Resolve personal info for display as well as for export.
+ *
+ * Exported so the editor can show the same values the exporter will render. When
+ * the two resolved differently, the Personal Information form could display empty
+ * fields while the exported PDF showed a full name — the user had no way to see
+ * or edit what was actually in their resume.
+ */
+export function resolvePersonalInfo(
 	metadataInfo: Partial<PersonalInfo> | undefined,
 	sectionData: Record<string, unknown> | undefined,
 ): PersonalInfo {
