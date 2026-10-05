@@ -104,7 +104,21 @@ function DashboardSkeleton() {
 					</div>
 					<Skeleton className="h-9 w-36" />
 				</div>
-				<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+				{/*
+				 * `grid-cols-1` explicitly, and it is load-bearing.
+				 *
+				 * `grid gap-6 sm:grid-cols-2 …` emits no `grid-template-columns` at all below `sm`,
+				 * so the single implicit column is `auto`-sized — that is, max-content. The card
+				 * contains a document preview with an explicit pixel width (`preview.tsx`:
+				 * `pageWidth * scale`, Letter = 816px), so that intrinsic width widened the track,
+				 * which widened the container, which raised `scale` in the thumbnail's
+				 * ResizeObserver. Measured in Chromium: it settled at 513px inside a 390px viewport,
+				 * with the card itself as the widest overflowing node.
+				 *
+				 * `repeat(1, minmax(0, 1fr))` is what lets the track shrink below its content. The
+				 * `minmax(0, …)` is the part that matters; a bare `1fr` still floors at min-content.
+				 */}
+				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					{Array.from({ length: 8 }).map((_, i) => (
 						<ResumeCardSkeleton key={i} />
 					))}
@@ -599,7 +613,7 @@ function DashboardContent() {
 								total: totalResumes,
 							})}
 						</p>
-						<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{pagedResumes.map((resume: Resume) => (
 								<ResumeCard
 									isArchiving={archivingId === resume.id}

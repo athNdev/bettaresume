@@ -75,7 +75,10 @@ export function ResumeCard({
 
 	return (
 		<Card
-			className={`group relative transition-all hover:shadow-lg ${resume.isArchived ? "opacity-60" : ""}`}
+			// min-w-0 so the card can shrink below its own max-content. A grid item defaults
+			// to min-width:auto, which floors it at the widest child — and the widest child here
+			// is a document preview with a pixel width.
+			className={`group relative min-w-0 transition-all hover:shadow-lg ${resume.isArchived ? "opacity-60" : ""}`}
 		>
 			<CardHeader className="pb-2">
 				<div className="flex items-start justify-between">
