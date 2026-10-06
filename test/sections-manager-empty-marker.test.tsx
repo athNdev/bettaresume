@@ -1,4 +1,4 @@
-import type { ResumeSection } from "@bettaresume/types";
+import type { PersonalInfo, ResumeSection } from "@bettaresume/types";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SortableSectionItem } from "@/features/resume-editor/components/sections-manager";
@@ -29,6 +29,7 @@ const base = {
 function renderRow(
 	content: ResumeSection["content"],
 	overrides: Partial<ResumeSection> = {},
+	personalInfo?: PersonalInfo | null,
 ): string {
 	return renderToStaticMarkup(
 		<SortableSectionItem
@@ -37,6 +38,7 @@ function renderRow(
 			onDelete={() => {}}
 			onSelect={() => {}}
 			onToggleVisibility={() => {}}
+			personalInfo={personalInfo}
 			section={
 				{
 					...base,
@@ -108,5 +110,48 @@ describe("SortableSectionItem empty marker", () => {
 		expect(
 			renderRow({ title: "Work Experience", data: [{ company: "Acme" }] }),
 		).toContain("Work Experience");
+	});
+});
+
+/**
+ * The false-positive guard, at the level it actually occurred.
+ *
+ * Personal info is the one section the editor persists to `resume.metadata` rather
+ * than to the section's `content.data`, so a real user's `personal-info` section keeps
+ * `data: []` forever. Checking the section alone marked Personal Information empty on a
+ * fully filled resume — the exact confusion this feature exists to remove, reintroduced
+ * by the feature itself.
+ */
+describe("SortableSectionItem personal-info marker", () => {
+	const PI: PersonalInfo = {
+		fullName: "Amara Okafor",
+		email: "amara@example.com",
+	} as PersonalInfo;
+
+	it("does not mark Personal Information empty when only metadata is filled", () => {
+		const html = renderRow(
+			{ title: "Personal Information", data: [] },
+			{ type: "personal-info" },
+			PI,
+		);
+		expect(html).not.toContain(MARKER);
+	});
+
+	it("still marks Personal Information empty when metadata is blank too", () => {
+		const html = renderRow(
+			{ title: "Personal Information", data: [] },
+			{ type: "personal-info" },
+			{ fullName: "", email: "" } as PersonalInfo,
+		);
+		expect(html).toContain(MARKER);
+	});
+
+	it("does not double-mark a section that is filled in both stores", () => {
+		const html = renderRow(
+			{ title: "Personal Information", data: { fullName: "Amara Okafor" } },
+			{ type: "personal-info" },
+			PI,
+		);
+		expect(html).not.toContain(MARKER);
 	});
 });

@@ -1,3 +1,5 @@
+import type { PersonalInfo } from "@bettaresume/types";
+
 /**
  * Is a section actually empty?
  *
@@ -44,6 +46,8 @@ function isBlankValue(value: Json): boolean {
 }
 
 export interface SectionLike {
+	/** `sectionType`, used to spot personal-info and read its second store. */
+	type?: string;
 	content?: {
 		title?: string;
 		data?: unknown;
@@ -59,9 +63,30 @@ export interface SectionLike {
  */
 export function isSectionEmpty(
 	section: SectionLike | null | undefined,
+	/**
+	 * `Resume.metadata.personalInfo`, supplied for a `personal-info` section.
+	 *
+	 * Personal info is the one section the editor does not write through its own
+	 * `content.data`: `handlePersonalInfoChange` persists to `resume.metadata` and never
+	 * touches the section, so for every user who fills their name in through the editor
+	 * the section stays `data: []` forever. Only `api/src/db/seed.sql` writes the section
+	 * copy.
+	 *
+	 * Checking the section alone therefore reported Personal Information as empty on a
+	 * fully filled resume -- a false positive on the most important section, in the very
+	 * feature meant to stop users being unsure which sections they had filled in.
+	 *
+	 * Both stores are consulted and either one counts, mirroring the per-field fallback in
+	 * `resolvePersonalInfo`.
+	 */
+	personalInfo?: PersonalInfo | Record<string, unknown> | null,
 ): boolean {
 	if (!section?.content) return true;
 	const { data, html } = section.content;
+
+	if (section.type === "personal-info" && !isBlankValue(personalInfo as Json)) {
+		return false;
+	}
 
 	// `summary` keeps its rich text in `html` and has no `data`.
 	if (typeof html === "string" && html.trim() !== "") return false;

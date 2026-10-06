@@ -132,3 +132,55 @@ describe("isSectionEmpty", () => {
 		).toBe(false);
 	});
 });
+
+/**
+ * Personal info is the one section whose real content lives somewhere else.
+ *
+ * `handlePersonalInfoChange` writes to `Resume.metadata.personalInfo` and never
+ * touches the section, so for every user who fills in their name through the editor
+ * the `personal-info` section's own `content.data` stays `data: []` forever. Only
+ * `api/src/db/seed.sql` writes the section copy.
+ *
+ * Checking the section alone therefore reports Personal Information as empty on a
+ * fully filled resume — a false positive on the most important section, in the very
+ * feature added to stop users being confused about which sections they had filled in.
+ */
+describe("isSectionEmpty for personal-info", () => {
+	// A real section always carries its `type`; that is how the emptiness check knows
+	// personal-info has a second store to consult.
+	const emptySection = {
+		type: "personal-info",
+		content: { title: "Personal Information", data: [] },
+	};
+
+	it("reads personal info from the section when the section has it", () => {
+		expect(
+			isSectionEmpty({
+				type: "personal-info",
+				content: {
+					title: "Personal Information",
+					data: { fullName: "Amara Okafor" },
+				},
+			}),
+		).toBe(false);
+	});
+
+	it("is not empty when only the resume metadata has it, which is the normal path", () => {
+		expect(
+			isSectionEmpty(emptySection, { fullName: "Amara Okafor", email: "" }),
+		).toBe(false);
+	});
+
+	it("is still empty when neither store has content", () => {
+		expect(isSectionEmpty(emptySection, { fullName: "", email: "" })).toBe(
+			true,
+		);
+		expect(isSectionEmpty(emptySection)).toBe(true);
+	});
+
+	it("ignores metadata made entirely of blanks", () => {
+		expect(
+			isSectionEmpty(emptySection, { fullName: "   ", email: "", phone: "" }),
+		).toBe(true);
+	});
+});

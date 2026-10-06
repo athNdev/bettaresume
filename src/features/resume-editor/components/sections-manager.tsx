@@ -1,5 +1,6 @@
 "use client";
 
+import type { PersonalInfo } from "@bettaresume/types";
 import {
 	closestCenter,
 	DndContext,
@@ -57,6 +58,14 @@ import { cn } from "@/lib/utils";
 
 interface SectionsManagerProps {
 	sections: ResumeSection[];
+	/**
+	 * `resume.metadata.personalInfo`.
+	 *
+	 * Personal info is persisted to metadata, not to the section's own `content.data`, so
+	 * without this the outline would mark Personal Information empty on every resume a
+	 * real user had filled in.
+	 */
+	personalInfo?: PersonalInfo | null;
 	pages?: ResumePage[];
 	onSectionsChange: (sections: ResumeSection[]) => void;
 	onPagesChange?: (pages: ResumePage[]) => void;
@@ -89,6 +98,8 @@ const titleOf = (section: ResumeSection) =>
 
 interface SortableSectionItemProps {
 	section: ResumeSection;
+	/** `resume.metadata.personalInfo`; see `SectionsManagerProps`. */
+	personalInfo?: PersonalInfo | null;
 	/** Id of the reorder instructions, wired to the drag handle. */
 	describedById: string;
 	isSelected: boolean;
@@ -128,6 +139,7 @@ export function SortableSectionItem({
 	onToggleVisibility,
 	onDelete,
 	onSelect,
+	personalInfo,
 }: SortableSectionItemProps) {
 	const {
 		attributes,
@@ -198,7 +210,7 @@ export function SortableSectionItem({
 					<span className="shrink-0 text-[10px] text-muted-foreground uppercase">
 						Hidden
 					</span>
-				) : isSectionEmpty(section) ? (
+				) : isSectionEmpty(section, personalInfo) ? (
 					<span
 						aria-label="This section is empty"
 						className="h-1.5 w-1.5 shrink-0 rounded-full border border-muted-foreground/70 border-dashed"
@@ -250,6 +262,7 @@ export function SortableSectionItem({
 
 export function SectionsManager({
 	sections,
+	personalInfo,
 	onSectionsChange,
 	onAddSection,
 	onDeleteSection,
@@ -395,6 +408,7 @@ export function SectionsManager({
 									onDelete={onDeleteSection}
 									onSelect={onSelectSection}
 									onToggleVisibility={toggleVisibility}
+									personalInfo={personalInfo}
 									section={section}
 								/>
 							</li>

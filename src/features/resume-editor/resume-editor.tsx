@@ -1164,6 +1164,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 												onDeleteSection={handleDeleteSection}
 												onSectionsChange={handleSectionsReorder}
 												onSelectSection={setSelectedSectionId}
+												personalInfo={activeResume.metadata?.personalInfo}
 												sections={activeResume.sections}
 												selectedSectionId={selectedSectionId || undefined}
 											/>
