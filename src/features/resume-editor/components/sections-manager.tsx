@@ -112,7 +112,16 @@ interface SortableSectionItemProps {
  *   order while invisible, so keyboard users tabbed onto controls they could not
  *   see. They now also reveal on `focus-within`.
  */
-function SortableSectionItem({
+/**
+ * Exported for its render test.
+ *
+ * The empty-section marker is the part of this feature that cannot be checked by a
+ * predicate test alone: `isSectionEmpty` being right does not prove the marker is
+ * actually emitted, or that it is suppressed for a hidden section. Rendering the row
+ * to static markup covers that wiring without needing a browser, which matters because
+ * the editor route does not reliably load on a 4.9 GB node.
+ */
+export function SortableSectionItem({
 	section,
 	describedById,
 	isSelected,
