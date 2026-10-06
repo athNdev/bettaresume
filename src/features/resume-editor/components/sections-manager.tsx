@@ -1,5 +1,6 @@
 "use client";
 
+import type { PersonalInfo } from "@bettaresume/types";
 import {
 	closestCenter,
 	DndContext,
@@ -46,6 +47,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { isSectionEmpty } from "@/features/resume-editor/section-state";
 import type {
 	ResumePage,
 	ResumeSection,
@@ -56,6 +58,14 @@ import { cn } from "@/lib/utils";
 
 interface SectionsManagerProps {
 	sections: ResumeSection[];
+	/**
+	 * `resume.metadata.personalInfo`.
+	 *
+	 * Personal info is persisted to metadata, not to the section's own `content.data`, so
+	 * without this the outline would mark Personal Information empty on every resume a
+	 * real user had filled in.
+	 */
+	personalInfo?: PersonalInfo | null;
 	pages?: ResumePage[];
 	onSectionsChange: (sections: ResumeSection[]) => void;
 	onPagesChange?: (pages: ResumePage[]) => void;
@@ -88,6 +98,8 @@ const titleOf = (section: ResumeSection) =>
 
 interface SortableSectionItemProps {
 	section: ResumeSection;
+	/** `resume.metadata.personalInfo`; see `SectionsManagerProps`. */
+	personalInfo?: PersonalInfo | null;
 	/** Id of the reorder instructions, wired to the drag handle. */
 	describedById: string;
 	isSelected: boolean;
@@ -111,13 +123,23 @@ interface SortableSectionItemProps {
  *   order while invisible, so keyboard users tabbed onto controls they could not
  *   see. They now also reveal on `focus-within`.
  */
-function SortableSectionItem({
+/**
+ * Exported for its render test.
+ *
+ * The empty-section marker is the part of this feature that cannot be checked by a
+ * predicate test alone: `isSectionEmpty` being right does not prove the marker is
+ * actually emitted, or that it is suppressed for a hidden section. Rendering the row
+ * to static markup covers that wiring without needing a browser, which matters because
+ * the editor route does not reliably load on a 4.9 GB node.
+ */
+export function SortableSectionItem({
 	section,
 	describedById,
 	isSelected,
 	onToggleVisibility,
 	onDelete,
 	onSelect,
+	personalInfo,
 }: SortableSectionItemProps) {
 	const {
 		attributes,
@@ -173,10 +195,28 @@ function SortableSectionItem({
 					{SECTION_ICONS[section.type]}
 				</span>
 				<span className="flex-1 truncate text-sm">{title}</span>
+				{/*
+				 * Say which sections are actually empty.
+				 *
+				 * Without this, an empty section and one that failed to save are
+				 * indistinguishable in the outline: both are just a row you click. Since a
+				 * resume is mostly this list, "my Experience section disappeared" had no
+				 * visible answer anywhere in the UI.
+				 *
+				 * Dotted outline = visible but empty. A hidden section already says so, and
+				 * showing both would be noise, so the dot is suppressed there.
+				 */}
 				{!section.visible ? (
 					<span className="shrink-0 text-[10px] text-muted-foreground uppercase">
 						Hidden
 					</span>
+				) : isSectionEmpty(section, personalInfo) ? (
+					<span
+						aria-label="This section is empty"
+						className="h-1.5 w-1.5 shrink-0 rounded-full border border-muted-foreground/70 border-dashed"
+						role="img"
+						title="This section is empty"
+					/>
 				) : null}
 			</button>
 
@@ -222,6 +262,7 @@ function SortableSectionItem({
 
 export function SectionsManager({
 	sections,
+	personalInfo,
 	onSectionsChange,
 	onAddSection,
 	onDeleteSection,
@@ -367,6 +408,7 @@ export function SectionsManager({
 									onDelete={onDeleteSection}
 									onSelect={onSelectSection}
 									onToggleVisibility={toggleVisibility}
+									personalInfo={personalInfo}
 									section={section}
 								/>
 							</li>
