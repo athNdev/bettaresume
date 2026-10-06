@@ -239,7 +239,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 	const handleDraftPersonalInfoUpdate = useCallback((info: PersonalInfo) => {
 		setDraftResume((prev) => {
-			if (!prev || !prev.metadata) return prev;
+			if (!prev?.metadata) return prev;
 			if (JSON.stringify(prev.metadata.personalInfo) === JSON.stringify(info)) {
 				return prev;
 			}
@@ -344,7 +344,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		};
 
 		setDraftResume((prev) => {
-			if (!prev || !prev.metadata) return prev;
+			if (!prev?.metadata) return prev;
 			const baseSettings = prev.metadata.settings;
 			return {
 				...prev,
@@ -467,7 +467,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 	const handleSummaryChange = useCallback(
 		(html: string) => {
-			if (!selectedSection || selectedSection.type !== "summary") return;
+			if (selectedSection?.type !== "summary") return;
 			handleSectionChange(selectedSection.id, {
 				content: { ...selectedSection.content, html },
 			});
@@ -475,9 +475,25 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		[selectedSection, handleSectionChange],
 	);
 
+	/**
+	 * `custom` and `summary` both store rich text under `content.html`.
+	 *
+	 * Separate from `handleSummaryChange` because that one asserts the selected section
+	 * is a summary, which would silently do nothing here.
+	 */
+	const handleCustomChange = useCallback(
+		(html: string) => {
+			if (selectedSection?.type !== "custom") return;
+			handleSectionChange(selectedSection.id, {
+				content: { ...selectedSection?.content, html },
+			});
+		},
+		[selectedSection, handleSectionChange],
+	);
+
 	const handlePersonalInfoChange = useCallback(
 		async (info: PersonalInfo) => {
-			if (!activeResume || !activeResume.metadata) return;
+			if (!activeResume?.metadata) return;
 			try {
 				await updateResume(activeResume.id, {
 					metadata: {
@@ -500,11 +516,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				await createSection({
 					type,
 					visible: true,
-					content: {
-						title: config.defaultTitle,
-						data: type === "summary" ? {} : [],
-						html: type === "summary" ? "" : undefined,
-					},
+					content:
+						type === "summary" || type === "custom"
+							? { title: config.defaultTitle, html: "" }
+							: { title: config.defaultTitle, data: [] },
 				});
 			} catch (err) {
 				reportError("Could not add that section", err);
@@ -557,10 +572,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 	const handleSettingsChange = useCallback(
 		async (settings: PartialResumeSettings) => {
-			if (!activeResume || !activeResume.metadata) return;
+			if (!activeResume?.metadata) return;
 			try {
 				setDraftResume((prev) => {
-					if (!prev || !prev.metadata) return prev;
+					if (!prev?.metadata) return prev;
 					const baseSettings = prev.metadata.settings;
 					const mergedSettings: ResumeSettings = {
 						...baseSettings,
@@ -593,7 +608,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					clearTimeout(settingsSaveTimerRef.current);
 				}
 				settingsSaveTimerRef.current = setTimeout(async () => {
-					if (!activeResume || !activeResume.metadata) return;
+					if (!activeResume?.metadata) return;
 					const mergedServerSettings: ResumeSettings = {
 						...(activeResume.metadata as ResumeMetadata).settings,
 						...settings,
@@ -725,6 +740,36 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							onChange={handleSummaryChange}
 							onLocalUpdate={stableDraftSummaryUpdate}
 							placeholder="Write a compelling professional summary..."
+						/>
+					</div>
+				);
+			case "custom":
+				/*
+				 * `custom` was offered in the Add Section menu — `availableSections` is
+				 * built from `Object.keys(SECTION_CONFIGS)` — but had no case here, so it
+				 * fell through to the default branch and rendered:
+				 *
+				 *     Section type "custom" is not yet supported.
+				 *
+				 * A dead end the UI offered and then refused. It now mirrors `summary`:
+				 * free-form rich text under a title, which is the honest shape for a
+				 * section the product does not model.
+				 */
+				return (
+					<div className="space-y-4">
+						<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center border-b bg-background/95 px-4 py-2 backdrop-blur">
+							<h3 className="font-semibold">
+								{content.title ||
+									SECTION_CONFIGS[selectedSection.type].defaultTitle}
+							</h3>
+						</div>
+						<RichTextEditor
+							content={content.html || ""}
+							key={selectedSection.id}
+							minHeight="200px"
+							onChange={handleCustomChange}
+							onLocalUpdate={stableDraftSummaryUpdate}
+							placeholder="Add any section this resume needs — headings, notes, anything a fixed section type does not cover."
 						/>
 					</div>
 				);
