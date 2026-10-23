@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 // `src/features/resume-editor/typst_templates` imports `.typ` files through webpack's
@@ -36,19 +37,21 @@ vi.mock("@/features/resume-editor/typst_templates", () => ({
  * which is exactly the bug.
  */
 
-const source = (await import("node:fs")).readFileSync(
-	new URL("../src/components/export/export-buttons.tsx", import.meta.url)
-		.pathname,
-	"utf8",
-);
+/**
+ * Read a repository-relative file.
+ *
+ * `resolve(process.cwd(), …)` rather than `new URL(…, import.meta.url).pathname`:
+ * the URL form produces `/C:/…` on Windows, which reads as a path on the current
+ * drive and fails with ENOENT against files that exist.
+ */
+const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
+
+const source = read("src/components/export/export-buttons.tsx");
 
 // Typst itself is dynamically imported inside the compiler, so importing this module in
 // Node pulls in no WASM and touches no browser API.
 const { toDownloadBlob } = await import("../src/components/export/export-buttons");
 const { DOCX_MIME } = await import("../src/lib/export/docx");
-
-const read = (p: string) =>
-	readFileSync(new URL(`../${p}`, import.meta.url).pathname, "utf8");
 
 describe("export failures are visible to the user", () => {
 	it("imports the toast API that ToastProvider already mounts", () => {
@@ -145,16 +148,8 @@ describe("export failures are visible to the user", () => {
 
 describe("the toast surface is actually mounted", () => {
 	it("ToastProvider renders a Toaster and is in the app tree", async () => {
-		const { readFileSync } = await import("node:fs");
-		const provider = readFileSync(
-			new URL("../src/components/providers/toast-provider.tsx", import.meta.url)
-				.pathname,
-			"utf8",
-		);
-		const app = readFileSync(
-			new URL("../src/app/provider.tsx", import.meta.url).pathname,
-			"utf8",
-		);
+		const provider = read("src/components/providers/toast-provider.tsx");
+		const app = read("src/app/provider.tsx");
 		// Without both, every toast.error above would be a silent no-op — which is
 		// precisely the bug class this file exists to prevent.
 		expect(provider).toMatch(/Toaster/);

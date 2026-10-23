@@ -137,7 +137,10 @@ describe("createContext does not eagerly fetch the Clerk user", () => {
 describe("the eager fetch is really gone", () => {
 	it("no source file calls users.getUser outside the lazy loader", async () => {
 		const { readFileSync, readdirSync } = await import("node:fs");
-		const root = new URL("../src/", import.meta.url).pathname;
+		const { resolve } = await import("node:path");
+		// `resolve(process.cwd(), …)`, not `new URL(…).pathname`, which produces `/C:/…`
+		// on Windows and makes every read fail with ENOENT.
+		const root = resolve(process.cwd(), "src");
 		const files: string[] = [];
 		const walk = (dir: string) => {
 			for (const e of readdirSync(dir, { withFileTypes: true })) {

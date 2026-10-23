@@ -1,7 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -25,7 +31,9 @@ const script = readFileSync("scripts/merge-pr.sh", "utf8");
 function run(checksOutput: string, ghExit = 0) {
 	const dir = mkdtempSync(join(tmpdir(), "merge-"));
 	const bin = join(dir, "bin");
-	execFileSync("mkdir", ["-p", bin]);
+	// `mkdir -p` through a POSIX-only PATH is what made this suite fail on Windows
+	// for reasons that had nothing to do with the script under test.
+	mkdirSync(bin, { recursive: true });
 
 	writeFileSync(
 		join(bin, "gh"),
@@ -48,13 +56,14 @@ exit 99
 	try {
 		const stdout = execFileSync("bash", ["scripts/merge-pr.sh", "999"], {
 			encoding: "utf8",
-			env: {
-				PATH: `${bin}:/usr/bin:/bin`,
-				HOME: dir,
-				// Shrink the real 20-minute budget so the timeout path is testable.
-				MERGE_PR_MAX_POLLS: "2",
-				MERGE_PR_POLL_SECONDS: "0",
-			} as unknown as NodeJS.ProcessEnv,
+				env: {
+					...process.env,
+					PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+					HOME: dir,
+					// Shrink the real 20-minute budget so the timeout path is testable.
+					MERGE_PR_MAX_POLLS: "2",
+					MERGE_PR_POLL_SECONDS: "0",
+				} as unknown as NodeJS.ProcessEnv,
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 		return { code: 0, stdout };
