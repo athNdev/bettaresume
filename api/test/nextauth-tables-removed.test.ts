@@ -158,9 +158,11 @@ describe("the drop migration exists and is well-formed", () => {
 			expect(e.idx).toBe(i);
 		});
 
-		// The drop must be last, so a fresh database builds the full product schema and
-		// only then removes the legacy tables.
-		expect(tags[tags.length - 1]).toBe("0005_drop_nextauth_tables.sql");
+		// The drop must come after the product schema exists, so a fresh database
+		// builds the full schema and only then removes the legacy tables. It is not
+		// required to be the final file overall -- later migrations are additive, and
+		// pinning it to `tags.length - 1` failed the first time one was added.
+		expect(tags.indexOf("0005_drop_nextauth_tables.sql")).toBe(5);
 	});
 
 	it("documents why, since the migration is irreversible", () => {

@@ -5,6 +5,7 @@ import {
 	Check,
 	ChevronDown,
 	GitBranch,
+	Loader2,
 	Plus,
 	RefreshCw,
 	Trash2,
@@ -53,6 +54,8 @@ interface VariationManagerProps {
 	onSelectVariation: (id: string) => void;
 	onDeleteVariation: (id: string) => void;
 	onSyncWithBase?: (variationId: string) => void;
+	/** True while a variation is being created, so the control cannot be double-fired. */
+	isCreating?: boolean;
 }
 
 export function VariationManager({
@@ -63,6 +66,7 @@ export function VariationManager({
 	onSelectVariation,
 	onDeleteVariation,
 	onSyncWithBase,
+	isCreating = false,
 }: VariationManagerProps) {
 	const confirm = useConfirm();
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -165,18 +169,21 @@ export function VariationManager({
 						))}
 					</ScrollArea>
 
-					<DropdownMenuSeparator />
-
-					{/* Create New Variation */}
-					<DropdownMenuItem
-						onSelect={(e) => {
-							e.preventDefault();
-							setIsCreateOpen(true);
-						}}
-					>
-						<Plus className="mr-2 h-4 w-4" />
-						Create Variation
-					</DropdownMenuItem>
+					{/* Create New Variation — only when there is something to call. */}
+					{onCreateVariation ? (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onSelect={(e) => {
+									e.preventDefault();
+									setIsCreateOpen(true);
+								}}
+							>
+								<Plus className="mr-2 h-4 w-4" />
+								Create Variation
+							</DropdownMenuItem>
+						</>
+					) : null}
 				</DropdownMenuContent>
 			</DropdownMenu>
 
@@ -249,11 +256,22 @@ export function VariationManager({
 							</div>
 						</div>
 						<DialogFooter>
-							<Button onClick={() => setIsCreateOpen(false)} variant="outline">
+							<Button
+								disabled={isCreating}
+								onClick={() => setIsCreateOpen(false)}
+								variant="outline"
+							>
 								Cancel
 							</Button>
-							<Button disabled={!newName.trim()} onClick={handleCreate}>
-								<GitBranch className="mr-2 h-4 w-4" />
+							<Button
+								disabled={!newName.trim() || isCreating}
+								onClick={handleCreate}
+							>
+								{isCreating ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<GitBranch className="mr-2 h-4 w-4" />
+								)}
 								Create Variation
 							</Button>
 						</DialogFooter>

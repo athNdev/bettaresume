@@ -114,8 +114,17 @@ describe("no control is shipped that does nothing", () => {
 	 * of bug is the same one that shipped a `TabsContent` with no `TabsTrigger` — a
 	 * surface that looks like a feature and is not reachable to a real outcome.
 	 */
-	it("does not ship a create-variation handler that only logs", () => {
-		expect(editor).not.toMatch(/handleCreateVariation/);
+	it("wires the create-variation control to a real mutation", () => {
+		// It used to be a `console.log` behind a complete, working-looking dialog: fill in
+		// a name, press the button, nothing happened, no error. It is now backed by
+		// `resume.createVariation`; this asserts the handler calls it rather than merely
+		// existing, which is the difference that mattered.
+		const handler = editor.match(
+			/const handleCreateVariation = useCallback\([\s\S]*?\n\t\);/,
+		)?.[0];
+		expect(handler).toBeDefined();
+		expect(handler).toMatch(/createResumeVariation\(/);
+		expect(handler).toMatch(/reportError\(/);
 	});
 
 	it("hides the create control when the host cannot create", () => {

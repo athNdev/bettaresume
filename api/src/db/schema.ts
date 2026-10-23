@@ -184,6 +184,39 @@ export const sections = sqliteTable(
 		contentItemId: text("contentItemId").references(() => contentItems.id, {
 			onDelete: "set null",
 		}),
+		/**
+		 * The section in the base resume this one mirrors, when it is linked.
+		 *
+		 * Variants are copies, so `id` cannot express the relationship: copying a
+		 * section mints a new id, and matching on `type` or `order` breaks the moment
+		 * the user reorders or adds a section. This column is the identity of the
+		 * relationship and the only thing propagation may key on.
+		 *
+		 * Nullable by construction: a base section, or any section the user added to a
+		 * variant directly, has no counterpart in another resume.
+		 *
+		 * ON DELETE SET NULL, not CASCADE: deleting a section from the base must orphan
+		 * the variant's copy (which then behaves as an ordinary detached section), not
+		 * delete content the user can still see in a document they may already have
+		 * sent out.
+		 */
+		baseSectionId: text("baseSectionId").references(
+			(): AnySQLiteColumn => sections.id,
+			{ onDelete: "set null" },
+		),
+		/**
+		 * Whether this section still follows its base counterpart.
+		 *
+		 * The linked/detached distinction is per section, not per resume: a user
+		 * tailoring a summary for one role usually still wants their experience bullets
+		 * tracking the master. Per-resume linkage cannot express that.
+		 *
+		 * Editing a linked variant section clears this, which is what makes "linked
+		 * until you take it over" true rather than aspirational.
+		 */
+		linkedToBase: integer("linkedToBase", { mode: "boolean" })
+			.notNull()
+			.default(false),
 		createdAt: integer("createdAt", { mode: "timestamp" })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -196,6 +229,9 @@ export const sections = sqliteTable(
 		// "which placements point at this item?" drives the non-destructive divergence
 		// check, so it is the second most common query after loading a resume.
 		index("Section_contentItemId_idx").on(table.contentItemId),
+		// "which variant sections mirror this base section?" is the propagation query,
+		// run on every base edit, so it is the hottest index on this table.
+		index("Section_baseSectionId_idx").on(table.baseSectionId),
 		// One placement per (resume, item). `content.attach` already avoids this with a
 		// read-then-insert, but that read-then-insert is exactly the shape two concurrent
 		// requests can interleave, and a duplicate placement silently doubles a section

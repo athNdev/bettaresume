@@ -260,6 +260,84 @@ async function appendRevision(
 	}
 }
 
+/**
+ * How long an automatic snapshot suppresses the next one.
+ *
+ * Without a cooldown, `section.update` (which the editor calls on every save bar
+ * commit, and settings changes debounce at 600ms) would append a revision every few
+ * seconds and the history would be unreadable within a minute — the failure mode that
+ * makes people stop trusting a version list. Five minutes is coarse enough to be a
+ * "changes since" view and fine enough to recover work.
+ *
+ * A user-labelled save always writes, so this never stands between the user and an
+ * explicit action.
+ */
+export const AUTOSNAPSHOT_COOLDOWN_MS = 5 * 60 * 1000;
+
+/**
+ * Record a revision after a write, unless it would be redundant or too soon.
+ *
+ * Called by every write path (`resume.update`, `section.*`, `resume.createVariation`)
+ * so history exists without the user pressing anything. That is what makes "your saves
+ * are versioned" true rather than a description of a button.
+ *
+ * Failures are logged and swallowed **by design**: an inability to record history must
+ * never turn a successful edit into a failed save. The user's document is the primary
+ * artefact; the log is a recovery aid.
+ */
+export async function maybeSnapshot(
+	db: Database,
+	resumeId: string,
+	options: { force?: boolean; label?: string } = {},
+): Promise<{ created: boolean; revision?: typeof resumeRevisions.$inferSelect }> {
+	try {
+		const [resume, resumeSections] = await Promise.all([
+			db.query.resumes.findFirst({ where: eq(resumes.id, resumeId) }),
+			db.select().from(sections).where(eq(sections.resumeId, resumeId)),
+		]);
+		if (!resume) return { created: false };
+
+		const snapshot = projectResumeForSnapshot(resume, resumeSections);
+		const hash = await contentHash(snapshot);
+
+		// Identical content is already in the log. Returning it is the truthful answer;
+		// `appendRevision` would make the same call, but checking here avoids the seq
+		// lookup for the common autosave-with-no-change case.
+		const existing = await db.query.resumeRevisions.findFirst({
+			where: and(
+				eq(resumeRevisions.resumeId, resumeId),
+				eq(resumeRevisions.contentHash, hash),
+			),
+		});
+		if (existing) return { created: false, revision: existing };
+
+		const latest = await db.query.resumeRevisions.findFirst({
+			where: eq(resumeRevisions.resumeId, resumeId),
+			orderBy: [desc(resumeRevisions.seq)],
+		});
+
+		if (!options.force && latest) {
+			const ageMs = Date.now() - new Date(latest.createdAt).getTime();
+			if (ageMs < AUTOSNAPSHOT_COOLDOWN_MS) {
+				return { created: false, revision: latest };
+			}
+		}
+
+		const result = await appendRevision(
+			db,
+			resumeId,
+			options.label ?? "Autosave",
+			snapshot,
+			hash,
+		);
+		return { created: result.created, revision: result.revision };
+	} catch (err) {
+		// Never let history recording fail a user's save. See the function comment.
+		console.error(`[revision] could not snapshot resume ${resumeId}`, err);
+		return { created: false };
+	}
+}
+
 export const revisionRouter = router({
 	/**
 	 * Append a snapshot. Returns `created: false` when this exact content is already in

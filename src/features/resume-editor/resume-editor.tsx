@@ -15,6 +15,7 @@ import {
 	Loader2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import {
 	Panel,
 	Group as PanelGroup,
@@ -121,12 +122,19 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	// Data fetching via tRPC
 	const { data: activeResume, isLoading, isError } = useResume(resumeId);
 	const { data: allResumes = [] } = useResumes({ includeArchived: true });
-	const { updateResume, deleteResume } = useResumeMutations();
+	const {
+		updateResume,
+		deleteResume,
+		createResumeVariation,
+		syncVariationWithBase,
+		isCreatingVariation,
+	} = useResumeMutations();
 	const {
 		updateSection,
 		createSection,
 		deleteSection: deleteSectionMutation,
 		reorderSections,
+		setSectionLink,
 		isAnyPending,
 	} = useSectionMutations(resumeId);
 
@@ -645,19 +653,73 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 
 	/*
-	 * No `onCreateVariation` is passed to `VariationManager`.
+	 * Variation creation and sync.
 	 *
-	 * This used to be a `console.log` behind a complete, working-looking Create
-	 * Variation dialog: fill in a name and a domain, press the button, the dialog
-	 * closed and nothing happened — no error, no new variation, no explanation. A
-	 * control that silently does nothing is worse than an absent one, because the
-	 * user concludes the feature is broken rather than unbuilt.
-	 *
-	 * So the prop is optional and the control hides itself. Wiring this up properly
-	 * needs a `resume.createVariation` procedure that does not exist yet; the
-	 * roadmap's sequencing puts it behind the content-library work, and inventing a
-	 * mutation contract here would be worse than leaving the control out.
+	 * These were previously absent, and the UI compensated by hiding the controls --
+	 * after an earlier version shipped a complete-looking Create Variation dialog wired
+	 * to a `console.log`. The API now does the work, so the controls are shown again and
+	 * can be held to their promises.
 	 */
+	const handleCreateVariation = useCallback(
+		async (name: string, domain?: string) => {
+			if (!baseResume) return;
+			try {
+				const created = await createResumeVariation({
+					baseResumeId: baseResume.id,
+					name,
+					...(domain ? { domain } : {}),
+				});
+				if (created?.id) {
+					setActiveResumeId(created.id);
+					navigate(`/resume-editor/${created.id}`);
+				}
+			} catch (err) {
+				reportError("Could not create the variation", err);
+			}
+		},
+		[
+			baseResume,
+			createResumeVariation,
+			navigate,
+			reportError,
+			setActiveResumeId,
+		],
+	);
+
+	const handleSyncWithBase = useCallback(
+		async (variationId: string) => {
+			try {
+				const result = await syncVariationWithBase(variationId);
+				// `updated: 0` is a real answer -- every section is detached -- and saying so
+				// is the difference between a control that worked and a control that did
+				// nothing visible.
+				toast.success(
+					result.updated === 0
+						? "Nothing to sync — every section is detached from the base."
+						: `Updated ${result.updated} linked section${result.updated === 1 ? "" : "s"}.`,
+				);
+			} catch (err) {
+				reportError("Could not sync with the base resume", err);
+			}
+		},
+		[reportError, syncVariationWithBase],
+	);
+
+	const handleSetSectionLink = useCallback(
+		async (sectionId: string, linked: boolean) => {
+			try {
+				await setSectionLink(sectionId, linked);
+			} catch (err) {
+				reportError(
+					linked
+						? "Could not re-link this section to the base"
+						: "Could not detach this section from the base",
+					err,
+				);
+			}
+		},
+		[reportError, setSectionLink],
+	);
 
 	const handleSelectVariation = useCallback(
 		(id: string) => {
@@ -1029,8 +1091,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							<VariationManager
 								baseResume={baseResume}
 								currentResumeId={activeResume.id}
+								isCreating={isCreatingVariation}
+								onCreateVariation={handleCreateVariation}
 								onDeleteVariation={handleDeleteVariation}
 								onSelectVariation={handleSelectVariation}
+								onSyncWithBase={handleSyncWithBase}
 								variations={variations}
 							/>
 						</div>
@@ -1168,6 +1233,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 												onDeleteSection={handleDeleteSection}
 												onSectionsChange={handleSectionsReorder}
 												onSelectSection={setSelectedSectionId}
+												onSetLink={
+													baseResume && activeResume.baseResumeId
+														? handleSetSectionLink
+														: undefined
+												}
 												personalInfo={activeResume.metadata?.personalInfo}
 												sections={activeResume.sections}
 												selectedSectionId={selectedSectionId || undefined}

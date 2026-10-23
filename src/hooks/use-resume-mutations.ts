@@ -114,12 +114,41 @@ export function useResumeMutations() {
 		},
 	});
 
+	/**
+	 * Create a variant of a resume.
+	 *
+	 * Invalidates the list (the new document has to appear in it) and the base resume
+	 * (its variant count is derived from the list, but the editor also holds a
+	 * `getById` entry for the base).
+	 */
+	const createVariation = api.resume.createVariation.useMutation({
+		onSuccess: (_result, { baseResumeId }) => {
+			utils.resume.list.invalidate();
+			utils.resume.getById.invalidate({ id: baseResumeId });
+		},
+	});
+
+	/**
+	 * Re-pull every linked section of a variant from its base.
+	 *
+	 * Fetches the full document afterwards because `pullFromBase` can rewrite most of the
+	 * section bodies at once; patching them optimistically would mean duplicating the
+	 * server's resolution rules in the browser.
+	 */
+	const pullFromBase = api.resume.pullFromBase.useMutation({
+		onSuccess: (_result, { resumeId }) => {
+			utils.resume.getById.invalidate({ id: resumeId });
+		},
+	});
+
 	return {
 		create,
 		update,
 		remove,
 		duplicate,
 		archive,
+		createVariation,
+		pullFromBase,
 		// Convenience methods
 		createResume: (input: CreateResumeInput) => create.mutateAsync(input),
 		updateResume: (id: string, data: UpdateResumeInput) =>
@@ -129,17 +158,32 @@ export function useResumeMutations() {
 			duplicate.mutateAsync({ id, newName }),
 		archiveResume: (id: string, archived: boolean) =>
 			archive.mutateAsync({ id, archived }),
+		/**
+		 * Create a variant. `baseResumeId` is the resume being copied; the server resolves
+		 * the root base if it is itself a variant, so the caller does not have to know.
+		 */
+		createResumeVariation: (input: {
+			baseResumeId: string;
+			name: string;
+			domain?: string;
+		}) => createVariation.mutateAsync(input),
+		syncVariationWithBase: (resumeId: string) =>
+			pullFromBase.mutateAsync({ resumeId }),
 		// Loading states
 		isCreating: create.isPending,
 		isUpdating: update.isPending,
 		isDeleting: remove.isPending,
 		isDuplicating: duplicate.isPending,
 		isArchiving: archive.isPending,
+		isCreatingVariation: createVariation.isPending,
+		isSyncing: pullFromBase.isPending,
 		isAnyPending:
 			create.isPending ||
 			update.isPending ||
 			remove.isPending ||
 			duplicate.isPending ||
-			archive.isPending,
+			archive.isPending ||
+			createVariation.isPending ||
+			pullFromBase.isPending,
 	};
 }

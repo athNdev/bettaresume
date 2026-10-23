@@ -4,6 +4,7 @@ import {
 	reorderSectionsInputSchema,
 	sectionContentSchema,
 	sectionLayoutSchema,
+	setSectionLinkInputSchema,
 	sectionTypeSchema,
 	updateSectionInputSchema,
 } from "@bettaresume/types";
@@ -12,6 +13,7 @@ import { z } from "zod";
 import { resumes, sections } from "../../db/schema";
 import { protectedProcedure, router } from "../index";
 import { sectionScopeError, sectionWriteScope } from "../middleware/ownership";
+import { maybeSnapshot } from "./revision";
 
 export const sectionRouter = router({
 	/**
@@ -110,6 +112,8 @@ export const sectionRouter = router({
 				.set({ updatedAt: now })
 				.where(eq(resumes.id, input.resumeId));
 
+			await maybeSnapshot(ctx.db, input.resumeId);
+
 			const newSection = await ctx.db.query.sections.findFirst({
 				where: eq(sections.id, sectionId),
 			});
@@ -157,16 +161,51 @@ export const sectionRouter = router({
 			if (input.data.content !== undefined)
 				updateData.content = JSON.stringify(input.data.content);
 
+			// "Linked until you edit it" has to be mechanical, or it is a description of
+			// intent. Editing a linked variant section *is* taking it over, so the link is
+			// dropped here rather than requiring a second, separate gesture the user would
+			// never discover. `visible` and `order` are deliberately not enough: a variant
+			// exists to hide and reorder sections, and doing so must not freeze their text.
+			const changesOwnedContent =
+				input.data.content !== undefined || input.data.type !== undefined;
+			if (changesOwnedContent && section.baseSectionId && section.linkedToBase) {
+				updateData.linkedToBase = false;
+			}
+
 			await ctx.db
 				.update(sections)
 				.set(updateData)
 				.where(sectionWriteScope(input.id, section.resumeId));
+
+			// Editing a *base* section propagates to every variant that still follows it.
+			// Without this, "linked" means only "was linked at creation time": the base
+			// could change all day and no variant would notice, which is the opposite of
+			// what a linked section promises. Done in one indexed update rather than a
+			// read-then-write per variant.
+			if (changesOwnedContent && !section.baseSectionId) {
+				const propagated: Record<string, unknown> = { updatedAt: now };
+				if (input.data.content !== undefined)
+					propagated.content = JSON.stringify(input.data.content);
+				if (input.data.type !== undefined) propagated.type = input.data.type;
+
+				await ctx.db
+					.update(sections)
+					.set(propagated)
+					.where(
+						and(
+							eq(sections.baseSectionId, section.id),
+							eq(sections.linkedToBase, true),
+						),
+					);
+			}
 
 			// Update resume's updatedAt
 			await ctx.db
 				.update(resumes)
 				.set({ updatedAt: now })
 				.where(eq(resumes.id, section.resumeId));
+
+			await maybeSnapshot(ctx.db, section.resumeId);
 
 			const updated = await ctx.db.query.sections.findFirst({
 				where: eq(sections.id, input.id),
@@ -177,6 +216,82 @@ export const sectionRouter = router({
 						...updated,
 						content: JSON.parse(updated.content || "{}"),
 					}
+				: null;
+		}),
+
+	/**
+	 * Link or detach one section from the base resume it mirrors.
+	 *
+	 * Linking pulls the base content immediately: a link that leaves the two copies
+	 * different is not a link, it is a label. Detaching writes only the flag, because
+	 * the current copy is what the user chose to keep.
+	 *
+	 * Deliberately per section. A variant that wants a tailored summary but a shared
+	 * experience block is the normal case, not the exception, and a per-resume switch
+	 * cannot express it.
+	 */
+	setLink: protectedProcedure
+		.input(setSectionLinkInputSchema)
+		.mutation(async ({ ctx, input }) => {
+			const section = await ctx.db.query.sections.findFirst({
+				where: eq(sections.id, input.id),
+				with: { resume: true },
+			});
+
+			if (!section || section.resume.userId !== ctx.userId) {
+				throw new Error("Section not found or access denied");
+			}
+			if (!section.baseSectionId) {
+				throw new Error("This section has no base counterpart to link to");
+			}
+
+			const now = new Date();
+
+			if (!input.linked) {
+				await ctx.db
+					.update(sections)
+					.set({ linkedToBase: false, updatedAt: now })
+					.where(sectionWriteScope(section.id, section.resumeId));
+			} else {
+				const base = await ctx.db.query.sections.findFirst({
+					where: eq(sections.id, section.baseSectionId),
+					with: { resume: true },
+				});
+
+				// The pointer survives the base section's deletion only via ON DELETE SET NULL.
+				// If it is dangling anyway, refuse rather than link to nothing.
+				if (!base || base.resume.userId !== ctx.userId) {
+					throw new Error("The base section is no longer available");
+				}
+
+				await ctx.db
+					.update(sections)
+					.set({
+						linkedToBase: true,
+						type: base.type,
+						content: base.content,
+						contentItemId: base.contentItemId ?? null,
+						updatedAt: now,
+					})
+					.where(sectionWriteScope(section.id, section.resumeId));
+			}
+
+			await ctx.db
+				.update(resumes)
+				.set({ updatedAt: now })
+				.where(eq(resumes.id, section.resumeId));
+
+			await maybeSnapshot(ctx.db, section.resumeId, {
+				force: true,
+				label: input.linked ? "Section linked to base" : "Section detached",
+			});
+
+			const updated = await ctx.db.query.sections.findFirst({
+				where: eq(sections.id, section.id),
+			});
+
+			return updated
+				? { ...updated, content: JSON.parse(updated.content || "{}") }
 				: null;
 		}),
 
@@ -228,7 +343,8 @@ export const sectionRouter = router({
 			}
 
 			if (existing) {
-				// Update
+				// Update. A linked variant section is detached by the write for the same
+				// reason as `update`: this path overwrites content, so it is a takeover.
 				await ctx.db
 					.update(sections)
 					.set({
@@ -236,6 +352,9 @@ export const sectionRouter = router({
 						order: input.order,
 						visible: input.visible,
 						content: JSON.stringify(input.content),
+						...(existing.baseSectionId && existing.linkedToBase
+							? { linkedToBase: false }
+							: {}),
 						updatedAt: now,
 					})
 					.where(sectionWriteScope(input.id!, input.resumeId));
@@ -258,6 +377,8 @@ export const sectionRouter = router({
 				.update(resumes)
 				.set({ updatedAt: now })
 				.where(eq(resumes.id, input.resumeId));
+
+			await maybeSnapshot(ctx.db, input.resumeId);
 
 			const result = await ctx.db.query.sections.findFirst({
 				where: sectionWriteScope(sectionId, input.resumeId),
@@ -396,6 +517,8 @@ export const sectionRouter = router({
 				.set({ updatedAt: now })
 				.where(eq(resumes.id, input.resumeId));
 
+			await maybeSnapshot(ctx.db, input.resumeId);
+
 			return { success: true };
 		}),
 
@@ -426,6 +549,8 @@ export const sectionRouter = router({
 				.update(resumes)
 				.set({ updatedAt: new Date() })
 				.where(eq(resumes.id, section.resumeId));
+
+			await maybeSnapshot(ctx.db, section.resumeId);
 
 			return { success: true, id: input.id };
 		}),

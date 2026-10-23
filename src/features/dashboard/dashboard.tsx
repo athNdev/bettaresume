@@ -62,6 +62,10 @@ import {
 } from "@/features/resume-editor/types";
 import { useActiveResumeStore, useResumeMutations, useResumes } from "@/hooks";
 import { useHashRouter } from "@/lib/hash-router";
+import { extractDocumentText } from "@/lib/import/extractors";
+import { toLibraryPayload } from "@/lib/import/library-item";
+import { sectionResumeText } from "@/lib/import/sectioner";
+import { api } from "@/lib/trpc/react";
 
 export default function Dashboard() {
 	return (
@@ -197,6 +201,8 @@ function DashboardContent() {
 		isDuplicating,
 		isArchiving,
 	} = useResumeMutations();
+	const utils = api.useUtils();
+	const bulkUpsertSections = api.section.bulkUpsert.useMutation();
 
 	const firstName = greetingName(user);
 	// Filtered resumes
@@ -388,9 +394,21 @@ function DashboardContent() {
 		}
 	};
 
-	const handleExportResume = (id: string, name: string) => {
-		const resume = resumes.find((r: Resume) => r.id === id);
-		if (resume) {
+	/**
+	 * Export the WHOLE document, not the list projection.
+	 *
+	 * The previous implementation serialised the row it already had from `resume.list`,
+	 * which is a list query. Whether sections survived depended on a query this button
+	 * did not control, and an exported file that silently omits the resume's contents is
+	 * the worst possible failure for a backup.
+	 */
+	const handleExportResume = async (id: string, name: string) => {
+		try {
+			const resume = await utils.resume.getById.fetch({ id });
+			if (!resume) {
+				toast.error(`Could not load "${name}" to export it.`);
+				return;
+			}
 			const json = JSON.stringify(resume, null, 2);
 			const blob = new Blob([json], { type: "application/json" });
 			const url = URL.createObjectURL(blob);
@@ -399,34 +417,120 @@ function DashboardContent() {
 			a.download = `${name.toLowerCase().replace(/\s+/g, "-")}.json`;
 			a.click();
 			URL.revokeObjectURL(url);
+		} catch (err) {
+			console.error("Failed to export resume:", err);
+			toast.error(`Could not export "${name}".`);
 		}
 	};
 
+	/**
+	 * Import a document into a new resume.
+	 *
+	 * Accepts the format this app exports (JSON, sections included) and the formats
+	 * people actually arrive with (PDF, DOCX, Markdown, plain text). The previous
+	 * control claimed a full import and read only the JSON envelope, so importing an
+	 * exported resume produced an empty document -- a silent data loss on the restore
+	 * path, which is the one path a user cannot afford to have lie.
+	 *
+	 * Nothing is created until parsing succeeds. A failed parse names the file and the
+	 * reason and leaves the library untouched.
+	 */
 	const handleImportResume = () => {
 		const input = document.createElement("input");
 		input.type = "file";
-		input.accept = ".json";
+		input.accept = ".json,.pdf,.docx,.md,.markdown,.txt";
 		input.onchange = async (e) => {
 			const file = (e.target as HTMLInputElement).files?.[0];
-			if (file) {
-				try {
-					const text = await file.text();
-					const data = JSON.parse(text);
-					const newResume = await createResume({
-						name: data.name || "Imported Resume",
-						template: data.template || "minimal",
+			if (!file) return;
+
+			const baseName = file.name.replace(/\.[^.]+$/, "") || "Imported resume";
+
+			try {
+				if (/\.json$/i.test(file.name)) {
+					const data = JSON.parse(await file.text()) as {
+						name?: string;
+						template?: string;
+						domain?: string;
+						tags?: string[];
+						metadata?: unknown;
+						sections?: Array<{
+							type: string;
+							order?: number;
+							visible?: boolean;
+							content?: unknown;
+						}>;
+					};
+
+					const created = await createResume({
+						name: data.name || baseName,
+						template: (data.template as TemplateType) || "minimal",
 						domain: data.domain,
 						tags: data.tags,
-						metadata: data.metadata,
+						metadata: data.metadata as never,
 					});
-					if (newResume?.id) {
-						setActiveResumeId(newResume.id);
-						navigate(`/resume-editor/${newResume.id}`);
+
+					if (created?.id && Array.isArray(data.sections) && data.sections.length) {
+						await bulkUpsertSections.mutateAsync({
+							resumeId: created.id,
+							sections: data.sections.map((section, index) => ({
+								type: section.type as never,
+								order: section.order ?? index,
+								visible: section.visible ?? true,
+								content: (section.content ?? {}) as never,
+							})),
+						});
 					}
-				} catch (err) {
-					console.error("Failed to import resume:", err);
-					toast.error("Could not import the file.");
+
+					if (created?.id) {
+						setActiveResumeId(created.id);
+						navigate(`/resume-editor/${created.id}`);
+					}
+					return;
 				}
+
+				const text = /\.(md|markdown|txt)$/i.test(file.name)
+					? await file.text()
+					: await (async () => {
+							const outcome = await extractDocumentText(file);
+							if (!outcome.ok) throw new Error(outcome.message);
+							return outcome.text;
+						})();
+
+				const result = sectionResumeText(text);
+				if (result.sections.length === 0) {
+					throw new Error(
+						"No sections were recognised. The file may be a scan, or its headings may not match a resume format.",
+					);
+				}
+
+				const now = new Date().toISOString();
+				const created = await createResume({
+					name: result.contact.fullName?.value || baseName,
+					template: "minimal",
+				});
+				if (!created?.id) throw new Error("The resume could not be created.");
+
+				await bulkUpsertSections.mutateAsync({
+					resumeId: created.id,
+					sections: result.sections.map((section, index) => ({
+						type: section.type,
+						order: index,
+						visible: true,
+						content: toLibraryPayload(section, {
+							source: /\.pdf$/i.test(file.name) ? "pdf" : "docx",
+							sourceName: file.name,
+							importedAt: now,
+							headingConfidence: section.confidence,
+						}),
+					})),
+				});
+
+				setActiveResumeId(created.id);
+				navigate(`/resume-editor/${created.id}`);
+			} catch (err) {
+				console.error("Failed to import resume:", err);
+				const detail = err instanceof Error ? err.message : String(err);
+				toast.error(`Could not import "${file.name}": ${detail}`);
 			}
 		};
 		input.click();

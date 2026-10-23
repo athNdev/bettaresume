@@ -41,6 +41,11 @@ export const TEMPLATE_SECTION_HEADINGS: Partial<Record<SectionType, string>> = {
 	volunteer: "Volunteer Experience",
 	publications: "Publications",
 	references: "References",
+	// `custom` has no built-in heading in the template either: `render-custom` falls back to
+	// "Additional Information" when the user has not titled the section. Without this
+	// entry the audit reported the rendered heading as unmapped and the map/template
+	// cross-check below failed — which is the check doing its job.
+	custom: "Additional Information",
 };
 
 /** The heading a section will render, honouring a user override. */

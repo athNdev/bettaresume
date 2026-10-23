@@ -124,6 +124,18 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 		onSettled: invalidateResume,
 	});
 
+	/**
+	 * Link or detach one section from the base resume it mirrors.
+	 *
+	 * No optimistic update: linking replaces the section's content with the base's, and
+	 * this hook does not hold the base resume. Guessing would render a section that then
+	 * changed under the user when the invalidation landed, which is worse than the
+	 * half-second of latency.
+	 */
+	const setLink = api.section.setLink.useMutation({
+		onSuccess: invalidateResume,
+	});
+
 	return {
 		create,
 		update,
@@ -131,6 +143,7 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 		bulkUpsert,
 		reorder,
 		remove,
+		setLink,
 		// Convenience methods
 		createSection: (input: {
 			type: SectionType;
@@ -157,6 +170,8 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 			},
 		) => update.mutateAsync({ id, data }),
 		deleteSection: (id: string) => remove.mutateAsync({ id }),
+		setSectionLink: (id: string, linked: boolean) =>
+			setLink.mutateAsync({ id, linked }),
 		reorderSections: (sectionIds: string[]) => {
 			if (!resumeId) throw new Error("No resume selected");
 			return reorder.mutateAsync({ resumeId, sectionIds });
@@ -179,11 +194,13 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 		isDeleting: remove.isPending,
 		isReordering: reorder.isPending,
 		isBulkUpserting: bulkUpsert.isPending,
+		isLinking: setLink.isPending,
 		isAnyPending:
 			create.isPending ||
 			update.isPending ||
 			remove.isPending ||
 			reorder.isPending ||
-			bulkUpsert.isPending,
+			bulkUpsert.isPending ||
+			setLink.isPending,
 	};
 }

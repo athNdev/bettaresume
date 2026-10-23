@@ -24,23 +24,26 @@ export { minimalSource, postgradSource, sectionsSource, undergradSource };
 // Keys must match the TemplateType union from @bettaresume/types:
 //   "minimal" | "postgrad" | "undergrad"
 //
-// Templates that don't yet have a dedicated .typ file fall back to minimalSource.
+// Every template is a real file. `postgrad.typ` and `undergrad.typ` used to be 0 bytes
+// while `TEMPLATE_CONFIGS` advertised all three, and the `|| minimalSource` fallback made
+// that invisible: picking Postgrad produced a Minimal document with no warning anywhere.
+// The fallback is gone and `test/typst-templates.test.ts` asserts each file has content
+// and sets a page, so an empty template fails CI instead of silently rendering the wrong
+// thing.
 
 export const TEMPLATE_SOURCES: Record<string, string> = {
-	// ── Implemented ──────────────────────────────────────────────────────────
 	minimal: minimalSource,
-
-	// ── University variants — falls back to minimal until .typ files are filled ─
-	undergrad: undergradSource || minimalSource,
-	postgrad: postgradSource || minimalSource,
+	postgrad: postgradSource,
+	undergrad: undergradSource,
 };
 
 /**
  * Returns the fully assembled Typst source for the given template name.
  *
- * `sections.typ` is always prepended because it defines all `render-*`
- * helpers and the `render-section` dispatcher that every template calls.
- * Falls back to `minimal` for any unrecognised template name.
+ * `sections.typ` is always prepended because it defines all `render-*` helpers and the
+ * `render-section` dispatcher that every template calls. Falls back to `minimal` for an
+ * unrecognised template name — that is a forward-compatibility allowance for a stored
+ * resume naming a template this build does not have, not a fallback for a missing file.
  */
 export function getTemplateSource(template: string): string {
 	const body = TEMPLATE_SOURCES[template] ?? TEMPLATE_SOURCES.minimal ?? minimalSource;

@@ -437,6 +437,41 @@
 // Dispatcher
 // ──────────────────────────────────────────────
 
+// ──────────────────────────────────────────────
+// Custom — a title plus free-form body
+// ──────────────────────────────────────────────
+//
+// `serialize.ts` has produced `{body, items}` for this type since #125, but this
+// dispatcher never called it, so a custom section that the editor accepted, the preview
+// drew and the API stored exported as nothing at all. A section type the UI offers has to
+// survive the round trip.
+#let render-custom(section) = {
+  let body = section.at("body", default: "")
+  let items = section.at("items", default: ())
+  if body == "" and items.len() == 0 { return }
+  section-title(if section.title != "" { section.title } else { "Additional Information" })
+
+  if body != "" {
+    text(size: px-to-pt(typo.body))[#body]
+    v(spacing-val * 0.4)
+  }
+
+  for item in items {
+    if item.title != "" {
+      text(
+        size: px-to-pt(typo.itemTitle),
+        weight: "semibold",
+        fill: rgb(colors.heading),
+      )[#item.title]
+      linebreak()
+    }
+    if item.body != "" {
+      text(size: px-to-pt(typo.body))[#item.body]
+    }
+    v(spacing-val * 0.4)
+  }
+}
+
 #let render-section(section) = {
   let t = section.type
   if t == "summary"        { render-summary(section) }
@@ -450,4 +485,5 @@
   else if t == "volunteer"     { render-volunteer(section) }
   else if t == "publications"  { render-publications(section) }
   else if t == "references"    { render-references(section) }
+  else if t == "custom"        { render-custom(section) }
 }

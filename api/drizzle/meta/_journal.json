@@ -43,6 +43,13 @@
       "when": 1791065965302,
       "tag": "0005_drop_nextauth_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792792284098,
+      "tag": "0006_colorful_jasper_sitwell",
+      "breakpoints": true
     }
   ]
 }
