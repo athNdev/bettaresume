@@ -391,7 +391,21 @@ export const resumeRouter = router({
 			// Create default metadata if not provided
 			const defaultMetadata = {
 				personalInfo: {
-					fullName: "Your Name",
+					/*
+					 * Empty, deliberately — do not seed placeholder text as if it were data.
+					 *
+					 * This used to be the literal string "Your Name". Personal info is stored
+					 * in two places (`Resume.metadata.personalInfo` and a `personal-info`
+					 * section's `content.data`), and `resolvePersonalInfo` in
+					 * `src/lib/typst/serialize.ts` prefers `metadata` per field, treating an
+					 * empty or missing value as "fall through to the section".
+					 *
+					 * "Your Name" is non-empty, so it won: every freshly created resume
+					 * displayed "Your Name" as a real value in the editor instead of showing
+					 * the field's placeholder, and any name written only to the section was
+					 * shadowed and never rendered. An empty string falls through correctly.
+					 */
+					fullName: "",
 					email: "",
 					phone: "",
 					location: "",
