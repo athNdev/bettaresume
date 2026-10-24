@@ -32,6 +32,7 @@
 		"test:root": "vitest run",
 		"test:watch": "vitest",
 		"typecheck": "tsc --noEmit",
+		"templates:render": "node scripts/render-templates.cjs",
 		"copy:typst": "node scripts/copy-typst-assets.mjs",
 		"prebuild": "npm run copy:typst",
 		"predev": "npm run copy:typst"
