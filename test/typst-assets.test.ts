@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import * as fontkit from "fontkit";
 import { describe, expect, it } from "vitest";
 import { FONT_FILES } from "@/lib/typst/fonts";
 import { codeOf } from "./helpers/code-source";
@@ -99,4 +100,57 @@ describe("every declared font file exists", () => {
 		// This is the one that was 404 and nobody noticed.
 		expect(FONT_FILES.Inter?.length).toBeGreaterThan(0);
 	});
+});
+
+describe("each family ships real weights, not one variable font twice", () => {
+	// The regression this pins, measured rather than guessed: every upstream family
+	// except Lato is published as a single variable font. Typst loads it and reports the
+	// right family, but does not apply the `wght` axis — compiling the same word at 400,
+	// 700 and 900 produced byte-identical SVG *and* byte-identical PDF. Vendoring the
+	// variable file therefore renders every bold heading in the export at regular weight,
+	// and nothing in the build complains.
+	//
+	// So: two files per family, and they must actually claim different weights.
+	for (const [family, paths] of Object.entries(FONT_FILES)) {
+		it(`${family} declares at least two weights`, () => {
+			expect(
+				(paths ?? []).length,
+				`${family} declares ${paths?.length ?? 0} file(s); a single file cannot supply bold`,
+			).toBeGreaterThanOrEqual(2);
+		});
+
+		it(`${family}'s files carry distinct, non-zero weight classes`, () => {
+			const weights = (paths ?? []).map((path) => {
+				const font = fontkit.openSync(resolve(ROOT, `public${path}`));
+				// openSync is typed as Font | FontCollection; every file here is a single face.
+				const os2 = (font as fontkit.Font)["OS/2"];
+				return os2?.usWeightClass ?? 0;
+			});
+
+			for (const weight of weights) {
+				expect(
+					weight,
+					`${family} declares a face with no weight class`,
+				).toBeGreaterThan(0);
+			}
+			expect(
+				new Set(weights).size,
+				`${family} declares duplicate weights`,
+			).toBe(weights.length);
+		});
+
+		it(`${family}'s files are registered under the family name Typst asks for`, () => {
+			// Montserrat's variable font defaults to an instance named "Montserrat Thin", and
+			// HarfBuzz's instancer keeps the instance name. A file whose `name` table says
+			// "Montserrat Thin" is invisible to `#set text(font: "Montserrat")`.
+			for (const path of paths ?? []) {
+				const font = fontkit.openSync(
+					resolve(ROOT, `public${path}`),
+				) as fontkit.Font;
+				expect(font.familyName, `${path} is registered as something else`).toBe(
+					family,
+				);
+			}
+		});
+	}
 });
