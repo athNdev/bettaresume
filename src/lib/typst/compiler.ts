@@ -20,9 +20,20 @@ import {
 } from "./fonts";
 
 // Minimal typing for the @myriaddreamin/typst.ts snippet API surface we use.
+interface TypstInitOptions {
+	getModule: () => string;
+	/**
+	 * `false` disables the library's bundled default, which is a jsDelivr font bundle
+	 * (`cdn.jsdelivr.net/gh/typst/typst-assets@…/files/fonts/`). Left at its default, that
+	 * URL is still a remote asset source even though every module and typeface we need is
+	 * served from this origin.
+	 */
+	assets?: false;
+}
+
 interface TypstSnippet {
-	setCompilerInitOptions(opts: { getModule: () => string }): void;
-	setRendererInitOptions(opts: { getModule: () => string }): void;
+	setCompilerInitOptions(opts: TypstInitOptions): void;
+	setRendererInitOptions(opts: TypstInitOptions): void;
 	addFonts(fonts: Uint8Array[]): Promise<void>;
 	/** May return a single combined SVG string or an array (one per page). */
 	svg(opts: { mainContent: string }): Promise<string | string[]>;
@@ -113,9 +124,11 @@ async function initCompiler(): Promise<void> {
 		// visitor's IP to somebody else's server.
 		inst.setCompilerInitOptions({
 			getModule: () => `${assetBase()}/wasm/typst_ts_web_compiler_bg.wasm`,
+			assets: false,
 		});
 		inst.setRendererInitOptions({
 			getModule: () => `${assetBase()}/wasm/typst_ts_renderer_bg.wasm`,
+			assets: false,
 		});
 
 		// Trigger a minimal compile to warm up the WASM modules
