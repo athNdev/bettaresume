@@ -39,6 +39,15 @@ describe("nothing is fetched from a CDN at runtime", () => {
 		expect(compiler).toMatch(/wasm\/typst_ts_renderer_bg\.wasm/);
 	});
 
+	it("the library's bundled CDN asset list is disabled", () => {
+		// typst.ts merges its defaults into the init options, and its default `assets` is
+		// `cdn.jsdelivr.net/gh/typst/typst-assets@.../files/fonts/`. Leaving it at the
+		// default keeps a remote font source reachable even though every module and
+		// typeface is now served from this origin.
+		const disables = compiler.match(/assets: false/g) ?? [];
+		expect(disables).toHaveLength(2);
+	});
+
 	it("no CDN hostname survives in code", () => {
 		// `codeOf` strips comments, so the doc comments explaining the removal cannot
 		// satisfy or fail this.
