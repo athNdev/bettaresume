@@ -17,6 +17,23 @@
 			"migrations_dir": "./drizzle"
 		}
 	],
+	// Cloudflare's per-colo token bucket. Read by src/rate-limit.ts.
+	//
+	// 120 requests per minute per IP is generous for one person editing a resume — the
+	// editor autosaves on a debounce and batches its tRPC calls — and hostile to a
+	// script, which is the distinction the limiter exists to draw. The path that made
+	// this necessary is not the read side: `revision.restore` deletes and re-inserts
+	// every section, and `resume.createVariation` copies a whole document.
+	//
+	// `period` must be 10 or 60. The limit is per-colo and eventually consistent, which
+	// is the right trade for stopping a runaway client rather than metering usage.
+	"ratelimits": [
+		{
+			"name": "RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": { "limit": 120, "period": 60 }
+		}
+	],
 	"vars": {
 		"CLERK_PUBLISHABLE_KEY": "$CLERK_PUBLISHABLE_KEY",
 		// Production. Explicitly NOT "development", so the x-dev-mode auth bypass in

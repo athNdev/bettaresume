@@ -4,6 +4,7 @@ import {
 	applyPreflightHeaders,
 	parseAllowedOrigins,
 } from "./cors";
+import { checkRateLimit } from "./rate-limit";
 import {
 	applyRequestId,
 	REQUEST_ID_HEADER,
@@ -11,6 +12,7 @@ import {
 } from "./request-id";
 import { appRouter } from "./root";
 import { applySecurityHeaders } from "./security-headers";
+import type { Env } from "./trpc/context";
 import { createContext } from "./trpc/context";
 
 /**
@@ -60,6 +62,29 @@ export default {
 		}
 
 		if (url.pathname.startsWith("/trpc")) {
+			/*
+			 * Before any parsing, token verification or database work.
+			 *
+			 * The limiter is keyed by IP rather than user id because the user id is only
+			 * known after `createContext` has verified the JWT inside the tRPC handler —
+			 * which is after the work this is meant to protect. `CF-Connecting-IP` is set
+			 * by Cloudflare at the edge, so it cannot be spoofed by the caller.
+			 */
+			const limited = await checkRateLimit(env, request);
+			if (limited) {
+				const headers = baseHeaders(requestId);
+				headers.set("Content-Type", "application/json");
+				headers.set("Retry-After", String(limited.retryAfterSeconds));
+				applyCorsHeaders(headers, origin, allowed, env.ENVIRONMENT);
+				return new Response(
+					JSON.stringify({
+						error: "Too many requests",
+						requestId,
+					}),
+					{ status: 429, headers },
+				);
+			}
+
 			const response = await fetchRequestHandler({
 				endpoint: "/trpc",
 				req: request,
