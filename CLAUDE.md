@@ -221,10 +221,13 @@ function ExperienceForm({ data, onChange }) {
 
 **Navigation**:
 ```tsx
-import { useHashNavigate } from '@/lib/hash-router';
-const navigate = useHashNavigate();
+import { useHashRouter } from '@/lib/hash-router';
+const { navigate, replace } = useHashRouter();
 navigate('/resume-editor/123');
 ```
+
+There is no `useHashNavigate` hook — this section used to document one, and it does not
+exist. `HashLink` is the declarative alternative and is what an `<a href>` should be.
 
 ---
 
