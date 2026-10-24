@@ -29,10 +29,12 @@
   font: settings.at("fontFamily", default: "Inter"),
 )
 
-// Tighter than `minimal`. This template exists for documents that are trying to fit on
-// one page, and a student reads that as "nothing here is padding".
+// Compact, not tighter-lined: this template exists for documents that are trying to
+// fit on one page, and the density comes from the spacing scale, not from squeezing
+// the leading. `par-leading` is the one mapping (`sections.typ`) every template and
+// the preview share.
 #set par(
-  leading: float(settings.at("lineHeight", default: 1.35)) * 0.45em,
+  leading: par-leading,
   justify: false,
 )
 

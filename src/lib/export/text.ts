@@ -1,7 +1,7 @@
 import type { Resume, ResumeSection } from "@/features/resume-editor/types";
 import { SECTION_RULE } from "@/lib/export/rules";
 import { formatDateRange, formatResumeDate } from "@/lib/format-date";
-import { richTextToPlain } from "@/lib/rich-text";
+import { richContentToPlain, richTextToPlain } from "@/lib/rich-text";
 
 export { SECTION_RULE };
 
@@ -37,6 +37,18 @@ export { SECTION_RULE };
  * Empty sections are skipped. `personal-info` is skipped entirely — its content is the
  * letterhead at the top, which is already printed there; emitting a bare
  * "Contact Information" heading with nothing under it was pure noise.
+ *
+ * ## How marks appear here
+ *
+ * They don't — except links. This file mirrors the document's TEXT LAYER, the bytes a
+ * parser extracts from the PDF or DOCX, and a text layer carries words, not styling:
+ * the PDF's own extraction has no way to say "this run was bold", so decorating the
+ * plain text with `**bold**` would describe a document nobody can produce and would
+ * feed punctuation to every ATS this feature exists to predict. So bold, italic,
+ * underline and strikethrough render as their words, and a link — whose target is
+ * content, not decoration — renders as `text [url]`, the representation
+ * `richTextToPlain` has always used and the one the Typst and DOCX exporters spell
+ * out too. Same words in every format; that is the promise this file makes.
  */
 
 /** `key: value` pairs are emitted for these keys only when the value is truthy. */
@@ -125,7 +137,12 @@ function sectionBody(
 	const data = section.content.data;
 
 	if (section.type === "summary") {
-		const plain = richTextToPlain(String(section.content.html ?? ""));
+		// The stored ProseMirror document carries the marks (see `rich-text.ts`);
+		// content without one — imported or legacy — keeps the old HTML path.
+		const plain = richContentToPlain(
+			section.content.json,
+			richTextToPlain(String(section.content.html ?? "")),
+		);
 		if (plain) out.push(plain);
 		return out;
 	}

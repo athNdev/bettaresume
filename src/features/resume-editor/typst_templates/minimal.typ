@@ -21,7 +21,9 @@
   // Font is requested by name; Typst falls back to "New Computer Modern" if unavailable
   font:   settings.at("fontFamily", default: "Inter"),
 )
-#set par(leading: float(settings.at("lineHeight", default: 1.35)) * 0.5em, justify: false)
+// `par-leading` is the one leading mapping (`sections.typ`), shared with every
+// template so the preview and the PDF cannot disagree about line spacing.
+#set par(leading: par-leading, justify: false)
 
 // ──────────────────────────────────────────────
 // HEADER — personal info

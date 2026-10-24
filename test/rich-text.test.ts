@@ -156,8 +156,11 @@ describe("the preview does not keep a private stripper", () => {
 	it("the Typst serialiser imports the shared converter", async () => {
 		const { readFileSync } = await import("node:fs");
 		const serialize = readFileSync("src/lib/typst/serialize.ts", "utf8");
+		// The import names several converters now (the mark-preserving ones live in
+		// the same module), but `richTextToPlain` must still come from there — the
+		// point is one converter module, not one imported symbol.
 		expect(serialize).toMatch(
-			/import \{ richTextToPlain \} from "@\/lib\/rich-text"/,
+			/import \{[^}]*richTextToPlain[^}]*\} from "@\/lib\/rich-text"/,
 		);
 	});
 });
