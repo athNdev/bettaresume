@@ -1,7 +1,7 @@
-import { htmlToText } from "html-to-text";
 import type { Resume, ResumeSection } from "@/features/resume-editor/types";
 import { SECTION_RULE } from "@/lib/export/rules";
 import { formatDateRange, formatResumeDate } from "@/lib/format-date";
+import { richTextToPlain } from "@/lib/rich-text";
 
 export { SECTION_RULE };
 
@@ -125,9 +125,7 @@ function sectionBody(
 	const data = section.content.data;
 
 	if (section.type === "summary") {
-		const plain = htmlToText(String(section.content.html ?? ""), {
-			wordwrap: false,
-		}).trim();
+		const plain = richTextToPlain(String(section.content.html ?? ""));
 		if (plain) out.push(plain);
 		return out;
 	}

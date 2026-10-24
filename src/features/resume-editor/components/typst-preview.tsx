@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { usePreviewPages } from "@/features/resume-editor/lib/preview-pages";
 import type { Resume } from "@/features/resume-editor/types";
+import { sanitizeTypstSvg } from "@/lib/rich-text";
 import { cn } from "@/lib/utils";
 import { useTypstPreview } from "../hooks/use-typst-preview";
 
@@ -132,8 +133,12 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 			}}
 		>
 			<div
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: Typst WASM output
-				dangerouslySetInnerHTML={{ __html: scaledSvg }}
+				// The one place in the app that injects markup. `sanitizeTypstSvg` strips
+				// script/foreignObject/iframe, event handlers and executable URL schemes; Typst
+				// already escapes the text it lays out, so this is defence against the
+				// assumption rather than against a known hole. See `src/lib/rich-text.ts`.
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitised Typst output
+				dangerouslySetInnerHTML={{ __html: sanitizeTypstSvg(scaledSvg) }}
 				style={{ display: "block", lineHeight: 0 }}
 			/>
 		</div>

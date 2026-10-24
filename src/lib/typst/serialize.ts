@@ -24,6 +24,7 @@ import type {
 	Volunteer,
 } from "@/features/resume-editor/types";
 import { formatResumeDate } from "@/lib/format-date";
+import { richTextToPlain } from "@/lib/rich-text";
 import { resolveTypstFont } from "./fonts";
 
 // Canonical font names as Typst knows them (keys are lowercase for lookup)
@@ -70,34 +71,17 @@ const defaultSettings: ResumeSettings = {
 	accentStyle: "underline",
 };
 
+/**
+ * Stored rich text → the string Typst lays out.
+ *
+ * Was a hand-rolled regex stripper with a partial entity table; it lived beside three
+ * other converters (see `src/lib/rich-text.ts`), and they disagreed on entities, on
+ * nested tags, and on what a list looks like. The Typst payload is what the PDF is built
+ * from, so a disagreement here is a disagreement between the preview the user approved
+ * and the file they sent.
+ */
 function stripHtml(html: string): string {
-	// First normalize some common block/inline tags to text representations.
-	let text = html
-		.replace(/<br\s*\/?>/gi, "\n")
-		.replace(/<\/p>/gi, "\n")
-		.replace(/<\/li>/gi, "\n")
-		.replace(/<li>/gi, "• ");
-
-	// Repeatedly strip any remaining HTML tags to avoid incomplete
-	// multi-character sanitization where earlier replacements reveal
-	// new tags (e.g. nested or overlapping constructs).
-	let previous: string;
-	do {
-		previous = text;
-		text = text.replace(/<[^>]*>/g, "");
-	} while (text !== previous);
-
-	// Decode a subset of common HTML entities to their character forms.
-	text = text
-		.replace(/&nbsp;/g, " ")
-		.replace(/&lt;/g, "<")
-		.replace(/&gt;/g, ">")
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&amp;/g, "&")
-		.trim();
-
-	return text;
+	return richTextToPlain(html);
 }
 
 function safeStr(val: unknown, fallback = ""): string {
