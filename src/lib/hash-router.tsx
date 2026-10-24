@@ -21,8 +21,11 @@ const RouterContext = createContext<RouterContextType | null>(null);
 /**
  * Parse hash path and extract route params
  * e.g., "/#/resume-editor/123" -> { path: "/resume-editor/123", params: {} }
+ *
+ * Exported for `test/hash-router.test.ts`. This guards every navigation in the app, and
+ * it is pure, so there is no reason for it to be reachable only through a provider.
  */
-function parseHash(hash: string): {
+export function parseHash(hash: string): {
 	path: string;
 	params: Record<string, string>;
 } {
