@@ -121,14 +121,26 @@ export const SAMPLE_RESUME: Resume = {
  * Same person, same voice, more of it. Generated through `resumeToTypstJson` like any
  * other resume, so what the gallery shows is what the export button produces.
  */
+/**
+ * The sample's own metadata, typed as present.
+ *
+ * `Resume.metadata` is nullable because a row can be fetched without relations, but
+ * this object literal is authored above with a complete one. Reading it through a
+ * constant keeps the two non-null assertions out of the spread below and states the
+ * assumption once.
+ */
+const SAMPLE_METADATA = SAMPLE_RESUME.metadata as NonNullable<
+	Resume["metadata"]
+>;
+
 export const GALLERY_SAMPLE_RESUME: Resume = {
 	...SAMPLE_RESUME,
 	id: "marketing-gallery",
 	name: "Avery Chen — gallery",
 	metadata: {
-		...SAMPLE_RESUME.metadata!,
+		...SAMPLE_METADATA,
 		personalInfo: {
-			...SAMPLE_RESUME.metadata!.personalInfo,
+			...SAMPLE_METADATA.personalInfo,
 			location: "Berlin",
 		},
 	},
