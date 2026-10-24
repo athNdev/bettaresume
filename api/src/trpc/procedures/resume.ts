@@ -10,6 +10,9 @@ import {
 	createResumeInputSchema,
 	createVariationInputSchema,
 	deepMergeMetadata,
+	MARGIN_DEFAULTS,
+	normalizeTypeSettings,
+	TYPE_SCALE_DEFAULTS,
 	updateResumeInputSchema,
 } from "@bettaresume/types";
 import { and, desc, eq } from "drizzle-orm";
@@ -111,26 +114,17 @@ function normalizeSettings(value: unknown): ResumeSettings {
 	const margins = record(settings.margins);
 	const typography = record(settings.typography);
 	const colors = record(settings.colors);
+	// One migration point for the px-era → points conversion and the readability
+	// floors; shared with the frontend's serialiser and preview so all three agree on
+	// what a stored value renders as. See `normalizeTypeSettings`.
+	const typeSettings = normalizeTypeSettings({ typography, margins });
 
 	return {
 		pageSize: oneOf(settings.pageSize, PAGE_SIZES, "A4"),
-		margins: {
-			top: num(margins.top, 20),
-			right: num(margins.right, 20),
-			bottom: num(margins.bottom, 20),
-			left: num(margins.left, 20),
-		},
-		fontSize: num(settings.fontSize, 12),
+		margins: typeSettings.margins,
 		fontScale: num(settings.fontScale, 1),
-		typography: {
-			name: num(typography.name, 24),
-			title: num(typography.title, 18),
-			sectionHeading: num(typography.sectionHeading, 14),
-			itemTitle: num(typography.itemTitle, 12),
-			body: num(typography.body, 10),
-			small: num(typography.small, 8),
-		},
-		lineHeight: num(settings.lineHeight, 1.4),
+		typography: typeSettings.typography,
+		lineHeight: num(settings.lineHeight, 1.35),
 		fontFamily: oneOf(settings.fontFamily, FONT_FAMILIES, "Inter"),
 		colors: {
 			primary: str(colors.primary, "#000000"),
@@ -341,18 +335,10 @@ export const resumeRouter = router({
 				},
 				settings: {
 					pageSize: "Letter" as const,
-					margins: { top: 40, right: 40, bottom: 40, left: 40 },
-					fontSize: 11,
+					margins: { ...MARGIN_DEFAULTS },
 					fontScale: 1,
-					typography: {
-						name: 24,
-						title: 14,
-						sectionHeading: 14,
-						itemTitle: 12,
-						body: 11,
-						small: 9,
-					},
-					lineHeight: 1.5,
+					typography: { ...TYPE_SCALE_DEFAULTS },
+					lineHeight: 1.35,
 					fontFamily: "Inter" as const,
 					colors: {
 						primary: "#2563eb",
@@ -913,9 +899,8 @@ export const resumeRouter = router({
 
 			const sharedSettings = {
 				fontFamily: "Inter",
-				fontSize: 11,
-				lineHeight: 1.4,
-				margins: { top: 40, right: 40, bottom: 40, left: 40 },
+				lineHeight: 1.35,
+				margins: { ...MARGIN_DEFAULTS },
 				sectionSpacing: "normal",
 				colors: {
 					primary: "#1e293b",

@@ -4,8 +4,8 @@
 
 #let default-settings = (
   colors: (accent: "#2563eb", heading: "#111827", secondary: "#6b7280", background: "#ffffff", text: "#1e293b", primary: "#2563eb", divider: "#e2e8f0"),
-  typography: (name: 24, title: 14, small: 10, body: 11, itemTitle: 12, sectionHeading: 14),
-  margins: (top: 36, right: 36, bottom: 36, left: 36),
+  typography: (name: 18, title: 11, small: 9.5, body: 10.5, itemTitle: 10.5, sectionHeading: 11),
+  margins: (top: 43, right: 50, bottom: 43, left: 50),
   sectionSpacing: "normal",
   accentStyle: "underline",
 )
@@ -29,14 +29,21 @@
 // setting and not the page — the exact "control that does nothing" defect this file has
 // already been bitten by twice. Scaling the scale object here means every size that goes
 // through `typo.*` follows the control, including the header, which templates read
-// directly rather than through `px-to-pt`.
+// directly rather than through the render helpers.
+//
+// The values are **true points**. `ResumeSettings.typography` used to carry CSS px and
+// this file multiplied them by 0.75 (`px-to-pt`) before laying out body text, while the
+// templates' headers read the same numbers as raw points — so "11pt" body text exported
+// at 8.25pt and the same document's contact line sat at 11pt. The serialiser now emits
+// points (clamped to the researched floors: body 10pt, small 9pt), so `typo.*` are
+// lengths directly. One unit, and it is the unit the UI shows.
 //
 // Spacing and margins are deliberately NOT scaled: those are layout, and a user asking for
 // larger type does not automatically want a wider margin.
 #let font-scale = float(settings.at("fontScale", default: 1))
 #let typo = {
   let base = settings.at("typography", default: default-settings.typography)
-  let scale(v) = float(v) * font-scale
+  let scale(v) = float(v) * font-scale * 1pt
   (
     name: scale(base.name),
     title: scale(base.title),
@@ -47,24 +54,53 @@
   )
 }
 
+// ──────────────────────────────────────────────
+// Spacing scale (docs/research/template-research.md §4)
+// ──────────────────────────────────────────────
+//
+// One modular scale in points: 2/3/4/6/8/12/16. Every vertical gap in the document is
+// one of these named values — the old `spacing-val` switch (8pt/12pt/20pt) and the
+// scattered `v(4pt)`/`v(6pt)` literals ran three rhythms at once.
+#let space-xs  = 2pt   // typographic fine-tuning: name → title, heading → its rule
+#let space-s   = 3pt   // between bullets in one entry; label → its labels
+#let space-m   = 4pt   // section heading → first entry; meta line → first bullet
+#let space-l   = 6pt   // between entries within a section; name block → contacts
+#let space-xl  = 8pt   // gap above a section heading — compact
+#let space-2xl = 12pt  // header block → hairline rule (half of the 16pt header gap)
+#let space-3xl = 16pt  // header → body (assembled in the templates)
+
 #let section-spacing = settings.at("sectionSpacing", default: "normal")
-#let spacing-val = if section-spacing == "compact" {
-  8pt
+
+// Gap above a section heading: the research's 8–12pt band, picked by `sectionSpacing`
+// — compact 8pt, normal 10pt, spacious ("relaxed" in the brief) 12pt. 10pt is the one
+// value outside the modular steps; it is the band midpoint the brief fixes for normal.
+#let section-gap = if section-spacing == "compact" {
+  space-xl
 } else if section-spacing == "spacious" {
-  20pt
-} else { 12pt }
+  space-2xl
+} else {
+  10pt
+}
 
 // ──────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────
 
-#let px-to-pt(px) = { float(px) * 0.75pt }
+// A skill/technology/language label. Research allows exactly one accent used sparingly
+// — the rule under a heading and small labels — so the label keeps the accent ink but
+// the tinted chip fill (`colors.accent + "20"`) is gone: fills render as graphics in
+// extraction and are a named parse failure.
+#let badge(content) = text(size: typo.small, fill: rgb(colors.accent))[#content]
 
-#let badge(content) = box(
-  fill: rgb(colors.accent + "20"),
-  inset: (x: px-to-pt(6), y: px-to-pt(2)),
-  radius: px-to-pt(4),
-)[#text(size: px-to-pt(typo.small), fill: rgb(colors.accent))[#content]]
+// A tight bullet cluster: one style throughout, hanging indent ≈ the body size, and
+// exactly `space-s` between bullets. A `list` cannot express the 3pt item gap on the
+// bundled compiler, so the marker is set here where the spacing is owned too.
+#let bullets(items) = {
+  for i in range(items.len()) {
+    if i > 0 { v(space-s) }
+    par(hanging-indent: 10pt)[•#h(space-m)#text(size: typo.body)[#items.at(i)]]
+  }
+}
 
 #let date-range(start, end-val, is-current) = {
   if start != "" {
@@ -78,51 +114,43 @@
 // Section title
 // ──────────────────────────────────────────────
 
-#let section-title(content) = {
-  v(spacing-val)
+#let section-title(content, section) = {
+  // `section-gap` is the gap ABOVE a heading between sections. The first section must
+  // not add it: the header block already separates the header from the body by
+  // `space-3xl` (16pt), and stacking the two would spend 26pt before the first word.
+  if section != sections.at(0, default: (:)) {
+    v(section-gap)
+  }
   let style = settings.at("accentStyle", default: "underline")
+  // Headings are the text colour in every style: emphasis is weight and case, not
+  // colour (docs/research/template-research.md §6). The accent appears only as the rule
+  // (and the label ink in `badge`), never as heading text or a fill.
+  let head = text(
+    size: typo.sectionHeading,
+    weight: "semibold",
+    fill: rgb(colors.text),
+  )[#content]
   if style == "underline" {
     stack(
       dir: ttb,
-      text(
-        size: px-to-pt(typo.sectionHeading),
-        weight: "semibold",
-        fill: rgb(colors.heading),
-      )[#content],
-      v(2pt),
+      head,
+      v(space-xs),
       line(length: 100%, stroke: 1.5pt + rgb(colors.accent)),
     )
-  } else if style == "background" {
-    block(
-      fill: rgb(colors.accent),
-      inset: (x: px-to-pt(6), y: px-to-pt(3)),
-      width: 100%,
-    )[
-      #text(
-        size: px-to-pt(typo.sectionHeading),
-        weight: "semibold",
-        fill: white,
-      )[#content]
-    ]
   } else if style == "border" {
     stack(
       dir: ltr,
-      rect(width: 3pt, height: px-to-pt(typo.sectionHeading) + 4pt, fill: rgb(colors.accent)),
-      h(6pt),
-      text(
-        size: px-to-pt(typo.sectionHeading),
-        weight: "semibold",
-        fill: rgb(colors.heading),
-      )[#content],
+      rect(width: 3pt, height: typo.sectionHeading + 4pt, fill: rgb(colors.accent)),
+      h(space-l),
+      head,
     )
   } else {
-    text(
-      size: px-to-pt(typo.sectionHeading),
-      weight: "semibold",
-      fill: rgb(colors.heading),
-    )[#content]
+    // "background" used to paint the heading on an accent-filled bar. Section
+    // background fills are advised against outright — they extract as graphics — so
+    // the setting stays valid and draws the same text-only heading as "none".
+    head
   }
-  v(4pt)
+  v(space-m)
 }
 
 // ──────────────────────────────────────────────
@@ -131,9 +159,8 @@
 
 #let render-summary(section) = {
   if section.summaryText == "" { return }
-  section-title(if section.title != "" { section.title } else { "Professional Summary" })
-  text(size: px-to-pt(typo.body))[#section.summaryText]
-  v(spacing-val * 0.5)
+  section-title(if section.title != "" { section.title } else { "Professional Summary" }, section)
+  text(size: typo.body)[#section.summaryText]
 }
 
 // ──────────────────────────────────────────────
@@ -143,41 +170,42 @@
 #let render-experience(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Work Experience" })
+  section-title(if section.title != "" { section.title } else { "Work Experience" }, section)
 
-  for exp in items {
+  for i in range(items.len()) {
+    let exp = items.at(i)
+    if i > 0 { v(space-l) }
     grid(
       columns: (1fr, auto),
-      gutter: 4pt,
+      gutter: space-m,
       {
         text(
-          size: px-to-pt(typo.itemTitle),
+          size: typo.itemTitle,
           weight: "semibold",
-          fill: rgb(colors.heading),
+          fill: rgb(colors.text),
         )[#exp.position]
         linebreak()
-        text(size: px-to-pt(typo.body), fill: rgb(colors.secondary))[
+        text(size: typo.body, fill: rgb(colors.secondary))[
           #exp.company#if exp.location != "" { " • " + exp.location }
         ]
       },
       align(right)[
-        #text(size: px-to-pt(typo.small), fill: rgb(colors.secondary))[
+        #text(size: typo.small, fill: rgb(colors.secondary))[
           #date-range(exp.startDate, exp.endDate, exp.current)
         ]
       ],
     )
 
     if exp.description != "" {
-      v(2pt)
-      text(size: px-to-pt(typo.body))[#exp.description]
+      v(space-xs)
+      text(size: typo.body)[#exp.description]
     }
 
     let hl = exp.at("highlights", default: ())
     if hl.len() > 0 {
-      v(2pt)
-      list(..hl.map(h => text(size: px-to-pt(typo.body))[#h]))
+      v(space-m)
+      bullets(hl)
     }
-    v(spacing-val * 0.6)
   }
 }
 
@@ -188,32 +216,33 @@
 #let render-education(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Education" })
+  section-title(if section.title != "" { section.title } else { "Education" }, section)
 
-  for edu in items {
+  for i in range(items.len()) {
+    let edu = items.at(i)
+    if i > 0 { v(space-l) }
     grid(
       columns: (1fr, auto),
-      gutter: 4pt,
+      gutter: space-m,
       {
         text(
-          size: px-to-pt(typo.itemTitle),
+          size: typo.itemTitle,
           weight: "semibold",
-          fill: rgb(colors.heading),
+          fill: rgb(colors.text),
         )[
           #edu.degree#if edu.field != "" { " in " + edu.field }
         ]
         linebreak()
-        text(size: px-to-pt(typo.body), fill: rgb(colors.secondary))[
+        text(size: typo.body, fill: rgb(colors.secondary))[
           #edu.institution#if edu.gpa != "" { " • GPA: " + edu.gpa }
         ]
       },
       align(right)[
-        #text(size: px-to-pt(typo.small), fill: rgb(colors.secondary))[
+        #text(size: typo.small, fill: rgb(colors.secondary))[
           #edu.graduationDate
         ]
       ],
     )
-    v(spacing-val * 0.6)
   }
 }
 
@@ -224,17 +253,18 @@
 #let render-skills(section) = {
   let cats = section.at("categories", default: ())
   if cats.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Skills" })
+  section-title(if section.title != "" { section.title } else { "Skills" }, section)
 
-  for cat in cats {
+  for i in range(cats.len()) {
+    let cat = cats.at(i)
+    if i > 0 { v(space-l) }
     text(
-      size: px-to-pt(typo.itemTitle),
+      size: typo.itemTitle,
       weight: "semibold",
-      fill: rgb(colors.heading),
+      fill: rgb(colors.text),
     )[#cat.name]
-    v(3pt)
-    cat.skills.map(s => badge(s.name)).join(h(4pt))
-    v(spacing-val * 0.5)
+    v(space-s)
+    cat.skills.map(s => badge(s.name)).join(h(space-m))
   }
 }
 
@@ -245,19 +275,21 @@
 #let render-projects(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Projects" })
+  section-title(if section.title != "" { section.title } else { "Projects" }, section)
 
-  for proj in items {
+  for i in range(items.len()) {
+    let proj = items.at(i)
+    if i > 0 { v(space-l) }
     grid(
       columns: (1fr, auto),
-      gutter: 4pt,
+      gutter: space-m,
       text(
-        size: px-to-pt(typo.itemTitle),
+        size: typo.itemTitle,
         weight: "semibold",
-        fill: rgb(colors.heading),
+        fill: rgb(colors.text),
       )[#proj.name],
       align(right)[
-        #text(size: px-to-pt(typo.small), fill: rgb(colors.secondary))[
+        #text(size: typo.small, fill: rgb(colors.secondary))[
           #if proj.startDate != "" {
             date-range(proj.startDate, proj.endDate, proj.current)
           }
@@ -265,15 +297,14 @@
       ],
     )
     if proj.description != "" {
-      v(2pt)
-      text(size: px-to-pt(typo.body))[#proj.description]
+      v(space-xs)
+      text(size: typo.body)[#proj.description]
     }
     let techs = proj.at("technologies", default: ())
     if techs.len() > 0 {
-      v(3pt)
-      techs.map(badge).join(h(4pt))
+      v(space-s)
+      techs.map(badge).join(h(space-m))
     }
-    v(spacing-val * 0.6)
   }
 }
 
@@ -284,26 +315,27 @@
 #let render-certifications(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Certifications" })
+  section-title(if section.title != "" { section.title } else { "Certifications" }, section)
 
-  for cert in items {
+  for i in range(items.len()) {
+    let cert = items.at(i)
+    if i > 0 { v(space-l) }
     grid(
       columns: (1fr, auto),
-      gutter: 4pt,
+      gutter: space-m,
       {
         text(
-          size: px-to-pt(typo.itemTitle),
+          size: typo.itemTitle,
           weight: "semibold",
-          fill: rgb(colors.heading),
+          fill: rgb(colors.text),
         )[#cert.name]
         linebreak()
-        text(size: px-to-pt(typo.body), fill: rgb(colors.secondary))[#cert.issuer]
+        text(size: typo.body, fill: rgb(colors.secondary))[#cert.issuer]
       },
       align(right)[
-        #text(size: px-to-pt(typo.small), fill: rgb(colors.secondary))[#cert.date]
+        #text(size: typo.small, fill: rgb(colors.secondary))[#cert.date]
       ],
     )
-    v(spacing-val * 0.5)
   }
 }
 
@@ -314,30 +346,31 @@
 #let render-awards(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Awards & Honors" })
+  section-title(if section.title != "" { section.title } else { "Awards & Honors" }, section)
 
-  for award in items {
+  for i in range(items.len()) {
+    let award = items.at(i)
+    if i > 0 { v(space-l) }
     grid(
       columns: (1fr, auto),
-      gutter: 4pt,
+      gutter: space-m,
       {
         text(
-          size: px-to-pt(typo.itemTitle),
+          size: typo.itemTitle,
           weight: "semibold",
-          fill: rgb(colors.heading),
+          fill: rgb(colors.text),
         )[#award.title]
         linebreak()
-        text(size: px-to-pt(typo.body), fill: rgb(colors.secondary))[#award.issuer]
+        text(size: typo.body, fill: rgb(colors.secondary))[#award.issuer]
       },
       align(right)[
-        #text(size: px-to-pt(typo.small), fill: rgb(colors.secondary))[#award.date]
+        #text(size: typo.small, fill: rgb(colors.secondary))[#award.date]
       ],
     )
     if award.description != "" {
-      v(2pt)
-      text(size: px-to-pt(typo.body))[#award.description]
+      v(space-xs)
+      text(size: typo.body)[#award.description]
     }
-    v(spacing-val * 0.5)
   }
 }
 
@@ -348,9 +381,8 @@
 #let render-languages(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Languages" })
-  items.map(l => badge(l.name + " (" + l.proficiency + ")")).join(h(4pt))
-  v(spacing-val * 0.5)
+  section-title(if section.title != "" { section.title } else { "Languages" }, section)
+  items.map(l => badge(l.name + " (" + l.proficiency + ")")).join(h(space-m))
 }
 
 // ──────────────────────────────────────────────
@@ -360,39 +392,40 @@
 #let render-volunteer(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Volunteer Experience" })
+  section-title(if section.title != "" { section.title } else { "Volunteer Experience" }, section)
 
-  for vol in items {
+  for i in range(items.len()) {
+    let vol = items.at(i)
+    if i > 0 { v(space-l) }
     grid(
       columns: (1fr, auto),
-      gutter: 4pt,
+      gutter: space-m,
       {
         text(
-          size: px-to-pt(typo.itemTitle),
+          size: typo.itemTitle,
           weight: "semibold",
-          fill: rgb(colors.heading),
+          fill: rgb(colors.text),
         )[#vol.role]
         linebreak()
-        text(size: px-to-pt(typo.body), fill: rgb(colors.secondary))[
+        text(size: typo.body, fill: rgb(colors.secondary))[
           #vol.organization#if vol.location != "" { " • " + vol.location }
         ]
       },
       align(right)[
-        #text(size: px-to-pt(typo.small), fill: rgb(colors.secondary))[
+        #text(size: typo.small, fill: rgb(colors.secondary))[
           #date-range(vol.startDate, vol.endDate, vol.current)
         ]
       ],
     )
     if vol.description != "" {
-      v(2pt)
-      text(size: px-to-pt(typo.body))[#vol.description]
+      v(space-xs)
+      text(size: typo.body)[#vol.description]
     }
     let hl = vol.at("highlights", default: ())
     if hl.len() > 0 {
-      v(2pt)
-      list(..hl.map(h => text(size: px-to-pt(typo.body))[#h]))
+      v(space-m)
+      bullets(hl)
     }
-    v(spacing-val * 0.6)
   }
 }
 
@@ -403,30 +436,31 @@
 #let render-publications(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Publications" })
+  section-title(if section.title != "" { section.title } else { "Publications" }, section)
 
-  for pub in items {
+  for i in range(items.len()) {
+    let pub = items.at(i)
+    if i > 0 { v(space-l) }
     text(
-      size: px-to-pt(typo.itemTitle),
+      size: typo.itemTitle,
       weight: "semibold",
-      fill: rgb(colors.heading),
+      fill: rgb(colors.text),
     )[#pub.title]
     linebreak()
-    text(size: px-to-pt(typo.body), fill: rgb(colors.secondary))[
+    text(size: typo.body, fill: rgb(colors.secondary))[
       #pub.publisher • #pub.date
     ]
     let authors = pub.at("authors", default: ())
     if authors.len() > 0 {
       linebreak()
-      text(size: px-to-pt(typo.small), fill: rgb(colors.secondary))[
+      text(size: typo.small, fill: rgb(colors.secondary))[
         Authors: #authors.join(", ")
       ]
     }
     if pub.summary != "" {
-      v(2pt)
-      text(size: px-to-pt(typo.body))[#pub.summary]
+      v(space-xs)
+      text(size: typo.body)[#pub.summary]
     }
-    v(spacing-val * 0.5)
   }
 }
 
@@ -437,29 +471,26 @@
 #let render-references(section) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "References" })
+  section-title(if section.title != "" { section.title } else { "References" }, section)
 
-  for ref in items {
+  for i in range(items.len()) {
+    let ref = items.at(i)
+    if i > 0 { v(space-l) }
     text(
-      size: px-to-pt(typo.itemTitle),
+      size: typo.itemTitle,
       weight: "semibold",
-      fill: rgb(colors.heading),
+      fill: rgb(colors.text),
     )[#ref.name]
     linebreak()
-    text(size: px-to-pt(typo.body), fill: rgb(colors.secondary))[
+    text(size: typo.body, fill: rgb(colors.secondary))[
       #ref.position#if ref.company != "" { " at " + ref.company }
     ]
     if ref.email != "" {
       linebreak()
-      text(size: px-to-pt(typo.small))[#ref.email]
+      text(size: typo.small)[#ref.email]
     }
-    v(spacing-val * 0.5)
   }
 }
-
-// ──────────────────────────────────────────────
-// Dispatcher
-// ──────────────────────────────────────────────
 
 // ──────────────────────────────────────────────
 // Custom — a title plus free-form body
@@ -473,28 +504,33 @@
   let body = section.at("body", default: "")
   let items = section.at("items", default: ())
   if body == "" and items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Additional Information" })
+  section-title(if section.title != "" { section.title } else { "Additional Information" }, section)
 
   if body != "" {
-    text(size: px-to-pt(typo.body))[#body]
-    v(spacing-val * 0.4)
+    text(size: typo.body)[#body]
+    if items.len() > 0 { v(space-m) }
   }
 
-  for item in items {
+  for i in range(items.len()) {
+    let item = items.at(i)
+    if i > 0 { v(space-l) }
     if item.title != "" {
       text(
-        size: px-to-pt(typo.itemTitle),
+        size: typo.itemTitle,
         weight: "semibold",
-        fill: rgb(colors.heading),
+        fill: rgb(colors.text),
       )[#item.title]
       linebreak()
     }
     if item.body != "" {
-      text(size: px-to-pt(typo.body))[#item.body]
+      text(size: typo.body)[#item.body]
     }
-    v(spacing-val * 0.4)
   }
 }
+
+// ──────────────────────────────────────────────
+// Dispatcher
+// ──────────────────────────────────────────────
 
 #let render-section(section) = {
   let t = section.type

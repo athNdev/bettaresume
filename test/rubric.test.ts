@@ -84,7 +84,7 @@ function resume(overrides: Partial<Resume> = {}): Resume {
 				fontScale: 1,
 				dateFormat: "MMMM YYYY",
 				typography: {
-					name: 15,
+					name: 18,
 					title: 14,
 					sectionHeading: 12,
 					itemTitle: 12,

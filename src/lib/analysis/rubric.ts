@@ -86,14 +86,16 @@ export const LENGTH_RULES = {
 
 /**
  * Type sizes a parser-friendly document uses, in points. Below 10pt OCR and
- * text extraction degrade; above 16pt (except the name) a resume reads as a
- * poster. From the 2026 formatting rules, corroborated across sources.
+ * text extraction degrade; above 20pt a resume reads as a poster. From the
+ * 2026 formatting rules, corroborated across sources. The name band is the
+ * scale's 16–20pt (docs/research/template-research.md §3); `size()` folds in
+ * `fontScale`, so this reads the rendered size, not the stored knob.
  */
 export const TYPE_RULES = {
 	bodyMin: 10,
 	bodyMax: 12,
-	nameMin: 14,
-	nameMax: 16,
+	nameMin: 16,
+	nameMax: 20,
 	headingMin: 11,
 	headingMax: 13,
 } as const;

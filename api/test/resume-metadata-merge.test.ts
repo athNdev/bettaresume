@@ -33,7 +33,6 @@ const FULL_METADATA = {
 	settings: {
 		pageSize: "A4",
 		fontFamily: "Inter",
-		fontSize: 11,
 		fontScale: 1,
 		lineHeight: 1.5,
 		margins: { top: 36, right: 36, bottom: 36, left: 36 },
@@ -116,7 +115,7 @@ describe("resume.update metadata", () => {
 				id: RESUME_A,
 				data: {
 					metadata: {
-						settings: { fontFamily: "Georgia", fontSize: 13 },
+						settings: { fontFamily: "Georgia", fontScale: 1.15 },
 					} as never,
 				},
 			});
@@ -125,7 +124,7 @@ describe("resume.update metadata", () => {
 
 			// The patch landed.
 			expect(after.settings.fontFamily).toBe("Georgia");
-			expect(after.settings.fontSize).toBe(13);
+			expect(after.settings.fontScale).toBe(1.15);
 
 			// Nothing else was destroyed.
 			expect(after.personalInfo.fullName).toBe("Alexandra Chen");
@@ -270,11 +269,11 @@ describe("resume.update metadata", () => {
 
 			await caller.resume.update({
 				id: RESUME_A,
-				data: { metadata: { settings: { fontSize: 14 } } as never },
+				data: { metadata: { settings: { fontScale: 1.1 } } as never },
 			});
 
 			const after = await storedMetadata(h, RESUME_A);
-			expect(after.settings.fontSize).toBe(14);
+			expect(after.settings.fontScale).toBe(1.1);
 		} finally {
 			h.close();
 		}
@@ -289,7 +288,7 @@ describe("resume.update metadata", () => {
 			await expect(
 				attacker.resume.update({
 					id: RESUME_B,
-					data: { metadata: { settings: { fontSize: 99 } } as never },
+					data: { metadata: { settings: { fontScale: 9 } } as never },
 				}),
 			).rejects.toThrowError(/not found|access denied/i);
 

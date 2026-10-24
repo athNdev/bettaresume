@@ -1,5 +1,6 @@
 "use client";
 
+import { MARGIN_BAND, TYPE_SCALE_BANDS } from "@bettaresume/types";
 import {
 	LayoutGrid,
 	Minus,
@@ -108,6 +109,10 @@ const COLOR_PRESETS = {
 	],
 };
 
+/** Margins are stored in points; the control reads out in inches and mm. */
+const formatMargin = (pt: number) =>
+	`${(pt / 72).toFixed(2)} in · ${((pt * 25.4) / 72).toFixed(1)} mm`;
+
 export const FormattingToolbar = memo(function FormattingToolbar({
 	settings,
 	onSettingsChange,
@@ -123,6 +128,15 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 	}, [settings]);
 
 	const fontScale = Math.round((localSettings.fontScale || 1) * 100);
+	// The 10pt body floor is on what renders, and the scale control multiplies the
+	// knob. When it would push body text below the floor, say so instead of letting the
+	// percentage silently break the readability promise.
+	const scaledBody =
+		(localSettings.typography?.body ?? DEFAULT_TYPOGRAPHY.body) *
+		(localSettings.fontScale || 1);
+	const scaledSmall =
+		(localSettings.typography?.small ?? DEFAULT_TYPOGRAPHY.small) *
+		(localSettings.fontScale || 1);
 
 	const handleFontScaleChange = (delta: number) => {
 		const newScale = Math.max(
@@ -194,6 +208,13 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 				</Button>
 			</div>
 
+			{(scaledBody < 10 || scaledSmall < 9) && (
+				<span className="text-[10px] text-destructive">
+					At {fontScale}% body renders at {scaledBody.toFixed(1)}pt — below the
+					readability floor
+				</span>
+			)}
+
 			{/* Typography Scale */}
 			<Popover>
 				<PopoverTrigger asChild>
@@ -232,9 +253,12 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 										pt
 									</span>
 								</div>
+								{/* Values are true points. The range is the role's supported band
+								(`TYPE_SCALE_BANDS`), so the floors — body 10pt, small 9pt —
+								are the slider minima: there is no in-product path below them. */}
 								<Slider
-									max={key === "name" ? 36 : 20}
-									min={key === "name" ? 18 : 8}
+									max={TYPE_SCALE_BANDS[key].max}
+									min={TYPE_SCALE_BANDS[key].min}
 									onValueChange={(values) =>
 										handleTypographyChange(
 											key,
@@ -249,7 +273,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											},
 										})
 									}
-									step={1}
+									step={0.5}
 									value={[
 										localSettings.typography?.[key] || DEFAULT_TYPOGRAPHY[key],
 									]}
@@ -258,8 +282,9 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 						))}
 					</div>
 					<p className="mt-4 text-[10px] text-muted-foreground">
-						Use the scale control (%) to resize all text proportionally, or
-						adjust individual sizes here.
+						Sizes are points. Body never goes below 10pt and small never below
+						9pt — below those floors text extraction degrades. The scale control
+						(%) resizes everything proportionally.
 					</p>
 				</PopoverContent>
 			</Popover>
@@ -459,7 +484,10 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 						</div>
 
 						<div>
-							<Label className="text-xs">Margins (mm)</Label>
+							<Label className="text-xs">Margins (in / mm)</Label>
+							<p className="mt-1 text-[10px] text-muted-foreground">
+								Points stored; floor 0.5 in (36 pt).
+							</p>
 							<div className="mt-2 grid grid-cols-2 gap-3">
 								<div>
 									<Label className="text-[10px] text-muted-foreground">
@@ -468,8 +496,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 									<div className="flex items-center gap-2">
 										<Slider
 											className="flex-1"
-											max={50}
-											min={5}
+											max={MARGIN_BAND.max}
+											min={MARGIN_BAND.min}
 											onValueChange={([v]) =>
 												setLocalSettings((prev) => ({
 													...prev,
@@ -490,8 +518,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.top]}
 										/>
-										<span className="w-6 text-right text-xs">
-											{localSettings.margins.top}
+										<span className="w-20 text-right text-[10px] tabular-nums">
+											{formatMargin(localSettings.margins.top)}
 										</span>
 									</div>
 								</div>
@@ -502,8 +530,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 									<div className="flex items-center gap-2">
 										<Slider
 											className="flex-1"
-											max={50}
-											min={5}
+											max={MARGIN_BAND.max}
+											min={MARGIN_BAND.min}
 											onValueChange={([v]) =>
 												setLocalSettings((prev) => ({
 													...prev,
@@ -524,8 +552,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.right]}
 										/>
-										<span className="w-6 text-right text-xs">
-											{localSettings.margins.right}
+										<span className="w-20 text-right text-[10px] tabular-nums">
+											{formatMargin(localSettings.margins.right)}
 										</span>
 									</div>
 								</div>
@@ -536,8 +564,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 									<div className="flex items-center gap-2">
 										<Slider
 											className="flex-1"
-											max={50}
-											min={5}
+											max={MARGIN_BAND.max}
+											min={MARGIN_BAND.min}
 											onValueChange={([v]) =>
 												setLocalSettings((prev) => ({
 													...prev,
@@ -558,8 +586,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.bottom]}
 										/>
-										<span className="w-6 text-right text-xs">
-											{localSettings.margins.bottom}
+										<span className="w-20 text-right text-[10px] tabular-nums">
+											{formatMargin(localSettings.margins.bottom)}
 										</span>
 									</div>
 								</div>
@@ -570,8 +598,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 									<div className="flex items-center gap-2">
 										<Slider
 											className="flex-1"
-											max={50}
-											min={5}
+											max={MARGIN_BAND.max}
+											min={MARGIN_BAND.min}
 											onValueChange={([v]) =>
 												setLocalSettings((prev) => ({
 													...prev,
@@ -592,8 +620,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.left]}
 										/>
-										<span className="w-6 text-right text-xs">
-											{localSettings.margins.left}
+										<span className="w-20 text-right text-[10px] tabular-nums">
+											{formatMargin(localSettings.margins.left)}
 										</span>
 									</div>
 								</div>

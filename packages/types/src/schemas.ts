@@ -219,6 +219,52 @@ export const sectionContentSchema = z
 // Resume Settings Schemas
 // ============================================
 
+/**
+ * The canonical type scale, in **true points** (docs/research/template-research.md §3).
+ *
+ * These values used to be CSS px: `sections.typ` multiplied every size by 0.75 before
+ * rendering, so the UI's "11pt" body exported at 8.25pt — below every published floor.
+ * The unit is now points end to end, so the numbers the UI shows are the numbers the
+ * PDF prints. The supported band is what the product allows; the default is the
+ * canonical value. See `normalizeTypeSettings` in `metadata.ts` for how stored px-era
+ * values are migrated on read.
+ */
+export const TYPE_SCALE_DEFAULTS = {
+	name: 18,
+	title: 11,
+	sectionHeading: 11,
+	itemTitle: 10.5,
+	body: 10.5,
+	small: 9.5,
+} as const;
+
+/**
+ * Supported bands per role, in points. `min` is the readability floor — body 10pt and
+ * small 9pt are the hard floors from the research (MIT 10pt minimum; Butterick 9pt for
+ * small text). The serialiser clamps into these bands and the UI slider ranges mirror
+ * them.
+ */
+export const TYPE_SCALE_BANDS = {
+	name: { min: 16, max: 20 },
+	title: { min: 10.5, max: 12 },
+	sectionHeading: { min: 10.5, max: 12 },
+	itemTitle: { min: 10, max: 11.5 },
+	body: { min: 10, max: 12 },
+	small: { min: 9, max: 10.5 },
+} as const;
+
+/**
+ * Page margins, in points. Defaults are 0.7in sides / 0.6in top and bottom; the hard
+ * floor is 0.5in (36pt) and 1in (72pt) is the top of the supported range.
+ */
+export const MARGIN_DEFAULTS = {
+	top: 43,
+	right: 50,
+	bottom: 43,
+	left: 50,
+} as const;
+export const MARGIN_BAND = { min: 36, max: 72 } as const;
+
 export const typographyScaleSchema = z.object({
 	name: z.number(),
 	title: z.number(),
@@ -246,7 +292,6 @@ export const resumeSettingsSchema = z.object({
 		bottom: z.number(),
 		left: z.number(),
 	}),
-	fontSize: z.number(),
 	fontScale: z.number(),
 	typography: typographyScaleSchema,
 	lineHeight: z.number(),

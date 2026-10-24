@@ -211,9 +211,10 @@ export interface TypographyScale {
 
 export interface ResumeSettings {
 	pageSize: "A4" | "Letter";
+	/** Points (1/72 in). Floor 36pt (0.5in). */
 	margins: { top: number; right: number; bottom: number; left: number };
-	fontSize: number;
 	fontScale: number;
+	/** True points. See `TYPE_SCALE_DEFAULTS` / `TYPE_SCALE_BANDS`. */
 	typography: TypographyScale;
 	lineHeight: number;
 	fontFamily: FontFamily;
@@ -231,7 +232,6 @@ export interface PartialResumeSettings {
 		bottom: number;
 		left: number;
 	}>;
-	fontSize?: number;
 	fontScale?: number;
 	typography?: Partial<TypographyScale>;
 	lineHeight?: number;

@@ -1,5 +1,10 @@
 "use client";
 
+import {
+	MARGIN_DEFAULTS,
+	normalizeTypeSettings,
+	TYPE_SCALE_DEFAULTS,
+} from "@bettaresume/types";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
 	Award,
@@ -17,7 +22,6 @@ import type {
 	SkillCategory,
 	Volunteer,
 } from "@/features/resume-editor/types";
-
 import { keyedByContent } from "@/lib/collections";
 import { formatDateRange, formatResumeDate } from "@/lib/format-date";
 import { richTextToPlain } from "@/lib/rich-text";
@@ -31,13 +35,13 @@ interface PreviewProps {
 	paginate?: boolean;
 }
 
-// Default settings for when metadata is null
+// Default settings for when metadata is null. Type sizes and margins are true points,
+// converted to CSS px at the one place they enter the DOM (see `pt` below).
 const defaultSettings: ResumeSettings = {
 	fontFamily: "Inter",
-	fontSize: 11,
 	fontScale: 1,
-	lineHeight: 1.5,
-	margins: { top: 40, right: 40, bottom: 40, left: 40 },
+	lineHeight: 1.35,
+	margins: { ...MARGIN_DEFAULTS },
 	pageSize: "Letter",
 	colors: {
 		primary: "#2563eb",
@@ -48,14 +52,7 @@ const defaultSettings: ResumeSettings = {
 		accent: "#f59e0b",
 		divider: "#e2e8f0",
 	},
-	typography: {
-		name: 24,
-		title: 14,
-		sectionHeading: 14,
-		itemTitle: 12,
-		body: 11,
-		small: 9,
-	},
+	typography: { ...TYPE_SCALE_DEFAULTS },
 	sectionSpacing: "normal",
 	dateFormat: "MMM YYYY",
 	accentStyle: "underline",
@@ -145,14 +142,34 @@ export function Preview({
 			...defaultSettings.colors,
 			...(metadata?.settings?.colors ?? {}),
 		},
-		typography: {
-			...defaultSettings.typography,
-			...(metadata?.settings?.typography ?? {}),
-		},
-		margins: {
-			...defaultSettings.margins,
-			...(metadata?.settings?.margins ?? {}),
-		},
+	};
+	/*
+	 * The type scale and the margins go through the shared migration point:
+	 * `normalizeTypeSettings` turns px-era stored values into true points and clamps to
+	 * the readability floors (body 10pt, small 9pt, margins 36pt) — the same values the
+	 * Typst serialiser exports. They are then converted to CSS px (1pt = 4/3px at
+	 * 96dpi, and the page below is sized in 96dpi px), so the preview draws the same
+	 * physical size the PDF prints. Everything downstream reads `typography` / `margins`
+	 * in px and multiplies by the zoom `scale` only.
+	 */
+	const typeSettings = normalizeTypeSettings({
+		typography: metadata?.settings?.typography,
+		margins: metadata?.settings?.margins,
+	});
+	const pt = (value: number) => (value * 96) / 72;
+	const typography = {
+		name: pt(typeSettings.typography.name),
+		title: pt(typeSettings.typography.title),
+		sectionHeading: pt(typeSettings.typography.sectionHeading),
+		itemTitle: pt(typeSettings.typography.itemTitle),
+		body: pt(typeSettings.typography.body),
+		small: pt(typeSettings.typography.small),
+	};
+	const margins = {
+		top: pt(typeSettings.margins.top),
+		right: pt(typeSettings.margins.right),
+		bottom: pt(typeSettings.margins.bottom),
+		left: pt(typeSettings.margins.left),
 	};
 	const personalInfo = metadata?.personalInfo ?? defaultPersonalInfo;
 	// The same formatter the PDF serialiser uses, bound to the document's own setting.
@@ -166,7 +183,6 @@ export function Preview({
 	) => formatDateRange(start, end, current, settings.dateFormat);
 
 	const colors = settings.colors;
-	const typography = settings.typography;
 
 	// Get visible sections sorted by order
 	const visibleSections = useMemo(
@@ -177,8 +193,7 @@ export function Preview({
 	// Page dimensions in pixels (at 96 DPI)
 	const pageWidth = settings.pageSize === "A4" ? 794 : 816;
 	const pageHeight = settings.pageSize === "A4" ? 1123 : 1056;
-	const pageInnerHeight =
-		pageHeight - (settings.margins.top + settings.margins.bottom);
+	const pageInnerHeight = pageHeight - (margins.top + margins.bottom);
 
 	const basePageStyle: React.CSSProperties = {
 		width: pageWidth * scale,
@@ -188,7 +203,7 @@ export function Preview({
 		fontFamily: resolveFontFamily(settings.fontFamily),
 		fontSize: typography.body * scale,
 		lineHeight: settings.lineHeight,
-		padding: `${settings.margins.top * scale}px ${settings.margins.right * scale}px ${settings.margins.bottom * scale}px ${settings.margins.left * scale}px`,
+		padding: `${margins.top * scale}px ${margins.right * scale}px ${margins.bottom * scale}px ${margins.left * scale}px`,
 		boxSizing: "border-box",
 		overflow: "hidden",
 		boxShadow:
@@ -199,8 +214,10 @@ export function Preview({
 		<div
 			style={{
 				borderBottom: `1px solid ${colors.divider}`,
-				paddingBottom: 12 * scale,
-				marginBottom: 16 * scale,
+				// 12pt above the hairline rule, 4pt below it: 16pt header → body,
+				// matching `space-2xl + space-m` in `sections.typ`.
+				paddingBottom: pt(12) * scale,
+				marginBottom: pt(4) * scale,
 			}}
 		>
 			<h1
@@ -208,7 +225,7 @@ export function Preview({
 					fontSize: typography.name * scale,
 					fontWeight: 700,
 					color: colors.heading,
-					marginBottom: 4 * scale,
+					marginBottom: pt(2) * scale,
 				}}
 			>
 				{personalInfo.fullName || "Your Name"}
@@ -218,7 +235,7 @@ export function Preview({
 					style={{
 						fontSize: typography.title * scale,
 						color: colors.secondary,
-						marginBottom: 8 * scale,
+						marginBottom: pt(6) * scale,
 					}}
 				>
 					{personalInfo.professionalTitle}
@@ -254,21 +271,25 @@ export function Preview({
 		</div>
 	);
 
+	// Gap above a section heading — the 8–12pt band, picked by `sectionSpacing`,
+	// mirroring `section-gap` in `sections.typ`.
 	const sectionSpacingPx =
 		settings.sectionSpacing === "compact"
-			? 12
+			? pt(8)
 			: settings.sectionSpacing === "spacious"
-				? 24
-				: 16;
+				? pt(12)
+				: pt(10);
 
 	const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 		<h2
 			style={{
 				fontSize: typography.sectionHeading * scale,
 				fontWeight: 600,
-				color: colors.heading,
-				marginBottom: 8 * scale,
-				paddingBottom: 4 * scale,
+				// Headings are the text colour: emphasis is weight and case, not
+				// colour (docs/research/template-research.md §6).
+				color: colors.text,
+				marginBottom: pt(4) * scale,
+				paddingBottom: pt(2) * scale,
 				borderBottom:
 					settings.accentStyle === "underline"
 						? `2px solid ${colors.accent}`
@@ -293,7 +314,6 @@ export function Preview({
 				<p
 					style={{
 						fontSize: typography.body * scale,
-						lineHeight: settings.lineHeight * 1.2,
 					}}
 				>
 					{summaryText}
@@ -310,7 +330,7 @@ export function Preview({
 					{section.content.title || "Work Experience"}
 				</SectionTitle>
 				{experiences.map((exp) => (
-					<div key={exp.id} style={{ marginBottom: 10 * scale }}>
+					<div key={exp.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								display: "flex",
@@ -323,7 +343,7 @@ export function Preview({
 									style={{
 										fontSize: typography.itemTitle * scale,
 										fontWeight: 600,
-										color: colors.heading,
+										color: colors.text,
 									}}
 								>
 									{exp.position}
@@ -351,21 +371,21 @@ export function Preview({
 							<p
 								style={{
 									fontSize: typography.body * scale,
-									marginTop: 4 * scale,
+									marginTop: pt(2) * scale,
 								}}
 							>
 								{exp.description}
 							</p>
 						)}
 						{exp.highlights && exp.highlights.length > 0 && (
-							<ul style={{ paddingLeft: 16 * scale, marginTop: 4 * scale }}>
+							<ul style={{ paddingLeft: 16 * scale, marginTop: pt(4) * scale }}>
 								{keyedByContent(exp.highlights, (h) => h).map(
 									({ key, item: h }) => (
 										<li
 											key={`${exp.id}-${key}`}
 											style={{
 												fontSize: typography.body * scale,
-												marginBottom: 2 * scale,
+												marginBottom: pt(3) * scale,
 											}}
 										>
 											{h}
@@ -386,7 +406,7 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Education"}</SectionTitle>
 				{education.map((edu) => (
-					<div key={edu.id} style={{ marginBottom: 10 * scale }}>
+					<div key={edu.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								display: "flex",
@@ -399,7 +419,7 @@ export function Preview({
 									style={{
 										fontSize: typography.itemTitle * scale,
 										fontWeight: 600,
-										color: colors.heading,
+										color: colors.text,
 									}}
 								>
 									{edu.degree} in {edu.field}
@@ -435,27 +455,26 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Skills"}</SectionTitle>
 				{categories.map((cat) => (
-					<div key={cat.id} style={{ marginBottom: 8 * scale }}>
+					<div key={cat.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								fontSize: typography.itemTitle * scale,
 								fontWeight: 600,
-								color: colors.heading,
-								marginBottom: 4 * scale,
+								color: colors.text,
+								marginBottom: pt(3) * scale,
 							}}
 						>
 							{cat.name}
 						</div>
-						<div style={{ display: "flex", flexWrap: "wrap", gap: 4 * scale }}>
+						<div
+							style={{ display: "flex", flexWrap: "wrap", gap: pt(4) * scale }}
+						>
 							{cat.skills.map((skill) => (
 								<span
 									key={skill.id}
 									style={{
 										fontSize: typography.small * scale,
-										backgroundColor: `${colors.accent}20`,
 										color: colors.accent,
-										padding: `${2 * scale}px ${6 * scale}px`,
-										borderRadius: 4 * scale,
 									}}
 								>
 									{skill.name}
@@ -474,7 +493,7 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Projects"}</SectionTitle>
 				{projects.map((proj) => (
-					<div key={proj.id} style={{ marginBottom: 10 * scale }}>
+					<div key={proj.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								display: "flex",
@@ -486,7 +505,7 @@ export function Preview({
 								style={{
 									fontSize: typography.itemTitle * scale,
 									fontWeight: 600,
-									color: colors.heading,
+									color: colors.text,
 								}}
 							>
 								{proj.name}
@@ -505,7 +524,7 @@ export function Preview({
 						<p
 							style={{
 								fontSize: typography.body * scale,
-								marginTop: 4 * scale,
+								marginTop: pt(2) * scale,
 							}}
 						>
 							{proj.description}
@@ -515,8 +534,8 @@ export function Preview({
 								style={{
 									display: "flex",
 									flexWrap: "wrap",
-									gap: 4 * scale,
-									marginTop: 4 * scale,
+									gap: pt(4) * scale,
+									marginTop: pt(3) * scale,
 								}}
 							>
 								{keyedByContent(proj.technologies, (tech) => tech).map(
@@ -525,10 +544,7 @@ export function Preview({
 											key={`${proj.id}-${key}`}
 											style={{
 												fontSize: typography.small * scale,
-												backgroundColor: `${colors.accent}20`,
 												color: colors.accent,
-												padding: `${2 * scale}px ${6 * scale}px`,
-												borderRadius: 4 * scale,
 											}}
 										>
 											{tech}
@@ -549,7 +565,7 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Certifications"}</SectionTitle>
 				{certs.map((cert) => (
-					<div key={cert.id} style={{ marginBottom: 8 * scale }}>
+					<div key={cert.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								display: "flex",
@@ -562,7 +578,7 @@ export function Preview({
 									style={{
 										fontSize: typography.itemTitle * scale,
 										fontWeight: 600,
-										color: colors.heading,
+										color: colors.text,
 									}}
 								>
 									{cert.name}
@@ -596,16 +612,13 @@ export function Preview({
 		return (
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Languages"}</SectionTitle>
-				<div style={{ display: "flex", flexWrap: "wrap", gap: 8 * scale }}>
+				<div style={{ display: "flex", flexWrap: "wrap", gap: pt(4) * scale }}>
 					{languages.map((lang) => (
 						<span
 							key={lang.id}
 							style={{
 								fontSize: typography.small * scale,
-								backgroundColor: `${colors.accent}20`,
 								color: colors.accent,
-								padding: `${2 * scale}px ${6 * scale}px`,
-								borderRadius: 4 * scale,
 							}}
 						>
 							{lang.name} ({lang.proficiency})
@@ -624,7 +637,7 @@ export function Preview({
 					{section.content.title || "Awards & Honors"}
 				</SectionTitle>
 				{awards.map((award) => (
-					<div key={award.id} style={{ marginBottom: 8 * scale }}>
+					<div key={award.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								display: "flex",
@@ -637,7 +650,7 @@ export function Preview({
 									style={{
 										fontSize: typography.itemTitle * scale,
 										fontWeight: 600,
-										color: colors.heading,
+										color: colors.text,
 									}}
 								>
 									{award.title}
@@ -664,7 +677,7 @@ export function Preview({
 							<p
 								style={{
 									fontSize: typography.body * scale,
-									marginTop: 4 * scale,
+									marginTop: pt(2) * scale,
 								}}
 							>
 								{award.description}
@@ -684,7 +697,7 @@ export function Preview({
 					{section.content.title || "Volunteer Experience"}
 				</SectionTitle>
 				{volunteers.map((vol) => (
-					<div key={vol.id} style={{ marginBottom: 10 * scale }}>
+					<div key={vol.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								display: "flex",
@@ -697,7 +710,7 @@ export function Preview({
 									style={{
 										fontSize: typography.itemTitle * scale,
 										fontWeight: 600,
-										color: colors.heading,
+										color: colors.text,
 									}}
 								>
 									{vol.role}
@@ -725,7 +738,7 @@ export function Preview({
 							<p
 								style={{
 									fontSize: typography.body * scale,
-									marginTop: 4 * scale,
+									marginTop: pt(2) * scale,
 								}}
 							>
 								{vol.description}
@@ -735,7 +748,7 @@ export function Preview({
 							<ul
 								style={{
 									paddingLeft: 16 * scale,
-									marginTop: 4 * scale,
+									marginTop: pt(4) * scale,
 								}}
 							>
 								{keyedByContent(vol.highlights, (h) => h).map(
@@ -744,7 +757,7 @@ export function Preview({
 											key={`${vol.id}-${key}`}
 											style={{
 												fontSize: typography.body * scale,
-												marginBottom: 2 * scale,
+												marginBottom: pt(3) * scale,
 											}}
 										>
 											{h}
@@ -765,12 +778,12 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Publications"}</SectionTitle>
 				{pubs.map((pub) => (
-					<div key={pub.id} style={{ marginBottom: 8 * scale }}>
+					<div key={pub.id} style={{ marginBottom: pt(6) * scale }}>
 						<div
 							style={{
 								fontSize: typography.itemTitle * scale,
 								fontWeight: 600,
-								color: colors.heading,
+								color: colors.text,
 							}}
 						>
 							{pub.title}
@@ -798,7 +811,7 @@ export function Preview({
 							<p
 								style={{
 									fontSize: typography.body * scale,
-									marginTop: 4 * scale,
+									marginTop: pt(2) * scale,
 								}}
 							>
 								{pub.summary}
@@ -818,12 +831,12 @@ export function Preview({
 				{refs
 					.filter((r) => !r.isHidden)
 					.map((ref) => (
-						<div key={ref.id} style={{ marginBottom: 8 * scale }}>
+						<div key={ref.id} style={{ marginBottom: pt(6) * scale }}>
 							<div
 								style={{
 									fontSize: typography.itemTitle * scale,
 									fontWeight: 600,
-									color: colors.heading,
+									color: colors.text,
 								}}
 							>
 								{ref.name}
