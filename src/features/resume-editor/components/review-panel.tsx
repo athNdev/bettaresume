@@ -98,6 +98,22 @@ function DiagnosticRow({ diagnostic }: { diagnostic: ParseDiagnostic }) {
 	);
 }
 
+/**
+ * The class every tab panel shares.
+ *
+ * `forceMount` keeps a panel's subtree alive across tab switches, which is the whole
+ * reason the History panel can remember a selected revision and a half-typed label.
+ * But Radix treats a force-mounted panel as always `present`, so it stops setting the
+ * `hidden` attribute on the inactive ones — every panel then renders, stacked, and the
+ * sheet grows to three thousand pixels. Selecting "History" appeared to do nothing
+ * because its content was 2,400px below the tab strip; the reader saw the checklist.
+ *
+ * `data-[state=inactive]:hidden` restores the hiding Radix would have applied, without
+ * giving up the mounting. Both halves are load-bearing: drop `forceMount` and panel
+ * state dies on every switch, drop the class and every panel is visible at once.
+ */
+const TAB_PANEL = "min-h-0 flex-1 px-6 pb-6 data-[state=inactive]:hidden";
+
 function ClearState({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed p-8 text-center">
@@ -221,31 +237,19 @@ export function ReviewPanel({
 						</TabsTrigger>
 					</TabsList>
 
-					<TabsContent
-						className="min-h-0 flex-1 px-6 pb-6"
-						forceMount
-						value="checklist"
-					>
+					<TabsContent className={TAB_PANEL} forceMount value="checklist">
 						<ScrollArea className="h-full pr-3">
 							<RubricChecklist resume={resume} />
 						</ScrollArea>
 					</TabsContent>
 
-					<TabsContent
-						className="min-h-0 flex-1 px-6 pb-6"
-						forceMount
-						value="plaintext"
-					>
+					<TabsContent className={TAB_PANEL} forceMount value="plaintext">
 						<ScrollArea className="h-full pr-3">
 							<PlainTextTest resume={resume} />
 						</ScrollArea>
 					</TabsContent>
 
-					<TabsContent
-						className="min-h-0 flex-1 px-6 pb-6"
-						forceMount
-						value="parse"
-					>
+					<TabsContent className={TAB_PANEL} forceMount value="parse">
 						<ScrollArea className="h-full pr-3">
 							{diagnostics.length === 0 ? (
 								<ClearState>
@@ -261,19 +265,11 @@ export function ReviewPanel({
 						</ScrollArea>
 					</TabsContent>
 
-					<TabsContent
-						className="min-h-0 flex-1 px-6 pb-6"
-						forceMount
-						value="history"
-					>
+					<TabsContent className={TAB_PANEL} forceMount value="history">
 						<HistoryPanel resume={resume} />
 					</TabsContent>
 
-					<TabsContent
-						className="min-h-0 flex-1 px-6 pb-6"
-						forceMount
-						value="bullets"
-					>
+					<TabsContent className={TAB_PANEL} forceMount value="bullets">
 						<ScrollArea className="h-full pr-3">
 							{bulletReport.bullets.length === 0 ? (
 								<ClearState>No bullets to review yet.</ClearState>
@@ -337,7 +333,7 @@ export function ReviewPanel({
 						</ScrollArea>
 					</TabsContent>
 					<TabsContent
-						className="min-h-0 flex-1 overflow-hidden px-6 pb-6"
+						className={`${TAB_PANEL} overflow-hidden`}
 						forceMount
 						value="job"
 					>

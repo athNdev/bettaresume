@@ -225,8 +225,14 @@ describe("every tab panel is reachable", () => {
 	 * History panel's selected revision, its typed label, and its scroll position --
 	 * you would pick a version, glance at Parser fit, come back, and be told to
 	 * "Select a version to see what changed since then". `forceMount` on each
-	 * content keeps the subtrees alive; Radix still hides the inactive ones, so this
-	 * is not a "render everything at once" regression.
+	 * content keeps the subtrees alive.
+	 *
+	 * It also *unmounts nothing*, and this test's earlier version claimed Radix
+	 * "still hides the inactive ones". It does not: a force-mounted panel is always
+	 * `present`, so Radix stops setting `hidden` and all six panels render stacked.
+	 * The sheet grew to ~3,000px and clicking "History" looked like a no-op because
+	 * its content sat 2,400px below the tab strip. The class below is what actually
+	 * hides them, and it is asserted here so it cannot be dropped as "unused".
 	 */
 	it("keeps every tab panel mounted across tab switches", () => {
 		const contents = [...panelUi.matchAll(/<TabsContent\b[^>]*?>/g)].map(
@@ -237,6 +243,24 @@ describe("every tab panel is reachable", () => {
 		expect(
 			missing,
 			"an inactive TabsContent without forceMount loses its state on every tab switch",
+		).toEqual([]);
+	});
+
+	it("hides the panels forceMount keeps alive", () => {
+		// Without the `data-[state=inactive]:hidden` class every panel renders at once;
+		// see the note above. Both halves of the trick have to be present.
+		expect(panelUi).toMatch(
+			/const TAB_PANEL =[\s\S]{0,200}data-\[state=inactive\]:hidden/,
+		);
+		const contents = [...panelUi.matchAll(/<TabsContent\b[^>]*?>/g)].map(
+			(m) => m[0],
+		);
+		const unhidden = contents.filter(
+			(tag) => !/className=\{`?\$?\{?TAB_PANEL/.test(tag),
+		);
+		expect(
+			unhidden,
+			"a force-mounted TabsContent that does not use TAB_PANEL is visible alongside the active one",
 		).toEqual([]);
 	});
 });
