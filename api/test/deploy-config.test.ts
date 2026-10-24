@@ -107,15 +107,22 @@ describe("migrations are applied by the deploy pipeline", () => {
 		expect(cd).toMatch(/This is a workflow bug, not a token-scope problem/);
 	});
 
-	it("blocks on a SQL failure but only warns when the token lacks D1", () => {
-		// These are different problems. A wrong migration must stop the deploy. A
-		// token missing its D1 scope must not: blocking every deploy on a credential
-		// problem is worse than the drift, and the drift is reported either way.
+	it("blocks the deploy when the token cannot reach D1", () => {
+		// This used to warn and continue, so a Worker could ship ahead of its schema. On
+		// 2026-10-24 exactly that happened: 0006 was not applied, the Worker queried
+		// `Section.baseSectionId`, and every editor load failed while CD reported green.
+		// A deploy that hides a schema mismatch is worse than a blocked deploy.
 		expect(cd).toMatch(/7403|not authorized to access/);
-		expect(cd).toMatch(/::warning::/);
-		expect(cd).toMatch(/::error::D1 migration failed/);
-		// The step must not simply be allowed to fail unnoticed.
-		expect(cd).toMatch(/continue-on-error: true/);
+		expect(cd).toMatch(/Refusing to deploy a Worker ahead of its schema/);
+		// The migration step must not be allowed to fail silently. Scoped to the step:
+		// the "Report unapplied migrations" step below it is deliberately advisory.
+		const migrateStep = cd.slice(
+			cd.indexOf("Apply D1 migrations"),
+			cd.indexOf("Report unapplied migrations"),
+		);
+		expect(migrateStep).not.toMatch(/continue-on-error/);
+		// And the guidance has to be actionable.
+		expect(cd).toMatch(/add D1 read\/write to the token/);
 	});
 
 	it("reports unapplied migrations on every deploy", () => {
