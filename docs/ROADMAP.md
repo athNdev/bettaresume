@@ -14,15 +14,22 @@ vendor-published ones are the weakest and are labelled as such.
 
 ## Where we actually are
 
+**Shipped since this plan was written** (2026-10-24): the content library, resume variants
+with per-section linked/detached semantics, automatic revision snapshots with diff and
+restore, PDF/DOCX/Markdown/text import with a review gate, DOCX export, the parser-fit
+review, the job-target match, the metric detector, and a real Postgrad/Undergrad template
+pair. The table below is kept because it documents what the schemas declared *before* it
+was built; the `Status` column now names the module that implements each row.
+
 Better than the gap list suggested. `packages/types/src/schemas.ts` already defines and
 the API already persists:
 
 | Schema | Line | Status |
 |---|---|---|
-| `jobTargetSchema` | 291 | stored, **never computed or displayed** |
-| `atsSuggestionSchema` | 300 | stored, **never produced** |
-| `atsScoreSchema` | 308 | stored, **never produced** |
-| `exportRecordSchema` (`pdf\|json\|docx\|txt`) | 320 | `docx` declared, **no DOCX exporter exists** |
+| `jobTargetSchema` | 291 | stored; computed and displayed by `job-match-panel.tsx` |
+| `atsSuggestionSchema` | 300 | produced by `lib/analysis/parse-fidelity.ts` |
+| `atsScoreSchema` | 308 | stored, deliberately **never produced** — see "Explicitly rejected" |
+| `exportRecordSchema` (`pdf\|json\|docx\|txt`) | 320 | all four exporters exist (`export-buttons.tsx`, `lib/export/docx.ts`) |
 
 So Features 5 and 3 are **computation + UI**, not data modelling. That moves both up the
 list.

@@ -34,14 +34,17 @@ which is why `src/lib/typst/serialize.ts` is lossy.
 Resolve this before building variants, custom editor nodes, or import. See
 `[DATA] Decide and write the ADR` on Plane.
 
-**Status: the ADR is written and merged** — `docs/adr/0001-content-model.md`
-(#126) — but it deliberately does **not** pick. The analysis found that only the
-"rich editor" capability needs free-form rich text; content library, versioning,
-variants, job tracking, import, ATS text and export fidelity are all better served
-by structured records. So Option B (drop TipTap) is materially cheaper and unblocks
-the workbench sooner, but it contradicts an explicit product statement, so the
-choice belongs to the owner. Recommendation is Option C (rich document canonical,
-typed records as a derived index). **Ask before building on this.**
+**Status: decided — structured records are canonical.** `docs/adr/0001-content-model.md`
+records the options; the codebase took the practical middle: typed Zod records are the
+source of truth for every section whose fields a parser reads (`experience`, `education`,
+`skills`, …), and rich text is used only where the shape is genuinely free-form (`summary`,
+`custom`). There is no TipTap document store and no derived index, so the two-owner problem
+the ADR describes is gone: `content.html` is written only for `summary`/`custom`, and
+`content.data` only for the typed types.
+
+What this unlocks — and what is now shipped — is the workbench: content library, variants,
+versioning, import and the parser review. Those never needed the rich-document migration;
+they needed one owner per field, which the split above provides.
 
 ---
 
@@ -533,6 +536,43 @@ source: one report here claimed eight `<h1>` on the dashboard, and the dashboard
 
 For behaviour, prefer pure-function unit tests and `curl` probes — both work on this node.
 
+## 2.24 An empty template is invisible until a user picks it
+
+`postgrad.typ` and `undergrad.typ` were **0 bytes** while `TEMPLATE_CONFIGS` advertised
+three templates. The registry papered over it with `postgradSource || minimalSource`, so
+picking Postgrad produced a Minimal document: no error, no warning, no failing test. The
+preview looked plausible because it *was* a real template — the wrong one.
+
+**Rule:** a fallback that substitutes a different artefact for a missing one is not
+defensive coding, it is silent corruption. `test/typst-templates.test.ts` now asserts every
+template file has content, sets a page, and renders the section loop.
+
+## 2.25 Turbopack cannot resolve `next/font/google` on this host
+
+`next build` (Turbopack) fails with 36 ×
+`Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`,
+while `next build --webpack` completes in ~20s with the same source and the same network
+access. `build:next` is pinned to `--webpack`, matching `dev:frontend`.
+
+**Do not remove the flag** to "modernise the bundler". If Turbopack is retried, the gate is
+`npm run build` producing `out/index.html`, not the absence of warnings.
+
+## 2.26 The test suite used to be green only on Linux
+
+15 root and 19 API tests failed on Windows against correct code. Every cause was in the
+harness, not the product:
+
+| Cause | Fix |
+|---|---|
+| `new URL(…, import.meta.url).pathname` yields `/C:/…`, so `readFileSync` reports ENOENT | resolve from `process.cwd()` |
+| `python3` is absent on Windows | probe for `python3`/`python`; skip the independent ZIP/XML validation with a named reason (CI keeps it) |
+| `rm`, `mkdir`, bare `npx` are not executables | `rmSync`, `mkdirSync`, `npx.cmd` + `shell: true` on win32 |
+| source assertions matched `\n` against a CRLF checkout | `.gitattributes` with `eol=lf`, plus `core.autocrlf=false` |
+
+**Rule:** a suite that is red on one platform for harness reasons teaches people to ignore
+red. If a test can only run on one OS, skip it explicitly and say why — never leave it
+failing.
+
 ## 2.x Never hand-write a list of what to substitute, read it from the file
 
 This one took production down twice, and the second outage was caused by the fix for
@@ -671,29 +711,26 @@ query path gives `405 -32005`, which reads like an auth failure.
 ## 3. Architecture as it actually is
 
 ```
-GitHub Pages  ──  /            static marketing page (no client JS beyond 3 scripts)
+GitHub Pages  ──  /            static marketing page (prerendered, no client JS)
              └─  /app/#/…     the SPA; Clerk + tRPC + Zustand + TipTap
 
 Cloudflare Worker (api.bettaresume.com)
   server.ts      CORS, /health, tRPC handler
   trpc/          context.ts (Clerk auth + D1), index.ts (procedures, errorFormatter)
-  procedures/    user, resume, section, auth
+  procedures/    user, resume, section, revision, content, auth
   db/            Drizzle schema + seed
 
-D1 (SQLite)     User → Resume → Section   (Section.content = JSON blob)
+D1 (SQLite)     User → Resume → Section
+                Resume → resume_revisions (append-only snapshots)
+                content_items ← Section.contentItemId (library placements)
+                Section.baseSectionId → Section (variant linkage)
 ```
 
-Two write paths exist, and one of them lies:
-
-- **Real**: React tRPC hooks (`use-resume-mutations`, `use-section-mutations`)
-  consumed by `resume-editor.tsx`.
-- **Fictional**: `SyncManager` in `src/lib/api.ts:403-420`. Its entire tRPC
-  integration is commented out, `trpcClient` is `unknown = null`, and it reports
-  `status: "synced"` while only logging. The Zustand store's ~20 mutation methods
-  go through it.
-
-Several shipped controls are wired to this stub. See
-`[CLEAN] Wire or remove the controls that silently do nothing`.
+**One write path.** The React tRPC hooks (`use-resume-mutations`, `use-section-mutations`)
+are the only thing that persists anything. The "offline-first" `SyncManager` described in
+earlier revisions of this document was deleted in #152; it never executed, and its queue
+reported success while discarding writes. Do not reintroduce a second write path without
+also wiring it to the tRPC client and a Clerk token getter.
 
 ---
 
@@ -705,34 +742,35 @@ Several shipped controls are wired to this stub. See
 | `npm run typecheck -w api` | **required in CI** (added #118) |
 | `npm test` (root + api) | **required in CI** (added #125/#127) — **1031 tests**: 812 root, 219 api |
 | `npm run build` | required |
-| `npm run check` (biome) | **312 diagnostics**, ratcheted in CI (baseline 312, lowered from 376) — **not** gated. Tighten it whenever the count falls, or the improvement is spendable again. The seven findings that were load-bearing are now closed at the rendering layer — see §2.20. |
+| `npm run check` (biome) | **307 diagnostics**, ratcheted in CI (baseline 307, down from 376) — **not** gated. Tighten it whenever the count falls, or the improvement is spendable again. The seven findings that were load-bearing are now closed at the rendering layer — see §2.20. |
 | `dev-server` | required in CI |
 
 `tsconfig.json` now includes `test/**`, so tests are typechecked rather than only
 transpiled (#126). Before that they were never checked at all.
 
 Coverage is **not** broad. The tests cluster on the areas most recently fixed —
-CORS, auth, IDOR, the FK, Typst serialisation. `computeCompleteness`, date/period
-formatting, section ordering and `isSectionEmpty` still have none.
+CORS, auth, IDOR, the FK, Typst serialisation, variants, revision history and the
+marketing claims. `computeCompleteness`, date/period formatting, section ordering and
+`isSectionEmpty` still have none.
 
 Node 22 is required (`wrangler@4` needs `>= 22`); CI and `engines` both say so.
 
 ---
 
-## 5. Known-fictional types
+## 5. Types that were fictional, and what they are now
 
-These exist as TypeScript types with **no database column**. Treating them as
-implemented is a common mistake.
+These were types with **no database column**. Most are now real; the two that are not are
+marked, so "it exists in `types.ts`" is still not evidence on its own.
 
 | Type | Reality |
 |---|---|
-| `Section.linkedToBase` | set client-side at `resume.store.ts:663`, not serialised, lost on reload |
-| `ResumePage` | entirely client-side page CRUD |
-| `ActivityLog` / `ActivityAction` | 14 actions + a 15-icon component wired to `const currentActivityLog: ActivityLog[] = []` (`resume-editor.tsx:348`) |
-| `Resume.variationType` | column exists, writable via `resume.create`/`update`, but **no procedure lists or traverses variants** |
-| `Resume.baseResumeId` | column exists and now has a **real FK** to `Resume(id)` `ON DELETE SET NULL` (#127). Still no variant procedures, and the FK does **not** prevent a cross-tenant or self-referential pointer — SQLite lets a row satisfy its own immediate FK. |
-| `Resume.tags` | JSON array in a TEXT column — unindexable |
-| `Resume.metadata` | personalInfo + settings + jobTarget + atsScore + exportHistory in **one blob**, replaced wholesale on partial update |
+| `Section.linkedToBase` | **real column** (`integer` boolean, migration `0006`). Set false when a variant section is edited; `section.setLink` sets it back. |
+| `Section.baseSectionId` | **real column** (`text`, self-FK, `ON DELETE SET NULL`) — the pointer that makes linkage per-section rather than per-resume. |
+| `Resume.variationType` / `Resume.baseResumeId` | real columns with a FK; `resume.createVariation` / `listVariations` / `pullFromBase` traverse them. `createVariation` flattens a variant-of-a-variant to the root. |
+| `ResumePage` | **still fictional.** Entirely client-side; no column, no procedure. |
+| `ActivityLog` / `ActivityAction` | **deleted from the UI.** The change log was hardcoded empty; history now lives in `resume_revisions` and the History panel. |
+| `Resume.tags` | JSON array in a TEXT column — still unindexable. |
+| `Resume.metadata` | one blob, but `resume.update` **deep-merges** a partial patch rather than replacing it (§2.17). |
 
 ---
 
@@ -749,11 +787,10 @@ implemented is a common mistake.
 ### Adding a section type
 
 Per `CLAUDE.md`: schema in `packages/types`, `SECTION_CONFIGS` entry, form
-component, editor registration, PDF preview.
-
-**New:** if the ADR goes to Option A, section content becomes a TipTap document,
-so a section type is now also a node schema plus a JSON→Typst walker. Read
-`[EDIT] Build resume-specific TipTap nodes` first.
+component, editor registration, and a branch in `render-section` in
+`sections.typ`. `test/typst-templates.test.ts` fails if a type in
+`sectionTypeSchema` has no dispatcher branch, which is the check that would have
+caught `custom` exporting as nothing.
 
 ---
 

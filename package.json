@@ -9,8 +9,8 @@
 	],
 	"scripts": {
 		"prepare": "node scripts/setup-gitleaks.cjs && husky",
-		"build": "run-s build:types build:next postbuild",
-		"build:next": "next build",
+		"build": "run-s build:types build:next",
+		"build:next": "next build --webpack",
 		"build:types": "npm run build -w @bettaresume/types",
 		"check": "biome check .",
 		"check:unsafe": "biome check --write --unsafe .",
