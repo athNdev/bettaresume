@@ -42,9 +42,9 @@
 // HEADER — name and title on one line
 // ──────────────────────────────────────────────
 
-// `space-3xl` below the header block is the 16pt header → body gap; the first section
-// heading does not add its `section-gap` on top of it (see `section-title`).
-#block(width: 100%, below: space-3xl)[
+// `header-gap` below the header block is the header → body gap (16pt at Normal); the
+// first section heading does not add its `section-gap` on top of it (see `section-title`).
+#block(width: 100%, below: header-gap)[
   #text(
     size: typo.at("name", default: 18pt),
     weight: "bold",
@@ -59,7 +59,7 @@
     )[#personal.professionalTitle]
   }
 
-  #v(space-m)
+  #v(contact-gap-inline)
   #let contacts = ()
   #if personal.email    != "" { contacts.push(personal.email) }
   #if personal.phone    != "" { contacts.push(personal.phone) }
@@ -79,3 +79,6 @@
 #for section in sections {
   render-section(section)
 }
+
+// The fit meter's end-of-content marker (see `sections.typ`).
+#fit-end()

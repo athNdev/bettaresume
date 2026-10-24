@@ -90,6 +90,43 @@ describe("every formatting control reaches the document", () => {
 	});
 });
 
+describe("semantic page breaks reach Typst", () => {
+	it("maps the three flags to the Typst primitives that implement them", () => {
+		const dispatcher = read("sections.typ");
+		// Keep an entry together / keep a section together / start on a new page.
+		expect(dispatcher).toContain("block(breakable: false");
+		expect(dispatcher).toContain("block(breakable: true");
+		expect(dispatcher).toContain("pagebreak(weak: true)");
+		// The section flags the serialiser emits, read by the dispatcher.
+		expect(dispatcher).toMatch(/layout\.at\("keepSectionTogether"/);
+		expect(dispatcher).toMatch(/layout\.at\("pageBreakBefore"/);
+		// And the per-entry flag the serialiser resolves onto each item.
+		expect(dispatcher).toContain('item.at("keepTogether"');
+	});
+
+	it("emits the invisible markers the fit probe reads", () => {
+		const dispatcher = read("sections.typ");
+		expect(dispatcher).toContain('kind: "entry"');
+		expect(dispatcher).toContain('kind: "section"');
+		expect(dispatcher).toContain("#let fit-end()");
+		for (const file of TEMPLATES) {
+			expect(read(file), `${file} must close the probe`).toContain(
+				"#fit-end()",
+			);
+		}
+	});
+
+	it("takes the header gaps from density, with Normal unchanged", () => {
+		// `header-gap-half + space-m` and `header-gap` are today's 12+4 and 16 at Normal;
+		// the regression test in `page-fit.test.ts` pins the settings side.
+		const dispatcher = read("sections.typ");
+		expect(dispatcher).toContain("#let header-gap = if section-spacing");
+		expect(read("minimal.typ")).toContain("below: header-gap-half");
+		expect(read("postgrad.typ")).toContain("below: header-gap-half");
+		expect(read("undergrad.typ")).toContain("below: header-gap");
+	});
+});
+
 describe("the dispatcher can render every section type", () => {
 	/**
 	 * `personal-info` is deliberately absent: the templates render it as the document

@@ -107,8 +107,10 @@ import {
 	VariationManager,
 } from "./components";
 import { ContentLibraryPanel } from "./components/content-library-panel";
+import { FitMeter } from "./components/fit-meter";
 import { ImportTrigger } from "./components/import-review-panel";
 import { ReviewTrigger } from "./components/review-panel";
+import { SectionBreakControls } from "./components/section-break-controls";
 
 interface ResumeEditorPageProps {
 	id: string;
@@ -390,7 +392,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		ro.observe(previewPane);
 		return () => ro.disconnect();
 	}, [previewPane, pageWidthPt]);
-	/* Page count is published by the preview once it compiles; null until then. */
+	/* Page count and measured fit are published by the preview; the meter reads them directly. */
 	const pageCount = usePreviewPages((s) => s.pageCount);
 	const [contentOpen, setContentOpen] = useState(true);
 	/*
@@ -554,6 +556,25 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			if (!activeResume) return;
 			try {
 				await updateSection(sectionId, updates);
+				/*
+				 * Keep the draft in step with the write.
+				 *
+				 * The preview renders `draftResume`, and the draft only re-syncs from the server
+				 * when the section *structure* changes (ids and order). A break-flag change is
+				 * neither, so the optimistic tRPC cache update never reached the document and
+				 * "Start this section on a new page" toggled the switch without moving the page.
+				 * Applying the same patch to the draft is what makes the two agree.
+				 */
+				setDraftResume((prev) =>
+					prev
+						? {
+								...prev,
+								sections: prev.sections.map((s) =>
+									s.id === sectionId ? { ...s, ...updates } : s,
+								),
+							}
+						: prev,
+				);
 			} catch (err) {
 				reportError("Could not save this section", err);
 			}
@@ -1429,6 +1450,19 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 												) : null}
 											</div>
 
+											{/*
+											 * Break semantics per section. Layout, not content: everything here is
+											 * stored on `section.layout` and survives a variant copy.
+											 */}
+											{selectedSection.type !== "personal-info" ? (
+												<SectionBreakControls
+													onChange={(layout) =>
+														handleSectionChange(selectedSection.id, { layout })
+													}
+													section={selectedSection}
+												/>
+											) : null}
+
 											{renderSectionForm()}
 										</>
 									) : (
@@ -1518,6 +1552,20 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 												) : null}
 											</span>
 										</CollapsibleTrigger>
+										{/*
+										 * The fit meter sits outside the trigger, not inside it: a button inside a
+										 * button is the hydration error this file has already been bitten by, and the
+										 * meter is the one interactive thing in the header.
+										 */}
+										<FitMeter
+											onSelectSection={(id) => setSelectedSectionId(id)}
+											onSettingsChange={handleSettingsChange}
+											resume={draftResume ?? activeResume}
+											settings={
+												(draftResume?.metadata?.settings ??
+													activeResume.metadata.settings) as ResumeSettings
+											}
+										/>
 									</div>
 									<CollapsibleContent>
 										<FormattingToolbar

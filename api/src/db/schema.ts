@@ -191,6 +191,15 @@ export const sections = sqliteTable(
 		visible: integer("visible", { mode: "boolean" }).notNull().default(true),
 		content: text("content").notNull(),
 		/**
+		 * Break semantics for this section (keep together, keep section together, start on
+		 * a new page, per-entry overrides), as JSON.
+		 *
+		 * Layout, not content: a variant may re-break a section it still follows without
+		 * taking the text over, which is why this is a column and not a key inside
+		 * `content`. Nullable — every section written before this column has no answer.
+		 */
+		layout: text("layout"),
+		/**
 		 * The master content this section places, when it has one.
 		 *
 		 * Nullable on purpose: a section created before the library existed, or by a

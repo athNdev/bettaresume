@@ -18,6 +18,7 @@ import type {
 	Certification,
 	Education,
 	Experience,
+	KeepTogether,
 	Language,
 	PersonalInfo,
 	Project,
@@ -25,6 +26,7 @@ import type {
 	Reference,
 	Resume,
 	ResumeSettings,
+	SectionLayout,
 	SkillCategory,
 	Volunteer,
 } from "@/features/resume-editor/types";
@@ -245,6 +247,91 @@ function serializeSettings(settings: ResumeSettings) {
 	};
 }
 
+/**
+ * Resolve an entry's break behaviour.
+ *
+ * `auto` is the documented default: keep an entry together *when it is small enough to
+ * move as a unit*. Measuring the rendered height would need `measure(...)` in the
+ * template, and that call's signature differs between the bundled Typst 0.14 and the
+ * 0.10 CLI used by the test suite, so the shape heuristic lives here instead: an entry
+ * with no description and at most three bullets is a few lines and moves as one;
+ * anything longer is allowed to split rather than push half a page of whitespace onto
+ * the previous page.
+ *
+ * `always` is the user's explicit choice, with one safety rail: an entry estimated to be
+ * taller than a whole page is downgraded to `never`. A `breakable: false` block that
+ * cannot fit on a page is clipped by Typst rather than moved, so honouring the flag
+ * literally would silently delete bullets. A split entry is a layout flaw; a truncated
+ * one is lost content.
+ *
+ * These are layout decisions, never content ones: nothing is hidden, shortened or
+ * reflowed by them.
+ */
+export interface LayoutSettings {
+	pageSize?: "A4" | "Letter";
+	margins?: Partial<{
+		top: number;
+		right: number;
+		bottom: number;
+		left: number;
+	}>;
+	fontScale?: number;
+	lineHeight?: number;
+	typography?: Partial<ResumeSettings["typography"]>;
+}
+
+export function resolveKeepTogether(
+	layout: SectionLayout | undefined,
+	item: { id?: unknown; description?: unknown; highlights?: unknown[] },
+	settings?: LayoutSettings,
+): "always" | "never" {
+	const id = typeof item.id === "string" ? item.id : "";
+	const mode: KeepTogether = (layout?.entries?.[id] ??
+		layout?.keepTogether ??
+		"auto") as KeepTogether;
+	if (mode === "always") {
+		return entryFitsOnOnePage(item, settings) ? "always" : "never";
+	}
+	if (mode === "never") return "never";
+
+	const hasDescription =
+		typeof item.description === "string" && item.description.trim() !== "";
+	const bullets = Array.isArray(item.highlights) ? item.highlights.length : 0;
+	return !hasDescription && bullets <= 3 ? "always" : "never";
+}
+
+/**
+ * A conservative height estimate for one entry, against the usable page height.
+ *
+ * Deliberately pessimistic: it assumes a bullet wraps to 1.15 lines and a description
+ * line holds 90 characters. The cost of being wrong in this direction is an entry that
+ * is allowed to split; the cost of being wrong the other way is clipped bullets.
+ */
+export function entryFitsOnOnePage(
+	item: { description?: unknown; highlights?: unknown[] },
+	settings?: LayoutSettings,
+): boolean {
+	const body = Math.max(
+		1,
+		(settings?.typography?.body ?? 10.5) * (settings?.fontScale ?? 1),
+	);
+	const leading = settings?.lineHeight ?? 1.35;
+	const paperHeight = settings?.pageSize === "A4" ? 841.89 : 792;
+	const margins = { top: 43, bottom: 43, ...settings?.margins };
+	const usable = paperHeight - margins.top - margins.bottom;
+
+	const description =
+		typeof item.description === "string" ? item.description.trim() : "";
+	const descriptionLines = description ? Math.ceil(description.length / 90) : 0;
+	const bullets = Array.isArray(item.highlights) ? item.highlights.length : 0;
+
+	// Title + company/date line, the wrapped description, and 1.15 lines per bullet
+	// (a short bullet is one line, a long one wraps), plus the 3pt inter-bullet gaps.
+	const lines = 2 + descriptionLines + bullets * 1.15;
+	const height = lines * body * leading + bullets * 3 + 8;
+	return height <= usable;
+}
+
 function serializeSection(
 	section: {
 		id: string;
@@ -252,9 +339,16 @@ function serializeSection(
 		order: number;
 		visible: boolean;
 		content: Record<string, unknown>;
+		layout?: SectionLayout;
 	},
-	resolved: { personalInfo: PersonalInfo; dateFormat: string },
+	resolved: {
+		personalInfo: PersonalInfo;
+		dateFormat: string;
+		/** The compiled settings, for the keep-together height guard. */
+		settings: LayoutSettings;
+	},
 ) {
+	const documentSettings = resolved.settings;
 	// One formatter for the whole document, driven by settings.dateFormat. The setting
 	// existed and nothing read it: the PDF printed the stored value, so a resume set to
 	// "MMM YYYY" exported "2020-09 - 2024-05".
@@ -267,6 +361,15 @@ function serializeSection(
 		order: section.order,
 		visible: section.visible,
 		title: safeStr(content.title as string),
+		/*
+		 * Break semantics reach Typst verbatim. `keepTogether` on the section is only the
+		 * per-entry default; `serializeSection` resolves it onto each item below, so the
+		 * template never has to walk a second lookup table.
+		 */
+		layout: {
+			keepSectionTogether: section.layout?.keepSectionTogether === true,
+			pageBreakBefore: section.layout?.pageBreakBefore === true,
+		},
 	};
 
 	switch (type) {
@@ -295,6 +398,11 @@ function serializeSection(
 				...base,
 				items: items.map((exp) => ({
 					id: safeStr(exp.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						exp,
+						documentSettings,
+					),
 					company: safeStr(exp.company),
 					position: safeStr(exp.position),
 					startDate: fmt(exp.startDate),
@@ -314,6 +422,11 @@ function serializeSection(
 				...base,
 				items: items.map((edu) => ({
 					id: safeStr(edu.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						edu,
+						documentSettings,
+					),
 					institution: safeStr(edu.institution),
 					degree: safeStr(edu.degree),
 					field: safeStr(edu.field),
@@ -335,6 +448,11 @@ function serializeSection(
 				...base,
 				categories: items.map((cat) => ({
 					id: safeStr(cat.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						cat,
+						documentSettings,
+					),
 					name: safeStr(cat.name),
 					skills: safeArr<{ id: string; name: string; level?: string }>(
 						cat.skills,
@@ -353,6 +471,11 @@ function serializeSection(
 				...base,
 				items: items.map((p) => ({
 					id: safeStr(p.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						p,
+						documentSettings,
+					),
 					name: safeStr(p.name),
 					description: safeStr(p.description),
 					role: safeStr(p.role),
@@ -373,6 +496,11 @@ function serializeSection(
 				...base,
 				items: items.map((c) => ({
 					id: safeStr(c.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						c,
+						documentSettings,
+					),
 					name: safeStr(c.name),
 					issuer: safeStr(c.issuer),
 					date: fmt(c.date),
@@ -390,6 +518,11 @@ function serializeSection(
 				...base,
 				items: items.map((a) => ({
 					id: safeStr(a.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						a,
+						documentSettings,
+					),
 					title: safeStr(a.title),
 					issuer: safeStr(a.issuer),
 					date: fmt(a.date),
@@ -404,6 +537,11 @@ function serializeSection(
 				...base,
 				items: items.map((l) => ({
 					id: safeStr(l.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						l,
+						documentSettings,
+					),
 					name: safeStr(l.name),
 					proficiency: safeStr(l.proficiency),
 					certification: safeStr(l.certification),
@@ -417,6 +555,11 @@ function serializeSection(
 				...base,
 				items: items.map((p) => ({
 					id: safeStr(p.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						p,
+						documentSettings,
+					),
 					title: safeStr(p.title),
 					publisher: safeStr(p.publisher),
 					date: fmt(p.date),
@@ -433,6 +576,11 @@ function serializeSection(
 				...base,
 				items: items.map((v) => ({
 					id: safeStr(v.id),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						v,
+						documentSettings,
+					),
 					organization: safeStr(v.organization),
 					role: safeStr(v.role),
 					startDate: fmt(v.startDate),
@@ -483,16 +631,31 @@ function serializeSection(
 			// The body is markup for the same reason `summaryText` is (see above).
 			const body = richContentToTypst(content.json, stripHtml(html));
 			const raw = content.data;
-			const items: { title: string; body: string }[] = [];
+			const items: Array<{
+				id: string;
+				title: string;
+				body: string;
+				keepTogether: "always" | "never";
+			}> = [];
 
 			if (Array.isArray(raw)) {
 				for (const entry of raw) {
 					if (typeof entry === "string") {
 						// Plain strings, escaped: `render-custom` evals item bodies too.
-						items.push({ title: "", body: escapeTypst(stripHtml(entry)) });
+						items.push({
+							id: "",
+							title: "",
+							body: escapeTypst(stripHtml(entry)),
+							keepTogether: resolveKeepTogether(
+								section.layout,
+								{},
+								documentSettings,
+							),
+						});
 					} else if (entry && typeof entry === "object") {
 						const rec = entry as Record<string, unknown>;
 						items.push({
+							id: safeStr(rec.id),
 							title: safeStr(rec.title ?? rec.name ?? rec.heading),
 							body: escapeTypst(
 								stripHtml(
@@ -501,17 +664,36 @@ function serializeSection(
 									),
 								),
 							),
+							keepTogether: resolveKeepTogether(
+								section.layout,
+								{
+									id: rec.id,
+									description:
+										rec.body ?? rec.content ?? rec.text ?? rec.description,
+								},
+								documentSettings,
+							),
 						});
 					}
 				}
 			} else if (raw && typeof raw === "object") {
 				const rec = raw as Record<string, unknown>;
 				items.push({
+					id: safeStr(rec.id),
 					title: safeStr(rec.title ?? rec.name ?? rec.heading),
 					body: escapeTypst(
 						stripHtml(
 							safeStr(rec.body ?? rec.content ?? rec.text ?? rec.description),
 						),
+					),
+					keepTogether: resolveKeepTogether(
+						section.layout,
+						{
+							id: rec.id,
+							description:
+								rec.body ?? rec.content ?? rec.text ?? rec.description,
+						},
+						documentSettings,
 					),
 				});
 			}
@@ -574,8 +756,9 @@ export function resumeToTypstJson(resume: Resume): string {
 					order: s.order,
 					visible: s.visible,
 					content: s.content as Record<string, unknown>,
+					layout: s.layout,
 				},
-				{ personalInfo, dateFormat: settings.dateFormat },
+				{ personalInfo, dateFormat: settings.dateFormat, settings },
 			),
 		);
 

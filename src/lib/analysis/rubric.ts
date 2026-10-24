@@ -4,6 +4,8 @@ import { findDutyPhrase, hasQuantification } from "@/lib/analysis/metrics";
 import { auditParseFidelity } from "@/lib/analysis/parse-fidelity";
 import { AA_BODY, contrastRatio, parseColor } from "@/lib/color/contrast";
 import { buildPlainText, visibleSections } from "@/lib/export/text";
+import { type FitReport, formatMm, ptToMm } from "@/lib/layout/page-fit";
+import { resolveTypstFont } from "@/lib/typst/fonts";
 
 /**
  * The grading rubric: four dimensions, named checks, pass/fail — never a number.
@@ -100,6 +102,28 @@ export const TYPE_RULES = {
 	headingMax: 13,
 } as const;
 
+/**
+ * Readability bands — advice, except the print floor.
+ *
+ * All bands are **rendered** values. The line-spacing band is Butterick's 120–145%
+ * print band, widened to 1.2–1.6 so the knob's own range is inside it; line length is
+ * the resume-pragmatic 70–110 characters (prose guidance is 45–90, but every
+ * conventional resume layout runs longer and gets away with it because most lines are
+ * short bullets — the failure mode we care about is the return sweep past ~110); the
+ * margin floor is the 0.5in (36pt = 12.7mm) clamp the presets sit on.
+ *
+ * The research sketched the margin floor at 32px (24pt). That predates the point-unit
+ * migration: 24pt is under the clamp, so nothing could render there. The check reads the
+ * real floor instead, which is reachable only by stored values that bypass the
+ * serialiser's normalisation (legacy rows, imports, direct API writes).
+ */
+export const READABILITY_RULES = {
+	lineHeight: { min: 1.2, max: 1.6 },
+	lineChars: { min: 70, max: 110 },
+	marginMinPt: 36,
+	lastPageFillMin: 0.2,
+} as const;
+
 const GROUP_RANK: Record<RubricGroup, number> = {
 	"parse-fit": 0,
 	impact: 1,
@@ -187,10 +211,14 @@ function rolesOf(sections: readonly ResumeSection[]): Array<{
  *
  * `pageCount` is optional because it can only come from a compiled preview; when
  * it is absent the page-count check is reported as advice rather than guessing.
+ *
+ * `fit` is the measured page-fit report from the Typst probe. Every check that needs a
+ * *rendered* value (line length, last-page fill, spill millimetres) reads it here, and
+ * reports "not measured yet" rather than estimating.
  */
 export function buildRubric(
 	resume: Resume,
-	options: { pageCount?: number | null } = {},
+	options: { pageCount?: number | null; fit?: FitReport | null } = {},
 ): RubricReport {
 	const sections = visibleSections(resume.sections ?? []);
 	const checks: RubricCheck[] = [];
@@ -417,7 +445,14 @@ export function buildRubric(
 		}),
 	);
 
-	const pageCount = options.pageCount ?? null;
+	const fit = options.fit ?? null;
+	const pageCount = options.pageCount ?? fit?.pages ?? null;
+	const spill =
+		fit && fit.target !== null && fit.overMm >= 0.5
+			? ` ${formatMm(fit.overMm)} of that is spill onto page ${fit.target + 1}${
+					fit.overflow ? `, starting at “${fit.overflow.label}”` : ""
+				}.`
+			: "";
 	checks.push(
 		check({
 			id: "page-count",
@@ -432,7 +467,132 @@ export function buildRubric(
 			detail:
 				pageCount === null
 					? "The page count is not known until the preview has compiled. Open the preview and this resolves."
-					: `${pageCount} page${pageCount === 1 ? "" : "s"}. Most applications are read as one page early in a career and two later; a third is rarely read.`,
+					: `${pageCount} page${pageCount === 1 ? "" : "s"}.${spill} Most applications are read as one page early in a career and two later; a third is rarely read.`,
+			anchor: fit?.overflow?.section || fit?.overflow?.label,
+		}),
+	);
+
+	/*
+	 * Readability: advice for taste, a failure only where the document would not print.
+	 *
+	 * These are named rows in the existing four dimensions — no new group, no score. The
+	 * rubric is a projection of the document, and so is this: everything below reads the
+	 * settings or the probe, never a stored verdict.
+	 */
+	const lineHeight = settings?.lineHeight ?? 1.35;
+	const lineBand = READABILITY_RULES.lineHeight;
+	// A step of 0.1 means most values are `1.3`/`1.5`, but the default is 1.35 and a
+	// whole number should still read as `1.0`, not `1`.
+	const showRatio = (value: number) =>
+		Number.isInteger(value) ? value.toFixed(1) : String(value);
+	checks.push(
+		check({
+			id: "line-spacing",
+			group: "style",
+			title: "Line spacing is in the readable range",
+			ok: lineHeight >= lineBand.min && lineHeight <= lineBand.max,
+			soft: true,
+			effort: "quick",
+			detail:
+				lineHeight >= lineBand.min && lineHeight <= lineBand.max
+					? `Line spacing is ${showRatio(lineHeight)}, in the ${lineBand.min}–${lineBand.max} range print text is read comfortably in.`
+					: lineHeight < lineBand.min
+						? `Line spacing is ${showRatio(lineHeight)}. Below ${lineBand.min} printed lines start to tangle when the page is photocopied or faxed. The setting is in the formatting toolbar.`
+						: `Line spacing is ${showRatio(lineHeight)}. Loose spacing reads as coursework; you are paying for it in page height.`,
+		}),
+	);
+
+	const lineChars = fit?.lineChars ?? null;
+	const charBand = READABILITY_RULES.lineChars;
+	checks.push(
+		check({
+			id: "line-length",
+			group: "style",
+			title: "Lines are a readable length",
+			ok:
+				lineChars !== null &&
+				lineChars >= charBand.min &&
+				lineChars <= charBand.max,
+			soft: true,
+			effort: "medium",
+			detail:
+				lineChars === null
+					? "The line length is measured by the page-fit probe when the preview compiles."
+					: lineChars > charBand.max
+						? `About ${Math.round(lineChars)} characters fit on a full line. Above ~${charBand.max} the eye loses the line on the return sweep. Widen the margins or raise the body size slightly — or split the widest section into shorter bullets.`
+						: lineChars < charBand.min
+							? `About ${Math.round(lineChars)} characters fit on a full line. Below ${charBand.min} a bullet wraps sooner than it needs to; narrower margins give it room.`
+							: `About ${Math.round(lineChars)} characters fit on a full line. Fine for bullet-led text; prose usually reads better at 45–90.`,
+		}),
+	);
+
+	const margins = {
+		top: 43,
+		right: 50,
+		bottom: 43,
+		left: 50,
+		...settings?.margins,
+	};
+	const smallest = [
+		["top", margins.top],
+		["right", margins.right],
+		["bottom", margins.bottom],
+		["left", margins.left],
+	] as const;
+	const tightest = smallest.reduce((a, b) => (b[1] < a[1] ? b : a));
+	checks.push(
+		check({
+			id: "margins-printable",
+			group: "style",
+			title: "Margins keep text printable",
+			ok: tightest[1] >= READABILITY_RULES.marginMinPt,
+			effort: "quick",
+			detail:
+				tightest[1] >= READABILITY_RULES.marginMinPt
+					? `Margins are ${ptToMm(tightest[1]).toFixed(1)} mm or wider everywhere.`
+					: `Smallest margin is ${ptToMm(tightest[1]).toFixed(1)} mm (${tightest[0]}). Printers cannot print within about 5 mm of the paper edge, so this may lose text on paper; ${ptToMm(READABILITY_RULES.marginMinPt).toFixed(1)} mm (0.5 in) is the floor this app uses.`,
+		}),
+	);
+
+	/*
+	 * Font substitution, stated as a fact about rendering rather than taste. There is no
+	 * "ATS-safe font" verdict: the parsing risk is embedding and glyph coverage (both
+	 * already checked), not the family's fashion.
+	 */
+	const font = resolveTypstFont(settings?.fontFamily ?? "Inter");
+	checks.push(
+		check({
+			id: "font-embedded",
+			group: "parse-fit",
+			title: "The export uses the font you picked",
+			ok: !font.substituted,
+			soft: true,
+			effort: "quick",
+			detail: font.substituted
+				? `“${font.requested}” is not embedded in the export engine. The PDF renders as “${font.typstFamily}” — the same letter widths, so line and page breaks are unchanged.`
+				: `${font.requested} is embedded in the PDF exactly as picked.`,
+		}),
+	);
+
+	const lastPageFill = fit?.lastPageFill ?? null;
+	checks.push(
+		check({
+			id: "last-page-fill",
+			group: "brevity",
+			title: "The last page is substantial",
+			ok:
+				lastPageFill === null ||
+				lastPageFill >= READABILITY_RULES.lastPageFillMin,
+			soft: true,
+			effort: "medium",
+			detail:
+				lastPageFill === null
+					? "How full the last page is comes from the page-fit probe when the preview compiles."
+					: fit && fit.pages <= 1
+						? "The document fits on one page."
+						: lastPageFill < READABILITY_RULES.lastPageFillMin
+							? `Page ${fit?.pages} holds about ${Math.round(lastPageFill * 100)}% of a page. A page with a few lines reads as an accident; either pull the content back to one page (the meter has suggestions) or let the layout breathe to two.`
+							: `Page ${fit?.pages} holds about ${Math.round(lastPageFill * 100)}% of a page, which reads as deliberate.`,
 		}),
 	);
 

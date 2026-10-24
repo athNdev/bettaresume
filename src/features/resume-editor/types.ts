@@ -24,6 +24,7 @@ export type {
 	ExportRecord,
 	FontFamily,
 	JobTarget,
+	KeepTogether,
 	Language,
 	LanguagesContent,
 	PartialResumeMetadata,

@@ -57,8 +57,15 @@ describe("there is no layout setting to diverge", () => {
 
 	it("the Typst serialiser does not pass a layout or icon flag", () => {
 		const serialize = read("src/lib/typst/serialize.ts");
-		expect(serialize).not.toMatch(/\blayout:/);
+		// The dead page-layout setting (`"single-column" | "two-column" | "sidebar"`) must
+		// never come back. Section `layout:` exists again, but it carries break semantics
+		// (`keepSectionTogether`, `pageBreakBefore`), never a column count — see the next
+		// assertion, and `docs/research/page-fit-readability.md` §7.
+		expect(serialize).not.toMatch(
+			/layout:\s*"(single-column|two-column|sidebar)"/,
+		);
 		expect(serialize).not.toMatch(/\bshowIcons\b/);
+		expect(serialize).toMatch(/keepSectionTogether/);
 	});
 });
 

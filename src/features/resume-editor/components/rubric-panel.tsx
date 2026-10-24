@@ -77,9 +77,10 @@ function CheckRow({ check }: { check: RubricCheck }) {
 
 export function RubricChecklist({ resume }: { resume: Resume }) {
 	const pageCount = usePreviewPages((s) => s.pageCount);
+	const fit = usePreviewPages((s) => s.fit);
 	const report: RubricReport = useMemo(
-		() => buildRubric(resume, { pageCount }),
-		[resume, pageCount],
+		() => buildRubric(resume, { pageCount, fit }),
+		[resume, pageCount, fit],
 	);
 
 	const groups = useMemo(() => {

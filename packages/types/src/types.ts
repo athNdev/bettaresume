@@ -176,7 +176,23 @@ export interface SectionLayout {
 	alignment?: "left" | "center" | "right";
 	spacing?: "compact" | "normal" | "spacious";
 	showDivider?: boolean;
+	/** How the section's entries break across pages. See `packages/types/src/schemas.ts`. */
+	keepTogether?: KeepTogether;
+	/** Keep the whole section (heading and entries) on one page. */
+	keepSectionTogether?: boolean;
+	/** Start this section on a new page, without leaving a blank page when already at one. */
+	pageBreakBefore?: boolean;
+	/** Per-entry override of `keepTogether`, keyed by entry id. */
+	entries?: Record<string, KeepTogether>;
 }
+
+/**
+ * The entry break vocabulary, shared by a section's default and a per-entry override.
+ *
+ * `auto` keeps an entry together only when it is small enough to move as a unit, which
+ * the serialiser resolves from the entry's shape (see `resolveKeepTogether`).
+ */
+export type KeepTogether = "auto" | "always" | "never";
 
 // ============================================
 // Personal Info
@@ -222,6 +238,8 @@ export interface ResumeSettings {
 	sectionSpacing: "compact" | "normal" | "spacious";
 	dateFormat: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
 	accentStyle: "underline" | "background" | "border" | "none";
+	/** `null` = no target; absent = the template's default. See `pageTargetForTemplate`. */
+	pageTarget?: 1 | 2 | null;
 }
 
 export interface PartialResumeSettings {
@@ -240,6 +258,7 @@ export interface PartialResumeSettings {
 	sectionSpacing?: "compact" | "normal" | "spacious";
 	dateFormat?: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
 	accentStyle?: "underline" | "background" | "border" | "none";
+	pageTarget?: 1 | 2 | null;
 }
 
 export type FontFamily =

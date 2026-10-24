@@ -201,6 +201,21 @@ export const sectionLayoutSchema = z.object({
 	alignment: z.enum(["left", "center", "right"]).optional(),
 	spacing: z.enum(["compact", "normal", "spacious"]).optional(),
 	showDivider: z.boolean().optional(),
+	/**
+	 * Break semantics, in the vocabulary Word users already know.
+	 *
+	 * `keepTogether` is the section's default for its entries ("Keep lines together");
+	 * `keepSectionTogether` keeps the heading with the whole section ("Keep with next");
+	 * `pageBreakBefore` starts the section on a fresh page without leaving a blank page
+	 * behind ("Page break before"). `entries` overrides the default per entry id.
+	 *
+	 * These are layout, not content: no D1 migration (they live in the section `layout`
+	 * JSON column) and a variant copy keeps them.
+	 */
+	keepTogether: z.enum(["auto", "always", "never"]).optional(),
+	keepSectionTogether: z.boolean().optional(),
+	pageBreakBefore: z.boolean().optional(),
+	entries: z.record(z.string(), z.enum(["auto", "always", "never"])).optional(),
 });
 
 // ============================================
@@ -321,6 +336,14 @@ export const resumeSettingsSchema = z.object({
 	sectionSpacing: z.enum(["compact", "normal", "spacious"]),
 	dateFormat: z.enum(["MM/YYYY", "MMM YYYY", "MMMM YYYY", "YYYY"]),
 	accentStyle: z.enum(["underline", "background", "border", "none"]),
+	/**
+	 * How many pages the user is aiming for: `1`, `2`, or `null` for no target.
+	 *
+	 * It lives in the settings rather than in UI state so the meter, the relief ladder
+	 * and a shared link all read the same answer, and so a variant can have its own
+	 * target. Absent means "use the template default" (`pageTargetForTemplate`).
+	 */
+	pageTarget: z.union([z.literal(1), z.literal(2), z.null()]).optional(),
 });
 
 export const partialResumeSettingsSchema = resumeSettingsSchema

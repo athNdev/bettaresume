@@ -37,6 +37,13 @@ import type {
 	TypographyScale,
 } from "@/features/resume-editor/types";
 import { DEFAULT_TYPOGRAPHY } from "@/features/resume-editor/types";
+import {
+	DENSITY_DESCRIPTIONS,
+	DENSITY_LABELS,
+	DENSITY_PRESETS_ORDER,
+	densityOf,
+	densityPatch,
+} from "@/lib/layout/density";
 
 interface FormattingToolbarProps {
 	settings: ResumeSettings;
@@ -128,6 +135,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 	}, [settings]);
 
 	const fontScale = Math.round((localSettings.fontScale || 1) * 100);
+	const density = densityOf(localSettings);
 	// The 10pt body floor is on what renders, and the scale control multiplies the
 	// knob. When it would push body text below the floor, say so instead of letting the
 	// percentage silently break the readability promise.
@@ -228,6 +236,31 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 					readability floor
 				</span>
 			)}
+
+			{/* Density — one named composition of the spacing knobs. */}
+			<div className="flex items-center gap-2">
+				<span className="font-medium text-xs">Density</span>
+				<div className="flex items-center gap-0.5 rounded-md border p-0.5">
+					{DENSITY_PRESETS_ORDER.map((preset) => (
+						<Button
+							aria-label={`${DENSITY_LABELS[preset]} density`}
+							aria-pressed={density === preset}
+							className="h-7 px-2 text-xs"
+							key={preset}
+							onClick={() => onSettingsChange(densityPatch(preset))}
+							size="sm"
+							static
+							title={DENSITY_DESCRIPTIONS[preset]}
+							variant={density === preset ? "secondary" : "ghost"}
+						>
+							{DENSITY_LABELS[preset]}
+						</Button>
+					))}
+					{density === "custom" ? (
+						<span className="px-2 text-muted-foreground text-xs">Custom</span>
+					) : null}
+				</div>
+			</div>
 
 			{/* Typography Scale */}
 			<Popover>

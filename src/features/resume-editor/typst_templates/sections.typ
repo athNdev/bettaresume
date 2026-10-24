@@ -68,8 +68,61 @@
 #let space-xl  = 8pt   // gap above a section heading — compact
 #let space-2xl = 12pt  // header block → hairline rule (half of the 16pt header gap)
 #let space-3xl = 16pt  // header → body (assembled in the templates)
+#let space-4xl = 20pt  // header → body, relaxed density
 
 #let section-spacing = settings.at("sectionSpacing", default: "normal")
+
+// Paper width in points, used only by the fit probe to measure the line length. It is
+// the same constant `src/lib/layout/page-fit.ts` uses; the probe is the only reader, so
+// there is no second layout source of truth here.
+#let page-width = if settings.at("pageSize", default: "Letter") == "A4" {
+  595.28pt
+} else {
+  612pt
+}
+#let page-height = if settings.at("pageSize", default: "Letter") == "A4" {
+  841.89pt
+} else {
+  792pt
+}
+
+// Usable text height of one page. The serialiser uses the same arithmetic to refuse
+// "keep together" for an entry taller than a page: a non-breakable block that cannot fit
+// on a page is clipped by Typst rather than moved, and a split entry is a layout flaw
+// while a truncated one is lost content.
+#let usable-height = page-height - margins.top * 1pt - margins.bottom * 1pt
+
+// Header spacing follows density.
+//
+// `header-gap` is the WHOLE header → body distance (16pt at Normal, which is what the
+// templates assemble today: 12pt below the block + a rule + 4pt). `header-gap-half` is
+// the part below the header block before the rule, and `contact-gap` / the inline
+// variant are the name → contact-line gaps the templates used to hard-code at 6pt and
+// 4pt. Normal reproduces those exact values; Compact and Relaxed move them with the
+// rest of the document instead of needing a second set of controls.
+#let header-gap = if section-spacing == "compact" {
+  space-2xl
+} else if section-spacing == "spacious" {
+  space-4xl
+} else {
+  space-3xl
+}
+#let header-gap-half = header-gap - space-m
+#let contact-gap = if section-spacing == "compact" {
+  space-m
+} else if section-spacing == "spacious" {
+  space-xl
+} else {
+  space-l
+}
+// The undergrad header keeps its contacts one step tighter than the other templates.
+#let contact-gap-inline = if section-spacing == "compact" {
+  space-s
+} else if section-spacing == "spacious" {
+  space-l
+} else {
+  space-m
+}
 
 // ──────────────────────────────────────────────
 // Leading (line spacing) — one mapping for every template
@@ -92,13 +145,20 @@
 // Gap above a section heading: the research's 8–12pt band, picked by `sectionSpacing`
 // — compact 8pt, normal 10pt, spacious ("relaxed" in the brief) 12pt. 10pt is the one
 // value outside the modular steps; it is the band midpoint the brief fixes for normal.
-#let section-gap = if section-spacing == "compact" {
+//
+// `section-gap-for` is the per-section override: a section may carry
+// `layout.spacing: compact | normal | spacious` and move its own gap without touching
+// the rest of the document. Absent means "follow the global density".
+#let section-gap-for(spacing) = if spacing == "compact" {
   space-xl
-} else if section-spacing == "spacious" {
+} else if spacing == "spacious" {
   space-2xl
 } else {
   10pt
 }
+#let section-gap-of(section) = section-gap-for(
+  section.at("layout", default: (:)).at("spacing", default: section-spacing),
+)
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -129,6 +189,52 @@
 }
 
 // ──────────────────────────────────────────────
+// Semantic page breaks (docs/research/page-fit-readability.md §6.1)
+// ──────────────────────────────────────────────
+//
+// Word's vocabulary, Typst's primitives:
+//   keep an entry together   → block(breakable: false)   ("Keep lines together")
+//   keep a section together  → block(breakable: false) around the whole section
+//   start on a new page      → pagebreak(weak: true)     ("Page break before")
+//
+// `auto` never reaches Typst: the serialiser resolves it from the entry's shape (an
+// entry short enough to move as one unit becomes "always"; a long one becomes "never"),
+// because a measured guard would need `layout(measure(...))`, which forces a block
+// container and can itself change pagination.
+#let entry-block(mode, body) = {
+  if mode == "always" {
+    block(breakable: false, body)
+  } else if mode == "never" {
+    block(breakable: true, body)
+  } else {
+    body
+  }
+}
+
+#let keep-mode(item) = item.at("keepTogether", default: "")
+
+// An invisible marker the fit probe reads back with `query(metadata)`. Metadata is
+// layout-neutral: it cannot change the document, so the PDF and the SVG preview are
+// byte-identical with or without it (the probe only adds the reader).
+#let mark-entry(section, item, label) = metadata((
+  kind: "entry",
+  id: item.at("id", default: ""),
+  section: section.at("id", default: ""),
+  label: label,
+))
+
+#let mark-section(section, label) = metadata((
+  kind: "section",
+  id: section.at("id", default: ""),
+  section: section.at("id", default: ""),
+  label: label,
+))
+
+// End-of-content marker: the fit meter measures the spill from here, because "the last
+// page ends" is the only position that says how much content actually ran over.
+#let fit-end() = metadata((kind: "end"))
+
+// ──────────────────────────────────────────────
 // Section title
 // ──────────────────────────────────────────────
 
@@ -137,8 +243,9 @@
   // not add it: the header block already separates the header from the body by
   // `space-3xl` (16pt), and stacking the two would spend 26pt before the first word.
   if section != sections.at(0, default: (:)) {
-    v(section-gap)
+    v(section-gap-of(section))
   }
+  mark-section(section, section.at("title", default: ""))
   let style = settings.at("accentStyle", default: "underline")
   // Headings are the text colour in every style: emphasis is weight and case, not
   // colour (docs/research/template-research.md §6). The accent appears only as the rule
@@ -197,37 +304,40 @@
   for i in range(items.len()) {
     let exp = items.at(i)
     if i > 0 { v(space-l) }
-    grid(
-      columns: (1fr, auto),
-      gutter: space-m,
-      {
-        text(
-          size: typo.itemTitle,
-          weight: "semibold",
-          fill: rgb(colors.text),
-        )[#exp.position]
-        linebreak()
-        text(size: typo.body, fill: rgb(colors.secondary))[
-          #exp.company#if exp.location != "" { " • " + exp.location }
-        ]
-      },
-      align(right)[
-        #text(size: typo.small, fill: rgb(colors.secondary))[
-          #date-range(exp.startDate, exp.endDate, exp.current)
-        ]
-      ],
-    )
+    mark-entry(section, exp, exp.position + " at " + exp.company)
+    entry-block(keep-mode(exp), {
+      grid(
+        columns: (1fr, auto),
+        gutter: space-m,
+        {
+          text(
+            size: typo.itemTitle,
+            weight: "semibold",
+            fill: rgb(colors.text),
+          )[#exp.position]
+          linebreak()
+          text(size: typo.body, fill: rgb(colors.secondary))[
+            #exp.company#if exp.location != "" { " • " + exp.location }
+          ]
+        },
+        align(right)[
+          #text(size: typo.small, fill: rgb(colors.secondary))[
+            #date-range(exp.startDate, exp.endDate, exp.current)
+          ]
+        ],
+      )
 
-    if exp.description != "" {
-      v(space-xs)
-      text(size: typo.body)[#exp.description]
-    }
+      if exp.description != "" {
+        v(space-xs)
+        text(size: typo.body)[#exp.description]
+      }
 
-    let hl = exp.at("highlights", default: ())
-    if hl.len() > 0 {
-      v(space-m)
-      bullets(hl)
-    }
+      let hl = exp.at("highlights", default: ())
+      if hl.len() > 0 {
+        v(space-m)
+        bullets(hl)
+      }
+    })
   }
 }
 
@@ -243,28 +353,31 @@
   for i in range(items.len()) {
     let edu = items.at(i)
     if i > 0 { v(space-l) }
-    grid(
-      columns: (1fr, auto),
-      gutter: space-m,
-      {
-        text(
-          size: typo.itemTitle,
-          weight: "semibold",
-          fill: rgb(colors.text),
-        )[
-          #edu.degree#if edu.field != "" { " in " + edu.field }
-        ]
-        linebreak()
-        text(size: typo.body, fill: rgb(colors.secondary))[
-          #edu.institution#if edu.gpa != "" { " • GPA: " + edu.gpa }
-        ]
-      },
-      align(right)[
-        #text(size: typo.small, fill: rgb(colors.secondary))[
-          #edu.graduationDate
-        ]
-      ],
-    )
+    mark-entry(section, edu, edu.degree + " — " + edu.institution)
+    entry-block(keep-mode(edu), {
+      grid(
+        columns: (1fr, auto),
+        gutter: space-m,
+        {
+          text(
+            size: typo.itemTitle,
+            weight: "semibold",
+            fill: rgb(colors.text),
+          )[
+            #edu.degree#if edu.field != "" { " in " + edu.field }
+          ]
+          linebreak()
+          text(size: typo.body, fill: rgb(colors.secondary))[
+            #edu.institution#if edu.gpa != "" { " • GPA: " + edu.gpa }
+          ]
+        },
+        align(right)[
+          #text(size: typo.small, fill: rgb(colors.secondary))[
+            #edu.graduationDate
+          ]
+        ],
+      )
+    })
   }
 }
 
@@ -280,13 +393,16 @@
   for i in range(cats.len()) {
     let cat = cats.at(i)
     if i > 0 { v(space-l) }
-    text(
-      size: typo.itemTitle,
-      weight: "semibold",
-      fill: rgb(colors.text),
-    )[#cat.name]
-    v(space-s)
-    cat.skills.map(s => badge(s.name)).join(h(space-m))
+    mark-entry(section, cat, cat.name)
+    entry-block(keep-mode(cat), {
+      text(
+        size: typo.itemTitle,
+        weight: "semibold",
+        fill: rgb(colors.text),
+      )[#cat.name]
+      v(space-s)
+      cat.skills.map(s => badge(s.name)).join(h(space-m))
+    })
   }
 }
 
@@ -302,31 +418,34 @@
   for i in range(items.len()) {
     let proj = items.at(i)
     if i > 0 { v(space-l) }
-    grid(
-      columns: (1fr, auto),
-      gutter: space-m,
-      text(
-        size: typo.itemTitle,
-        weight: "semibold",
-        fill: rgb(colors.text),
-      )[#proj.name],
-      align(right)[
-        #text(size: typo.small, fill: rgb(colors.secondary))[
-          #if proj.startDate != "" {
-            date-range(proj.startDate, proj.endDate, proj.current)
-          }
-        ]
-      ],
-    )
-    if proj.description != "" {
-      v(space-xs)
-      text(size: typo.body)[#proj.description]
-    }
-    let techs = proj.at("technologies", default: ())
-    if techs.len() > 0 {
-      v(space-s)
-      techs.map(badge).join(h(space-m))
-    }
+    mark-entry(section, proj, proj.name)
+    entry-block(keep-mode(proj), {
+      grid(
+        columns: (1fr, auto),
+        gutter: space-m,
+        text(
+          size: typo.itemTitle,
+          weight: "semibold",
+          fill: rgb(colors.text),
+        )[#proj.name],
+        align(right)[
+          #text(size: typo.small, fill: rgb(colors.secondary))[
+            #if proj.startDate != "" {
+              date-range(proj.startDate, proj.endDate, proj.current)
+            }
+          ]
+        ],
+      )
+      if proj.description != "" {
+        v(space-xs)
+        text(size: typo.body)[#proj.description]
+      }
+      let techs = proj.at("technologies", default: ())
+      if techs.len() > 0 {
+        v(space-s)
+        techs.map(badge).join(h(space-m))
+      }
+    })
   }
 }
 
@@ -342,22 +461,25 @@
   for i in range(items.len()) {
     let cert = items.at(i)
     if i > 0 { v(space-l) }
-    grid(
-      columns: (1fr, auto),
-      gutter: space-m,
-      {
-        text(
-          size: typo.itemTitle,
-          weight: "semibold",
-          fill: rgb(colors.text),
-        )[#cert.name]
-        linebreak()
-        text(size: typo.body, fill: rgb(colors.secondary))[#cert.issuer]
-      },
-      align(right)[
-        #text(size: typo.small, fill: rgb(colors.secondary))[#cert.date]
-      ],
-    )
+    mark-entry(section, cert, cert.name)
+    entry-block(keep-mode(cert), {
+      grid(
+        columns: (1fr, auto),
+        gutter: space-m,
+        {
+          text(
+            size: typo.itemTitle,
+            weight: "semibold",
+            fill: rgb(colors.text),
+          )[#cert.name]
+          linebreak()
+          text(size: typo.body, fill: rgb(colors.secondary))[#cert.issuer]
+        },
+        align(right)[
+          #text(size: typo.small, fill: rgb(colors.secondary))[#cert.date]
+        ],
+      )
+    })
   }
 }
 
@@ -373,26 +495,29 @@
   for i in range(items.len()) {
     let award = items.at(i)
     if i > 0 { v(space-l) }
-    grid(
-      columns: (1fr, auto),
-      gutter: space-m,
-      {
-        text(
-          size: typo.itemTitle,
-          weight: "semibold",
-          fill: rgb(colors.text),
-        )[#award.title]
-        linebreak()
-        text(size: typo.body, fill: rgb(colors.secondary))[#award.issuer]
-      },
-      align(right)[
-        #text(size: typo.small, fill: rgb(colors.secondary))[#award.date]
-      ],
-    )
-    if award.description != "" {
-      v(space-xs)
-      text(size: typo.body)[#award.description]
-    }
+    mark-entry(section, award, award.title)
+    entry-block(keep-mode(award), {
+      grid(
+        columns: (1fr, auto),
+        gutter: space-m,
+        {
+          text(
+            size: typo.itemTitle,
+            weight: "semibold",
+            fill: rgb(colors.text),
+          )[#award.title]
+          linebreak()
+          text(size: typo.body, fill: rgb(colors.secondary))[#award.issuer]
+        },
+        align(right)[
+          #text(size: typo.small, fill: rgb(colors.secondary))[#award.date]
+        ],
+      )
+      if award.description != "" {
+        v(space-xs)
+        text(size: typo.body)[#award.description]
+      }
+    })
   }
 }
 
@@ -419,35 +544,38 @@
   for i in range(items.len()) {
     let vol = items.at(i)
     if i > 0 { v(space-l) }
-    grid(
-      columns: (1fr, auto),
-      gutter: space-m,
-      {
-        text(
-          size: typo.itemTitle,
-          weight: "semibold",
-          fill: rgb(colors.text),
-        )[#vol.role]
-        linebreak()
-        text(size: typo.body, fill: rgb(colors.secondary))[
-          #vol.organization#if vol.location != "" { " • " + vol.location }
-        ]
-      },
-      align(right)[
-        #text(size: typo.small, fill: rgb(colors.secondary))[
-          #date-range(vol.startDate, vol.endDate, vol.current)
-        ]
-      ],
-    )
-    if vol.description != "" {
-      v(space-xs)
-      text(size: typo.body)[#vol.description]
-    }
-    let hl = vol.at("highlights", default: ())
-    if hl.len() > 0 {
-      v(space-m)
-      bullets(hl)
-    }
+    mark-entry(section, vol, vol.role + " at " + vol.organization)
+    entry-block(keep-mode(vol), {
+      grid(
+        columns: (1fr, auto),
+        gutter: space-m,
+        {
+          text(
+            size: typo.itemTitle,
+            weight: "semibold",
+            fill: rgb(colors.text),
+          )[#vol.role]
+          linebreak()
+          text(size: typo.body, fill: rgb(colors.secondary))[
+            #vol.organization#if vol.location != "" { " • " + vol.location }
+          ]
+        },
+        align(right)[
+          #text(size: typo.small, fill: rgb(colors.secondary))[
+            #date-range(vol.startDate, vol.endDate, vol.current)
+          ]
+        ],
+      )
+      if vol.description != "" {
+        v(space-xs)
+        text(size: typo.body)[#vol.description]
+      }
+      let hl = vol.at("highlights", default: ())
+      if hl.len() > 0 {
+        v(space-m)
+        bullets(hl)
+      }
+    })
   }
 }
 
@@ -463,26 +591,29 @@
   for i in range(items.len()) {
     let pub = items.at(i)
     if i > 0 { v(space-l) }
-    text(
-      size: typo.itemTitle,
-      weight: "semibold",
-      fill: rgb(colors.text),
-    )[#pub.title]
-    linebreak()
-    text(size: typo.body, fill: rgb(colors.secondary))[
-      #pub.publisher • #pub.date
-    ]
-    let authors = pub.at("authors", default: ())
-    if authors.len() > 0 {
+    mark-entry(section, pub, pub.title)
+    entry-block(keep-mode(pub), {
+      text(
+        size: typo.itemTitle,
+        weight: "semibold",
+        fill: rgb(colors.text),
+      )[#pub.title]
       linebreak()
-      text(size: typo.small, fill: rgb(colors.secondary))[
-        Authors: #authors.join(", ")
+      text(size: typo.body, fill: rgb(colors.secondary))[
+        #pub.publisher • #pub.date
       ]
-    }
-    if pub.summary != "" {
-      v(space-xs)
-      text(size: typo.body)[#pub.summary]
-    }
+      let authors = pub.at("authors", default: ())
+      if authors.len() > 0 {
+        linebreak()
+        text(size: typo.small, fill: rgb(colors.secondary))[
+          Authors: #authors.join(", ")
+        ]
+      }
+      if pub.summary != "" {
+        v(space-xs)
+        text(size: typo.body)[#pub.summary]
+      }
+    })
   }
 }
 
@@ -498,19 +629,22 @@
   for i in range(items.len()) {
     let ref = items.at(i)
     if i > 0 { v(space-l) }
-    text(
-      size: typo.itemTitle,
-      weight: "semibold",
-      fill: rgb(colors.text),
-    )[#ref.name]
-    linebreak()
-    text(size: typo.body, fill: rgb(colors.secondary))[
-      #ref.position#if ref.company != "" { " at " + ref.company }
-    ]
-    if ref.email != "" {
+    mark-entry(section, ref, ref.name)
+    entry-block(keep-mode(ref), {
+      text(
+        size: typo.itemTitle,
+        weight: "semibold",
+        fill: rgb(colors.text),
+      )[#ref.name]
       linebreak()
-      text(size: typo.small)[#ref.email]
-    }
+      text(size: typo.body, fill: rgb(colors.secondary))[
+        #ref.position#if ref.company != "" { " at " + ref.company }
+      ]
+      if ref.email != "" {
+        linebreak()
+        text(size: typo.small)[#ref.email]
+      }
+    })
   }
 }
 
@@ -537,17 +671,20 @@
   for i in range(items.len()) {
     let item = items.at(i)
     if i > 0 { v(space-l) }
-    if item.title != "" {
-      text(
-        size: typo.itemTitle,
-        weight: "semibold",
-        fill: rgb(colors.text),
-      )[#item.title]
-      linebreak()
-    }
-    if item.body != "" {
-      text(size: typo.body)[#eval(item.body, mode: "markup")]
-    }
+    mark-entry(section, item, item.at("title", default: ""))
+    entry-block(keep-mode(item), {
+      if item.title != "" {
+        text(
+          size: typo.itemTitle,
+          weight: "semibold",
+          fill: rgb(colors.text),
+        )[#item.title]
+        linebreak()
+      }
+      if item.body != "" {
+        text(size: typo.body)[#eval(item.body, mode: "markup")]
+      }
+    })
   }
 }
 
@@ -555,7 +692,7 @@
 // Dispatcher
 // ──────────────────────────────────────────────
 
-#let render-section(section) = {
+#let section-body(section) = {
   let t = section.type
   if t == "summary"        { render-summary(section) }
   else if t == "experience"    { render-experience(section) }
@@ -569,4 +706,20 @@
   else if t == "publications"  { render-publications(section) }
   else if t == "references"    { render-references(section) }
   else if t == "custom"        { render-custom(section) }
+}
+
+// Section-level break semantics. `pagebreak(weak: true)` is Word's "page break before"
+// with the edge case fixed: when the section is already at the top of a page it does
+// nothing, so asking for it cannot leave a blank page behind.
+#let render-section(section) = {
+  let layout = section.at("layout", default: (:))
+  if layout.at("pageBreakBefore", default: false) {
+    pagebreak(weak: true)
+  }
+  let body = section-body(section)
+  if layout.at("keepSectionTogether", default: false) {
+    block(breakable: false, body)
+  } else {
+    body
+  }
 }

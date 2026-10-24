@@ -1,0 +1,11 @@
+-- Section break semantics.
+--
+-- `sectionLayoutSchema` has been an accepted input of `section.create`/`update`/`upsert`
+-- since the router was written, but there was no column behind it: the field was validated
+-- and then dropped, so a client could set "keep this entry together", get a success, and
+-- find the flag gone on the next read. The page-fit suite is the first caller that depends
+-- on it, which is why this lands now.
+--
+-- ADD COLUMN only: nullable, no default, no table rebuild, and every existing row reads as
+-- NULL = "no break overrides". Nothing is dropped and nothing is backfilled.
+ALTER TABLE `Section` ADD `layout` text;

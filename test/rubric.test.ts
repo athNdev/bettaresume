@@ -338,6 +338,138 @@ describe("the rubric", () => {
 	});
 });
 
+describe("the readability checks", () => {
+	it("flags line spacing outside 1.2–1.6 as advice, not a failure", () => {
+		const tight = buildRubric(goodResume(), {});
+		expect(tight.checks.find((c) => c.id === "line-spacing")?.status).toBe(
+			"pass",
+		);
+
+		const cramped = goodResume();
+		(
+			cramped.metadata as unknown as { settings: Record<string, unknown> }
+		).settings.lineHeight = 1.0;
+		const row = buildRubric(cramped).checks.find(
+			(c) => c.id === "line-spacing",
+		);
+		expect(row?.status).toBe("advice");
+		expect(row?.detail).toContain("1.0");
+	});
+
+	it("flags a line longer than 110 characters, and passes the shipped ~96", () => {
+		const withLineChars = (lineChars: number) =>
+			({
+				pages: 1,
+				usableHeightPt: 706,
+				target: 1,
+				overPt: 0,
+				overMm: 0,
+				pageEstimate: 1,
+				lastPageFill: 1,
+				lineChars,
+				overflow: null,
+				atFloor: false,
+			}) as never;
+
+		const wide = buildRubric(goodResume(), {
+			fit: withLineChars(130),
+		}).checks.find((c) => c.id === "line-length");
+		expect(wide?.status).toBe("advice");
+		expect(wide?.detail).toContain("130");
+
+		const shipped = buildRubric(goodResume(), {
+			fit: withLineChars(96),
+		}).checks.find((c) => c.id === "line-length");
+		expect(shipped?.status).toBe("pass");
+	});
+
+	it("fails margins under the 36pt print floor", () => {
+		const narrow = goodResume();
+		(
+			narrow.metadata as unknown as { settings: Record<string, unknown> }
+		).settings.margins = {
+			top: 43,
+			right: 24,
+			bottom: 43,
+			left: 24,
+		};
+		const row = buildRubric(narrow).checks.find(
+			(c) => c.id === "margins-printable",
+		);
+		expect(row?.status).toBe("fail");
+		expect(row?.detail).toContain("8.5 mm");
+
+		const shipped = buildRubric(goodResume()).checks.find(
+			(c) => c.id === "margins-printable",
+		);
+		expect(shipped?.status).toBe("pass");
+	});
+
+	it("says which font the export will actually use", () => {
+		const substituted = goodResume();
+		(
+			substituted.metadata as unknown as { settings: Record<string, unknown> }
+		).settings.fontFamily = "Times New Roman";
+		const row = buildRubric(substituted).checks.find(
+			(c) => c.id === "font-embedded",
+		);
+		expect(row?.status).toBe("advice");
+		expect(row?.detail).toContain("Tinos");
+
+		const exact = buildRubric(goodResume()).checks.find(
+			(c) => c.id === "font-embedded",
+		);
+		expect(exact?.status).toBe("pass");
+	});
+
+	it("flags a last page with almost nothing on it", () => {
+		const fit = {
+			pages: 2,
+			usableHeightPt: 706,
+			target: null,
+			overPt: 0,
+			overMm: 0,
+			pageEstimate: 1.1,
+			lastPageFill: 0.12,
+			lineChars: 96,
+			overflow: null,
+			atFloor: false,
+		} as never;
+		const row = buildRubric(goodResume(), { fit }).checks.find(
+			(c) => c.id === "last-page-fill",
+		);
+		expect(row?.status).toBe("advice");
+		expect(row?.detail).toContain("12%");
+	});
+
+	it("names the spill in the page-count detail", () => {
+		const fit = {
+			pages: 2,
+			usableHeightPt: 706,
+			target: 1,
+			overPt: 100,
+			overMm: 35.3,
+			pageEstimate: 1.2,
+			lastPageFill: 0.14,
+			lineChars: 96,
+			overflow: {
+				id: "e1",
+				section: "s1",
+				label: "Senior Engineer at Acme",
+				page: 2,
+				y: 43,
+			},
+			atFloor: false,
+		} as never;
+		const row = buildRubric(goodResume(), { fit }).checks.find(
+			(c) => c.id === "page-count",
+		);
+		expect(row?.detail).toContain("35 mm");
+		expect(row?.detail).toContain("Senior Engineer at Acme");
+		expect(row?.anchor).toBe("s1");
+	});
+});
+
 describe("the Plain Text Test", () => {
 	it("passes all five checks on a document built by the exporter", () => {
 		const r = goodResume();
