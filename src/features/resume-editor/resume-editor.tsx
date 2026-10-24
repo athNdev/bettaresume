@@ -1205,7 +1205,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					style={{ height: "100%" }}
 				>
 					{/* Left Panel - VS Code style collapsible sections */}
-					<Panel defaultSize="18%" id="left-panel" maxSize="32%" minSize="13%">
+					<Panel defaultSize="16%" id="left-panel" maxSize="28%" minSize="12%">
 						<ScrollArea className="h-full border-r">
 							<div className="flex flex-col">
 								{/* CONTENT Section */}
@@ -1312,7 +1312,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
 
 					{/* Middle Panel - Form Editor */}
-					<Panel defaultSize="38%" id="form-panel" maxSize="60%" minSize="24%">
+					<Panel defaultSize="42%" id="form-panel" maxSize="58%" minSize="26%">
 						<div className="flex h-full flex-col border-r">
 							<ScrollArea className="flex-1">
 								<div className="p-4">
@@ -1346,7 +1346,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
 
 					{/* Right Panel - Preview */}
-					<Panel defaultSize="44%" id="right-panel" minSize="24%">
+					<Panel defaultSize="42%" id="right-panel" minSize="22%">
 						<div className="flex h-full flex-col overflow-hidden bg-muted/30">
 							{/*
 							 * Formatting controls, collapsed by default.

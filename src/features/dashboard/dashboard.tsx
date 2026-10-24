@@ -170,7 +170,7 @@ function DashboardContent() {
 	 */
 	const [archivingId, setArchivingId] = useState<string | null>(null);
 	const [showArchived, setShowArchived] = useState(false);
-	const [selectedTemplate, _setSelectedTemplate] = useState<
+	const [selectedTemplate, setSelectedTemplate] = useState<
 		TemplateType | "all"
 	>("all");
 	const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -251,6 +251,21 @@ function DashboardContent() {
 	// Stats
 	const totalResumes = useMemo(
 		() => resumes.filter((r: Resume) => !r.isArchived).length,
+		[resumes],
+	);
+
+	/*
+	 * Counts for the rail, derived from the same list the grid renders so they cannot
+	 * disagree with it. `variationCount` is also the first place in the product that
+	 * answers "how many of these are variants of something else" — which is the
+	 * question a user is really asking when they look at a wall of near-identical cards.
+	 */
+	const variationCount = useMemo(
+		() => resumes.filter((r: Resume) => r.variationType === "variation").length,
+		[resumes],
+	);
+	const archivedCount = useMemo(
+		() => resumes.filter((r: Resume) => r.isArchived).length,
 		[resumes],
 	);
 
@@ -469,7 +484,11 @@ function DashboardContent() {
 						metadata: data.metadata as never,
 					});
 
-					if (created?.id && Array.isArray(data.sections) && data.sections.length) {
+					if (
+						created?.id &&
+						Array.isArray(data.sections) &&
+						data.sections.length
+					) {
 						await bulkUpsertSections.mutateAsync({
 							resumeId: created.id,
 							sections: data.sections.map((section, index) => ({
@@ -590,6 +609,118 @@ function DashboardContent() {
 			{/* Main content */}
 			<main className="container mx-auto px-4 py-8">
 				{/*
+				 * Two columns at lg: the document list gets the room, filters and account
+				 * actions move into a rail beside it.
+				 *
+				 * This was one column at every width: search, the archived toggle, the
+				 * greeting and the grid all shared the same measure, so nothing had
+				 * hierarchy and the controls a user reaches for constantly were stacked
+				 * with the content they act on. The rail is `lg:sticky` so it stays put
+				 * while the list scrolls.
+				 *
+				 * The rail is FIRST in the DOM and ordered second at lg, so a narrow
+				 * screen shows filters before the list they filter — which is the order
+				 * that makes sense when they cannot sit side by side.
+				 */}
+				<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">
+					<aside className="lg:order-2">
+						<div className="space-y-4 lg:sticky lg:top-8">
+							<Card>
+								<CardHeader className="pb-3">
+									<CardTitle className="text-base">Filters</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="relative">
+										<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+										<Input
+											aria-label="Search resumes"
+											className="pl-10"
+											onChange={(e) => {
+												setSearchQuery(e.target.value);
+												setPage(1);
+											}}
+											placeholder="Search resumes..."
+											value={searchQuery}
+										/>
+									</div>
+
+									<div>
+										<Label htmlFor="template-filter">Template</Label>
+										<Select
+											onValueChange={(value) => {
+												setSelectedTemplate(value as TemplateType | "all");
+												setPage(1);
+											}}
+											value={selectedTemplate}
+										>
+											<SelectTrigger
+												className="mt-1 w-full"
+												id="template-filter"
+											>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="all">All templates</SelectItem>
+												{(Object.keys(TEMPLATE_CONFIGS) as TemplateType[]).map(
+													(template) => (
+														<SelectItem key={template} value={template}>
+															{TEMPLATE_CONFIGS[template].name}
+														</SelectItem>
+													),
+												)}
+											</SelectContent>
+										</Select>
+									</div>
+
+									<Button
+										className="w-full"
+										onClick={() => {
+											setShowArchived(!showArchived);
+											setPage(1);
+										}}
+										size="sm"
+										variant={showArchived ? "default" : "outline"}
+									>
+										<Archive className="mr-2 h-4 w-4" />
+										{showArchived ? "Showing archived" : "Show archived"}
+									</Button>
+								</CardContent>
+							</Card>
+
+							{totalResumes > 0 ? (
+								<Card>
+									<CardHeader className="pb-3">
+										<CardTitle className="text-base">Your library</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<dl className="space-y-2 text-sm">
+											<div className="flex items-baseline justify-between gap-2">
+												<dt className="text-muted-foreground">Resumes</dt>
+												<dd className="font-medium tabular-nums">
+													{totalResumes}
+												</dd>
+											</div>
+											<div className="flex items-baseline justify-between gap-2">
+												<dt className="text-muted-foreground">Variants</dt>
+												<dd className="font-medium tabular-nums">
+													{variationCount}
+												</dd>
+											</div>
+											<div className="flex items-baseline justify-between gap-2">
+												<dt className="text-muted-foreground">Archived</dt>
+												<dd className="font-medium tabular-nums">
+													{archivedCount}
+												</dd>
+											</div>
+										</dl>
+									</CardContent>
+								</Card>
+							) : null}
+						</div>
+					</aside>
+
+					<div className="min-w-0 lg:order-1">
+						{/*
 
 				{/*
 				 * A page heading that says who is signed in.
@@ -602,181 +733,164 @@ function DashboardContent() {
 				 * Shown only once there is something to come back to. With no resumes the
 				 * welcome guide below is the heading, and two of them would compete.
 				 */}
-				{user && totalResumes > 0 ? (
-					<h1 className="mb-6 font-bold text-2xl">
-						{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
-					</h1>
-				) : null}
+						{user && totalResumes > 0 ? (
+							<h1 className="mb-6 font-bold text-2xl">
+								{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+							</h1>
+						) : null}
 
-				{/* Welcome Guide */}
-				{showWelcomeGuide && totalResumes === 0 && (
-					<Card className="mb-8 border-primary/20 bg-primary/5">
-						<CardHeader className="relative">
-							<Button
-								className="absolute top-4 right-4"
-								onClick={() => setShowWelcomeGuide(false)}
-								size="icon"
-								variant="ghost"
-							>
-								<X className="h-4 w-4" />
-							</Button>
-							<CardTitle className="flex items-center gap-2">
-								<Info className="h-5 w-5 text-primary" />
-								Welcome to Betta Resume!
-							</CardTitle>
-							<CardDescription>
-								Get started by creating your first resume
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="grid gap-4 sm:grid-cols-3">
-								<div className="rounded-lg border bg-card p-4">
-									<h4 className="mb-2 font-medium">1. Create a Resume</h4>
-									<p className="text-muted-foreground text-sm">
-										Click &quot;New Resume&quot; to start building your
-										professional resume.
-									</p>
+						{/* Welcome Guide */}
+						{showWelcomeGuide && totalResumes === 0 && (
+							<Card className="mb-8 border-primary/20 bg-primary/5">
+								<CardHeader className="relative">
+									<Button
+										className="absolute top-4 right-4"
+										onClick={() => setShowWelcomeGuide(false)}
+										size="icon"
+										variant="ghost"
+									>
+										<X className="h-4 w-4" />
+									</Button>
+									<CardTitle className="flex items-center gap-2">
+										<Info className="h-5 w-5 text-primary" />
+										Welcome to Betta Resume!
+									</CardTitle>
+									<CardDescription>
+										Get started by creating your first resume
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="grid gap-4 sm:grid-cols-3">
+										<div className="rounded-lg border bg-card p-4">
+											<h4 className="mb-2 font-medium">1. Create a Resume</h4>
+											<p className="text-muted-foreground text-sm">
+												Click &quot;New Resume&quot; to start building your
+												professional resume.
+											</p>
+										</div>
+										<div className="rounded-lg border bg-card p-4">
+											<h4 className="mb-2 font-medium">
+												2. Customize Sections
+											</h4>
+											<p className="text-muted-foreground text-sm">
+												Add your experience, education, skills, and more.
+											</p>
+										</div>
+										<div className="rounded-lg border bg-card p-4">
+											<h4 className="mb-2 font-medium">3. Export & Share</h4>
+											<p className="text-muted-foreground text-sm">
+												Download your resume as PDF or share it online.
+											</p>
+										</div>
+									</div>
+								</CardContent>
+								<CardFooter>
+									<Button
+										disabled={isCreating}
+										onClick={() => setIsCreateDialogOpen(true)}
+									>
+										{isCreating ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<Plus className="mr-2 h-4 w-4" />
+										)}
+										Create Your First Resume
+									</Button>
+								</CardFooter>
+							</Card>
+						)}
+
+						{/* Resume Grid */}
+						{filteredResumes.length > 0 ? (
+							<>
+								{/*
+								 * Says what the filter did, and is announced when it changes.
+								 *
+								 * The search filters client-side on every keystroke, so the grid changes
+								 * without focus ever moving. Nothing said so: the input reported the query
+								 * and the list silently shrank, which a screen-reader user cannot detect
+								 * and a sighted user has to count for themselves.
+								 *
+								 * Visually this is also the answer to "why is only one card showing" when
+								 * the filter is narrow or the list is paginated.
+								 */}
+								<p
+									aria-live="polite"
+									className="mb-4 text-muted-foreground text-sm"
+									role="status"
+								>
+									{resultSummary({
+										matched: filteredResumes.length,
+										query: searchQuery,
+										total: totalResumes,
+									})}
+								</p>
+								<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+									{pagedResumes.map((resume: Resume) => (
+										<ResumeCard
+											isArchiving={archivingId === resume.id}
+											isDuplicating={duplicatingId === resume.id}
+											key={resume.id}
+											onArchive={() =>
+												handleArchiveResume(resume.id, true, resume.name)
+											}
+											onDelete={() => {
+												setResumeToDelete(resume.id);
+												setIsDeleteDialogOpen(true);
+											}}
+											onDuplicate={() =>
+												handleDuplicateResume(resume.id, resume.name)
+											}
+											onEdit={() => {
+												setActiveResumeId(resume.id);
+												navigate(`/resume-editor/${resume.id}`);
+											}}
+											onExport={() =>
+												handleExportResume(resume.id, resume.name)
+											}
+											onRestore={() =>
+												handleArchiveResume(resume.id, false, resume.name)
+											}
+											resume={resume}
+											variations={getVariations(resume.id)}
+										/>
+									))}
 								</div>
-								<div className="rounded-lg border bg-card p-4">
-									<h4 className="mb-2 font-medium">2. Customize Sections</h4>
-									<p className="text-muted-foreground text-sm">
-										Add your experience, education, skills, and more.
-									</p>
-								</div>
-								<div className="rounded-lg border bg-card p-4">
-									<h4 className="mb-2 font-medium">3. Export & Share</h4>
-									<p className="text-muted-foreground text-sm">
-										Download your resume as PDF or share it online.
-									</p>
-								</div>
-							</div>
-						</CardContent>
-						<CardFooter>
-							<Button
-								disabled={isCreating}
-								onClick={() => setIsCreateDialogOpen(true)}
-							>
-								{isCreating ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : (
-									<Plus className="mr-2 h-4 w-4" />
+								{filteredResumes.length > pageSize && (
+									<div className="mt-8 flex items-center justify-center gap-3">
+										<Button
+											disabled={page <= 1}
+											onClick={() => setPage((p) => Math.max(1, p - 1))}
+											size="sm"
+											variant="outline"
+										>
+											Previous
+										</Button>
+										<span className="text-muted-foreground text-sm">
+											Page {page} of {totalPages}
+										</span>
+										<Button
+											disabled={page >= totalPages}
+											onClick={() =>
+												setPage((p) => Math.min(totalPages, p + 1))
+											}
+											size="sm"
+											variant="outline"
+										>
+											Next
+										</Button>
+									</div>
 								)}
-								Create Your First Resume
-							</Button>
-						</CardFooter>
-					</Card>
-				)}
-
-				{/* Filters */}
-				<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<div className="flex flex-1 items-center gap-4">
-						<div className="relative flex-1 sm:max-w-xs">
-							<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-							<Input
-								className="pl-10"
-								onChange={(e) => setSearchQuery(e.target.value)}
-								placeholder="Search resumes..."
-								value={searchQuery}
+							</>
+						) : (
+							<EmptyState
+								onCreateNew={() => setIsCreateDialogOpen(true)}
+								searchQuery={searchQuery}
+								showArchived={showArchived}
 							/>
-						</div>
-					</div>
-					<div className="flex items-center gap-2">
-						<Button
-							onClick={() => setShowArchived(!showArchived)}
-							size="sm"
-							variant={showArchived ? "default" : "outline"}
-						>
-							<Archive className="mr-2 h-4 w-4" />
-							{showArchived ? "Showing Archived" : "Show Archived"}
-						</Button>
+						)}
 					</div>
 				</div>
-
-				{/* Resume Grid */}
-				{filteredResumes.length > 0 ? (
-					<>
-						{/*
-						 * Says what the filter did, and is announced when it changes.
-						 *
-						 * The search filters client-side on every keystroke, so the grid changes
-						 * without focus ever moving. Nothing said so: the input reported the query
-						 * and the list silently shrank, which a screen-reader user cannot detect
-						 * and a sighted user has to count for themselves.
-						 *
-						 * Visually this is also the answer to "why is only one card showing" when
-						 * the filter is narrow or the list is paginated.
-						 */}
-						<p
-							aria-live="polite"
-							className="mb-4 text-muted-foreground text-sm"
-							role="status"
-						>
-							{resultSummary({
-								matched: filteredResumes.length,
-								query: searchQuery,
-								total: totalResumes,
-							})}
-						</p>
-						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-							{pagedResumes.map((resume: Resume) => (
-								<ResumeCard
-									isArchiving={archivingId === resume.id}
-									isDuplicating={duplicatingId === resume.id}
-									key={resume.id}
-									onArchive={() =>
-										handleArchiveResume(resume.id, true, resume.name)
-									}
-									onDelete={() => {
-										setResumeToDelete(resume.id);
-										setIsDeleteDialogOpen(true);
-									}}
-									onDuplicate={() =>
-										handleDuplicateResume(resume.id, resume.name)
-									}
-									onEdit={() => {
-										setActiveResumeId(resume.id);
-										navigate(`/resume-editor/${resume.id}`);
-									}}
-									onExport={() => handleExportResume(resume.id, resume.name)}
-									onRestore={() =>
-										handleArchiveResume(resume.id, false, resume.name)
-									}
-									resume={resume}
-									variations={getVariations(resume.id)}
-								/>
-							))}
-						</div>
-						{filteredResumes.length > pageSize && (
-							<div className="mt-8 flex items-center justify-center gap-3">
-								<Button
-									disabled={page <= 1}
-									onClick={() => setPage((p) => Math.max(1, p - 1))}
-									size="sm"
-									variant="outline"
-								>
-									Previous
-								</Button>
-								<span className="text-muted-foreground text-sm">
-									Page {page} of {totalPages}
-								</span>
-								<Button
-									disabled={page >= totalPages}
-									onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-									size="sm"
-									variant="outline"
-								>
-									Next
-								</Button>
-							</div>
-						)}
-					</>
-				) : (
-					<EmptyState
-						onCreateNew={() => setIsCreateDialogOpen(true)}
-						searchQuery={searchQuery}
-						showArchived={showArchived}
-					/>
-				)}
 			</main>
 
 			{/* Create Dialog */}

@@ -174,8 +174,20 @@ describe("the panes are proportioned for the task", () => {
 		);
 	});
 
-	it("gives the form more room than it used to", () => {
-		expect(sizes()["form-panel"]).toBe("38%");
+	it("gives the form the largest share, because editing is the job", () => {
+		// Was 38/44/18. The preview is a fixed-aspect page that scrolls anyway, so it
+		// was taking the most room from the surface where all the typing happens.
+		// Pinned as a relationship rather than a literal: the point is which pane wins,
+		// not a magic number.
+		const s = sizes();
+		const pct = (v: string) => Number.parseInt(v, 10);
+		expect(pct(s["form-panel"] as string)).toBeGreaterThanOrEqual(40);
+		expect(pct(s["form-panel"] as string)).toBeGreaterThanOrEqual(
+			pct(s["right-panel"] as string),
+		);
+		expect(pct(s["right-panel"] as string)).toBeGreaterThanOrEqual(
+			pct(s["left-panel"] as string),
+		);
 	});
 
 	it("does not let any pane collapse to nothing", () => {
@@ -213,9 +225,9 @@ describe("controls stop competing with the document", () => {
 	it("gives every disclosure its own flag", () => {
 		// One `designOpen` driving two disclosures on opposite sides of the screen meant
 		// opening the rail's Templates also shoved the preview's toolbar open.
-		const owners = [
-			...editor.matchAll(/onOpenChange=\{(set[A-Za-z]+)\}/g),
-		].map((m) => m[1] as string);
+		const owners = [...editor.matchAll(/onOpenChange=\{(set[A-Za-z]+)\}/g)].map(
+			(m) => m[1] as string,
+		);
 		expect(new Set(owners).size, "two disclosures share one flag").toBe(
 			owners.length,
 		);
