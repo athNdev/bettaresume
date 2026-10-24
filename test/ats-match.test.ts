@@ -267,7 +267,8 @@ describe("prose is not a keyword", () => {
 		const r = analyzeJobMatch({
 			resume: resume([]),
 			jobTarget: {
-				description: "We are looking for someone who can ship.\nRequired: Docker",
+				description:
+					"We are looking for someone who can ship.\nRequired: Docker",
 			},
 		});
 		expect(r.keywords.map((k) => k.keyword)).toEqual(["Docker"]);

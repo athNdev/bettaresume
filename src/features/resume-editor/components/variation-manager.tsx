@@ -228,8 +228,12 @@ export function VariationManager({
 						<DialogHeader>
 							<DialogTitle>Create Variation</DialogTitle>
 							<DialogDescription>
-								Create a new variation of "{baseResume.name}" to customize for a
-								specific role or company.
+								Start from &quot;{baseResume.name}&quot; with every section
+								linked to it. Change what is different for this role — those
+								sections detach and become yours — while everything else keeps
+								following the base when you edit it there. Fork rather than edit
+								when the next application needs a different emphasis, not a
+								different history.
 							</DialogDescription>
 						</DialogHeader>
 						<div className="space-y-4 py-4">

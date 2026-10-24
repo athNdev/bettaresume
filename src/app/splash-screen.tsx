@@ -16,7 +16,7 @@ export function SplashScreen({ message = "Loading..." }: SplashScreenProps) {
 		<div className="flex min-h-screen flex-col items-center justify-center bg-background">
 			{/* Logo */}
 			<div className="mb-8">
-				<img src="/logo.svg" alt="Betta Resume Logo" className="h-24 w-auto" />
+				<img alt="Betta Resume Logo" className="h-24 w-auto" src="/logo.svg" />
 			</div>
 
 			{/* App Name */}
@@ -26,8 +26,8 @@ export function SplashScreen({ message = "Loading..." }: SplashScreenProps) {
 			{/* Spinner */}
 			<div className="flex flex-col items-center gap-4">
 				<div
-					className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
 					aria-label="Loading"
+					className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
 					role="status"
 				/>
 				<p className="text-muted-foreground text-sm">{message}</p>

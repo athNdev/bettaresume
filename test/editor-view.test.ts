@@ -279,3 +279,36 @@ describe("unsaved work survives leaving a section", () => {
 		);
 	});
 });
+
+describe("the keyboard does the obvious thing", () => {
+	it("⌘/Ctrl+S flushes the pending saves", () => {
+		// Autosave exists, so the shortcut is not about preventing loss — it is about
+		// answering "did that save?" the moment the user asks.
+		expect(editor).toMatch(/event\.key\.toLowerCase\(\) !== "s"/);
+		expect(editor).toMatch(/flushPendingSaves\(\)/);
+		// And the browser's own save dialog is suppressed, or the shortcut is invisible.
+		expect(editor).toMatch(/event\.preventDefault\(\)/);
+	});
+
+	it("each form registers its save, and only runs when dirty", () => {
+		// Twelve forms each own a save trigger; the registry is how one keystroke
+		// reaches all of them without wiring twelve components.
+		expect(autoSaveSrc).toMatch(/registerPendingSave\(saveIfDirty\)/);
+		expect(autoSaveSrc).toMatch(
+			/JSON\.stringify\(localData\) === savedDataRef\.current/,
+		);
+	});
+});
+
+describe("the section you are editing says what it is", () => {
+	it("shows the section name and type above its form", () => {
+		expect(editor).toMatch(/<h2 className="truncate font-semibold text-sm">/);
+	});
+
+	it("offers the link control where the field is, not in an overflow menu", () => {
+		// Editing is what changes a section's link state, so the control belongs beside
+		// the fields it affects — it used to exist only in the outline's overflow menu.
+		expect(editor).toMatch(/Linked — click to take over/);
+		expect(editor).toMatch(/Detached — click to re-link/);
+	});
+});

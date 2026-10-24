@@ -12,7 +12,9 @@ import {
 	Layers,
 	Layout,
 	Library,
+	Link2,
 	Loader2,
+	Unlink2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -52,6 +54,7 @@ import {
 	draftChangeCount,
 	isDraftDirty,
 } from "@/features/resume-editor/lib/draft-state";
+import { usePreviewPages } from "@/features/resume-editor/lib/preview-pages";
 import type {
 	Award,
 	Certification,
@@ -88,6 +91,7 @@ import {
 import { useConfirm } from "@/hooks/use-confirm";
 import { useHashRouter } from "@/lib/hash-router";
 import { resolvePersonalInfo } from "@/lib/typst/serialize";
+import { flushPendingSaves } from "@/lib/ui/save-registry";
 import { cn } from "@/lib/utils";
 import {
 	FormattingToolbar,
@@ -193,6 +197,28 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		setEditorError(`${what}: ${detail}`);
 	}, []);
 
+	/*
+	 * ⌘/Ctrl+S saves.
+	 *
+	 * Each section form owns its own save trigger, so the shortcut cannot reach them
+	 * directly; `useAutoSave` registers every form's save and this flushes the dirty
+	 * ones. It runs even though autosave exists, because "did that save?" is the
+	 * question a user is asking when they press it, and a shortcut that answers it
+	 * immediately is worth more than the debounce it bypasses.
+	 */
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (!(event.metaKey || event.ctrlKey)) return;
+			if (event.key.toLowerCase() !== "s") return;
+			event.preventDefault();
+			void flushPendingSaves().then((ran) => {
+				if (ran > 0) toast.success("Saved");
+			});
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, []);
+
 	// Live updates for draft (instant, no server call)
 	const handleDraftSectionDataUpdate = useCallback(
 		(
@@ -292,7 +318,9 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		},
 		[handleDraftSummaryUpdate],
 	);
-	const [previewScale, setPreviewScale] = useState(0.7);
+	const [previewScale, setPreviewScale] = useState(1);
+	/* Page count is published by the preview once it compiles; null until then. */
+	const pageCount = usePreviewPages((s) => s.pageCount);
 	const [contentOpen, setContentOpen] = useState(true);
 	/*
 	 * The typography controls default to collapsed so the document gets the space.
@@ -1317,7 +1345,59 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							<ScrollArea className="flex-1">
 								<div className="p-4">
 									{selectedSection ? (
-										renderSectionForm()
+										<>
+											{/*
+											 * The form's own header: what you are editing, and whether
+											 * it still follows the base resume.
+											 *
+											 * The link state used to live only in the outline's overflow
+											 * menu, which meant the answer to "is this section still
+											 * shared with my other resumes?" was two clicks away from
+											 * the field you were about to edit. It sits here now,
+											 * because editing is what changes the answer.
+											 */}
+											<div className="mb-4 flex items-start justify-between gap-3">
+												<div className="min-w-0">
+													<h2 className="truncate font-semibold text-sm">
+														{String(selectedSection.content.title ?? "") ||
+															SECTION_CONFIGS[selectedSection.type]
+																.defaultTitle}
+													</h2>
+													<p className="text-muted-foreground text-xs">
+														{SECTION_CONFIGS[selectedSection.type].label}
+													</p>
+												</div>
+
+												{selectedSection.baseSectionId &&
+												handleSetSectionLink ? (
+													<Button
+														onClick={() =>
+															handleSetSectionLink(
+																selectedSection.id,
+																!selectedSection.linkedToBase,
+															)
+														}
+														size="sm"
+														static
+														variant="outline"
+													>
+														{selectedSection.linkedToBase ? (
+															<>
+																<Unlink2 className="mr-2 h-3.5 w-3.5" />
+																Linked — click to take over
+															</>
+														) : (
+															<>
+																<Link2 className="mr-2 h-3.5 w-3.5" />
+																Detached — click to re-link
+															</>
+														)}
+													</Button>
+												) : null}
+											</div>
+
+											{renderSectionForm()}
+										</>
 									) : (
 										<PanelEmpty
 											action={
@@ -1386,7 +1466,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 														activeResume.template ??
 														"minimal") as TemplateType
 												]?.name ?? "Minimal"}
-												· {Math.round(previewScale * 100)}%
+												{" · "}
+												{Math.round(previewScale * 100)}%
+												{pageCount !== null ? (
+													<span>
+														{" · "}
+														{pageCount} {pageCount === 1 ? "page" : "pages"}
+													</span>
+												) : null}
 											</span>
 										</CollapsibleTrigger>
 									</div>

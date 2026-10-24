@@ -51,8 +51,6 @@ function fileOf(bytes: Uint8Array, name: string, type = ""): File {
 	} as File;
 }
 
-
-
 describe("the DOCX path", () => {
 	it("reads the document's own text", async () => {
 		const { text } = await extractDocxText(

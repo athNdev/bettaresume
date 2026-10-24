@@ -3,10 +3,11 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+	publicProcedure,
 	REDACTED_ERROR_MESSAGE,
+	router,
 	type ValidationIssue,
 } from "../src/trpc/index";
-import { publicProcedure, router } from "../src/trpc/index";
 
 /**
  * Error-formatter tests.

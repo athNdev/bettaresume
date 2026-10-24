@@ -127,7 +127,12 @@ describe("wrangler can actually apply every migration", () => {
 				"--config",
 				"wrangler.dev.jsonc",
 			],
-			{ encoding: "utf8", input: "Y\n", cwd: process.cwd(), shell: process.platform === "win32" },
+			{
+				encoding: "utf8",
+				input: "Y\n",
+				cwd: process.cwd(),
+				shell: process.platform === "win32",
+			},
 		);
 
 		expect(out).not.toMatch(/SQLITE_AUTH/);

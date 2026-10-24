@@ -81,8 +81,7 @@ describe("the dead persistence layer stays deleted", () => {
 });
 
 describe("real persistence is the tRPC path, not a local queue", () => {
-	const src = (p: string) =>
-		readFileSync(resolve(process.cwd(), p), "utf8");
+	const src = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 
 	it("section edits go through the live updateSection mutation", () => {
 		const editor = src("src/features/resume-editor/resume-editor.tsx");

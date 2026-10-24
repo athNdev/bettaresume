@@ -1,7 +1,7 @@
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require("node:fs");
+const path = require("node:path");
 
-const stateDir = path.resolve(__dirname, '..', '.wrangler', 'state');
+const stateDir = path.resolve(__dirname, "..", ".wrangler", "state");
 
 function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -38,7 +38,7 @@ async function rmWithRetries(targetPath, attempts = 8) {
 		if (fs.existsSync(stateDir)) {
 			await rmWithRetries(stateDir);
 		}
-		process.stdout.write('[db] Cleared local D1 state\n');
+		process.stdout.write("[db] Cleared local D1 state\n");
 	} catch (error) {
 		process.stderr.write(
 			`[db] Failed to clear ${stateDir}. If you have a running wrangler dev process, stop it and rerun.\n${error?.message || error}\n`,

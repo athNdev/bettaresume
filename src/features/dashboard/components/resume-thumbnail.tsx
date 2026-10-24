@@ -23,7 +23,11 @@ export interface ResumeThumbnailProps {
 	className?: string;
 }
 
-export function ResumeThumbnail({ resume, onClick, className }: ResumeThumbnailProps) {
+export function ResumeThumbnail({
+	resume,
+	onClick,
+	className,
+}: ResumeThumbnailProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [mounted, setMounted] = useState(false);
 	const [inView, setInView] = useState(false);
@@ -59,7 +63,10 @@ export function ResumeThumbnail({ resume, onClick, className }: ResumeThumbnailP
 		return () => obs.disconnect();
 	}, []);
 
-	const pageWidthPx = useMemo(() => getPageWidthPx(resume), [resume.metadata?.settings?.pageSize]);
+	const pageWidthPx = useMemo(
+		() => getPageWidthPx(resume),
+		[resume.metadata?.settings?.pageSize],
+	);
 
 	useEffect(() => {
 		if (!mounted) return;
@@ -75,7 +82,7 @@ export function ResumeThumbnail({ resume, onClick, className }: ResumeThumbnailP
 		const ro = new ResizeObserver(() => {
 			const width = el.clientWidth;
 			// Fit the page width into the container with a bit of padding.
-			const computed = (Math.max(0, width - 12) / pageWidthPx);
+			const computed = Math.max(0, width - 12) / pageWidthPx;
 			const clamped = Math.min(0.28, Math.max(0.12, computed));
 			setScale(clamped);
 		});
@@ -88,7 +95,6 @@ export function ResumeThumbnail({ resume, onClick, className }: ResumeThumbnailP
 
 	return (
 		<div
-			ref={containerRef}
 			className={cn(
 				"relative flex aspect-[8.5/11] w-full items-start justify-center overflow-hidden rounded-md border bg-muted/50",
 				"transition-colors hover:bg-muted/70",
@@ -96,10 +102,16 @@ export function ResumeThumbnail({ resume, onClick, className }: ResumeThumbnailP
 				className,
 			)}
 			onClick={onClick}
+			ref={containerRef}
 		>
 			{shouldRenderPreview ? (
 				<div className="absolute inset-0 flex items-start justify-center p-1">
-					<Preview className="pointer-events-none select-none" paginate={false} resume={resume} scale={scale} />
+					<Preview
+						className="pointer-events-none select-none"
+						paginate={false}
+						resume={resume}
+						scale={scale}
+					/>
 				</div>
 			) : (
 				<div className="flex h-full w-full items-center justify-center">

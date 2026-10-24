@@ -34,7 +34,10 @@ describe("shouldReportLocalEdit", () => {
 
 	it("reports a genuine edit", () => {
 		expect(
-			shouldReportLocalEdit(JSON.stringify({ fullName: "Amara Okafor-Test" }), saved),
+			shouldReportLocalEdit(
+				JSON.stringify({ fullName: "Amara Okafor-Test" }),
+				saved,
+			),
 		).toBe(true);
 	});
 
@@ -46,7 +49,9 @@ describe("shouldReportLocalEdit", () => {
 	});
 
 	it("reports when a field is cleared back toward empty but differs from the baseline", () => {
-		expect(shouldReportLocalEdit(JSON.stringify({ fullName: "" }), saved)).toBe(true);
+		expect(shouldReportLocalEdit(JSON.stringify({ fullName: "" }), saved)).toBe(
+			true,
+		);
 	});
 
 	it("is order-sensitive for object keys, matching JSON.stringify semantics", () => {
@@ -62,8 +67,11 @@ describe("shouldReportLocalEdit", () => {
 	});
 
 	it("treats an empty-object baseline as dirty once anything is typed", () => {
-		expect(shouldReportLocalEdit(JSON.stringify({ fullName: "" }), JSON.stringify({}))).toBe(
-			true,
-		);
+		expect(
+			shouldReportLocalEdit(
+				JSON.stringify({ fullName: "" }),
+				JSON.stringify({}),
+			),
+		).toBe(true);
 	});
 });

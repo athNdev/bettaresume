@@ -61,6 +61,7 @@ import {
 	type TemplateType,
 } from "@/features/resume-editor/types";
 import { useActiveResumeStore, useResumeMutations, useResumes } from "@/hooks";
+import { useConfirm } from "@/hooks/use-confirm";
 import { useHashRouter } from "@/lib/hash-router";
 import { extractDocumentText } from "@/lib/import/extractors";
 import { toLibraryPayload } from "@/lib/import/library-item";
@@ -203,6 +204,7 @@ function DashboardContent() {
 	} = useResumeMutations();
 	const utils = api.useUtils();
 	const bulkUpsertSections = api.section.bulkUpsert.useMutation();
+	const confirm = useConfirm();
 
 	const firstName = greetingName(user);
 	// Filtered resumes
@@ -521,6 +523,25 @@ function DashboardContent() {
 						"No sections were recognised. The file may be a scan, or its headings may not match a resume format.",
 					);
 				}
+
+				/*
+				 * A review gate. Nothing is written until the user has seen what was
+				 * extracted — which is the same promise the editor's import sheet makes,
+				 * and the reason an import can never quietly replace a document.
+				 */
+				const names = result.sections
+					.slice(0, 4)
+					.map((s) => s.title)
+					.join(", ");
+				const more =
+					result.sections.length > 4
+						? ` and ${result.sections.length - 4} more`
+						: "";
+				const confirmed = await confirm(
+					`Import ${result.sections.length} sections from "${file.name}"?`,
+					`Found: ${names}${more}. This creates a new resume — nothing in an existing one is changed.`,
+				);
+				if (!confirmed) return;
 
 				const now = new Date().toISOString();
 				const created = await createResume({

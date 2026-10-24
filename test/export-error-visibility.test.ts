@@ -50,7 +50,9 @@ const source = read("src/components/export/export-buttons.tsx");
 
 // Typst itself is dynamically imported inside the compiler, so importing this module in
 // Node pulls in no WASM and touches no browser API.
-const { toDownloadBlob } = await import("../src/components/export/export-buttons");
+const { toDownloadBlob } = await import(
+	"../src/components/export/export-buttons"
+);
 const { DOCX_MIME } = await import("../src/lib/export/docx");
 
 describe("export failures are visible to the user", () => {
@@ -99,7 +101,9 @@ describe("export failures are visible to the user", () => {
 			source.indexOf("const exportPDF"),
 			source.indexOf("const exportDocx"),
 		);
-		expect(handler).toMatch(/downloadFile\(pdfBytes, filename, "application\/pdf"\)/);
+		expect(handler).toMatch(
+			/downloadFile\(pdfBytes, filename, "application\/pdf"\)/,
+		);
 		expect(handler).not.toMatch(/pdfBytes\.buffer/);
 		expect(handler).not.toMatch(/new Blob\(\[\s*pdfBytes/);
 	});
@@ -109,7 +113,9 @@ describe("export failures are visible to the user", () => {
 		// Mirror `get_artifact`: a small view inside a large WASM memory buffer.
 		const heap = new Uint8Array(16 * 1024 * 1024);
 		const pdfStart = 12_582_912;
-		const pdf = new TextEncoder().encode("%PDF-1.7\n% fabricated bytes\n%%EOF\n");
+		const pdf = new TextEncoder().encode(
+			"%PDF-1.7\n% fabricated bytes\n%%EOF\n",
+		);
 		heap.set(pdf, pdfStart);
 		const view = heap.subarray(pdfStart, pdfStart + pdf.byteLength);
 
@@ -126,9 +132,7 @@ describe("export failures are visible to the user", () => {
 
 		const bytes = new Uint8Array(await blob.arrayBuffer());
 		expect(bytes.byteLength).toBe(pdf.byteLength);
-		expect(new TextDecoder().decode(bytes)).toBe(
-			new TextDecoder().decode(pdf),
-		);
+		expect(new TextDecoder().decode(bytes)).toBe(new TextDecoder().decode(pdf));
 		// The bytes really are the PDF, read from its offset in the heap.
 		expect(new TextDecoder().decode(bytes.slice(0, 8))).toBe("%PDF-1.7");
 	});
@@ -189,9 +193,9 @@ describe("the DOCX export path is wired and honest", () => {
 		expect(toDownloadBlob(new Uint8Array([1, 2, 3]), DOCX_MIME).type).toBe(
 			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 		);
-		expect(toDownloadBlob(new Uint8Array([1, 2, 3]), "application/pdf").type).toBe(
-			"application/pdf",
-		);
+		expect(
+			toDownloadBlob(new Uint8Array([1, 2, 3]), "application/pdf").type,
+		).toBe("application/pdf");
 	});
 
 	it("keeps the DOCX byte length, not the buffer length", () => {

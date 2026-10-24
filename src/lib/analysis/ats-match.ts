@@ -410,7 +410,7 @@ export function analyzeJobMatch({
 	// was marked required".
 	if (keywords.length > 0 && requiredTotal === 0) {
 		suggestions.push(
-			"Nothing in this job description was marked as required, so every keyword below is treated as preferred. Mark the must-haves (for example \"Required: …\") so the two can be weighed separately.",
+			'Nothing in this job description was marked as required, so every keyword below is treated as preferred. Mark the must-haves (for example "Required: …") so the two can be weighed separately.',
 		);
 	}
 	for (const d of diagnostics) {
