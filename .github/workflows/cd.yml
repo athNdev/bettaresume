@@ -181,18 +181,23 @@ jobs:
         # did not have it. Applying before the deploy means the worker never
         # serves traffic against a schema it does not match.
         #
-        # Two failure modes are deliberately treated differently:
+        # WHY A MISSING D1 SCOPE IS NOW FATAL, NOT A WARNING
         #
-        #   ran and failed  -> BLOCK. A SQL error means the migration is wrong.
-        #   cannot run      -> WARN. Code 7403 means the API token lacks D1
-        #                      permission. Blocking every deploy on a missing scope
-        #                      would be worse than the drift, because it stops all
-        #                      shipping. It is reported as a warning on every run so
-        #                      the drift stays visible.
+        # This step used to warn on code 7403 and continue, on the argument that a
+        # credential problem should not block every deploy. On 2026-10-24 that
+        # argument was tested and lost:
         #
-        # Grant D1 read/write on the token to close this for real.
+        #   * migration 0006 (Section.baseSectionId / linkedToBase) was not applied
+        #     because the token lacked D1 scope;
+        #   * the Worker deployed anyway and queried columns that did not exist;
+        #   * `resume.getById` selects every Section column through Drizzle, so the
+        #     editor failed to load for every user, while CD reported success.
+        #
+        # The deploy that hides a schema mismatch is not a deploy. So: unreachable
+        # D1 blocks the release, and the message names the fix. To restore CD, the
+        # CLOUDFLARE_API_TOKEN secret needs D1 read/write added
+        # (My Profile -> API Tokens -> Edit -> add "D1" -> Edit).
         id: migrate
-        continue-on-error: true
         env:
           # Required. An earlier revision of this step dropped these when it was
           # converted from wrangler-action to a direct `npx wrangler` call, so
@@ -215,8 +220,8 @@ jobs:
             exit 1
           fi
           if echo "$log" | grep -qE '\b7403\b|not authorized to access'; then
-            echo "::warning::Cannot reach D1: the CLOUDFLARE_API_TOKEN secret lacks D1 permission (code 7403). Schema drift is possible — e.g. 0001_resume_base_resume_fk.sql is not applied, so the Resume.baseResumeId foreign key does not exist in production. Grant the token D1 read/write."
-            exit 0
+            echo "::error::Cannot reach D1: CLOUDFLARE_API_TOKEN lacks D1 permission (7403). Refusing to deploy a Worker ahead of its schema — that is what broke the editor on 2026-10-24. Fix: add D1 read/write to the token, then re-run this workflow."
+            exit 1
           fi
           echo "::error::D1 migration failed for a reason other than missing permissions. The database is now out of sync with api/drizzle."
           exit 1
