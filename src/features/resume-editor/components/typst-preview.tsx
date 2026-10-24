@@ -9,6 +9,8 @@
  */
 
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
+import { usePreviewPages } from "@/features/resume-editor/lib/preview-pages";
 import type { Resume } from "@/features/resume-editor/types";
 import { cn } from "@/lib/utils";
 import { useTypstPreview } from "../hooks/use-typst-preview";
@@ -26,6 +28,17 @@ export function TypstPreview({
 }: TypstPreviewProps) {
 	const { svgPages, isLoading, error, fallbackPageWidth, fallbackPageHeight } =
 		useTypstPreview(resume);
+
+	/*
+	 * Publish the page count. It is only knowable here, after compilation, and the
+	 * review panel's rubric needs it — "how many pages is my resume" is the question
+	 * a candidate actually asks. `null` while nothing has compiled, which the rubric
+	 * reports as unknown rather than as zero.
+	 */
+	const setPageCount = usePreviewPages((s) => s.setPageCount);
+	useEffect(() => {
+		setPageCount(svgPages.length > 0 ? svgPages.length : null);
+	}, [svgPages, setPageCount]);
 
 	// Use fallback dimensions (in pt) only for the skeleton/error placeholders.
 	// Real pages derive their size from the actual SVG attributes.

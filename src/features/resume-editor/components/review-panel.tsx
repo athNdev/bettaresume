@@ -27,6 +27,7 @@ import {
 	auditParseFidelity,
 	type ParseDiagnostic,
 } from "@/lib/analysis/parse-fidelity";
+import { PlainTextTest, RubricChecklist } from "./rubric-panel";
 
 /**
  * Surfaces both analysis engines next to the preview they describe.
@@ -172,8 +173,15 @@ export function ReviewPanel({
 					</SheetDescription>
 				</SheetHeader>
 
-				<Tabs className="min-h-0 flex-1" defaultValue="parse">
+				<Tabs className="min-h-0 flex-1" defaultValue="checklist">
 					<TabsList className="mx-6 mt-4">
+						{/*
+						 * The checklist is first and default: it is the one surface that
+						 * answers "what should I do next", which is the question a user opens
+						 * review with. The other tabs are the evidence behind its verdicts.
+						 */}
+						<TabsTrigger value="checklist">Checklist</TabsTrigger>
+						<TabsTrigger value="plaintext">Plain text</TabsTrigger>
 						<TabsTrigger value="parse">
 							Parser fit
 							{diagnostics.length > 0 ? (
@@ -212,6 +220,26 @@ export function ReviewPanel({
 							) : null}
 						</TabsTrigger>
 					</TabsList>
+
+					<TabsContent
+						className="min-h-0 flex-1 px-6 pb-6"
+						forceMount
+						value="checklist"
+					>
+						<ScrollArea className="h-full pr-3">
+							<RubricChecklist resume={resume} />
+						</ScrollArea>
+					</TabsContent>
+
+					<TabsContent
+						className="min-h-0 flex-1 px-6 pb-6"
+						forceMount
+						value="plaintext"
+					>
+						<ScrollArea className="h-full pr-3">
+							<PlainTextTest resume={resume} />
+						</ScrollArea>
+					</TabsContent>
 
 					<TabsContent
 						className="min-h-0 flex-1 px-6 pb-6"
