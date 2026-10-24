@@ -11,6 +11,7 @@ import {
 	Workflow,
 } from "@/components/marketing/sections";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
+import { OG_IMAGE } from "@/lib/site";
 
 const TITLE = "Betta Resume — one master resume, tailored per role";
 const DESCRIPTION =
@@ -26,6 +27,12 @@ export const metadata: Metadata = {
 		title: TITLE,
 		description: DESCRIPTION,
 		siteName: "Betta Resume",
+		/*
+		 * Repeated from the root layout on purpose: a page that declares `openGraph`
+		 * replaces the parent object rather than merging into it, so omitting this
+		 * drops the card from the only page that is ever shared as a link.
+		 */
+		images: [OG_IMAGE],
 	},
 	twitter: {
 		card: "summary_large_image",

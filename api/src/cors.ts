@@ -51,10 +51,9 @@ export function requestHeadersFor(environment: string | undefined): string {
 /**
  * Response headers a cross-origin browser client is allowed to read.
  *
- * `x-request-id` is not emitted yet — emitting it is the separate request-id
- * plumbing ticket. Listing it here means that ticket only has to start sending
- * the header; no second change to this file will be needed for the browser to
- * become able to read it.
+ * `x-request-id` is emitted by `server.ts` on every response path and leads every
+ * Worker log line for a failure, so a user can quote the id from their own response
+ * and an operator can find the matching entry.
  */
 export const EXPOSED_HEADERS = "x-request-id";
 

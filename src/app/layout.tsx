@@ -1,15 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { defaultFont, fontVariables } from "@/lib/fonts";
+import { OG_IMAGE, SITE_URL } from "@/lib/site";
 import "@/styles/globals.css";
-
-/**
- * Canonical origin. GitHub Pages serves the site from
- * https://<owner>.github.io/<repo>, so absolute URLs for metadata, sitemap and
- * robots are derived from here rather than guessed per page. Override with
- * NEXT_PUBLIC_SITE_URL if the domain changes.
- */
-const SITE_URL =
-	process.env.NEXT_PUBLIC_SITE_URL ?? "https://athndev.github.io/bettaresume";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(SITE_URL),
@@ -37,6 +29,15 @@ export const metadata: Metadata = {
 		type: "website",
 		siteName: "Betta Resume",
 		locale: "en_GB",
+		/*
+		 * `/og.png`, not the file convention's `/opengraph-image`.
+		 *
+		 * The convention emits an extensionless URL, and GitHub Pages types
+		 * extensionless files as `application/octet-stream`. Crawlers read the
+		 * extension before they read `og:image:type`, so a card that renders
+		 * perfectly in a browser would silently refuse to unfurl.
+		 */
+		images: [OG_IMAGE],
 	},
 	twitter: {
 		card: "summary_large_image",

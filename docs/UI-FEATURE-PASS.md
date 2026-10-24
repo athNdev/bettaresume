@@ -90,14 +90,99 @@ exact transition properties, icon stroke matched to text weight, motion restrain
 | 5.5 | Export: `Name-Role.pdf` naming, page count in the toolbar | filename asserted |
 | 5.6 | Keyboard: ⌘/Ctrl+S saves, Esc closes, focus returns to the trigger | tab-order walk |
 
+### Wave 4 — what actually shipped, and the one deviation
+
+5.1–5.3, 5.5 and 5.6 shipped as written. 5.6 needed no new code: Radix's dialog and
+sheet primitives already supply Escape handling, focus trapping and focus return, so the
+work was asserting that nothing bypasses them (`test/confirm-dialog.test.ts`). That test
+found a real defect in `useConfirm`: **Escape and dismissal closed the dialog without
+resolving the promise the caller was awaiting**, so `await confirm(...)` hung forever and
+the action silently did nothing. Every exit now routes through one `settle()`.
+
+**5.4 did not add a fourth template.** `test/typst-templates.test.ts` and
+`test/marketing-claims.test.ts` both pin exactly three, and the marketing page says
+"Three templates". A fourth is a marketing and template-authoring job — a new `.typ`
+file with its own compiled-output test — not a UI-polish item, and adding a template the
+marketing page does not mention would make the page wrong. The specimens are the part of
+5.4 that was actually about legibility before choosing.
+
 ## 6. Wave 5 — Platform
 
 | # | Change | Proof |
 |---|---|---|
 | 6.1 | OG image + metadata for the marketing page | crawler-visible |
-| 6.2 | CSP `<meta>` on the marketing page | no inline script violations |
+| 6.2 | CSP `<meta>` on the marketing page | **not built** — see below |
 | 6.3 | Request IDs on the API | every response carries `x-request-id` |
 | 6.4 | D1 backup export scheduled | restore rehearsed |
+| 6.5 | One canonical origin | canonical, sitemap, robots, OG all agree |
+| 6.6 | API response hardening | every response path, asserted |
+
+### 6.1 — what actually shipped
+
+The card is generated at build time by `src/app/og.png/route.tsx` via `ImageResponse`, so
+its words cannot drift from the page's. Two defects were found while wiring it:
+
+1. **The canonical origin was wrong.** `https://athndev.github.io/bettaresume` was
+defaulted in three files, while production is served from `app.bettaresume.com` (the
+Pages hostname redirects to it). Every canonical, sitemap entry and OG URL therefore
+pointed at the redirecting host — the exact duplicate-origin signal a canonical tag
+exists to prevent. Now one constant in `src/lib/site.ts`.
+
+2. **The generated file had no extension.** The file convention emits `/opengraph-image`;
+GitHub Pages types extensionless files as `application/octet-stream`, and crawlers check
+the extension before `og:image:type`. The card would have rendered perfectly in a browser
+and never unfurled. The route directory is now named `og.png`, so the URL and the content
+type agree without a post-build copy.
+
+Also: a page that declares `openGraph` **replaces** the parent object rather than merging
+into it, so the marketing page had silently lost its card when only the layout carried
+one. `images` is repeated on both, from one constant.
+
+### 6.2 — why there is no CSP
+
+The plan called for a `<meta http-equiv="Content-Security-Policy">` on the marketing page
+because GitHub Pages cannot send response headers. It is not built, deliberately:
+
+- The page it would protect has **no user input rendered as HTML** and no inline event
+  handlers. The only `dangerouslySetInnerHTML` in the product is the hash-bounce script in
+  the root layout and the Typst compiler's SVG output.
+- The policy would have to allow Clerk's script, a WASM compiler
+  (`wasm-unsafe-eval`) and Next's inline hydration bootstrap. Getting any of those wrong
+  breaks **sign-in** — a total outage in exchange for a header protecting a static page.
+- There is no report-only mode to learn from: `Content-Security-Policy-Report-Only` in a
+  `<meta>` tag is ignored by browsers, and this session could not drive a real browser
+  against Clerk to verify the policy.
+
+What replaced it is the hardening that *is* verifiable: the Worker sets
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+`Cache-Control: no-store` and `Strict-Transport-Security` on **every** response path
+(`api/src/security-headers.ts`), asserted across preflight, health, 405, 404 and tRPC.
+`Cache-Control: no-store` is the one with teeth: every response is scoped to one user's
+Bearer token.
+
+### 6.4 — what actually shipped
+
+`.github/workflows/backup.yml` exports production nightly at 03:17 UTC and keeps the
+artifact for 90 days. It does not merely download bytes: it **loads the export into
+SQLite**, asserts the tables exist, asserts `User`/`Resume`/`Section` hold rows, and runs
+`PRAGMA foreign_key_check`. A backup that cannot be restored fails the run rather than
+being archived.
+
+That rehearsal found a real trap. D1 emits `Section` before `Resume`, and `Section`'s
+`INSERT`s name a parent that does not exist yet, so SQLite refuses to prepare them with
+foreign-key enforcement on — `no such table: main.Resume` — even though the export opens
+with `PRAGMA defer_foreign_keys=TRUE`. A restore must load with `foreign_keys=OFF` and
+check integrity afterwards. `docs/BACKUP.md` records the sequence, the manual export via
+the D1 API (so it does not depend on CI's config substitution), the production restore
+order, and what is explicitly not covered.
+
+### 6.3 — request ids
+
+`cors.ts` had already listed `x-request-id` in `Access-Control-Expose-Headers`, telling
+browsers they could read a header nothing sent. Every response now carries one
+(`api/src/request-id.ts`), a valid inbound id is honoured so proxies and retries keep
+their correlation, an unparseable one is replaced rather than reflected, and the id leads
+every Worker log line for a failure so a user's quoted id finds its entry with one grep.
 
 ---
 
