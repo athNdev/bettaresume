@@ -284,7 +284,18 @@ out of `node_modules` into `public/wasm/` by `scripts/copy-typst-assets.mjs`, wh
 from `prebuild` and `predev`; that directory is gitignored, because the source of truth is
 the lockfile. The typefaces are vendored in `public/fonts/` (committed — they are the
 thing that rotted) and refreshed by `scripts/vendor-fonts.mjs`, which is deliberately
-**not** a build step so a build cannot fail because GitHub or Google is unreachable.
+**not** a build step so a build cannot fail because GitHub is unreachable.
+
+**Do not vendor a variable font.** Every family except Lato is published upstream as one
+variable font, and Typst loads it and reports the right family — but this build does not
+apply the `wght` axis. Measured: the same word at weights 400, 700 and 900 produced
+byte-identical SVG *and* byte-identical PDF. A variable file therefore renders every bold
+heading in the export at regular weight, silently. `vendor-fonts.mjs` instantiates static
+files per weight with HarfBuzz and verifies each one's `familyName` and `usWeightClass`;
+`test/typst-assets.test.ts` then re-checks both from disk. Montserrat is taken from its
+own upstream static builds because HarfBuzz's instancer keeps the *instance* name
+("Montserrat Thin") rather than rewriting the family, which would make it invisible to
+`#set text(font: "Montserrat")`.
 
 **Rendering is unverified in CI.** No browser, so no test here can prove a PDF's page
 count. Anything claiming to have verified PDF output from a headless node has not.
