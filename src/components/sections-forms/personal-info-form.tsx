@@ -22,14 +22,12 @@ interface PersonalInfoFormProps {
 	data: PersonalInfo;
 	onChange: (data: PersonalInfo) => Promise<void>;
 	onLocalUpdate?: (data: PersonalInfo) => void;
-	title?: string;
 }
 
 export function PersonalInfoForm({
 	data,
 	onChange,
 	onLocalUpdate,
-	title,
 }: PersonalInfoFormProps) {
 	// Auto-save hook handles local state, debouncing, and status tracking
 	const { localData, setLocalData, status, error, retrySave, isDirty } =
@@ -51,9 +49,8 @@ export function PersonalInfoForm({
 
 	return (
 		<div className="relative">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -105,7 +102,7 @@ export function PersonalInfoForm({
 							<div className="relative mt-1">
 								<Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									className="pl-9"
+									className="pl-8"
 									id="email"
 									onChange={(e) => updateField("email", e.target.value)}
 									placeholder="john@example.com"
@@ -119,7 +116,7 @@ export function PersonalInfoForm({
 							<div className="relative mt-1">
 								<Phone className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									className="pl-9"
+									className="pl-8"
 									id="phone"
 									onChange={(e) => updateField("phone", e.target.value)}
 									placeholder="+1 (555) 123-4567"
@@ -132,7 +129,7 @@ export function PersonalInfoForm({
 							<div className="relative mt-1">
 								<MapPin className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									className="pl-9"
+									className="pl-8"
 									id="location"
 									onChange={(e) => updateField("location", e.target.value)}
 									placeholder="San Francisco, CA"
@@ -155,7 +152,7 @@ export function PersonalInfoForm({
 							<div className="relative mt-1">
 								<Link className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									className="pl-9"
+									className="pl-8"
 									id="linkedin"
 									onChange={(e) => updateField("linkedin", e.target.value)}
 									placeholder="linkedin.com/in/johndoe"
@@ -168,7 +165,7 @@ export function PersonalInfoForm({
 							<div className="relative mt-1">
 								<GitBranch className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									className="pl-9"
+									className="pl-8"
 									id="github"
 									onChange={(e) => updateField("github", e.target.value)}
 									placeholder="github.com/johndoe"
@@ -181,7 +178,7 @@ export function PersonalInfoForm({
 							<div className="relative mt-1">
 								<Globe className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									className="pl-9"
+									className="pl-8"
 									id="website"
 									onChange={(e) => updateField("website", e.target.value)}
 									placeholder="johndoe.com"
@@ -194,7 +191,7 @@ export function PersonalInfoForm({
 							<div className="relative mt-1">
 								<Briefcase className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
-									className="pl-9"
+									className="pl-8"
 									id="portfolio"
 									onChange={(e) => updateField("portfolio", e.target.value)}
 									placeholder="portfolio.johndoe.com"

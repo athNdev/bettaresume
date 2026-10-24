@@ -169,7 +169,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 				value={settings.fontFamily}
 			>
 				<SelectTrigger className="h-8 w-30 text-xs">
-					<Type className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+					<Type className="mr-2 h-3.5 w-3.5 shrink-0" />
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
@@ -185,31 +185,45 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 				</SelectContent>
 			</Select>
 
-			{/* Font Scale */}
-			<div className="flex items-center gap-0.5 rounded-md border">
-				<Button
-					className="h-8 w-8 rounded-r-none"
-					disabled={fontScale <= 80}
-					onClick={() => handleFontScaleChange(-0.05)}
-					size="icon"
-					variant="ghost"
-				>
-					<Minus className="h-3.5 w-3.5" />
-				</Button>
-				<span className="w-12 text-center text-xs">{fontScale}%</span>
-				<Button
-					className="h-8 w-8 rounded-l-none"
-					disabled={fontScale >= 120}
-					onClick={() => handleFontScaleChange(0.05)}
-					size="icon"
-					variant="ghost"
-				>
-					<Plus className="h-3.5 w-3.5" />
-				</Button>
+			{/*
+			 * Type scale — the document's own type multiplier (it changes the
+			 * artefact). It carries a visible label and a bordered stepper, because
+			 * the audit found it reading exactly like the preview zoom below: two
+			 * identical "%" pills meaning different things.
+			 */}
+			<div className="flex items-center gap-2">
+				<span className="font-medium text-xs">Type scale</span>
+				<div className="flex items-center gap-0.5 rounded-md border">
+					<Button
+						aria-label="Decrease type scale"
+						className="h-8 w-8 rounded-r-none"
+						disabled={fontScale <= 80}
+						onClick={() => handleFontScaleChange(-0.05)}
+						size="icon"
+						static
+						variant="ghost"
+					>
+						<Minus className="h-3.5 w-3.5" />
+					</Button>
+					<span className="w-12 text-center text-xs tabular-nums">
+						{fontScale}%
+					</span>
+					<Button
+						aria-label="Increase type scale"
+						className="h-8 w-8 rounded-l-none"
+						disabled={fontScale >= 120}
+						onClick={() => handleFontScaleChange(0.05)}
+						size="icon"
+						static
+						variant="ghost"
+					>
+						<Plus className="h-3.5 w-3.5" />
+					</Button>
+				</div>
 			</div>
 
 			{(scaledBody < 10 || scaledSmall < 9) && (
-				<span className="text-[10px] text-destructive">
+				<span className="text-destructive text-xs">
 					At {fontScale}% body renders at {scaledBody.toFixed(1)}pt — below the
 					readability floor
 				</span>
@@ -217,11 +231,21 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 
 			{/* Typography Scale */}
 			<Popover>
-				<PopoverTrigger asChild>
-					<Button className="h-8 gap-1.5 text-xs" size="sm" variant="outline">
-						<span className="font-bold">Aa</span>
-					</Button>
-				</PopoverTrigger>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button
+								aria-label="Typography scale"
+								className="h-8 gap-2 text-xs"
+								size="sm"
+								variant="outline"
+							>
+								<span className="font-bold">Aa</span>
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Typography scale</TooltipContent>
+				</Tooltip>
 				<PopoverContent align="start" className="w-72 p-4">
 					<div className="mb-4 flex items-center justify-between">
 						<h4 className="font-semibold text-sm">Typography Scale</h4>
@@ -281,7 +305,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 							</div>
 						))}
 					</div>
-					<p className="mt-4 text-[10px] text-muted-foreground">
+					<p className="mt-4 text-muted-foreground text-xs">
 						Sizes are points. Body never goes below 10pt and small never below
 						9pt — below those floors text extraction degrades. The scale control
 						(%) resizes everything proportionally.
@@ -291,23 +315,33 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 
 			{/* Line Height */}
 			<Popover>
-				<PopoverTrigger asChild>
-					<Button className="h-8 gap-1.5 text-xs" size="sm" variant="outline">
-						<svg
-							className="h-4 w-4"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							viewBox="0 0 24 24"
-						>
-							<title>Line height</title>
-							<line x1="3" x2="21" y1="6" y2="6" />
-							<line x1="3" x2="21" y1="12" y2="12" />
-							<line x1="3" x2="21" y1="18" y2="18" />
-						</svg>
-						{localSettings.lineHeight}
-					</Button>
-				</PopoverTrigger>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button
+								aria-label="Line height"
+								className="h-8 gap-2 text-xs"
+								size="sm"
+								variant="outline"
+							>
+								<svg
+									className="h-4 w-4"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									viewBox="0 0 24 24"
+								>
+									<title>Line height</title>
+									<line x1="3" x2="21" y1="6" y2="6" />
+									<line x1="3" x2="21" y1="12" y2="12" />
+									<line x1="3" x2="21" y1="18" y2="18" />
+								</svg>
+								{localSettings.lineHeight}
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Line height</TooltipContent>
+				</Tooltip>
 				<PopoverContent align="start" className="w-56 p-4">
 					<div className="mb-2 flex items-center justify-between">
 						<Label className="text-xs">Line Height</Label>
@@ -335,25 +369,35 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 
 			{/* Colors */}
 			<Popover>
-				<PopoverTrigger asChild>
-					<Button className="h-8 gap-1.5 text-xs" size="sm" variant="outline">
-						<div
-							className="h-4 w-4 rounded-full border"
-							style={{
-								background: `linear-gradient(135deg, ${settings.colors.primary} 50%, ${settings.colors.accent} 50%)`,
-							}}
-						/>
-					</Button>
-				</PopoverTrigger>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button
+								aria-label="Document colours"
+								className="h-8 gap-2 text-xs"
+								size="sm"
+								variant="outline"
+							>
+								<div
+									className="h-4 w-4 rounded-full border"
+									style={{
+										background: `linear-gradient(135deg, ${settings.colors.primary} 50%, ${settings.colors.accent} 50%)`,
+									}}
+								/>
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Document colours</TooltipContent>
+				</Tooltip>
 				<PopoverContent align="start" className="w-72 p-4">
 					<div className="space-y-4">
 						{/* Primary / Headings */}
 						<div>
-							<Label className="mb-2 flex items-center gap-1.5 text-xs">
+							<Label className="mb-2 flex items-center gap-2 text-xs">
 								<Palette className="h-3.5 w-3.5" />
 								Primary / Headings
 							</Label>
-							<div className="flex flex-wrap gap-1.5">
+							<div className="flex flex-wrap gap-2">
 								{COLOR_PRESETS.primary.map((color) => (
 									<button
 										className={`h-6 w-6 rounded border-2 transition-[transform,border-color] duration-150 ease-enter ${
@@ -381,7 +425,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 						{/* Accent */}
 						<div>
 							<Label className="mb-2 block text-xs">Accent</Label>
-							<div className="flex flex-wrap gap-1.5">
+							<div className="flex flex-wrap gap-2">
 								{COLOR_PRESETS.accent.map((color) => (
 									<button
 										className={`h-6 w-6 rounded border-2 transition-[transform,border-color] duration-150 ease-enter ${
@@ -405,7 +449,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 						{/* Body Text */}
 						<div>
 							<Label className="mb-2 block text-xs">Body Text</Label>
-							<div className="flex flex-wrap gap-1.5">
+							<div className="flex flex-wrap gap-2">
 								{COLOR_PRESETS.text.map((color) => (
 									<button
 										className={`h-6 w-6 rounded border-2 transition-[transform,border-color] duration-150 ease-enter ${
@@ -458,11 +502,21 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 
 			{/* Page Layout */}
 			<Popover>
-				<PopoverTrigger asChild>
-					<Button className="h-8 gap-1.5 text-xs" size="sm" variant="outline">
-						<LayoutGrid className="h-4 w-4" />
-					</Button>
-				</PopoverTrigger>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button
+								aria-label="Page layout and margins"
+								className="h-8 gap-2 text-xs"
+								size="sm"
+								variant="outline"
+							>
+								<LayoutGrid className="h-4 w-4" />
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Page layout and margins</TooltipContent>
+				</Tooltip>
 				<PopoverContent align="start" className="w-64 p-4">
 					<div className="space-y-4">
 						<div>
@@ -485,14 +539,12 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 
 						<div>
 							<Label className="text-xs">Margins (in / mm)</Label>
-							<p className="mt-1 text-[10px] text-muted-foreground">
+							<p className="mt-1 text-muted-foreground text-xs">
 								Points stored; floor 0.5 in (36 pt).
 							</p>
 							<div className="mt-2 grid grid-cols-2 gap-3">
 								<div>
-									<Label className="text-[10px] text-muted-foreground">
-										Top
-									</Label>
+									<Label className="text-muted-foreground text-xs">Top</Label>
 									<div className="flex items-center gap-2">
 										<Slider
 											className="flex-1"
@@ -518,15 +570,13 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.top]}
 										/>
-										<span className="w-20 text-right text-[10px] tabular-nums">
+										<span className="w-20 text-right text-xs tabular-nums">
 											{formatMargin(localSettings.margins.top)}
 										</span>
 									</div>
 								</div>
 								<div>
-									<Label className="text-[10px] text-muted-foreground">
-										Right
-									</Label>
+									<Label className="text-muted-foreground text-xs">Right</Label>
 									<div className="flex items-center gap-2">
 										<Slider
 											className="flex-1"
@@ -552,13 +602,13 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.right]}
 										/>
-										<span className="w-20 text-right text-[10px] tabular-nums">
+										<span className="w-20 text-right text-xs tabular-nums">
 											{formatMargin(localSettings.margins.right)}
 										</span>
 									</div>
 								</div>
 								<div>
-									<Label className="text-[10px] text-muted-foreground">
+									<Label className="text-muted-foreground text-xs">
 										Bottom
 									</Label>
 									<div className="flex items-center gap-2">
@@ -586,15 +636,13 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.bottom]}
 										/>
-										<span className="w-20 text-right text-[10px] tabular-nums">
+										<span className="w-20 text-right text-xs tabular-nums">
 											{formatMargin(localSettings.margins.bottom)}
 										</span>
 									</div>
 								</div>
 								<div>
-									<Label className="text-[10px] text-muted-foreground">
-										Left
-									</Label>
+									<Label className="text-muted-foreground text-xs">Left</Label>
 									<div className="flex items-center gap-2">
 										<Slider
 											className="flex-1"
@@ -620,7 +668,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 											step={1}
 											value={[localSettings.margins.left]}
 										/>
-										<span className="w-20 text-right text-[10px] tabular-nums">
+										<span className="w-20 text-right text-xs tabular-nums">
 											{formatMargin(localSettings.margins.left)}
 										</span>
 									</div>
@@ -669,29 +717,40 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 
 			<div className="flex-1" />
 
-			{/* Zoom controls */}
-			<div className="flex items-center gap-0.5 rounded-md border">
-				<Button
-					className="h-8 w-8 rounded-r-none"
-					disabled={scale <= 0.3}
-					onClick={() => onScaleChange(Math.max(0.3, scale - 0.1))}
-					size="icon"
-					variant="ghost"
-				>
-					<Minus className="h-3.5 w-3.5" />
-				</Button>
-				<span className="w-12 text-center text-xs">
-					{Math.round(scale * 100)}%
-				</span>
-				<Button
-					className="h-8 w-8 rounded-l-none"
-					disabled={scale >= 1.5}
-					onClick={() => onScaleChange(Math.min(1.5, scale + 0.1))}
-					size="icon"
-					variant="ghost"
-				>
-					<Plus className="h-3.5 w-3.5" />
-				</Button>
+			{/*
+			 * Preview zoom — how big the page looks in this panel. It changes only
+			 * the view, so it is the quieter of the two steppers: muted fill, no
+			 * border, muted label. The type scale stepper above is the bordered one.
+			 */}
+			<div className="flex items-center gap-2">
+				<span className="text-muted-foreground text-xs">Preview zoom</span>
+				<div className="flex items-center gap-0.5 rounded-md bg-muted">
+					<Button
+						aria-label="Zoom out"
+						className="h-8 w-8 rounded-r-none"
+						disabled={scale <= 0.3}
+						onClick={() => onScaleChange(Math.max(0.3, scale - 0.1))}
+						size="icon"
+						static
+						variant="ghost"
+					>
+						<Minus className="h-3.5 w-3.5" />
+					</Button>
+					<span className="w-12 text-center text-xs tabular-nums">
+						{Math.round(scale * 100)}%
+					</span>
+					<Button
+						aria-label="Zoom in"
+						className="h-8 w-8 rounded-l-none"
+						disabled={scale >= 1.5}
+						onClick={() => onScaleChange(Math.min(1.5, scale + 0.1))}
+						size="icon"
+						static
+						variant="ghost"
+					>
+						<Plus className="h-3.5 w-3.5" />
+					</Button>
+				</div>
 			</div>
 		</div>
 	);

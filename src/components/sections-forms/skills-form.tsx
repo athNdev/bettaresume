@@ -47,7 +47,6 @@ interface SkillsFormProps {
 	data: SkillCategory[];
 	onChange: (data: SkillCategory[]) => Promise<void>;
 	onLocalUpdate?: (data: SkillCategory[]) => void;
-	title?: string;
 }
 
 const SKILL_LEVELS: { value: SkillLevel; label: string; percent: number }[] = [
@@ -69,12 +68,7 @@ const SUGGESTED_CATEGORIES = [
 	"Management",
 ];
 
-export function SkillsForm({
-	data,
-	onChange,
-	onLocalUpdate,
-	title,
-}: SkillsFormProps) {
+export function SkillsForm({ data, onChange, onLocalUpdate }: SkillsFormProps) {
 	const confirm = useConfirm();
 	const [expandedItems, setExpandedItems] = useState<string[]>(
 		data.length > 0 && data[0]?.id ? [data[0].id] : [],
@@ -179,9 +173,8 @@ export function SkillsForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -193,7 +186,11 @@ export function SkillsForm({
 						{localData.length} categor{localData.length !== 1 ? "ies" : "y"},{" "}
 						{totalSkills} skill{totalSkills !== 1 ? "s" : ""}
 					</p>
-					<Button onClick={() => addCategory()} size="sm">
+					<Button
+						onClick={() => addCategory()}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Category
 					</Button>
 				</div>

@@ -32,14 +32,12 @@ interface EducationFormProps {
 	data: Education[];
 	onChange: (data: Education[]) => Promise<void>;
 	onLocalUpdate?: (data: Education[]) => void;
-	title?: string;
 }
 
 export function EducationForm({
 	data,
 	onChange,
 	onLocalUpdate,
-	title,
 }: EducationFormProps) {
 	const confirm = useConfirm();
 	const [expandedItems, setExpandedItems] = useState<string[]>(
@@ -129,9 +127,8 @@ export function EducationForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -143,7 +140,11 @@ export function EducationForm({
 						{localData.length} education entr
 						{localData.length !== 1 ? "ies" : "y"}
 					</p>
-					<Button onClick={addEducation} size="sm">
+					<Button
+						onClick={addEducation}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Education
 					</Button>
 				</div>
@@ -341,7 +342,7 @@ export function EducationForm({
 											{edu.achievements?.map((item, i) => (
 												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
-													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
+													<span className="flex-1 rounded bg-muted px-3 py-1 text-sm">
 														{item}
 													</span>
 													<Button
@@ -400,7 +401,7 @@ export function EducationForm({
 											{edu.coursework?.map((item, i) => (
 												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
-													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
+													<span className="flex-1 rounded bg-muted px-3 py-1 text-sm">
 														{item}
 													</span>
 													<Button
@@ -457,7 +458,7 @@ export function EducationForm({
 											{edu.honors?.map((item, i) => (
 												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
-													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
+													<span className="flex-1 rounded bg-muted px-3 py-1 text-sm">
 														{item}
 													</span>
 													<Button

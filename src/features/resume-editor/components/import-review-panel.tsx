@@ -201,7 +201,7 @@ export function ImportPanel({
 						  has no basis for.
 						*/
 						<p
-							className="rounded-md border border-amber-500/70 bg-amber-500/5 p-3 text-sm"
+							className="rounded-md border border-warning/70 bg-warning-soft p-3 text-sm"
 							data-import-refusal=""
 							role="alert"
 						>

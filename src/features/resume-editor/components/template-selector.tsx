@@ -32,10 +32,18 @@ function TemplateSpecimen({ template }: { template: TemplateConfig }) {
 	const isPostgrad = template.id === "postgrad";
 	const isUndergrad = template.id === "undergrad";
 
+	/*
+	 * The specimen is a miniature of a document, drawn in its own coordinate
+	 * system: its paper colour and its 11px/6.5px labels are part of the picture
+	 * (Surface B data, like the colours), not app-chrome type — an `aria-hidden`
+	 * decoration at 62px wide cannot wear the UI scale. Everything that IS chrome
+	 * (border, radius, padding) comes from the token scales.
+	 */
 	return (
 		<div
 			aria-hidden="true"
-			className="pointer-events-none select-none overflow-hidden rounded-[3px] border bg-white px-2 py-1.5 dark:bg-white"
+			className="pointer-events-none select-none overflow-hidden rounded-xs border px-2 py-1"
+			style={{ background: colors.background }}
 		>
 			<div
 				className={cn(
@@ -53,14 +61,14 @@ function TemplateSpecimen({ template }: { template: TemplateConfig }) {
 				}
 			>
 				<span
-					className="font-semibold text-[11px] leading-[1.15] tracking-tight"
-					style={{ color: colors.heading }}
+					className="font-semibold leading-[1.15] tracking-tight"
+					style={{ color: colors.heading, fontSize: 11 }}
 				>
 					Ada Lovelace
 				</span>
 				<span
-					className={cn("text-[6.5px] leading-[1.3]", isPostgrad && "italic")}
-					style={{ color: colors.secondary }}
+					className={cn("leading-[1.3]", isPostgrad && "italic")}
+					style={{ color: colors.secondary, fontSize: 6.5 }}
 				>
 					Mathematician
 				</span>
@@ -69,22 +77,22 @@ function TemplateSpecimen({ template }: { template: TemplateConfig }) {
 			{/* Minimal rules the header; the other two separate it by space. */}
 			{template.id === "minimal" && (
 				<div
-					className="mt-1.5 mb-1 h-px w-full"
+					className="mt-1 mb-1 h-px w-full"
 					style={{ background: colors.accent }}
 				/>
 			)}
 
-			<div className={cn("mt-1.5", isPostgrad && "text-center")}>
+			<div className={cn("mt-1", isPostgrad && "text-center")}>
 				<span
-					className="font-semibold text-[6.5px] uppercase tracking-[0.08em]"
-					style={{ color: colors.heading }}
+					className="font-semibold uppercase tracking-[0.08em]"
+					style={{ color: colors.heading, fontSize: 6.5 }}
 				>
 					Experience
 				</span>
 			</div>
 			<div
 				className={cn(
-					"mt-0.5 flex flex-col gap-[3px]",
+					"mt-0.5 flex flex-col gap-0.5",
 					isPostgrad && "items-center",
 				)}
 			>

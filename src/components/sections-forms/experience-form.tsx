@@ -41,14 +41,12 @@ interface ExperienceFormProps {
 	data: Experience[];
 	onChange: (data: Experience[]) => Promise<void>;
 	onLocalUpdate?: (data: Experience[]) => void;
-	title?: string;
 }
 
 export function ExperienceForm({
 	data,
 	onChange,
 	onLocalUpdate,
-	title,
 }: ExperienceFormProps) {
 	const confirm = useConfirm();
 	const [expandedItems, setExpandedItems] = useState<string[]>(
@@ -151,9 +149,8 @@ export function ExperienceForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -164,7 +161,11 @@ export function ExperienceForm({
 					<p className="text-muted-foreground text-sm">
 						{localData.length} position{localData.length !== 1 ? "s" : ""}
 					</p>
-					<Button onClick={addExperience} size="sm">
+					<Button
+						onClick={addExperience}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Position
 					</Button>
 				</div>
@@ -382,7 +383,7 @@ export function ExperienceForm({
 											{exp.highlights?.map((highlight, i) => (
 												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
-													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
+													<span className="flex-1 rounded bg-muted px-3 py-1 text-sm">
 														{highlight}
 													</span>
 													<Button

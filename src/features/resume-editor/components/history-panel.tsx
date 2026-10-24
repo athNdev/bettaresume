@@ -57,7 +57,7 @@ const KIND_STYLE: Record<
 > = {
 	added: {
 		label: "Added",
-		className: "text-emerald-600 dark:text-emerald-400",
+		className: "text-success",
 		Icon: Plus,
 	},
 	removed: {
@@ -67,7 +67,7 @@ const KIND_STYLE: Record<
 	},
 	changed: {
 		label: "Edited",
-		className: "text-amber-600 dark:text-amber-400",
+		className: "text-warning",
 		Icon: AlertTriangle,
 	},
 	unchanged: {
@@ -284,7 +284,7 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 								<li key={r.id}>
 									<button
 										aria-current={selectedId === r.id}
-										className={`w-full rounded-md border px-2 py-1.5 text-left text-sm ${
+										className={`w-full rounded-md border px-2 py-1 text-left text-sm ${
 											selectedId === r.id
 												? "border-primary bg-accent"
 												: "hover:bg-accent/50"
@@ -292,7 +292,7 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 										onClick={() => setSelectedId(r.id)}
 										type="button"
 									>
-										<span className="flex items-center gap-1.5">
+										<span className="flex items-center gap-2">
 											<History aria-hidden className="size-3.5 shrink-0" />
 											<span className="truncate font-medium">
 												{r.label ?? "Autosave"}

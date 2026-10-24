@@ -31,15 +31,9 @@ interface AwardsFormProps {
 	data: Award[];
 	onChange: (data: Award[]) => Promise<void>;
 	onLocalUpdate?: (data: Award[]) => void;
-	title?: string;
 }
 
-export function AwardsForm({
-	data,
-	onChange,
-	onLocalUpdate,
-	title,
-}: AwardsFormProps) {
+export function AwardsForm({ data, onChange, onLocalUpdate }: AwardsFormProps) {
 	const confirm = useConfirm();
 	const [expandedItems, setExpandedItems] = useState<string[]>(
 		data.length > 0 && data[0]?.id ? [data[0].id] : [],
@@ -89,9 +83,8 @@ export function AwardsForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -102,7 +95,11 @@ export function AwardsForm({
 					<p className="text-muted-foreground text-sm">
 						{localData.length} award{localData.length !== 1 ? "s" : ""}
 					</p>
-					<Button onClick={addAward} size="sm">
+					<Button
+						onClick={addAward}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Award
 					</Button>
 				</div>

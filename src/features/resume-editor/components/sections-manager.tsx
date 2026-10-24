@@ -252,7 +252,7 @@ export function SortableSectionItem({
 					</span>
 				) : null}
 				{!section.visible ? (
-					<span className="shrink-0 text-[10px] text-muted-foreground uppercase">
+					<span className="shrink-0 text-muted-foreground text-xs uppercase">
 						Hidden
 					</span>
 				) : isSectionEmpty(section, personalInfo) ? (
@@ -371,14 +371,6 @@ export function SectionsManager({
 	};
 
 	// Get available section types that haven't been added yet (for unique sections like personal-info)
-	const uniqueSections: SectionType[] = ["personal-info", "summary"];
-	const existingSectionTypes = sections.map((s) => s.type);
-	const availableSections = Object.keys(SECTION_CONFIGS).filter(
-		(type) =>
-			!uniqueSections.includes(type as SectionType) ||
-			!existingSectionTypes.includes(type as SectionType),
-	) as SectionType[];
-
 	const byId = useMemo(
 		() => new Map(sortedSections.map((s) => [s.id, s])),
 		[sortedSections],
@@ -496,22 +488,56 @@ export function SectionsManager({
 				</div>
 			) : null}
 
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button className="w-full" size="sm" variant="outline">
-						<Plus aria-hidden className="mr-2 h-4 w-4" />
-						Add Section
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="center" className="w-48">
-					{availableSections.map((type) => (
-						<DropdownMenuItem key={type} onSelect={() => onAddSection(type)}>
-							{SECTION_ICONS[type]}
-							<span className="ml-2">{SECTION_CONFIGS[type].label}</span>
-						</DropdownMenuItem>
-					))}
-				</DropdownMenuContent>
-			</DropdownMenu>
+			<AddSectionMenu onAddSection={onAddSection} sections={sections} />
 		</div>
+	);
+}
+
+/**
+ * The "Add Section" control: a dropdown of the section types this resume is
+ * still missing. Shared by the outline and the form column's empty state, so
+ * "this resume has no sections yet" can offer the one action that fixes it
+ * rather than pointing at another panel.
+ */
+export function AddSectionMenu({
+	sections,
+	onAddSection,
+	label = "Add Section",
+	className,
+	menuAlign = "center",
+}: {
+	sections: ResumeSection[];
+	onAddSection: (type: SectionType) => void;
+	label?: string;
+	/** Classes for the trigger; the rail passes `w-full`, an empty state need not. */
+	className?: string;
+	menuAlign?: "center" | "start" | "end";
+}) {
+	// Section types that can still be added: the unique ones only until they exist.
+	const uniqueSections: SectionType[] = ["personal-info", "summary"];
+	const existingSectionTypes = sections.map((s) => s.type);
+	const availableSections = Object.keys(SECTION_CONFIGS).filter(
+		(type) =>
+			!uniqueSections.includes(type as SectionType) ||
+			!existingSectionTypes.includes(type as SectionType),
+	) as SectionType[];
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button className={className} size="sm" variant="outline">
+					<Plus aria-hidden className="mr-2 h-4 w-4" />
+					{label}
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align={menuAlign} className="w-48">
+				{availableSections.map((type) => (
+					<DropdownMenuItem key={type} onSelect={() => onAddSection(type)}>
+						{SECTION_ICONS[type]}
+						<span className="ml-2">{SECTION_CONFIGS[type].label}</span>
+					</DropdownMenuItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

@@ -112,9 +112,9 @@ export function VariationManager({
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button className="gap-2" size="sm" variant="outline">
-						<span className="max-w-32 truncate">
-							{currentResume?.name || "Select"}
-						</span>
+						{/* The document name is the header's h1; this trigger names the
+						 * control instead, so the name is on screen exactly once. */}
+						<span>Variations</span>
 						<ChevronDown className="h-4 w-4" />
 					</Button>
 				</DropdownMenuTrigger>

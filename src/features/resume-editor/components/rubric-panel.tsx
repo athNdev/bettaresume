@@ -40,7 +40,7 @@ const STATUS_ICON = {
 } as const;
 
 const STATUS_STYLE = {
-	pass: "text-[var(--brand-verified)]",
+	pass: "text-success",
 	fail: "text-destructive",
 	advice: "text-muted-foreground",
 } as const;
@@ -63,12 +63,9 @@ function CheckRow({ check }: { check: RubricCheck }) {
 			<div className="min-w-0">
 				<div className="flex flex-wrap items-center gap-2">
 					<p className="font-medium text-sm">{check.title}</p>
-					<Badge className="text-[10px]" variant="outline">
-						{STATUS_LABEL[check.status]}
-					</Badge>
-					<Badge className="text-[10px]" variant="secondary">
-						{GROUP_LABELS[check.group]}
-					</Badge>
+					{/* The category chip is gone: every row sits under its own group
+					 * heading, so the chip repeated that heading on every line. */}
+					<Badge variant="outline">{STATUS_LABEL[check.status]}</Badge>
 				</div>
 				<p className="mt-1 text-muted-foreground text-xs leading-relaxed">
 					{check.detail}
@@ -98,7 +95,9 @@ export function RubricChecklist({ resume }: { resume: Resume }) {
 	return (
 		<div className="space-y-4">
 			<div>
-				<p className="text-muted-foreground text-xs">
+				{/* The summary line is the most useful sentence in the panel, so it is
+				 * not the smallest text in it (the audit measured it at 12px muted). */}
+				<p className="font-medium text-sm">
 					{report.counts.fail} to fix · {report.counts.advice} worth considering
 					· {report.counts.pass} holding. There is no score here: each line is a
 					named check with a verdict and a fix.
@@ -149,7 +148,7 @@ export function PlainTextTest({ resume }: { resume: Resume }) {
 	return (
 		<div className="space-y-4">
 			<div>
-				<p className="text-muted-foreground text-xs">
+				<p className="font-medium text-sm">
 					{verdict.passed} of {verdict.total} checks pass. This is the text a
 					parser reads out of your PDF — copy it into a plain editor and read it
 					top to bottom.
@@ -195,7 +194,7 @@ export function PlainTextTest({ resume }: { resume: Resume }) {
 						{copied ? "Copied" : "Copy"}
 					</Button>
 				</div>
-				<pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 font-mono text-[11px] leading-relaxed">
+				<pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">
 					{text}
 				</pre>
 			</div>

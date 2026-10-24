@@ -45,7 +45,7 @@ export function SaveState({
 		return (
 			<p
 				className={cn(
-					"flex items-center gap-1.5 text-muted-foreground text-xs",
+					"flex items-center gap-2 text-muted-foreground text-xs",
 					className,
 				)}
 				role="status"
@@ -60,7 +60,7 @@ export function SaveState({
 		return (
 			<p
 				className={cn(
-					"flex items-center gap-1.5 font-medium text-amber-700 text-xs dark:text-amber-500",
+					"flex items-center gap-2 font-medium text-warning text-xs",
 					className,
 				)}
 				role="status"
@@ -76,15 +76,12 @@ export function SaveState({
 	return (
 		<p
 			className={cn(
-				"flex items-center gap-1.5 text-muted-foreground text-xs",
+				"flex items-center gap-2 text-muted-foreground text-xs",
 				className,
 			)}
 			role="status"
 		>
-			<Check
-				aria-hidden
-				className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500"
-			/>
+			<Check aria-hidden className="h-3.5 w-3.5 text-success" />
 			All changes saved
 		</p>
 	);
