@@ -89,13 +89,26 @@ async function bodyText(page) {
 /**
  * Open a resume from the dashboard.
  *
- * The preview is a `<button aria-hidden tabindex=-1>` — a redundant pointer target beside
- * the card title, which is the announced control. Clicking the thumbnail mirrors what a
- * mouse user does; the title is what a keyboard user would use.
+ * The card title is the announced control — its own text is the accessible name — and the
+ * preview beside it is a pointer-only duplicate that `aria-hidden` keeps out of the tab
+ * order. That duplicate is also a `<button>` whose text is the whole rendered document, so
+ * this picks the short buttons: everything else in `main` is a filter or an action.
  */
 async function openResume(page, index = 0) {
-	const thumbs = page.locator('button[aria-hidden="true"][tabindex="-1"]');
-	await thumbs.nth(index).click();
+	const titles = page
+		.locator("main button")
+		.filter({ hasNotText: /^(All templates|Show archived|Create Your First Resume|Import)/ });
+	const count = await titles.count();
+	const names = [];
+	for (let i = 0; i < count; i++) {
+		const text = ((await titles.nth(i).innerText()) ?? "").trim();
+		if (text.length > 0 && text.length < 80) names.push(i);
+	}
+	const target = names[index];
+	if (target === undefined) {
+		throw new Error(`no resume card at index ${index} (found ${names.length})`);
+	}
+	await titles.nth(target).click();
 }
 
 /** Wait until the editor's own chrome is on screen. */
