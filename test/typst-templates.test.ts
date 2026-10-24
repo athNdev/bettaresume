@@ -43,11 +43,14 @@ describe("every template is a real document", () => {
 		expect(source).toMatch(/render-section\(section\)/);
 	});
 
-	it.each(TEMPLATES)("%s does not silently substitute another template", (file) => {
-		// A template that prints another template's source is the failure mode the
-		// `|| minimalSource` fallback used to hide.
-		expect(read(file)).not.toMatch(/minimalSource|getTemplateSource/);
-	});
+	it.each(TEMPLATES)(
+		"%s does not silently substitute another template",
+		(file) => {
+			// A template that prints another template's source is the failure mode the
+			// `|| minimalSource` fallback used to hide.
+			expect(read(file)).not.toMatch(/minimalSource|getTemplateSource/);
+		},
+	);
 });
 
 describe("the template registry", () => {
@@ -62,15 +65,28 @@ describe("the template registry", () => {
 	);
 
 	it("registers exactly the three templates the schema declares", () => {
-		const keys = [...registry.matchAll(/^\t(minimal|postgrad|undergrad):/gm)].map(
-			(m) => m[1],
-		);
+		const keys = [
+			...registry.matchAll(/^\t(minimal|postgrad|undergrad):/gm),
+		].map((m) => m[1]);
 		expect(keys.sort()).toEqual(["minimal", "postgrad", "undergrad"]);
 	});
 
 	it("does not fall back from an empty template to minimal", () => {
 		// `undergrad: undergradSource || minimalSource` is what hid two blank files.
 		expect(registry).not.toMatch(/\|\|\s*minimalSource/);
+	});
+});
+
+describe("every formatting control reaches the document", () => {
+	it("the font scale is applied, not just stored", () => {
+		// `fontScale` is a slider in the toolbar. It used to be serialised and read by
+		// nothing, so the page never changed. This pins the link between the setting and
+		// the type scale.
+		const dispatcher = read("sections.typ");
+		expect(dispatcher).toMatch(/fontScale/);
+		expect(dispatcher).toMatch(/font-scale/);
+		// And the scale must feed the values the render helpers use.
+		expect(dispatcher).toMatch(/body: scale\(base\.body\)/);
 	});
 });
 

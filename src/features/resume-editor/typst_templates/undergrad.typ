@@ -53,8 +53,8 @@
   )[#personal.fullName]
 
   #if personal.professionalTitle != "" {
-    #h(8pt)
-    #text(
+    h(8pt)
+    text(
       size: float(typo.at("title", default: 14)) * 1pt,
       fill: rgb(colors.at("secondary", default: "#6b7280")),
     )[#personal.professionalTitle]
