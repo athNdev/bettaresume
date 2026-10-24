@@ -23,8 +23,10 @@ import {
 	normalizeTypeSettings,
 	TYPE_SCALE_BANDS,
 	TYPE_SCALE_DEFAULTS,
+	templateTypeSchema,
 } from "@bettaresume/types";
 import { describe, expect, it } from "vitest";
+import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import { codeOf } from "./helpers/code-source";
 
 /** The values every pre-change resume stored (the old defaults). */
@@ -137,12 +139,16 @@ describe("nothing renders below a floor", () => {
 });
 
 describe("the templates render points, not converted px", () => {
-	const templates = [
-		"sections.typ",
-		"minimal.typ",
-		"postgrad.typ",
-		"undergrad.typ",
+	// Derived from the registry, so a new archetype is covered by these assertions the day
+	// its `.typ` is added rather than the day someone remembers this list.
+	const templateFiles = [
+		...new Set(
+			templateTypeSchema.options.map(
+				(id) => `${TEMPLATE_CONFIGS[id].sourceFile}.typ`,
+			),
+		),
 	];
+	const templates = ["sections.typ", ...templateFiles];
 	const read = (file: string) =>
 		codeOf(`src/features/resume-editor/typst_templates/${file}`);
 
@@ -172,9 +178,14 @@ describe("the templates render points, not converted px", () => {
 		expect(source).not.toMatch(/fill: rgb\(colors\.accent\),\s*\n\s*inset/);
 	});
 
-	it("the undergrad header band no longer tints the page", () => {
-		// The template's identity was a shaded accent band behind the header — the
-		// "shaded header bar" the research deletes outright.
-		expect(read("undergrad.typ")).not.toContain('accent", default');
+	it("no archetype tints its header or paints the accent", () => {
+		// A shaded header band was one template's identity; section fills and tinted
+		// badges are named parse failures (they extract as graphics). The accent may
+		// appear as a rule, never as a block fill.
+		for (const file of templateFiles) {
+			expect(read(file), `${file} fills a block with the accent`).not.toMatch(
+				/fill: rgb\(colors\.accent\)/,
+			);
+		}
 	});
 });

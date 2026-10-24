@@ -14,6 +14,7 @@
  * both).
  */
 
+import { normalizeTemplateId } from "@bettaresume/types";
 import {
 	Archive,
 	ArchiveRestore,
@@ -79,7 +80,7 @@ export function ResumeCard({
 	onDelete,
 }: ResumeCardProps) {
 	const templateName =
-		TEMPLATE_CONFIGS[resume.template as keyof typeof TEMPLATE_CONFIGS]?.name;
+		TEMPLATE_CONFIGS[normalizeTemplateId(resume.template)].name;
 
 	return (
 		<Card

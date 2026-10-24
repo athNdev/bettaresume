@@ -1,4 +1,4 @@
-import { MARGIN_DEFAULTS } from "@bettaresume/types";
+import { MARGIN_DEFAULTS, normalizeTemplateId } from "@bettaresume/types";
 import type {
 	ResumeSettings,
 	TemplateType,
@@ -95,13 +95,19 @@ export interface FitInput {
 }
 
 /**
- * The template's default target: one page for the two early-career templates, no target
- * for the academic CV (a three-page postgrad CV is normal, not an overflow).
+ * The archetype's default target. A CV is not an overflow at three pages, and an
+ * executive document is expected to run to two; the rest are one-page documents.
+ *
+ * Legacy ids are normalised first, so a resume stored as `postgrad` still gets the
+ * academic target rather than being treated as an unknown one-page template.
  */
 export function pageTargetForTemplate(
 	template: TemplateType | string | null | undefined,
 ): PageTarget {
-	return template === "postgrad" ? null : 1;
+	const id = normalizeTemplateId(template);
+	if (id === "academic") return null;
+	if (id === "executive") return 2;
+	return 1;
 }
 
 /**

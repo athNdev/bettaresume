@@ -7,6 +7,67 @@
 import { z } from "zod";
 
 // ============================================
+// Template archetypes
+// ============================================
+
+/**
+ * The shipped document archetypes (docs/research/template-research.md §7).
+ *
+ * Six, because they are six different documents rather than six skins: the research
+ * differentiates them by structure and density, never by colour. `compact` shares
+ * `standard`'s `.typ` source and differs only in its settings defaults, which is the one
+ * allowed "config variant" (see `TEMPLATE_CONFIGS`).
+ */
+export const templateTypeSchema = z.enum([
+	"standard",
+	"compact",
+	"technical",
+	"graduate",
+	"academic",
+	"executive",
+]);
+
+/**
+ * Ids this product used to ship, mapped to the archetype that replaces them.
+ *
+ * Resumes created before the archetypes were introduced store one of these strings in
+ * `Resume.template`, and an old revision snapshot can still carry one. Renaming the
+ * union must not turn those documents into "unknown template, render the default":
+ * `minimal` was the balanced layout, `postgrad` was the academic one and `undergrad`
+ * was the student one, so the mapping is the closest successor, not an arbitrary pick.
+ */
+export const LEGACY_TEMPLATE_ALIASES = {
+	minimal: "standard",
+	postgrad: "academic",
+	undergrad: "graduate",
+} as const;
+
+/**
+ * Resolve a stored template id to a shipped archetype.
+ *
+ * This is the single place a legacy id is translated. Everything downstream (the Typst
+ * registry, the display name, the page-target default) reads the result, so they cannot
+ * disagree about what an old resume renders as.
+ *
+ * An id that is neither shipped nor a known alias resolves to `standard`. That fallback
+ * is narrow and deliberate: it is the app's own default, it only covers corrupt data
+ * (writes are validated against `templateTypeSchema`, and the seed is checked by
+ * `api/test/seed-integrity.test.ts`), and the alternative — throwing while opening a
+ * resume — is worse.
+ */
+export function normalizeTemplateId(
+	id: string | null | undefined,
+): z.infer<typeof templateTypeSchema> {
+	if (id && (templateTypeSchema.options as readonly string[]).includes(id)) {
+		return id as z.infer<typeof templateTypeSchema>;
+	}
+	return (
+		LEGACY_TEMPLATE_ALIASES[id as keyof typeof LEGACY_TEMPLATE_ALIASES] ??
+		"standard"
+	);
+}
+
+// ============================================
 // Base Schemas
 // ============================================
 
@@ -14,7 +75,7 @@ export const userPreferencesSchema = z.object({
 	theme: z.enum(["light", "dark", "system"]),
 	emailNotifications: z.boolean(),
 	autoSave: z.boolean(),
-	defaultTemplate: z.enum(["minimal", "postgrad", "undergrad"]),
+	defaultTemplate: templateTypeSchema,
 });
 
 // ============================================
@@ -36,8 +97,6 @@ export const sectionTypeSchema = z.enum([
 	"references",
 	"custom",
 ]);
-
-export const templateTypeSchema = z.enum(["minimal", "postgrad", "undergrad"]);
 
 export const variationTypeSchema = z.enum(["base", "variation"]);
 
@@ -476,7 +535,7 @@ export const createResumeInputSchema = z.object({
 	variationType: variationTypeSchema.optional().default("base"),
 	baseResumeId: z.string().optional(),
 	domain: z.string().optional(),
-	template: templateTypeSchema.optional().default("minimal"),
+	template: templateTypeSchema.optional().default("standard"),
 	tags: z.array(z.string()).optional().default([]),
 	isArchived: z.boolean().optional().default(false),
 	metadata: resumeMetadataSchema.optional(),

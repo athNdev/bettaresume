@@ -50,7 +50,7 @@ const resumeWith = (sections: Array<Record<string, unknown>>): Resume =>
 		variationType: "base",
 		baseResumeId: null,
 		domain: null,
-		template: "minimal",
+		template: "standard",
 		tags: [],
 		isArchived: false,
 		createdAt: "2026-01-01T00:00:00.000Z",

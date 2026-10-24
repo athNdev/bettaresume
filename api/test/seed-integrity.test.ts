@@ -85,8 +85,8 @@ describe("seed data satisfies the application schemas", () => {
 			);
 			expect(
 				invalid.map((r) => `${r.id}=${JSON.stringify(r.template)}`),
-				"seeded templates outside templateTypeSchema — the UI silently " +
-					"renders these as minimal via getTemplateSource()'s fallback",
+				"seeded templates outside templateTypeSchema — normalizeTemplateId() " +
+					"would silently render these as the standard archetype",
 			).toEqual([]);
 		} finally {
 			db.close();

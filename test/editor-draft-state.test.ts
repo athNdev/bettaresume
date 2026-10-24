@@ -42,7 +42,7 @@ function resume(over: Partial<ResumeWithSections> = {}): ResumeWithSections {
 	return {
 		id: "r1",
 		name: "Test",
-		template: "minimal",
+		template: "standard",
 		domain: null,
 		sections: [section("s1", 0), section("s2", 1)],
 		metadata: {
@@ -163,7 +163,7 @@ describe("every persisted field is compared", () => {
 	});
 
 	it("detects a template change", () => {
-		expect(isDraftDirty(resume({ template: "postgrad" }), resume())).toBe(true);
+		expect(isDraftDirty(resume({ template: "academic" }), resume())).toBe(true);
 	});
 
 	it("detects a rename", () => {
@@ -190,14 +190,14 @@ describe("the change count describes writes, not quality", () => {
 	});
 
 	it("counts one for a single changed area", () => {
-		expect(draftChangeCount(resume({ template: "postgrad" }), resume())).toBe(
+		expect(draftChangeCount(resume({ template: "academic" }), resume())).toBe(
 			1,
 		);
 	});
 
 	it("counts metadata and sections separately", () => {
 		const draft = resume({
-			template: "postgrad",
+			template: "academic",
 			sections: [section("s2", 0), section("s1", 1)],
 		});
 		draft.metadata = {
@@ -212,7 +212,7 @@ describe("the change count describes writes, not quality", () => {
 		// sixth thing it is counting something a save does not write.
 		const draft = resume({
 			name: "x",
-			template: "postgrad",
+			template: "academic",
 			domain: "d",
 			sections: [],
 		});

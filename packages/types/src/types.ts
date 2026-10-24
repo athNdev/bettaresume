@@ -4,6 +4,12 @@
  * These types are used by both the API server and the SPA client.
  */
 
+// The template union is derived from its Zod schema rather than repeated. The vocabulary
+// trap this closes: `CLAUDE.md`, the Typst registry comment and the seed all used to list
+// the union by hand, and all three drifted from `templateTypeSchema`.
+import type { z } from "zod";
+import type { templateTypeSchema } from "./schemas";
+
 // ============================================
 // User Types
 // ============================================
@@ -289,7 +295,7 @@ export interface ResumeColors {
 // ============================================
 // Template Types
 // ============================================
-export type TemplateType = "minimal" | "postgrad" | "undergrad";
+export type TemplateType = z.infer<typeof templateTypeSchema>;
 
 export type ResumeLayout = "single-column" | "two-column" | "sidebar";
 

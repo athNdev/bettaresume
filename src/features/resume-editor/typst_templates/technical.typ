@@ -1,16 +1,18 @@
-// Undergrad — a compact layout for a first or second resume.
+// Technical — engineering, data and software roles.
 //
-// The header carries the name and contact line with the name and title side by side.
-// It used to sit in a tinted accent band; section background fills and shaded header
-// bars are a named parse failure (they extract as graphics) and the research is
-// unambiguous about them (docs/research/template-research.md §6), so the band's fill is
-// gone. Everything below the header is the same content model and the same `render-*`
-// helpers as the other templates.
+// The same content model and the same helpers as `standard.typ`; the archetype changes
+// what a section draws:
 //
-// The header block is a block, not a table and not a multi-column grid. Both of those
-// would change the order text is emitted in, and a student's first resume is exactly the
-// one that should not gamble on extraction order. Type sizes and margins are true points
-// (see `sections.typ`).
+//   * Skills become `Languages: Go, TypeScript, Python` lines instead of a label over a
+//     chip cluster (research §7.3). One line per category is both denser and easier to
+//     scan for a named technology.
+//   * Experience and projects surface their `technologies` as a labelled line — "say what
+//     language you used" — and a project draws the highlights it already carries.
+//   * The header puts the role beside the name, because the role is the first filter on a
+//     technical application.
+//
+// No skill bars, no rating dots, no icons: those are stand-ins for written text and the
+// research deletes them (§6). Type sizes and margins are true points (see `sections.typ`).
 
 #set page(
   paper: if settings.at("pageSize", default: "Letter") == "A4" { "a4" } else { "us-letter" },
@@ -29,22 +31,21 @@
   font: settings.at("fontFamily", default: "Inter"),
 )
 
-// Compact, not tighter-lined: this template exists for documents that are trying to
-// fit on one page, and the density comes from the spacing scale, not from squeezing
-// the leading. `par-leading` is the one mapping (`sections.typ`) every template and
-// the preview share.
-#set par(
-  leading: par-leading,
-  justify: false,
-)
+#set par(leading: par-leading, justify: false)
+
+#let profile = archetype-profile((
+  skills: "lines",
+  projects: "detail",
+  experience: "stack",
+))
 
 // ──────────────────────────────────────────────
-// HEADER — name and title on one line
+// HEADER — name and role on one line
 // ──────────────────────────────────────────────
 
-// `header-gap` below the header block is the header → body gap (16pt at Normal); the
-// first section heading does not add its `section-gap` on top of it (see `section-title`).
-#block(width: 100%, below: header-gap)[
+// `header-gap-half` below the block plus `space-m` below the rule is the header → body
+// gap (`header-gap`); the first section heading does not add its `section-gap`.
+#block(width: 100%, below: header-gap-half)[
   #text(
     size: typo.at("name", default: 18pt),
     weight: "bold",
@@ -59,7 +60,7 @@
     )[#personal.professionalTitle]
   }
 
-  #v(contact-gap-inline)
+  #v(space-m)
   #let contacts = ()
   #if personal.email    != "" { contacts.push(personal.email) }
   #if personal.phone    != "" { contacts.push(personal.phone) }
@@ -72,12 +73,15 @@
   ]
 ]
 
+#line(length: 100%, stroke: 0.5pt + rgb(colors.at("divider", default: "#e2e8f0")))
+#v(space-m)
+
 // ──────────────────────────────────────────────
 // BODY — sections
 // ──────────────────────────────────────────────
 
 #for section in sections {
-  render-section(section)
+  render-section(section, profile: profile)
 }
 
 // The fit meter's end-of-content marker (see `sections.typ`).

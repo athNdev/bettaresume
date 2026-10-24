@@ -62,7 +62,7 @@ export function useTypstPreview(
 		setError(null);
 
 		try {
-			const templateSource = getTemplateSource(r.template ?? "minimal");
+			const templateSource = getTemplateSource(r.template ?? "standard");
 			const dataJson = resumeToTypstJson(r);
 			const fontFamily = r.metadata?.settings?.fontFamily ?? "Inter";
 

@@ -8,6 +8,7 @@
  */
 
 import type { Resume } from "@bettaresume/types";
+import { normalizeTemplateId } from "@bettaresume/types";
 import {
 	Archive,
 	FileText,
@@ -190,7 +191,7 @@ function DashboardContent() {
 	const [resumeToDelete, setResumeToDelete] = useState<string | null>(null);
 	const [newResumeName, setNewResumeName] = useState("");
 	const [newResumeTemplate, setNewResumeTemplate] =
-		useState<TemplateType>("minimal");
+		useState<TemplateType>("standard");
 	const [showWelcomeGuide, setShowWelcomeGuide] = useState(true);
 	const [page, setPage] = useState(1);
 	const pageSize = 10;
@@ -508,7 +509,9 @@ function DashboardContent() {
 
 					const created = await createResume({
 						name: data.name || baseName,
-						template: (data.template as TemplateType) || "minimal",
+						template: normalizeTemplateId(
+							typeof data.template === "string" ? data.template : undefined,
+						),
 						domain: data.domain,
 						tags: data.tags,
 						metadata: data.metadata as never,
@@ -574,7 +577,7 @@ function DashboardContent() {
 				const now = new Date().toISOString();
 				const created = await createResume({
 					name: result.contact.fullName?.value || baseName,
-					template: "minimal",
+					template: "standard",
 				});
 				if (!created?.id) throw new Error("The resume could not be created.");
 

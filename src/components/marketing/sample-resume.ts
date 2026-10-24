@@ -28,7 +28,7 @@ export const SAMPLE_RESUME: Resume = {
 	variationType: "base",
 	baseResumeId: null,
 	domain: null,
-	template: "minimal",
+	template: "standard",
 	tags: [],
 	isArchived: false,
 	createdAt: "2026-01-01T00:00:00.000Z",
@@ -200,6 +200,11 @@ export const GALLERY_SAMPLE_RESUME: Resume = {
 						location: "Munich",
 						startDate: "2016-10",
 						endDate: "2018-06",
+						// The graduate and academic archetypes draw these; the standard one does
+						// not. Carrying them makes each specimen show its own structure rather
+						// than a claim in the card copy.
+						coursework: ["Distributed Systems", "Databases"],
+						honors: ["Dean's List"],
 						achievements: [],
 					},
 				],

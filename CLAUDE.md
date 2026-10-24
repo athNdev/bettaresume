@@ -325,7 +325,9 @@ All types and Zod schemas shared between frontend and backend.
 
 **Key exports** (`packages/types/src/schemas.ts`):
 - `sectionTypeSchema` → `"personal-info" | "summary" | "experience" | "education" | "skills" | "projects" | "certifications" | "awards" | "languages" | "publications" | "volunteer" | "references" | "custom"`
-- `templateTypeSchema` → `"minimal" | "postgrad" | "undergrad"`
+- `templateTypeSchema` → `"standard" | "compact" | "technical" | "graduate" | "academic" | "executive"`.
+  `TemplateType` is derived from this schema; `normalizeTemplateId` maps the retired
+  `minimal`/`postgrad`/`undergrad` ids to their successors on read.
 - Per-section content schemas: `personalInfoSchema`, `experienceSchema`, `educationSchema`, `skillCategorySchema`, `projectSchema`, `certificationSchema`, `awardSchema`, `languageSchema`, `publicationSchema`, `volunteerSchema`, `referenceSchema`
 - Resume schemas: `createResumeSchema`, `updateResumeSchema`, `resumeSettingsSchema`
 

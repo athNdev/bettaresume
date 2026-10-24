@@ -102,7 +102,7 @@ export function createHarness(): TestHarness {
 	insertUser.run(USER_B, "b@example.test", "User B", now, now);
 
 	const insertResume = sqlite.prepare(
-		"INSERT INTO Resume (id, userId, name, variationType, template, tags, isArchived, createdAt, updatedAt) VALUES (?, ?, ?, 'base', 'minimal', '[]', 0, ?, ?)",
+		"INSERT INTO Resume (id, userId, name, variationType, template, tags, isArchived, createdAt, updatedAt) VALUES (?, ?, ?, 'base', 'standard', '[]', 0, ?, ?)",
 	);
 	insertResume.run(RESUME_A, USER_A, "A resume", now, now);
 	insertResume.run(RESUME_B, USER_B, "B resume", now, now);

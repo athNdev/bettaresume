@@ -98,7 +98,7 @@ function resume(overrides: Partial<Resume> = {}): Resume {
 		variationType: "base",
 		baseResumeId: null,
 		domain: null,
-		template: "minimal",
+		template: "standard",
 		tags: [],
 		isArchived: false,
 		createdAt: new Date(),
@@ -296,17 +296,23 @@ describe("the chip copy", () => {
 });
 
 describe("page targets", () => {
-	it("defaults by template", () => {
-		expect(pageTargetForTemplate("minimal")).toBe(1);
-		expect(pageTargetForTemplate("undergrad")).toBe(1);
+	it("defaults by archetype, and keeps resolving a pre-archetype id", () => {
+		expect(pageTargetForTemplate("standard")).toBe(1);
+		expect(pageTargetForTemplate("compact")).toBe(1);
+		expect(pageTargetForTemplate("technical")).toBe(1);
+		expect(pageTargetForTemplate("graduate")).toBe(1);
+		expect(pageTargetForTemplate("executive")).toBe(2);
+		expect(pageTargetForTemplate("academic")).toBeNull();
+		// Resumes created before the archetypes still get the closest successor's target.
 		expect(pageTargetForTemplate("postgrad")).toBeNull();
+		expect(pageTargetForTemplate("minimal")).toBe(1);
 	});
 
 	it("lets the stored setting win, including an explicit none", () => {
-		expect(resolvePageTarget({ pageTarget: 2 }, "minimal")).toBe(2);
-		expect(resolvePageTarget({ pageTarget: null }, "minimal")).toBeNull();
-		expect(resolvePageTarget({}, "postgrad")).toBeNull();
-		expect(resolvePageTarget(undefined, "minimal")).toBe(1);
+		expect(resolvePageTarget({ pageTarget: 2 }, "standard")).toBe(2);
+		expect(resolvePageTarget({ pageTarget: null }, "standard")).toBeNull();
+		expect(resolvePageTarget({}, "academic")).toBeNull();
+		expect(resolvePageTarget(undefined, "standard")).toBe(1);
 	});
 });
 

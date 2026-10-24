@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { sectionTypeSchema } from "@bettaresume/types";
+import { sectionTypeSchema, templateTypeSchema } from "@bettaresume/types";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -136,19 +136,40 @@ describe("the counts on the page are the counts in the code", () => {
 		expect(visible).toContain("13");
 	});
 
-	it("says three templates, and the registry has three real ones", () => {
-		expect(Object.keys(TEMPLATE_CONFIGS).sort()).toEqual([
-			"minimal",
-			"postgrad",
-			"undergrad",
-		]);
-		expect(visible).toContain("Three templates");
+	it("names as many templates as the registry ships", () => {
+		// The schema union and the registry are one list: every archetype the schema
+		// accepts has a config, and no config exists for a value it would reject.
+		expect(Object.keys(TEMPLATE_CONFIGS).sort()).toEqual(
+			[...templateTypeSchema.options].sort(),
+		);
+
+		const count = Object.keys(TEMPLATE_CONFIGS).length;
+		const words = [
+			"Zero",
+			"One",
+			"Two",
+			"Three",
+			"Four",
+			"Five",
+			"Six",
+			"Seven",
+			"Eight",
+		];
+		expect(visible).toContain(`${words[count]} templates`);
+
+		// Every archetype gets a card, and every card's specimen comes from a real file.
 		// `postgrad.typ` and `undergrad.typ` were 0 bytes while the page advertised them.
-		for (const file of ["minimal", "postgrad", "undergrad"]) {
-			const source = read(
-				`src/features/resume-editor/typst_templates/${file}.typ`,
+		for (const config of Object.values(TEMPLATE_CONFIGS)) {
+			expect(visible, `${config.name} is not on the page`).toContain(
+				config.name,
 			);
-			expect(source.trim().length, `${file}.typ is empty`).toBeGreaterThan(200);
+			const source = read(
+				`src/features/resume-editor/typst_templates/${config.sourceFile}.typ`,
+			);
+			expect(
+				source.trim().length,
+				`${config.sourceFile}.typ is empty`,
+			).toBeGreaterThan(200);
 		}
 	});
 

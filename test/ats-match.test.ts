@@ -21,7 +21,7 @@ const resume = (sections: unknown[], settings = {}) =>
 	({
 		id: "r1",
 		name: "Test",
-		template: "minimal",
+		template: "standard",
 		sections,
 		metadata: { personalInfo: { fullName: "A", email: "a@b.c" }, settings },
 	}) as unknown as Resume;

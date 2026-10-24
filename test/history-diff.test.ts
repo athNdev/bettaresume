@@ -15,7 +15,7 @@ import {
 const snapshotOf = (sections: unknown[], extra: Record<string, unknown> = {}) =>
 	JSON.stringify({
 		name: "My Resume",
-		template: "minimal",
+		template: "standard",
 		domain: null,
 		metadata: null,
 		// Normalise real section objects, but pass junk through untouched: one test
@@ -43,7 +43,7 @@ const live = (
 	extra: Record<string, unknown> = {},
 ) => ({
 	name: "My Resume",
-	template: "minimal",
+	template: "standard",
 	domain: null,
 	// Required by the diff: metadata holds personalInfo, which is where the user's
 	// real name and email live, so omitting it is exactly what disabled Restore before.
@@ -246,7 +246,7 @@ describe("diffSnapshot", () => {
 	it("detects a template switch", () => {
 		const diff = diffSnapshot(
 			snapshotOf(snapSections),
-			live([], { template: "postgrad" }),
+			live([], { template: "academic" }),
 		);
 		expect(diff.fields.find((f) => f.label === "template")?.kind).toBe(
 			"changed",
@@ -327,7 +327,7 @@ describe("diffSnapshot", () => {
 	it("does not crash when the live resume has no sections array", () => {
 		const diff = diffSnapshot(snapshotOf(snapSections), {
 			name: "My Resume",
-			template: "minimal",
+			template: "standard",
 			domain: null,
 			metadata: null,
 			sections: [],

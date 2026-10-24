@@ -260,25 +260,46 @@ export function Inspect() {
 
 const TEMPLATES = [
 	{
-		id: "minimal",
-		name: "Minimal",
-		note: "The default. One column, generous leading, nothing between the reader and the content.",
+		id: "standard",
+		name: "Standard",
+		note: "Left-aligned header, dates in their own column, sections in the order you set. The reference layout.",
 		best: "Most applications",
-		alt: "The Minimal template: right-aligned dates, small caps section headings, and a single column of experience, education and skills for Avery Chen.",
+		alt: "The Standard template: a left-aligned name and contact block above dated experience, education and skills for Avery Chen.",
 	},
 	{
-		id: "postgrad",
-		name: "Postgrad",
-		note: "Centred header, justified body, looser leading — the shape an academic CV is read in.",
-		best: "Research and academic roles",
-		alt: "The Postgrad template: a centred name and contact block above a justified academic CV for Avery Chen.",
+		id: "compact",
+		name: "Compact",
+		note: "The Standard layout at the tight end of the spacing scale: 0.5 in margins, 1.25 leading, 8 pt between sections.",
+		best: "One page with a lot to say",
+		alt: "The Compact template: the standard layout with tighter section gaps and narrower margins for Avery Chen.",
 	},
 	{
-		id: "undergrad",
-		name: "Undergrad",
-		note: "Compact, with a tinted header band and tighter spacing, for a document aiming at one page.",
-		best: "First roles and internships",
-		alt: "The Undergrad template: a tinted header band above a compact one-page resume for Avery Chen.",
+		id: "technical",
+		name: "Technical",
+		note: "Skills become category lines such as \u201cLanguages: Go, TypeScript\u201d; projects show their stack and bullets.",
+		best: "Software, data and engineering roles",
+		alt: "The Technical template: a name and role on one line, skills as category-to-items lines, and project entries for Avery Chen.",
+	},
+	{
+		id: "graduate",
+		name: "Graduate",
+		note: "Education carries GPA, coursework and honours; projects show the bullets that were already in the document.",
+		best: "Students and new graduates",
+		alt: "The Graduate template: a plain header above an education entry listing coursework and honours for Avery Chen.",
+	},
+	{
+		id: "academic",
+		name: "Academic CV",
+		note: "Centred header, justified body, 1 in margins, and publications numbered so a reviewer can cite them.",
+		best: "Research, postdoc and faculty",
+		alt: "The Academic CV template: a centred name and contact block above a justified academic document for Avery Chen.",
+	},
+	{
+		id: "executive",
+		name: "Executive",
+		note: "A 20 pt name, expertise collapsed to one line, and more air around each selected role.",
+		best: "Directors, VPs and C-level",
+		alt: "The Executive template: a large name and role block above a spacious summary and selected roles for Avery Chen.",
 	},
 ] as const satisfies ReadonlyArray<{
 	id: keyof typeof TEMPLATE_CONFIGS;
@@ -288,12 +309,38 @@ const TEMPLATES = [
 	alt: string;
 }>;
 
+/**
+ * The heading's count is derived, not typed.
+ *
+ * "Three templates" was the kind of sentence that stays true until somebody adds a
+ * template, and then quietly stops being true. `test/marketing-claims.test.ts` checks the
+ * heading against the registry, so the only way to change the count is to change it in
+ * both places.
+ */
+const TEMPLATE_COUNT = Object.keys(TEMPLATE_CONFIGS).length;
+const COUNT_WORDS = [
+	"Zero",
+	"One",
+	"Two",
+	"Three",
+	"Four",
+	"Five",
+	"Six",
+	"Seven",
+	"Eight",
+	"Nine",
+	"Ten",
+];
+
 export function Templates() {
 	return (
 		<section className="bg-[var(--brand-paper)]" id="templates">
 			<div className="marketing-shell py-16 lg:py-24">
 				<div className="max-w-2xl">
-					<h2 className="text-title">Three templates, all single-column</h2>
+					<h2 className="text-title">
+						{COUNT_WORDS[TEMPLATE_COUNT] ?? TEMPLATE_COUNT} templates, all
+						single-column
+					</h2>
 					<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
 						Typography, spacing and colours are yours to tune. The layout stays
 						one column, because that is the part the text layer depends on.
@@ -306,13 +353,13 @@ export function Templates() {
 				 * `test/template-gallery.test.ts` fails if they are stale. Typst outlines its
 				 * glyphs, so these are self-contained and need no web font.
 				 *
-				 * The frame crops the specimen at 560 of the page's 842pt. The committed
-				 * renders put their last ink at 445–480pt (measured on the real SVGs), so
-				 * everything each template draws is visible with room to spare, and the
-				 * ~360pt of blank paper that made these cards read as half-empty is gone —
-				 * what is left below the content is a page that visibly continues, not a
-				 * void. If `npm run templates:render` ever moves the ink past 560, the crop
-				 * moves with it.
+				 * The frame crops the specimen at 600 of the page's 842pt. The six committed
+				 * renders put their last ink at 450–556pt (measured on the real SVGs by
+				 * `scripts/probe/svg-ink-bounds.cjs`), so everything each archetype draws is
+				 * visible with room to spare, and the ~300pt of blank paper that made these
+				 * cards read as half-empty is gone — what is left below the content is a page
+				 * that visibly continues, not a void. If `npm run templates:render` ever moves
+				 * the ink past 600, the crop moves with it.
 				 */}
 				<div className="mt-12 grid gap-6 md:grid-cols-3">
 					{TEMPLATES.map((template) => (
@@ -321,7 +368,7 @@ export function Templates() {
 							key={template.id}
 						>
 							<div className="border-[var(--brand-rule)] border-b bg-[var(--brand-paper)] p-3">
-								<div className="aspect-[595/560] overflow-hidden rounded-sm border border-[var(--brand-rule)] bg-[var(--brand-card)] shadow-elev-1">
+								<div className="aspect-[595/600] overflow-hidden rounded-sm border border-[var(--brand-rule)] bg-[var(--brand-card)] shadow-elev-1">
 									{/*
 									 * A plain `<img>`, deliberately. `next/image` cannot optimise in a static
 									 * export (`images.unoptimized` is on), and these are already-small SVG

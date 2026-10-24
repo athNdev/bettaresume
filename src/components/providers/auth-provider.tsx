@@ -123,7 +123,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 						theme: "dark",
 						emailNotifications: true,
 						autoSave: true,
-						defaultTemplate: "minimal",
+						defaultTemplate: "standard",
 					},
 				});
 
