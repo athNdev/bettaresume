@@ -3,7 +3,15 @@ import { Providers } from "@/app/provider";
 import { DevBadge } from "@/components/ui/dev-badge";
 
 export const metadata: Metadata = {
-	title: "Betta Resume",
+	/*
+	 * `absolute`, not a plain string.
+	 *
+	 * The root layout sets `title.template: "%s · Betta Resume"`, so a page that declares
+	 * a title of its own gets the suffix — and this one declared "Betta Resume", which
+	 * shipped a tab reading "Betta Resume · Betta Resume". `absolute` opts out of the
+	 * template, which is what a page whose title IS the bare product name wants.
+	 */
+	title: { absolute: "Betta Resume" },
 	// The app is behind auth and hash routing; nothing here is worth indexing.
 	robots: { index: false, follow: false },
 };
