@@ -149,7 +149,7 @@ export const TEMPLATE_CONFIGS: Record<TemplateType, TemplateConfig> = {
 		id: "minimal",
 		name: "Minimal",
 		description: "Clean and simple design that focuses on content",
-		thumbnail: "/templates/minimal.png",
+		thumbnail: "/templates/minimal.svg",
 		features: ["Clean typography", "ATS-friendly", "Single column"],
 		defaultColors: {
 			primary: "#000000",
@@ -167,7 +167,7 @@ export const TEMPLATE_CONFIGS: Record<TemplateType, TemplateConfig> = {
 		id: "postgrad",
 		name: "Postgrad",
 		description: "Academic style for postgraduate and research roles",
-		thumbnail: "/templates/postgrad.png",
+		thumbnail: "/templates/postgrad.svg",
 		features: ["Academic layout", "Publication-ready", "Single column"],
 		defaultColors: {
 			primary: "#1e2a4a",
@@ -185,7 +185,7 @@ export const TEMPLATE_CONFIGS: Record<TemplateType, TemplateConfig> = {
 		id: "undergrad",
 		name: "Undergrad",
 		description: "Fresh and clear layout for undergraduate students",
-		thumbnail: "/templates/undergrad.png",
+		thumbnail: "/templates/undergrad.svg",
 		features: ["Student-friendly", "Clean hierarchy", "Single column"],
 		defaultColors: {
 			primary: "#0d4f8b",

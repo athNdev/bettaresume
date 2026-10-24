@@ -110,3 +110,125 @@ export const SAMPLE_RESUME: Resume = {
 		},
 	],
 };
+
+/**
+ * A fuller document, for the template gallery.
+ *
+ * The hero's sample is deliberately short: it has to sit beside an exported-text panel
+ * and still be readable at a glance. That makes it a poor showcase for a template — three
+ * cards each rendering two inches of content on an otherwise blank page.
+ *
+ * Same person, same voice, more of it. Generated through `resumeToTypstJson` like any
+ * other resume, so what the gallery shows is what the export button produces.
+ */
+/**
+ * The sample's own metadata, typed as present.
+ *
+ * `Resume.metadata` is nullable because a row can be fetched without relations, but
+ * this object literal is authored above with a complete one. Reading it through a
+ * constant keeps the two non-null assertions out of the spread below and states the
+ * assumption once.
+ */
+const SAMPLE_METADATA = SAMPLE_RESUME.metadata as NonNullable<
+	Resume["metadata"]
+>;
+
+export const GALLERY_SAMPLE_RESUME: Resume = {
+	...SAMPLE_RESUME,
+	id: "marketing-gallery",
+	name: "Avery Chen — gallery",
+	metadata: {
+		...SAMPLE_METADATA,
+		personalInfo: {
+			...SAMPLE_METADATA.personalInfo,
+			location: "Berlin",
+		},
+	},
+	sections: [
+		{
+			id: "gallery-summary",
+			type: "summary",
+			order: 0,
+			visible: true,
+			content: {
+				title: "Summary",
+				html: "<p>Backend engineer with eight years building payment and reservation systems. Rewrites the slow path before adding a new one.</p>",
+			},
+		},
+		{
+			id: "gallery-experience",
+			type: "experience",
+			order: 1,
+			visible: true,
+			content: {
+				title: "Work Experience",
+				data: [
+					{
+						id: "g1",
+						company: "Northwind Systems",
+						position: "Senior Backend Engineer",
+						location: "Berlin",
+						startDate: "2022-03",
+						current: true,
+						highlights: [
+							"Cut p99 checkout latency 41% by rewriting the reservation path off the shared connection pool.",
+							"Led the migration of 14 services to one audit log, removing 9,000 lines of duplicated writes.",
+						],
+						technologies: ["Go", "Postgres"],
+					},
+					{
+						id: "g2",
+						company: "Kestrel Labs",
+						position: "Backend Engineer",
+						location: "Munich",
+						startDate: "2018-07",
+						endDate: "2022-02",
+						highlights: [
+							"Built the billing service that processed EUR 40M in its first year with no reconciliation incidents.",
+						],
+						technologies: ["TypeScript", "Postgres"],
+					},
+				],
+			},
+		},
+		{
+			id: "gallery-education",
+			type: "education",
+			order: 2,
+			visible: true,
+			content: {
+				title: "Education",
+				data: [
+					{
+						id: "ge1",
+						institution: "Technical University of Munich",
+						degree: "MSc",
+						field: "Computer Science",
+						location: "Munich",
+						startDate: "2016-10",
+						endDate: "2018-06",
+						achievements: [],
+					},
+				],
+			},
+		},
+		{
+			id: "gallery-skills",
+			type: "skills",
+			order: 3,
+			visible: true,
+			content: {
+				title: "Skills",
+				data: [
+					{
+						id: "gs1",
+						name: "Languages",
+						skills: ["Go", "TypeScript", "Python"],
+					},
+					{ id: "gs2", name: "Data", skills: ["Postgres", "Redis", "Kafka"] },
+					{ id: "gs3", name: "Infrastructure", skills: ["Terraform", "AWS"] },
+				],
+			},
+		},
+	],
+};
