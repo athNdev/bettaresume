@@ -103,6 +103,10 @@ const NON_TEXT_TOKENS: Record<string, number> = {
 	"--brand-ink": 0,
 	"--brand-ink-soft": 0,
 	"--brand-paper": 0,
+	// The white card surface on paper (and the inverted solid button on ink).
+	// Surfaces carry no text obligation of their own; text tokens declare which
+	// backdrops they may land on it (all the paper-side ones cover `white`).
+	"--brand-card": 0,
 	"--brand-rule": 0,
 	"--brand-warm-decor": 0,
 	"--brand-control-border": NON_TEXT,

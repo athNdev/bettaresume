@@ -218,6 +218,8 @@
 	--color-border-strong: var(--border-strong);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	--color-preview-paper: var(--preview-paper);
+	--color-preview-paper-shade: var(--preview-paper-shade);
 	/* Modal dimming layers. Static: a scrim dims toward ink in both themes. */
 	--color-scrim: oklch(0.145 0.005 250 / 0.8);
 	--color-scrim-soft: oklch(0.145 0.005 250 / 0.5);
@@ -228,6 +230,31 @@
 	--radius-md: var(--br-radius-md);
 	--radius-lg: var(--br-radius-lg);
 	--radius-xl: var(--br-radius-lg);
+	/* Type aliases — the closed 7-step scale (§3.2) is what `text-*` renders.
+	   Without these the utilities fall back to Tailwind's own defaults
+	   (18/20/24/30px for lg/xl/2xl/3xl), which are not on the scale and cannot
+	   be expressed without failing the closure test — so `text-lg` meant 18px
+	   while the documented scale said 20px, and the briefs' "~20px" targets
+	   were unreachable on-scale. The size, line-height and tracking all come
+	   from the primitives. */
+	--text-xs: var(--br-text-xs);
+	--text-xs--line-height: var(--br-text-xs--line-height);
+	--text-sm: var(--br-text-sm);
+	--text-sm--line-height: var(--br-text-sm--line-height);
+	--text-base: var(--br-text-base);
+	--text-base--line-height: var(--br-text-base--line-height);
+	--text-lg: var(--br-text-lg);
+	--text-lg--line-height: var(--br-text-lg--line-height);
+	--text-lg--letter-spacing: var(--br-text-lg--letter-spacing);
+	--text-xl: var(--br-text-xl);
+	--text-xl--line-height: var(--br-text-xl--line-height);
+	--text-xl--letter-spacing: var(--br-text-xl--letter-spacing);
+	--text-2xl: var(--br-text-2xl);
+	--text-2xl--line-height: var(--br-text-2xl--line-height);
+	--text-2xl--letter-spacing: var(--br-text-2xl--letter-spacing);
+	--text-3xl: var(--br-text-3xl);
+	--text-3xl--line-height: var(--br-text-3xl--line-height);
+	--text-3xl--letter-spacing: var(--br-text-3xl--letter-spacing);
 	/* Elevation. Shadows create depth; borders create structure. See `:root` below. */
 	--shadow-elev-0: var(--elev-0);
 	--shadow-elev-1: var(--elev-1);
@@ -300,6 +327,22 @@
 	--border: var(--br-neutral-300);
 	--border-strong: var(--br-neutral-400);
 	--input: var(--br-neutral-500);
+	/*
+	 * The document preview's paper. Constant across themes on purpose: a preview
+	 * is a preview of the export, and paper does not dark-mode (open question Q2
+	 * in docs/design-system/README.md). Only *chrome that imitates the page*
+	 * reads this — the thumbnail skeleton, so loading and loaded agree on the
+	 * sheet's colour. The document surface itself carries its palette as data
+	 * (R15) and never reads a chrome token.
+	 */
+	--preview-paper: var(--br-neutral-0);
+	/* Ghost lines inside that skeleton: a fixed shade of the paper, mixed from
+	   the ink ramp (never pure black — R3/R8), also constant across themes. */
+	--preview-paper-shade: color-mix(
+		in oklab,
+		var(--br-neutral-950) 12%,
+		var(--preview-paper)
+	);
 	/*
 	 * Focus indicator colour. This used to be `oklch(0.708 0 0)`, a grey that measures
 	 * 2.3:1 against white — below the 3:1 that a non-text indicator needs (WCAG 1.4.11),
@@ -534,6 +577,10 @@ body {
 	--brand-ink: oklch(0.17 0.014 268);
 	--brand-ink-soft: oklch(0.24 0.016 268);
 	--brand-paper: oklch(0.985 0.002 268);
+	/* The white card surface on paper — and the inverted solid button on ink.
+	   Cards sit a step brighter than the paper page; this is also the specimen
+	   paper inside the hero artefact and the template frames. */
+	--brand-card: oklch(1 0 0);
 
 	/* Text on paper. 11.3:1 / 7.4:1 / 6.3:1 on --brand-paper. */
 	--brand-text: oklch(0.34 0.012 268);

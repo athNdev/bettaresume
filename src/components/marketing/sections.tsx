@@ -27,6 +27,13 @@
  *
  * **No count that the product does not have.** The hero's three figures — 13 section
  * types, 4 export formats, 3 templates — are each checkable in the app in under a minute.
+ *
+ * ## Rhythm
+ *
+ * Section padding is `py-16 lg:py-24` (the 64/96 steps) everywhere; headline → lede is
+ * 16px, title → body is 8px, body → meta is 8px. Item titles are `text-lg`, body is the
+ * one `text-base` step, meta is `text-xs` — the audit's four body sizes inside 0.8px of
+ * each other collapsed to one (`docs/design-system/README.md` §3.1–3.2).
  */
 
 import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
@@ -81,27 +88,32 @@ const FEATURES = [
 export function Features() {
 	return (
 		<section className="rule-soft" id="features">
-			<div className="marketing-shell py-18 lg:py-24">
+			<div className="marketing-shell py-16 lg:py-24">
 				<div className="max-w-2xl">
 					<h2 className="text-title">
 						Everything between the blank page and the file
 					</h2>
-					<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
+					<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
 						A resume builder that keeps your history as a record, not a single
 						document you are afraid to edit.
 					</p>
 				</div>
 
-				<div className="mt-12 grid gap-x-10 gap-y-9 md:grid-cols-2">
+				{/*
+				 * Each item leads with a `text-lg` title, so the grid reads as eight
+				 * anchored items rather than eight dense paragraphs — the audit's
+				 * finding at 1440 was that nothing in this grid had visual priority.
+				 */}
+				<div className="mt-12 grid gap-x-8 gap-y-8 md:grid-cols-2">
 					{FEATURES.map((feature) => (
 						<article key={feature.title}>
-							<h3 className="font-semibold text-[1.05rem] text-[var(--brand-text)] tracking-tight">
+							<h3 className="font-semibold text-[var(--brand-text)] text-lg">
 								{feature.title}
 							</h3>
-							<p className="mt-2 text-[0.925rem] text-[var(--brand-text-muted)] leading-relaxed">
+							<p className="mt-2 text-[var(--brand-text-muted)] text-base">
 								{feature.body}
 							</p>
-							<p className="mt-2.5 font-mono text-[0.74rem] text-[var(--brand-text-faint)]">
+							<p className="mt-2 font-mono text-[var(--brand-text-faint)] text-xs">
 								{feature.detail}
 							</p>
 						</article>
@@ -134,11 +146,11 @@ const STEPS = [
 export function Workflow() {
 	return (
 		<section className="bg-[var(--brand-paper)]" id="workflow">
-			<div className="marketing-shell py-18 lg:py-24">
-				<div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+			<div className="marketing-shell py-16 lg:py-24">
+				<div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
 					<div>
 						<h2 className="text-title">One record, many applications</h2>
-						<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
+						<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
 							The alternative is the thing everyone actually does: duplicate a
 							file, rename it, and lose track of which version went where.
 						</p>
@@ -149,15 +161,15 @@ export function Workflow() {
 							<li className="flex gap-4" key={step.title}>
 								<span
 									aria-hidden="true"
-									className="tnum mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-accent)]/10 font-mono font-semibold text-[0.72rem] text-[var(--brand-accent)]"
+									className="tnum mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-accent)]/10 font-mono font-semibold text-[var(--brand-accent)] text-xs"
 								>
 									{index + 1}
 								</span>
 								<div className="min-w-0">
-									<h3 className="font-semibold text-[1.05rem] text-[var(--brand-text)] tracking-tight">
+									<h3 className="font-semibold text-[var(--brand-text)] text-lg">
 										{step.title}
 									</h3>
-									<p className="mt-1.5 text-[0.925rem] text-[var(--brand-text-muted)] leading-relaxed">
+									<p className="mt-2 text-[var(--brand-text-muted)] text-base">
 										{step.body}
 									</p>
 								</div>
@@ -192,17 +204,17 @@ const CHECKS = [
 export function Inspect() {
 	return (
 		<section className="rule-soft" id="inspect">
-			<div className="marketing-shell py-18 lg:py-24">
-				<div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+			<div className="marketing-shell py-16 lg:py-24">
+				<div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
 					<div>
 						<h2 className="text-title">Read the file before they do</h2>
-						<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
+						<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
 							Most builders render your resume in a browser and then guess what
 							a parser will extract. We typeset with Typst, which emits a single
 							column in a fixed order — so the text layer is knowable, and you
 							can read it yourself.
 						</p>
-						<p className="mt-5 max-w-prose text-[0.95rem] text-[var(--brand-text-muted)] leading-relaxed">
+						<p className="mt-4 max-w-(--marketing-measure) text-[var(--brand-text-muted)] text-base">
 							That is also why the review is a list of named checks rather than
 							a percentage. A number would be a verdict on software neither of
 							us ran; a check is something you can act on and verify.
@@ -212,10 +224,10 @@ export function Inspect() {
 					<ul className="grid gap-4">
 						{CHECKS.map((check) => (
 							<li
-								className="rounded-xl border border-[var(--brand-rule)] bg-white p-5"
+								className="rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)] p-6"
 								key={check.title}
 							>
-								<h3 className="flex items-start gap-2.5 font-semibold text-[1.02rem] text-[var(--brand-text)] tracking-tight">
+								<h3 className="flex items-start gap-2 font-semibold text-[var(--brand-text)] text-lg">
 									<svg
 										aria-hidden="true"
 										className="mt-1 h-4 w-4 shrink-0 text-[var(--brand-verified)]"
@@ -230,7 +242,7 @@ export function Inspect() {
 									</svg>
 									{check.title}
 								</h3>
-								<p className="mt-1.5 pl-6.5 text-[0.92rem] text-[var(--brand-text-muted)] leading-relaxed">
+								<p className="mt-2 pl-6 text-[var(--brand-text-muted)] text-base">
 									{check.body}
 								</p>
 							</li>
@@ -279,10 +291,10 @@ const TEMPLATES = [
 export function Templates() {
 	return (
 		<section className="bg-[var(--brand-paper)]" id="templates">
-			<div className="marketing-shell py-18 lg:py-24">
+			<div className="marketing-shell py-16 lg:py-24">
 				<div className="max-w-2xl">
 					<h2 className="text-title">Three templates, all single-column</h2>
-					<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
+					<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
 						Typography, spacing and colours are yours to tune. The layout stays
 						one column, because that is the part the text layer depends on.
 					</p>
@@ -293,40 +305,50 @@ export function Templates() {
 				 * template's own `.typ` by the same function the export button calls, and
 				 * `test/template-gallery.test.ts` fails if they are stale. Typst outlines its
 				 * glyphs, so these are self-contained and need no web font.
+				 *
+				 * The frame crops the specimen at 560 of the page's 842pt. The committed
+				 * renders put their last ink at 445–480pt (measured on the real SVGs), so
+				 * everything each template draws is visible with room to spare, and the
+				 * ~360pt of blank paper that made these cards read as half-empty is gone —
+				 * what is left below the content is a page that visibly continues, not a
+				 * void. If `npm run templates:render` ever moves the ink past 560, the crop
+				 * moves with it.
 				 */}
 				<div className="mt-12 grid gap-6 md:grid-cols-3">
 					{TEMPLATES.map((template) => (
 						<article
-							className="flex flex-col overflow-hidden rounded-xl border border-[var(--brand-rule)] bg-white"
+							className="flex flex-col overflow-hidden rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)]"
 							key={template.id}
 						>
 							<div className="border-[var(--brand-rule)] border-b bg-[var(--brand-paper)] p-3">
-								{/*
-								 * A plain `<img>`, deliberately. `next/image` cannot optimise in a static
-								 * export (`images.unoptimized` is on), and these are already-small SVG
-								 * files with outlined glyphs — there is nothing left to compress. It also
-								 * keeps the marketing page free of any client component.
-								 */}
-								{/* biome-ignore lint/performance/noImgElement: static SVG, nothing to optimise */}
-								<img
-									alt={template.alt}
-									className="mx-auto block h-auto w-full rounded-sm border border-[var(--brand-rule)] bg-white shadow-sm"
-									height={842}
-									loading="lazy"
-									// From the registry, so a renamed or removed template breaks the build
-									// here rather than silently leaving a broken image.
-									src={TEMPLATE_CONFIGS[template.id].thumbnail}
-									width={595}
-								/>
+								<div className="aspect-[595/560] overflow-hidden rounded-sm border border-[var(--brand-rule)] bg-[var(--brand-card)] shadow-elev-1">
+									{/*
+									 * A plain `<img>`, deliberately. `next/image` cannot optimise in a static
+									 * export (`images.unoptimized` is on), and these are already-small SVG
+									 * files with outlined glyphs — there is nothing left to compress. It also
+									 * keeps the marketing page free of any client component.
+									 */}
+									{/* biome-ignore lint/performance/noImgElement: static SVG, nothing to optimise */}
+									<img
+										alt={template.alt}
+										className="block w-full"
+										height={842}
+										loading="lazy"
+										// From the registry, so a renamed or removed template breaks the build
+										// here rather than silently leaving a broken image.
+										src={TEMPLATE_CONFIGS[template.id].thumbnail}
+										width={595}
+									/>
+								</div>
 							</div>
 							<div className="flex flex-1 flex-col p-6">
-								<h3 className="font-semibold text-[1.1rem] text-[var(--brand-text)] tracking-tight">
+								<h3 className="font-semibold text-[var(--brand-text)] text-lg">
 									{template.name}
 								</h3>
-								<p className="mt-2.5 flex-1 text-[0.92rem] text-[var(--brand-text-muted)] leading-relaxed">
+								<p className="mt-2 flex-1 text-[var(--brand-text-muted)] text-base">
 									{template.note}
 								</p>
-								<p className="mt-4 border-[var(--brand-rule)] border-t pt-3 text-[0.78rem] text-[var(--brand-text-faint)] uppercase tracking-wide">
+								<p className="mt-4 border-[var(--brand-rule)] border-t pt-3 text-[var(--brand-text-faint)] text-xs uppercase tracking-wide">
 									{template.best}
 								</p>
 							</div>
@@ -360,13 +382,13 @@ const PRINCIPLES = [
 export function Principles() {
 	return (
 		<section className="bg-[var(--brand-ink)]" id="principles">
-			<div className="marketing-shell py-18 lg:py-24">
-				<div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
+			<div className="marketing-shell py-16 lg:py-24">
+				<div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
 					<div>
 						<h2 className="text-[var(--brand-text-on-ink)] text-title">
 							Where the line is
 						</h2>
-						<p className="mt-5 text-[var(--brand-text-on-ink-muted)] text-lede">
+						<p className="mt-4 text-[var(--brand-text-on-ink-muted)] text-lede">
 							Three things this product deliberately does not do, in one short
 							list rather than scattered through the page.
 						</p>
@@ -375,13 +397,13 @@ export function Principles() {
 					<ul className="grid gap-6">
 						{PRINCIPLES.map((item) => (
 							<li
-								className="border-[var(--brand-accent-on-ink)] border-l-2 pl-5"
+								className="border-[var(--brand-accent-on-ink)] border-l-2 pl-4"
 								key={item.title}
 							>
-								<h3 className="font-semibold text-[1.02rem] text-[var(--brand-text-on-ink)] tracking-tight">
+								<h3 className="font-semibold text-[var(--brand-text-on-ink)] text-lg">
 									{item.title}
 								</h3>
-								<p className="mt-1.5 text-[0.92rem] text-[var(--brand-text-on-ink-muted)] leading-relaxed">
+								<p className="mt-2 text-[var(--brand-text-on-ink-muted)] text-base">
 									{item.body}
 								</p>
 							</li>
@@ -423,18 +445,18 @@ const FAQ = [
 export function Faq() {
 	return (
 		<section className="rule-soft" id="faq">
-			<div className="marketing-shell py-18 lg:py-24">
-				<div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+			<div className="marketing-shell py-16 lg:py-24">
+				<div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
 					<div>
 						<h2 className="text-title">Questions</h2>
-						<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
+						<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
 							Short answers, including the one about the score.
 						</p>
 					</div>
 
 					<div className="divide-y divide-[var(--brand-rule)] border-[var(--brand-rule)] border-y">
 						{FAQ.map((item) => (
-							<details className="group py-5" key={item.q}>
+							<details className="group py-4" key={item.q}>
 								<summary className="flex cursor-pointer list-none items-start justify-between gap-4 font-medium text-[var(--brand-text)] marker:content-none">
 									{item.q}
 									<span
@@ -444,7 +466,7 @@ export function Faq() {
 										+
 									</span>
 								</summary>
-								<p className="mt-3 max-w-prose text-[0.925rem] text-[var(--brand-text-muted)] leading-relaxed">
+								<p className="mt-2 max-w-(--marketing-measure) text-[var(--brand-text-muted)] text-base">
 									{item.a}
 								</p>
 							</details>
@@ -467,7 +489,7 @@ export function ClosingCta() {
 				aria-hidden="true"
 				className="pointer-events-none absolute inset-0 bg-[radial-gradient(38rem_20rem_at_50%_120%,color-mix(in_oklch,var(--brand-accent-on-ink)_22%,transparent),transparent)]"
 			/>
-			<div className="marketing-shell relative py-18 text-center lg:py-24">
+			<div className="marketing-shell relative py-16 text-center lg:py-24">
 				<h2 className="mx-auto max-w-3xl text-[var(--brand-text-on-ink)] text-title">
 					Start with the history you already have.
 				</h2>
@@ -475,9 +497,9 @@ export function ClosingCta() {
 					Import a document, or start from an empty one. Your first variant is
 					two clicks after that.
 				</p>
-				<div className="mt-10">
+				<div className="mt-8">
 					<a
-						className="group inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3.5 font-medium text-[var(--brand-ink)] transition-[box-shadow,transform] duration-200 ease-enter hover:-translate-y-0.5 hover:shadow-xl"
+						className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-card)] px-6 py-3 font-medium text-[var(--brand-ink)] transition-[box-shadow,transform] duration-(--br-duration-fast) ease-enter hover:-translate-y-0.5 hover:shadow-elev-1"
 						href="/app"
 					>
 						Open the editor

@@ -4,6 +4,14 @@
  * Resume Card Component
  *
  * Displays a resume card with actions.
+ *
+ * Anatomy (the audit's #5): the title owns its own row and the overflow menu is
+ * pinned to the card's top-right corner, so a long name truncates against
+ * reserved padding instead of colliding with the "…" button ("Harvard Appli…
+ * …"). The card is a tile in flow — border at rest (elev-0 pair), and on hover
+ * it lifts: the border goes transparent and `shadow-elev-1` takes over, so one
+ * depth signal is ever doing the work (inventory #20: elev-1 *or* border, never
+ * both).
  */
 
 import {
@@ -78,116 +86,126 @@ export function ResumeCard({
 			// min-w-0 so the card can shrink below its own max-content. A grid item defaults
 			// to min-width:auto, which floors it at the widest child — and the widest child here
 			// is a document preview with a pixel width.
-			className={`group relative min-w-0 transition-[box-shadow,transform,border-color] duration-200 ease-enter hover:shadow-lg ${resume.isArchived ? "opacity-60" : ""}`}
+			className={`group relative min-w-0 transition-[box-shadow,border-color] duration-(--br-duration-fast) ease-enter hover:border-transparent hover:shadow-elev-1 ${resume.isArchived ? "opacity-60" : ""}`}
 		>
-			<CardHeader className="pb-2">
-				<div className="flex items-start justify-between">
-					<div className="min-w-0 flex-1">
-						<CardTitle className="truncate text-lg">
-							{/*
-							 * The card's real control. Its own text is the accessible name, so a screen
-							 * reader says "Harvard Application, button" — once — and the redundant
-							 * preview target beside it stays out of the tab order.
-							 */}
-							<button
-								className="block max-w-full truncate rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-								onClick={onEdit}
-								type="button"
-							>
-								{resume.name}
-							</button>
-						</CardTitle>
-						<CardDescription className="mt-1 flex items-center gap-2">
-							<Badge className="text-xs" variant="secondary">
-								{templateName ?? resume.template}
-							</Badge>
-							{resume.variationType === "variation" && (
-								<Tooltip>
-									<TooltipTrigger>
-										<Badge className="text-xs" variant="outline">
-											<GitBranch className="mr-1 h-3 w-3" />
-											Variation
-										</Badge>
-									</TooltipTrigger>
-									<TooltipContent>
-										This is a tailored copy of another resume
-									</TooltipContent>
-								</Tooltip>
+			<CardHeader className="relative pb-2">
+				{/*
+				 * Pinned to the card's corner, not the title's row: the title gets
+				 * the full width minus a reserved `pr-8`, so truncation can never
+				 * collide with this button.
+				 */}
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							aria-label={`Actions for ${resume.name}`}
+							className="absolute top-6 right-6 h-8 w-8"
+							size="icon"
+							variant="ghost"
+						>
+							<MoreHorizontal className="h-4 w-4" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem onClick={onEdit}>
+							<Pencil className="mr-2 h-4 w-4" />
+							Edit
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled={isDuplicating} onClick={onDuplicate}>
+							{isDuplicating ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<Copy className="mr-2 h-4 w-4" />
 							)}
-							{resume.isArchived && (
-								<Badge className="text-xs" variant="outline">
-									<Archive className="mr-1 h-3 w-3" />
-									Archived
-								</Badge>
-							)}
-						</CardDescription>
-					</div>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button
-								aria-label={`Actions for ${resume.name}`}
-								className="h-8 w-8"
-								size="icon"
-								variant="ghost"
-							>
-								<MoreHorizontal className="h-4 w-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem onClick={onEdit}>
-								<Pencil className="mr-2 h-4 w-4" />
-								Edit
-							</DropdownMenuItem>
-							<DropdownMenuItem disabled={isDuplicating} onClick={onDuplicate}>
-								{isDuplicating ? (
+							{isDuplicating ? "Duplicating…" : "Duplicate"}
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={onExport}>
+							<Download className="mr-2 h-4 w-4" />
+							Export JSON
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						{resume.isArchived ? (
+							<DropdownMenuItem disabled={isArchiving} onClick={onRestore}>
+								{isArchiving ? (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								) : (
-									<Copy className="mr-2 h-4 w-4" />
+									<ArchiveRestore className="mr-2 h-4 w-4" />
 								)}
-								{isDuplicating ? "Duplicating…" : "Duplicate"}
+								{isArchiving ? "Restoring…" : "Restore"}
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={onExport}>
-								<Download className="mr-2 h-4 w-4" />
-								Export JSON
+						) : (
+							<DropdownMenuItem disabled={isArchiving} onClick={onArchive}>
+								{isArchiving ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<Archive className="mr-2 h-4 w-4" />
+								)}
+								{isArchiving ? "Archiving…" : "Archive"}
 							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							{resume.isArchived ? (
-								<DropdownMenuItem disabled={isArchiving} onClick={onRestore}>
-									{isArchiving ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<ArchiveRestore className="mr-2 h-4 w-4" />
-									)}
-									{isArchiving ? "Restoring…" : "Restore"}
-								</DropdownMenuItem>
-							) : (
-								<DropdownMenuItem disabled={isArchiving} onClick={onArchive}>
-									{isArchiving ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<Archive className="mr-2 h-4 w-4" />
-									)}
-									{isArchiving ? "Archiving…" : "Archive"}
-								</DropdownMenuItem>
-							)}
-							<DropdownMenuSeparator />
-							<DropdownMenuItem className="text-destructive" onClick={onDelete}>
-								<Trash2 className="mr-2 h-4 w-4" />
-								Delete
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
+						)}
+						<DropdownMenuSeparator />
+						<DropdownMenuItem className="text-destructive" onClick={onDelete}>
+							<Trash2 className="mr-2 h-4 w-4" />
+							Delete
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+
+				<CardTitle className="pr-8 text-lg">
+					{/*
+					 * The card's real control. Its own text is the accessible name, so a screen
+					 * reader says "Harvard Application, button" — once — and the redundant
+					 * preview target beside it stays out of the tab order.
+					 */}
+					<button
+						className="block max-w-full truncate rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						onClick={onEdit}
+						type="button"
+					>
+						{resume.name}
+					</button>
+				</CardTitle>
+				<CardDescription className="mt-1 flex flex-wrap items-center gap-2">
+					<Badge className="text-xs" variant="secondary">
+						{templateName ?? resume.template}
+					</Badge>
+					{resume.variationType === "variation" && (
+						<Tooltip>
+							<TooltipTrigger>
+								<Badge className="text-xs" variant="outline">
+									<GitBranch className="mr-1 h-3 w-3" />
+									Variation
+								</Badge>
+							</TooltipTrigger>
+							<TooltipContent>
+								This is a tailored copy of another resume
+							</TooltipContent>
+						</Tooltip>
+					)}
+					{resume.isArchived && (
+						<Badge className="text-xs" variant="outline">
+							<Archive className="mr-1 h-3 w-3" />
+							Archived
+						</Badge>
+					)}
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<ResumeThumbnail onClick={onEdit} resume={resume} />
 			</CardContent>
-			<CardFooter className="flex justify-between text-muted-foreground text-xs">
+			{/*
+			 * One meta group, left-aligned: the old `justify-between` row floated a
+			 * single date against a phantom second column whenever there were no
+			 * variations to put on the right.
+			 */}
+			<CardFooter className="flex-wrap gap-2 text-muted-foreground text-xs">
 				<span>Updated {new Date(resume.updatedAt).toLocaleDateString()}</span>
 				{variations.length > 0 && (
-					<span>
-						{variations.length} variation{variations.length > 1 ? "s" : ""}
-					</span>
+					<>
+						<span aria-hidden="true">·</span>
+						<span>
+							{variations.length} variation{variations.length > 1 ? "s" : ""}
+						</span>
+					</>
 				)}
 			</CardFooter>
 		</Card>

@@ -16,6 +16,12 @@
  * asserting it matched the exporter, and it stopped matching the day the exporter was
  * fixed — leaving the most prominent panel on the site advertising `startDate: 2020-09`.
  * Rendering the real output is the only version of this that cannot drift.
+ *
+ * Type and spacing are the closed scales (`docs/design-system/README.md` §3.1–3.2): the
+ * specimen reads at `text-lg` + `text-xs` — two sizes, with weight and tone carrying the
+ * rest of its internal hierarchy — and the page's body copy is the one `text-base` step.
+ * The audit's per-element rem values (22 sizes on this page, four of them within 0.8px)
+ * are gone; nothing here may choose a size that is not on the scale.
  */
 
 import { buildPlainText } from "@/lib/export/text";
@@ -45,18 +51,20 @@ const SKILLS = ["Go", "TypeScript", "Postgres", "Terraform"];
 export function Hero() {
 	return (
 		<section className="relative overflow-hidden">
-			<div
-				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 -z-10"
-			>
+			{/*
+			 * Decorative wash behind the hero. Positioned (not z-indexed below the
+			 * content): the content column is `relative`, so tree order paints it
+			 * above the wash without reaching for an off-ladder z value.
+			 */}
+			<div aria-hidden="true" className="pointer-events-none absolute inset-0">
 				<div className="absolute inset-x-0 top-0 h-[38rem] bg-[radial-gradient(60rem_28rem_at_18%_-8%,color-mix(in_oklch,var(--brand-accent)_12%,transparent),transparent)]" />
 				<div className="absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(46rem_22rem_at_88%_4%,color-mix(in_oklch,var(--brand-warm-decor)_14%,transparent),transparent)]" />
 			</div>
 
-			<div className="marketing-shell py-14 lg:py-20">
+			<div className="marketing-shell relative py-12 lg:py-16">
 				<div className="max-w-4xl">
 					<p
-						className="flex items-center gap-2.5 font-semibold text-[0.72rem] text-[var(--brand-accent)] uppercase tracking-[0.16em]"
+						className="flex items-center gap-2 font-semibold text-[var(--brand-accent)] text-xs uppercase tracking-[0.16em]"
 						data-animate
 						style={{ animationDelay: "0ms" }}
 					>
@@ -68,7 +76,7 @@ export function Hero() {
 					</p>
 
 					<h1
-						className="mt-5 text-display"
+						className="mt-4 text-display"
 						data-animate
 						style={{ animationDelay: "70ms" }}
 					>
@@ -86,13 +94,13 @@ export function Hero() {
 					</p>
 
 					<div
-						className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-6"
+						className="mt-8"
 						data-animate
 						style={{ animationDelay: "210ms" }}
 					>
 						<div className="flex flex-wrap items-center gap-3">
 							<a
-								className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-ink)] px-6 py-3.5 font-medium text-[var(--brand-text-on-ink)] transition-[color,background-color,box-shadow,transform] duration-200 ease-enter hover:-translate-y-0.5 hover:bg-[var(--brand-ink-soft)] hover:shadow-[var(--brand-ink)]/20 hover:shadow-lg"
+								className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-ink)] px-6 py-3 font-medium text-[var(--brand-text-on-ink)] transition-[color,background-color,box-shadow,transform] duration-(--br-duration-fast) ease-enter hover:-translate-y-0.5 hover:bg-[var(--brand-ink-soft)] hover:shadow-elev-1"
 								href="/app"
 							>
 								Open the editor
@@ -104,7 +112,7 @@ export function Hero() {
 								</span>
 							</a>
 							<a
-								className="inline-flex items-center gap-2 rounded-lg border border-[var(--brand-control-border)] bg-white px-6 py-3.5 font-medium text-[var(--brand-text)] transition-colors hover:bg-[var(--brand-paper)]"
+								className="inline-flex items-center gap-2 rounded-lg border border-[var(--brand-control-border)] bg-[var(--brand-card)] px-6 py-3 font-medium text-[var(--brand-text)] transition-colors hover:bg-[var(--brand-paper)]"
 								href="#features"
 							>
 								What it does
@@ -115,8 +123,13 @@ export function Hero() {
 						 * Three counts, each verifiable in the app in under a minute. These
 						 * replace "None / None / Yours to read", which were positions
 						 * rather than facts about the product.
+						 *
+						 * A strip of its own under the actions, divided by a hairline: the
+						 * audit found this row floating at button mid-height as the
+						 * second-largest cluster on the screen, competing with the CTA.
+						 * Numbers with no decision value are support, not peers.
 						 */}
-						<dl className="grid flex-1 grid-cols-3 gap-5 border-[var(--brand-rule)] border-t pt-5 sm:max-w-md sm:border-t-0 sm:pt-0">
+						<dl className="mt-8 grid max-w-2xl grid-cols-3 gap-6 border-[var(--brand-rule)] border-t pt-6">
 							<Stat label="Section types" value="13" />
 							<Stat label="Export formats" value="4" />
 							<Stat label="Templates" value="3" />
@@ -139,10 +152,10 @@ export function Hero() {
 function Stat({ label, value }: { label: string; value: string }) {
 	return (
 		<div>
-			<dt className="text-[0.7rem] text-[var(--brand-text-faint)] uppercase leading-tight tracking-wide">
+			<dt className="font-semibold text-[var(--brand-text-faint)] text-xs uppercase leading-tight tracking-wide">
 				{label}
 			</dt>
-			<dd className="mt-1.5 font-semibold text-[0.95rem] text-[var(--brand-text)]">
+			<dd className="mt-1 font-semibold text-[var(--brand-text)] text-base">
 				{value}
 			</dd>
 		</div>
@@ -161,73 +174,81 @@ function Artefact() {
 		<div className="relative">
 			<div
 				aria-hidden="true"
-				className="absolute -inset-4 -z-10 rounded-2xl bg-gradient-to-br from-[var(--brand-accent)]/10 via-transparent to-[var(--brand-warm-decor)]/10 blur-2xl md:-inset-6"
+				className="absolute -inset-4 rounded-lg bg-gradient-to-br from-[var(--brand-accent)]/10 via-transparent to-[var(--brand-warm-decor)]/10 blur-2xl md:-inset-6"
 			/>
 
-			<div className="grid items-start gap-3 md:grid-cols-2">
+			{/*
+			 * `items-start` keeps the panels top-aligned. The figure's `mt-3` is the
+			 * mobile stack gap only (12 + the grid's 12 = the 24px step); on desktop
+			 * it is zeroed, because the audit caught the two panel headers sitting a
+			 * deliberate-looking 12px out of alignment.
+			 */}
+			<div className="relative grid items-start gap-3 md:grid-cols-2">
 				<div
 					aria-label="A resume document for Avery Chen, Senior Backend Engineer at Northwind Systems from March 2022, with one quantified bullet and a Skills section listing Go, TypeScript, Postgres and Terraform."
-					className="overflow-hidden rounded-xl border border-[var(--brand-rule)] bg-white shadow-[var(--brand-ink)]/8 shadow-xl"
+					className="overflow-hidden rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)] shadow-elev-2"
 					role="img"
 				>
-					<div className="flex items-center gap-2 border-[var(--brand-rule)] border-b bg-[var(--brand-paper)] px-4 py-2.5">
-						<div className="flex gap-1.5">
+					<div className="flex items-center gap-2 border-[var(--brand-rule)] border-b bg-[var(--brand-paper)] px-4 py-2">
+						<div className="flex gap-1">
 							<span className="h-2.5 w-2.5 rounded-full bg-[var(--brand-ink)]/15" />
 							<span className="h-2.5 w-2.5 rounded-full bg-[var(--brand-ink)]/15" />
 							<span className="h-2.5 w-2.5 rounded-full bg-[var(--brand-ink)]/15" />
 						</div>
-						<span className="tnum ml-2 truncate font-mono text-[0.66rem] text-[var(--brand-text-muted)]">
+						<span className="tnum ml-2 truncate font-mono text-[var(--brand-text-muted)] text-xs">
 							avery-chen — master
 						</span>
-						<span className="ml-auto rounded bg-[var(--brand-accent)]/10 px-1.5 py-0.5 font-medium text-[0.6rem] text-[var(--brand-accent)]">
+						<span className="ml-auto rounded bg-[var(--brand-accent)]/10 px-2 py-0.5 font-medium text-[var(--brand-accent)] text-xs">
 							Typst
 						</span>
 					</div>
 
-					<div className="p-6 sm:p-7">
+					<div className="p-6">
 						<div className="border-[var(--brand-rule)] border-b pb-4">
-							<p className="font-bold text-[1.3rem] text-[var(--brand-text)] leading-tight tracking-tight">
+							<p className="font-bold text-[var(--brand-text)] text-lg">
 								Avery Chen
 							</p>
-							<p className="text-[0.76rem] text-[var(--brand-text-muted)]">
+							<p className="text-[var(--brand-text-muted)] text-xs">
 								Senior Backend Engineer
 							</p>
-							<p className="tnum mt-1.5 font-mono text-[0.64rem] text-[var(--brand-text-faint)]">
+							<p className="tnum mt-1 font-mono text-[var(--brand-text-faint)] text-xs">
 								avery@chen.dev · +49 30 555 0142 · Berlin
 							</p>
 						</div>
 
-						<div className="mt-5">
+						<div className="mt-4">
 							<SectionLabel>Work Experience</SectionLabel>
 							<div className="flex items-baseline justify-between gap-3">
-								<p className="font-semibold text-[0.8rem] text-[var(--brand-text)]">
+								<p className="font-semibold text-[var(--brand-text)] text-xs">
 									Senior Backend Engineer
 								</p>
-								<p className="tnum shrink-0 text-[0.62rem] text-[var(--brand-text-faint)]">
+								<p className="tnum shrink-0 text-[var(--brand-text-faint)] text-xs">
 									Mar 2022 — Present
 								</p>
 							</div>
-							<p className="text-[0.66rem] text-[var(--brand-text-muted)] italic">
+							<p className="text-[var(--brand-text-muted)] text-xs italic">
 								Northwind Systems
 							</p>
 							<ul className="mt-2 space-y-1">
-								<li className="relative pl-3 text-[0.7rem] text-[var(--brand-text)] leading-[1.55]">
+								<li className="flex gap-2 text-[var(--brand-text)] text-xs">
 									<span
 										aria-hidden="true"
-										className="absolute top-[0.5em] left-0 h-1 w-1 rounded-full bg-[var(--brand-accent)]"
+										className="mt-1 h-1 w-1 shrink-0 rounded-full bg-[var(--brand-accent)]"
 									/>
-									Cut p99 checkout latency 41% by rewriting the reservation path
-									off the shared connection pool.
+									<span>
+										Cut p99 checkout latency 41% by rewriting the reservation
+										path off the shared connection pool.
+									</span>
 								</li>
 							</ul>
 						</div>
 
-						<div className="mt-5">
+						<div className="mt-4">
 							<SectionLabel>Skills</SectionLabel>
-							<div className="flex flex-wrap gap-1.5">
+							<div className="flex flex-wrap gap-2">
 								{SKILLS.map((s) => (
 									<span
-										className="rounded border border-[var(--brand-rule)] bg-[var(--brand-paper)] px-1.5 py-0.5 text-[0.62rem] text-[var(--brand-text-muted)]"
+										className="rounded border border-[var(--brand-rule)] bg-[var(--brand-paper)] px-2 py-0.5 text-[var(--brand-text-muted)] text-xs"
 										key={s}
 									>
 										{s}
@@ -238,9 +259,9 @@ function Artefact() {
 					</div>
 				</div>
 
-				<figure className="mt-3 overflow-hidden rounded-xl border border-[var(--brand-rule)] bg-[var(--brand-ink)]">
-					<figcaption className="flex flex-wrap items-center gap-x-3 gap-y-1 border-white/10 border-b px-4 py-2.5">
-						<span className="inline-flex items-center gap-1.5 font-semibold text-[0.62rem] text-[var(--brand-verified-on-ink)] uppercase tracking-[0.12em]">
+				<figure className="mt-3 overflow-hidden rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-ink)] md:mt-0">
+					<figcaption className="flex flex-wrap items-center gap-x-3 gap-y-1 border-[var(--brand-ink-soft)] border-b px-4 py-2">
+						<span className="inline-flex items-center gap-2 font-semibold text-[var(--brand-verified-on-ink)] text-xs uppercase tracking-[0.12em]">
 							<svg
 								aria-hidden="true"
 								className="h-3 w-3"
@@ -255,12 +276,12 @@ function Artefact() {
 							</svg>
 							Exported text
 						</span>
-						<span className="text-[0.68rem] text-[var(--brand-text-on-ink-faint)]">
+						<span className="text-[var(--brand-text-on-ink-faint)] text-xs">
 							Copy this from the editor before you send the file
 						</span>
 					</figcaption>
 
-					<pre className="tnum select-text whitespace-pre-wrap break-words px-4 py-3.5 font-mono text-[0.6rem] text-[var(--brand-text-on-ink-muted)] leading-[1.7] sm:text-[0.64rem]">
+					<pre className="tnum select-text whitespace-pre-wrap break-words px-4 py-3 font-mono text-[var(--brand-text-on-ink-muted)] text-xs">
 						{EXPORTED_LINES.map((line) => (
 							<span
 								className={
@@ -284,7 +305,7 @@ function Artefact() {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
 	return (
-		<p className="mb-2 font-bold text-[0.58rem] text-[var(--brand-accent)] uppercase tracking-[0.16em]">
+		<p className="mb-2 font-semibold text-[var(--brand-accent)] text-xs uppercase tracking-[0.16em]">
 			{children}
 		</p>
 	);

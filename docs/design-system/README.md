@@ -130,6 +130,7 @@ primitives keep their class vocabulary.
 | `--ring` | `accent-600` | `accent-400` | `--ring` | focus indicator |
 | `--success` / `--warning` / `--danger` / `--info` | §2.3 | lightened, ink text | `--destructive` = `--danger` | status text, fills, borders |
 | `--selection` | 20% `accent-500` | 30% `accent-500` | — | `::selection` |
+| `--preview-paper` | `neutral-0` | `neutral-0` (constant) | `bg-preview-paper` | the document preview's paper, for **chrome that imitates the page** (thumbnail skeletons). Paper never dark-modes: a preview is a preview of the export (Q2). `--preview-paper-shade` is its fixed ink-mix for ghost lines. The document surface itself keeps its palette as data (R15) |
 
 **The surface ladder.** Page → card → floating layer. In light, elevation is
 carried by border + shadow (the rungs are all near-white); in dark, by tonal

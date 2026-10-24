@@ -1,20 +1,25 @@
 "use client";
 
-import { FileText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Preview } from "@/features/resume-editor/components/preview";
 import type { Resume } from "@/features/resume-editor/types";
 import { cn } from "@/lib/utils";
 
-const PAGE_WIDTH_PX = {
-	A4: 794,
-	Letter: 816,
+/**
+ * Page geometry at 96dpi, mirroring `preview.tsx` so the loading skeleton and
+ * the rendered preview agree on the sheet's shape (A4 794×1123, Letter
+ * 816×1056). Kept in sync by eye — the values live in the preview too because
+ * the preview is Surface B and must not read chrome tokens (R15).
+ */
+const PAGE_PX = {
+	A4: { width: 794, height: 1123 },
+	Letter: { width: 816, height: 1056 },
 } as const;
 
-function getPageWidthPx(resume: Resume): number {
+function getPagePx(resume: Resume): { width: number; height: number } {
 	const pageSize = resume.metadata?.settings?.pageSize;
-	if (pageSize === "A4") return PAGE_WIDTH_PX.A4;
-	return PAGE_WIDTH_PX.Letter;
+	if (pageSize === "A4") return PAGE_PX.A4;
+	return PAGE_PX.Letter;
 }
 
 export interface ResumeThumbnailProps {
@@ -40,6 +45,14 @@ export interface ResumeThumbnailProps {
  * resume's name, so a screen reader announces "Harvard Application, button" once. This
  * one is a redundant pointer target for the large preview area, so it is `aria-hidden`
  * and taken out of the tab order — announced once, clickable in two places.
+ *
+ * ## The loading state
+ *
+ * Before the preview mounts (it lazy-loads behind an IntersectionObserver), the frame
+ * shows the *sheet* the preview will draw on — paper, correct proportions, ghost lines
+ * where the text will land — sized to the exact footprint the preview renders at. The
+ * audit caught the old state as a lone icon in an empty box, which on a phone loaded as
+ * three cards that read as broken. A skeleton that matches the final shape cannot.
  */
 export function ResumeThumbnail({
 	resume,
@@ -85,7 +98,7 @@ export function ResumeThumbnail({
 	// what the dependency rule is complaining about, correctly: the memo captured a
 	// `resume` that its key did not describe. The function is a two-branch switch, so
 	// the memo was buying nothing anyway.
-	const pageWidthPx = getPageWidthPx(resume);
+	const pagePx = getPagePx(resume);
 
 	useEffect(() => {
 		if (!mounted) return;
@@ -101,14 +114,14 @@ export function ResumeThumbnail({
 		const ro = new ResizeObserver(() => {
 			const width = el.clientWidth;
 			// Fit the page width into the container with a bit of padding.
-			const computed = Math.max(0, width - 12) / pageWidthPx;
+			const computed = Math.max(0, width - 12) / pagePx.width;
 			const clamped = Math.min(0.28, Math.max(0.12, computed));
 			setScale(clamped);
 		});
 
 		ro.observe(el);
 		return () => ro.disconnect();
-	}, [mounted, pageWidthPx]);
+	}, [mounted, pagePx]);
 
 	const shouldRenderPreview = mounted && inView;
 
@@ -129,7 +142,7 @@ export function ResumeThumbnail({
 					type="button"
 				>
 					<ThumbnailBody
-						pageWidthPx={pageWidthPx}
+						pagePx={pagePx}
 						resume={resume}
 						scale={scale}
 						shouldRenderPreview={shouldRenderPreview}
@@ -144,7 +157,7 @@ export function ResumeThumbnail({
 					ref={containerRef as React.RefObject<HTMLDivElement>}
 				>
 					<ThumbnailBody
-						pageWidthPx={pageWidthPx}
+						pagePx={pagePx}
 						resume={resume}
 						scale={scale}
 						shouldRenderPreview={shouldRenderPreview}
@@ -159,24 +172,69 @@ function ThumbnailBody({
 	resume,
 	scale,
 	shouldRenderPreview,
+	pagePx,
 }: {
 	resume: Resume;
 	scale: number;
 	shouldRenderPreview: boolean;
-	pageWidthPx: number;
+	pagePx: { width: number; height: number };
 }) {
-	return shouldRenderPreview ? (
+	return (
 		<div className="absolute inset-0 flex items-start justify-center p-1">
-			<Preview
-				className="pointer-events-none select-none"
-				paginate={false}
-				resume={resume}
-				scale={scale}
-			/>
+			{shouldRenderPreview ? (
+				<Preview
+					className="pointer-events-none select-none"
+					paginate={false}
+					resume={resume}
+					scale={scale}
+				/>
+			) : (
+				<ThumbnailSkeleton
+					height={pagePx.height * scale}
+					// The document's own paper colour when the resume sets one, so the
+					// skeleton is the same sheet the preview will draw (Surface B colour
+					// as data). Falls back to the paper token.
+					paper={resume.metadata?.settings?.colors?.background}
+					width={pagePx.width * scale}
+				/>
+			)}
 		</div>
-	) : (
-		<div className="flex h-full w-full items-center justify-center">
-			<FileText className="h-12 w-12 text-muted-foreground/50" />
+	);
+}
+
+/**
+ * The sheet, before there is content: paper at the preview's exact footprint,
+ * with ghost lines in the document's hierarchy (name, title, rule, body lines,
+ * section heads). The bars are `--preview-paper-shade` — a fixed mix of the ink
+ * ramp into the paper — because the sheet is white in both themes and its
+ * placeholders cannot follow the app's dark mode.
+ */
+export function ThumbnailSkeleton({
+	width,
+	height,
+	paper,
+}: {
+	width: number;
+	height: number;
+	paper?: string;
+}) {
+	return (
+		<div
+			className="flex flex-col gap-1 overflow-hidden bg-preview-paper p-2 shadow-elev-1"
+			style={{ backgroundColor: paper, height, width }}
+		>
+			<div className="h-2 w-1/2 rounded-xs bg-preview-paper-shade" />
+			<div className="h-1 w-1/3 rounded-xs bg-preview-paper-shade" />
+			<div className="mt-1 h-px w-full bg-preview-paper-shade" />
+			<div className="h-1 w-full rounded-xs bg-preview-paper-shade" />
+			<div className="h-1 w-full rounded-xs bg-preview-paper-shade" />
+			<div className="h-1 w-2/3 rounded-xs bg-preview-paper-shade" />
+			<div className="mt-2 h-1 w-1/4 rounded-xs bg-preview-paper-shade" />
+			<div className="h-1 w-full rounded-xs bg-preview-paper-shade" />
+			<div className="h-1 w-5/6 rounded-xs bg-preview-paper-shade" />
+			<div className="mt-2 h-1 w-1/4 rounded-xs bg-preview-paper-shade" />
+			<div className="h-1 w-full rounded-xs bg-preview-paper-shade" />
+			<div className="h-1 w-1/2 rounded-xs bg-preview-paper-shade" />
 		</div>
 	);
 }
