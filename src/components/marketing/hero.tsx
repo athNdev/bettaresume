@@ -6,47 +6,41 @@
  * product. This one leads with the job the product does — write once, tailor per role —
  * and keeps the inspectable export as the *proof* underneath it.
  *
- * The artefact below is still pure CSS, and deliberately so: `src/lib/typst/` pulls a
- * WASM compiler tens of megabytes large from a CDN, and a public page must prerender to
- * real HTML with no runtime dependency. It shows a real exported shape (the same
- * `key: value` lines the exporter writes), not a fictional screenshot.
+ * The artefact below is pure CSS and stays that way: `src/lib/typst/` pulls a WASM
+ * compiler tens of megabytes large from a CDN, and a public page must prerender to real
+ * HTML with no runtime dependency. But its *text* is not a mock-up — it is
+ * `buildPlainText(SAMPLE_RESUME)`, the same function the app's export button calls. This
+ * is a server component, so the call happens once at build time and ships no client JS.
+ *
+ * That indirection is deliberate. The panel used to be a hand-written `key: value` list
+ * asserting it matched the exporter, and it stopped matching the day the exporter was
+ * fixed — leaving the most prominent panel on the site advertising `startDate: 2020-09`.
+ * Rendering the real output is the only version of this that cannot drift.
  */
 
-import { SECTION_RULE } from "@/lib/export/rules";
+import { buildPlainText } from "@/lib/export/text";
+import { SAMPLE_RESUME } from "./sample-resume";
 
-/** Contact block. Field names and order mirror the text export. */
-const CONTACT = [
-	"Avery Chen",
-	"Senior Backend Engineer",
-	"",
-	"Email: avery@chen.dev",
-	"Phone: +49 30 555 0142",
-	"Location: Berlin",
-	"GitHub: github.com/averychen",
-] as const;
-
-/** One `key: value` line per experience field, in schema order. */
-const EXPERIENCE_TEXT = [
-	{ key: "company", value: "Northwind Systems" },
-	{ key: "position", value: "Senior Backend Engineer" },
-	{ key: "startDate", value: "March 2022" },
-	{
-		key: "highlights",
-		value: "• Cut p99 checkout latency 41% by rewriting the reservation path",
-	},
-] as const;
-
-const SKILLS = ["Go", "TypeScript", "Postgres", "Terraform"];
+/** The exact bytes the export button produces for the sample document. */
+const EXPORTED_TEXT = buildPlainText(SAMPLE_RESUME);
 
 /**
- * The rule the plain-text exporter writes around every section heading.
+ * The same lines, each with a stable identity for rendering.
  *
- * Imported rather than redefined: the whole claim of this panel is "this is what the
- * exporter produces", and a second constant is how the page and the artefact drift
- * apart. `src/lib/export/rules.ts` is the one definition, and it carries no imports so
- * this page stays free of the export path's dependencies.
+ * Keyed by content plus the number of times that content has already appeared, because
+ * the text contains plenty of identical blank lines and a bare index would make every
+ * line's key change if the exporter's leading blank line ever moved.
  */
-const RULE = SECTION_RULE;
+const EXPORTED_LINES = (() => {
+	const seen = new Map<string, number>();
+	return EXPORTED_TEXT.split("\n").map((text) => {
+		const occurrence = (seen.get(text) ?? 0) + 1;
+		seen.set(text, occurrence);
+		return { id: `${occurrence}\u0000${text}`, text };
+	});
+})();
+
+const SKILLS = ["Go", "TypeScript", "Postgres", "Terraform"];
 
 export function Hero() {
 	return (
@@ -266,26 +260,21 @@ function Artefact() {
 						</span>
 					</figcaption>
 
-					<pre className="tnum select-text overflow-x-auto px-4 py-3.5 font-mono text-[0.6rem] text-[var(--brand-text-on-ink-muted)] leading-[1.7] sm:text-[0.64rem]">
-						{CONTACT.join("\n")}
-						{"\n\n"}
-						<TextRule label="Work Experience" />
-						{EXPERIENCE_TEXT.map((line) => (
+					<pre className="tnum select-text whitespace-pre-wrap break-words px-4 py-3.5 font-mono text-[0.6rem] text-[var(--brand-text-on-ink-muted)] leading-[1.7] sm:text-[0.64rem]">
+						{EXPORTED_LINES.map((line) => (
 							<span
 								className={
-									line.key === "highlights"
+									line.text.startsWith("-")
 										? "block text-[var(--brand-text-on-ink)]"
-										: "block"
+										: /^=+$/.test(line.text)
+											? "block text-[var(--brand-text-on-ink-faint)]"
+											: "block"
 								}
-								key={line.key}
+								key={line.id}
 							>
-								{line.key}: {line.value}
+								{line.text === "" ? "\u00a0" : line.text}
 							</span>
 						))}
-						{"\n"}
-						<TextRule label="Skills" />
-						<span className="block">name: Backend</span>
-						<span className="block">skills: Go, TypeScript, Postgres</span>
 					</pre>
 				</figure>
 			</div>
@@ -298,18 +287,5 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 		<p className="mb-2 font-bold text-[0.58rem] text-[var(--brand-accent)] uppercase tracking-[0.16em]">
 			{children}
 		</p>
-	);
-}
-
-function TextRule({ label }: { label: string }) {
-	return (
-		<>
-			<span className="block">{RULE}</span>
-			<span className="block font-semibold text-[var(--brand-text-on-ink)]">
-				{label}
-			</span>
-			<span className="block">{RULE}</span>
-			{"\n"}
-		</>
 	);
 }

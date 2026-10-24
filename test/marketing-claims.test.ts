@@ -284,17 +284,27 @@ describe("the hero artefact matches the real exporter", () => {
 		);
 	});
 
-	it("uses the exporter's own section-rule width", () => {
-		// `buildPlainText` writes a `=` rule around headings. A pretty mock-up would
-		// undercut the only claim on this page that a reader can verify on their own
-		// machine, so the page imports the exporter's constant rather than restating it.
-		const rules = read("src/lib/export/rules.ts");
-		expect(rules).toMatch(/SECTION_RULE\s*=\s*"="\.repeat\(50\)/);
+	it("renders the exporter's own output, not a restatement of it", () => {
+		// This panel used to be a hand-written `key: value` list whose comment claimed it
+		// matched the exporter. It stopped matching the day the exporter stopped emitting
+		// internal field names, so the most prominent panel on the site advertised
+		// `startDate: 2020-09` as the product's output. Importing the function is the only
+		// form of this claim that cannot drift.
 		const hero = read("src/components/marketing/hero.tsx");
 		expect(hero).toMatch(
-			/import \{ SECTION_RULE \} from "@\/lib\/export\/rules"/,
+			/import \{ buildPlainText \} from "@\/lib\/export\/text"/,
 		);
+		expect(hero).toMatch(/buildPlainText\(SAMPLE_RESUME\)/);
+
+		// And the rendered HTML must contain real exporter output: the section rule, the
+		// template's own date range (not a stored `YYYY-MM`), and a `- ` bullet.
 		expect(html).toContain("=".repeat(50));
+		expect(html).toContain("Mar 2022 - Present");
+		expect(html).toMatch(/- Cut p99 checkout latency 41%/);
+
+		// The bug that started this: schema keys must never appear in the artefact.
+		expect(html).not.toContain("startDate:");
+		expect(html).not.toContain("highlights:");
 	});
 
 	it("keeps the mock document out of the page outline", () => {
