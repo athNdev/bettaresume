@@ -268,7 +268,7 @@ export function SortableSectionItem({
 			<div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
 				<Button
 					aria-label={`${section.visible ? "Hide" : "Show"} ${title}`}
-					className="h-6 w-6"
+					className="h-8 w-8"
 					onClick={() => onToggleVisibility(section.id)}
 					size="icon"
 					static
@@ -284,7 +284,7 @@ export function SortableSectionItem({
 					<DropdownMenuTrigger asChild>
 						<Button
 							aria-label={`More actions for ${title}`}
-							className="h-6 w-6"
+							className="h-8 w-8"
 							size="icon"
 							variant="ghost"
 						>

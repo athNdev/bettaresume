@@ -522,6 +522,22 @@ body {
 	transition: none !important;
 }
 
+/*
+ * Touch targets.
+ *
+ * The app's controls are sized for a pointer: the section outline's actions were
+ * 24px, and a finger cannot hit 24px reliably even though it clears the WCAG 2.5.8
+ * minimum. On a coarse pointer every button gets a 40px floor, and an element can
+ * opt out with `data-touch-minimal` where 40px would break a dense toolbar.
+ */
+@media (pointer: coarse) {
+	button:not([data-touch-minimal]),
+	[role="button"]:not([data-touch-minimal]) {
+		min-block-size: 40px;
+		min-inline-size: 40px;
+	}
+}
+
 /* Motion restraint: a user who asked for less motion gets feedback without it. */
 @media (prefers-reduced-motion: reduce) {
 	*,
