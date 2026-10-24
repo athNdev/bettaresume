@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta content="width=device-width, initial-scale=1" name="viewport">
+		<title>BettaResume design tokens — rendered reference</title>
+		<!--
+			Static token reference. The values here mirror src/styles/globals.css;
+			token changes update both in the same commit (rule 6.7 in the research,
+			enforced by review). Open this file in a browser — no build step.
+		-->
+		<style>
+		:root {
+			color-scheme: light dark;
+			font-family: ui-sans-serif, system-ui, sans-serif;
+			--ink: oklch(0.145 0.005 250);
+			--paper: oklch(0.988 0.001 250);
+			--muted: oklch(0.446 0.01 250);
+			--card: oklch(1 0 0);
+			--edge: oklch(0.872 0.004 250);
+		}
+		body {
+			margin: 0 auto;
+			max-width: 62rem;
+			padding: 2rem 1.5rem 6rem;
+			background: var(--paper);
+			color: var(--ink);
+			line-height: 1.6;
+		}
+		h1 {
+			font-size: 1.5rem;
+			letter-spacing: -0.015em;
+		}
+		h2 {
+			font-size: 1.25rem;
+			margin-top: 2.5rem;
+			border-top: 1px solid var(--edge);
+			padding-top: 1.5rem;
+		}
+		p,
+		td {
+			font-size: 0.875rem;
+		}
+		.note {
+			color: var(--muted);
+			font-size: 0.875rem;
+		}
+		table {
+			border-collapse: collapse;
+			width: 100%;
+		}
+		th {
+			text-align: left;
+			font-size: 0.75rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: var(--muted);
+			padding: 0.5rem 0.75rem;
+			border-bottom: 1px solid var(--edge);
+		}
+		td {
+			padding: 0.5rem 0.75rem;
+			border-bottom: 1px solid var(--edge);
+			vertical-align: middle;
+		}
+		code {
+			font-family: ui-monospace, monospace;
+			font-size: 0.8125rem;
+		}
+		.swatch {
+			display: inline-block;
+			width: 3.5rem;
+			height: 1.75rem;
+			border-radius: 4px;
+			border: 1px solid var(--edge);
+			vertical-align: middle;
+		}
+		.ladder {
+			display: flex;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+		}
+		.ladder > div {
+			flex: 1 1 8rem;
+			border-radius: 8px;
+			border: 1px solid var(--edge);
+			padding: 1rem;
+			font-size: 0.75rem;
+		}
+		.theme-dark {
+			background: oklch(0.145 0.005 250);
+			color: oklch(0.988 0.001 250);
+			border-radius: 8px;
+			padding: 1rem;
+		}
+		.theme-dark th,
+		.theme-dark td {
+			border-color: oklch(0.373 0.01 250);
+		}
+		.theme-dark .swatch {
+			border-color: oklch(0.373 0.01 250);
+		}
+		.theme-dark .note {
+			color: oklch(0.708 0.006 250);
+		}
+		.chip {
+			display: inline-block;
+			padding: 0.125rem 0.5rem;
+			border-radius: 9999px;
+			font-size: 0.75rem;
+			font-weight: 600;
+		}
+		.scale-chip {
+			display: inline-block;
+			border: 1px solid var(--edge);
+			border-radius: 4px;
+			text-align: center;
+			padding: 0.25rem 0;
+			margin: 0.125rem;
+			font-size: 0.6875rem;
+		}
+		</style>
+	</head>
+	<body>
+		<h1>BettaResume design tokens — rendered reference</h1>
+		<p class="note">
+			Values mirror <code>src/styles/globals.css</code>. Rules and usage:
+			<code>docs/design-system/README.md</code>. The resume document (Surface B)
+			does not use these tokens.
+		</p>
+
+		<h2>Neutral ramp — 12 steps, ink-toned</h2>
+		<table>
+			<tr>
+				<th>token</th>
+				<th>light</th>
+				<th>oklch</th>
+				<th>role</th>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-0</code></td>
+				<td><span class="swatch" style="background:#ffffff"></span></td>
+				<td><code>oklch(1 0 0)</code></td>
+				<td>paper</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-50</code></td>
+				<td><span class="swatch" style="background:#fafbfc"></span></td>
+				<td><code>oklch(0.988 0.001 250)</code></td>
+				<td>page (light)</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-100</code></td>
+				<td><span class="swatch" style="background:#f2f3f5"></span></td>
+				<td><code>oklch(0.965 0.002 250)</code></td>
+				<td>wells</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-200</code></td>
+				<td><span class="swatch" style="background:#e4e5e7"></span></td>
+				<td><code>oklch(0.922 0.003 250)</code></td>
+				<td>hairlines</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-300</code></td>
+				<td><span class="swatch" style="background:#d3d5d7"></span></td>
+				<td><code>oklch(0.872 0.004 250)</code></td>
+				<td>card edges (light)</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-400</code></td>
+				<td><span class="swatch" style="background:#9ea1a4"></span></td>
+				<td><code>oklch(0.708 0.006 250)</code></td>
+				<td>disabled text</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-500</code></td>
+				<td><span class="swatch" style="background:#707478"></span></td>
+				<td><code>oklch(0.556 0.008 250)</code></td>
+				<td>control boundaries</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-600</code></td>
+				<td><span class="swatch" style="background:#50555a"></span></td>
+				<td><code>oklch(0.446 0.01 250)</code></td>
+				<td>secondary text (light)</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-700</code></td>
+				<td><span class="swatch" style="background:#3d4146"></span></td>
+				<td><code>oklch(0.373 0.01 250)</code></td>
+				<td>card edges (dark)</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-800</code></td>
+				<td><span class="swatch" style="background:#25292c"></span></td>
+				<td><code>oklch(0.278 0.008 250)</code></td>
+				<td>floating layers (dark)</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-900</code></td>
+				<td><span class="swatch" style="background:#15171a"></span></td>
+				<td><code>oklch(0.205 0.006 250)</code></td>
+				<td>cards (dark)</td>
+			</tr>
+			<tr>
+				<td><code>--br-neutral-950</code></td>
+				<td><span class="swatch" style="background:#090a0c"></span></td>
+				<td><code>oklch(0.145 0.005 250)</code></td>
+				<td>page (dark)</td>
+			</tr>
+		</table>
+
+		<h2>Accent ramp — one hue (255)</h2>
+		<table>
+			<tr>
+				<th>token</th>
+				<th>swatch</th>
+				<th>oklch</th>
+				<th>use</th>
+			</tr>
+			<tr>
+				<td><code>--br-accent-50</code></td>
+				<td><span class="swatch" style="background:#f1f6fc"></span></td>
+				<td><code>oklch(0.97 0.01 255)</code></td>
+				<td>selection tint</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-100</code></td>
+				<td><span class="swatch" style="background:#dbe9fc"></span></td>
+				<td><code>oklch(0.93 0.03 255)</code></td>
+				<td>accent fills</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-200</code></td>
+				<td><span class="swatch" style="background:#bad7fc"></span></td>
+				<td><code>oklch(0.87 0.06 255)</code></td>
+				<td>accent borders</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-300</code></td>
+				<td><span class="swatch" style="background:#89b7f3"></span></td>
+				<td><code>oklch(0.77 0.1 255)</code></td>
+				<td>accent text on dark</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-400</code></td>
+				<td><span class="swatch" style="background:#539af2"></span></td>
+				<td><code>oklch(0.68 0.15 255)</code></td>
+				<td>primary + ring (dark)</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-500</code></td>
+				<td><span class="swatch" style="background:#0071e0"></span></td>
+				<td><code>oklch(0.56 0.19 255)</code></td>
+				<td>links, info</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-600</code></td>
+				<td><span class="swatch" style="background:#0063ed"></span></td>
+				<td><code>oklch(0.532 0.232 255)</code></td>
+				<td>primary + ring (light)</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-700</code></td>
+				<td><span class="swatch" style="background:#004fc8"></span></td>
+				<td><code>oklch(0.46 0.21 255)</code></td>
+				<td>primary hover</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-800</code></td>
+				<td><span class="swatch" style="background:#003d94"></span></td>
+				<td><code>oklch(0.38 0.16 255)</code></td>
+				<td>primary active</td>
+			</tr>
+			<tr>
+				<td><code>--br-accent-900</code></td>
+				<td><span class="swatch" style="background:#002e66"></span></td>
+				<td><code>oklch(0.31 0.11 255)</code></td>
+				<td>text on accent-50</td>
+			</tr>
+		</table>
+
+		<h2>Status — one token each</h2>
+		<table>
+			<tr>
+				<th>token</th>
+				<th>light text</th>
+				<th>dark text</th>
+				<th>soft tint</th>
+			</tr>
+			<tr>
+				<td><code>--br-success</code></td>
+				<td>
+					<span class="chip" style="background:#e8f4ec;color:#05773b"
+						>Saved · oklch(0.5 0.13 152)</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#123622;color:#b8e6c9"
+						>Saved</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#05773b1f;color:#05773b"
+						>12% mix</span
+					>
+				</td>
+			</tr>
+			<tr>
+				<td><code>--br-warning</code></td>
+				<td>
+					<span class="chip" style="background:#f7efdd;color:#8a5d0b"
+						>Check · oklch(0.515 0.105 75)</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#3a2c10;color:#ecd9a8"
+						>Check</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#8a5d0b24;color:#8a5d0b"
+						>14% mix</span
+					>
+				</td>
+			</tr>
+			<tr>
+				<td><code>--br-danger</code></td>
+				<td>
+					<span class="chip" style="background:#fbe9ea;color:#d00114"
+						>Failed · oklch(0.54 0.22 27.3)</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#3d1114;color:#f7c2c6"
+						>Failed</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#d001140f;color:#d00114"
+						>6% mix</span
+					>
+				</td>
+			</tr>
+			<tr>
+				<td><code>--br-info</code></td>
+				<td>
+					<span class="chip" style="background:#e7eef9;color:#0961bb"
+						>Note · oklch(0.5 0.16 255)</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#10233d;color:#b9d5f5"
+						>Note</span
+					>
+				</td>
+				<td>
+					<span class="chip" style="background:#0961bb1f;color:#0961bb"
+						>12% mix</span
+					>
+				</td>
+			</tr>
+		</table>
+
+		<h2>Surface ladder — the two themes</h2>
+		<div class="ladder">
+			<div style="background:#fafbfc">
+				light page<br><code>--background</code><br>neutral-50
+			</div>
+			<div style="background:#ffffff">
+				light card<br><code>--surface</code><br>neutral-0 + border + elev-1
+			</div>
+			<div style="background:#ffffff">
+				light popover<br><code>--surface-raised</code><br>neutral-0 + shadow
+			</div>
+		</div>
+		<div class="ladder" style="margin-top: 0.5rem">
+			<div style="background:#090a0c;color:#fafbfc">
+				dark page<br><code>--background</code><br>neutral-950
+			</div>
+			<div style="background:#15171a;color:#fafbfc">
+				dark card<br><code>--surface</code><br>neutral-900 · 1.11:1 step
+			</div>
+			<div style="background:#25292c;color:#fafbfc">
+				dark popover<br><code>--surface-raised</code><br>neutral-800 · 1.22:1
+				step
+			</div>
+		</div>
+		<p class="note">
+			Dark control boundaries (<code>--input</code>, neutral-500) measure
+			3.1–4.2:1 against every one of these surfaces; the focus ring 5.1–6.8:1
+			(WCAG 1.4.11).
+		</p>
+
+		<h2>Scales</h2>
+		<p>
+			<strong>Spacing</strong>
+			(px):
+			<span class="scale-chip" style="width: 2rem">2</span>
+			<span class="scale-chip" style="width: 2rem">4</span>
+			<span class="scale-chip" style="width: 2rem">8</span>
+			<span class="scale-chip" style="width: 2.5rem">12</span>
+			<span class="scale-chip" style="width: 3rem">16</span>
+			<span class="scale-chip" style="width: 3.5rem">24</span>
+			<span class="scale-chip" style="width: 4rem">32</span>
+			<span class="scale-chip" style="width: 5rem">48</span>
+			<span class="scale-chip" style="width: 6rem">64</span>
+			<span class="scale-chip" style="width: 7rem">96</span>
+		</p>
+		<p>
+			<strong>Type</strong>:
+			<span style="font-size: 12px">12&nbsp;meta</span>
+			·
+			<span style="font-size: 14px">14&nbsp;UI body</span>
+			·
+			<span style="font-size: 16px">16&nbsp;content</span>
+			·
+			<span style="font-size: 20px">20&nbsp;titles</span>
+			·
+			<span style="font-size: 24px">24&nbsp;page</span>
+			·
+			<span style="font-size: 32px">32</span>
+			·
+			<span style="font-size: 40px">40</span>
+		</p>
+		<p>
+			<strong>Radius</strong>:
+			<span class="swatch" style="width: 2.5rem; border-radius: 4px">4</span>
+			<span class="swatch" style="width: 2.5rem; border-radius: 6px">6</span>
+			<span class="swatch" style="width: 2.5rem; border-radius: 8px">8</span>
+			<span class="swatch" style="width: 2.5rem; border-radius: 12px">12</span>
+			<span class="swatch" style="width: 2.5rem; border-radius: 9999px">∞</span>
+		</p>
+		<p>
+			<strong>Motion</strong>: 120 / 180 / 240ms ·
+			<code>cubic-bezier(0.2, 0, 0, 1)</code>
+			family · always reduced-motion safe.
+		</p>
+		<p>
+			<strong>z-index</strong>: 0 · 10 · 100 · 1000 · 1100 · 1200 · 1300 · 1400
+			· 1500 — <code>z-(--br-z-…)</code> only.
+		</p>
+
+		<h2>Dark chrome sample</h2>
+		<div class="theme-dark">
+			<table>
+				<tr>
+					<th>role</th>
+					<th>swatch</th>
+					<th>value</th>
+				</tr>
+				<tr>
+					<td><code>--background</code></td>
+					<td><span class="swatch" style="background:#090a0c"></span></td>
+					<td>neutral-950</td>
+				</tr>
+				<tr>
+					<td><code>--surface</code></td>
+					<td><span class="swatch" style="background:#15171a"></span></td>
+					<td>neutral-900</td>
+				</tr>
+				<tr>
+					<td><code>--surface-raised</code></td>
+					<td><span class="swatch" style="background:#25292c"></span></td>
+					<td>neutral-800</td>
+				</tr>
+				<tr>
+					<td><code>--muted</code> (well)</td>
+					<td><span class="swatch" style="background:#0f1114"></span></td>
+					<td>50% 950↔900</td>
+				</tr>
+				<tr>
+					<td><code>--input</code> (boundary)</td>
+					<td><span class="swatch" style="background:#707478"></span></td>
+					<td>neutral-500</td>
+				</tr>
+				<tr>
+					<td><code>--border</code></td>
+					<td><span class="swatch" style="background:#3d4146"></span></td>
+					<td>neutral-700</td>
+				</tr>
+				<tr>
+					<td><code>--primary</code></td>
+					<td><span class="swatch" style="background:#539af2"></span></td>
+					<td>accent-400</td>
+				</tr>
+				<tr>
+					<td><code>--ring</code></td>
+					<td><span class="swatch" style="background:#539af2"></span></td>
+					<td>accent-400</td>
+				</tr>
+			</table>
+		</div>
+	</body>
+</html>

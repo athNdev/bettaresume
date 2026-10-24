@@ -29,13 +29,168 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================================
+   TOKEN SYSTEM — the single source of truth for colour, space, type, radius,
+   elevation, motion and z-index in the app chrome.
+   ==========================================================================
+
+   Two tiers (see `docs/design-system/README.md` for the rules and the full
+   tables):
+
+     1. PRIMITIVES  — `--br-*`, below. Ramps and scales. Never referenced by
+        components; they are the paint the roles are mixed from. The neutral
+        ramp is ink-toned (hue 250) and never pure black; the accent ramp is a
+        single hue (255, the blue already vetted for the focus ring) so a
+        rebrand is one constant.
+     2. ROLES       — `:root` / `.dark` below. What components consume. Light
+        and dark swap the *roles*, not the ramp.
+
+   shadcn's `--color-*` / `--radius-*` / `--shadow-*` names survive as an alias
+   layer (`@theme inline`), so `src/components/ui/` keeps its class vocabulary.
+
+   The scales are CLOSED. The app may use only these values:
+
+     space    0 2 4 8 12 16 24 32 48 64 96 px  (4px base, 2px optical half-step)
+     type     12 14 16 20 24 32 40 px          (7 sizes, weights 400–700)
+     radius   4 6 8 12 full px
+     elev     0 1 2 3                          (surface + shadow pairs)
+     motion   120 180 240 ms, one easing family
+     z        base raised sticky dropdown overlay dialog popover toast tooltip
+
+   `test/token-scale-closure.test.ts` fails on any value off these scales.
+   ========================================================================== */
+
+/* Primitives. `static` so the whole ramp is emitted even where a step is not
+   yet referenced — the ramp is documentation a component can paint from. */
+@theme static {
+	/* Neutral ramp — slightly cool grey (hue 250), ink on paper, never #000. */
+	--br-neutral-0: oklch(1 0 0);
+	--br-neutral-50: oklch(0.988 0.001 250);
+	--br-neutral-100: oklch(0.965 0.002 250);
+	--br-neutral-200: oklch(0.922 0.003 250);
+	--br-neutral-300: oklch(0.872 0.004 250);
+	--br-neutral-400: oklch(0.708 0.006 250);
+	--br-neutral-500: oklch(0.556 0.008 250);
+	--br-neutral-600: oklch(0.446 0.01 250);
+	--br-neutral-700: oklch(0.373 0.01 250);
+	--br-neutral-800: oklch(0.278 0.008 250);
+	--br-neutral-900: oklch(0.205 0.006 250);
+	--br-neutral-950: oklch(0.145 0.005 250);
+
+	/* Accent ramp — one hue (255). Re-hue here to rebrand. */
+	--br-accent-50: oklch(0.97 0.01 255);
+	--br-accent-100: oklch(0.93 0.03 255);
+	--br-accent-200: oklch(0.87 0.06 255);
+	--br-accent-300: oklch(0.77 0.1 255);
+	--br-accent-400: oklch(0.68 0.15 255);
+	--br-accent-500: oklch(0.56 0.19 255);
+	--br-accent-600: oklch(0.532 0.232 255);
+	--br-accent-700: oklch(0.46 0.21 255);
+	--br-accent-800: oklch(0.38 0.16 255);
+	--br-accent-900: oklch(0.31 0.11 255);
+
+	/* Status — one token per meaning, no per-status ramps. Everything softer or
+	   theme-shifted is a `color-mix` of these (see the roles below). Each value
+	   clears 4.5:1 as text on white, on the page, on its own soft tint, and as a
+	   solid fill under its `-foreground` — the tint pair is the binding one. */
+	--br-success: oklch(0.5 0.13 152);
+	--br-warning: oklch(0.515 0.105 75);
+	--br-danger: oklch(0.54 0.22 27.325);
+	--br-info: oklch(0.5 0.16 255);
+	/* Derived tints — soft fills for badges and callouts, never new hues. */
+	--br-success-soft: color-mix(in oklab, var(--br-success) 12%, transparent);
+	--br-warning-soft: color-mix(in oklab, var(--br-warning) 14%, transparent);
+	--br-danger-soft: color-mix(in oklab, var(--br-danger) 6%, transparent);
+	--br-info-soft: color-mix(in oklab, var(--br-info) 12%, transparent);
+
+	/* Spacing — 4px base, 2px optical half-step. 11 values, closed.
+	   `p-4` and friends already compute `calc(var(--spacing) * 4)`; the numbers
+	   on the utilities are validated against this scale by the lint test. */
+	--br-space-05: 0.125rem; /* 2px  optical nudge, icon↔label only */
+	--br-space-1: 0.25rem; /* 4px  label→input */
+	--br-space-2: 0.5rem; /* 8px  inline gaps */
+	--br-space-3: 0.75rem; /* 12px control padding */
+	--br-space-4: 1rem; /* 16px field gaps, dense card padding */
+	--br-space-6: 1.5rem; /* 24px group gaps, card padding */
+	--br-space-8: 2rem; /* 32px section gaps, dialog padding */
+	--br-space-12: 3rem; /* 48px panel padding */
+	--br-space-16: 4rem; /* 64px page padding */
+	--br-space-24: 6rem; /* 96px marketing rhythm */
+
+	/* Type — 7 sizes. Inter for chrome; the resume document has its own scale
+	   in the Typst templates and must never use these (R15). */
+	--br-text-xs: 0.75rem; /* 12 meta, helper, badges */
+	--br-text-xs--line-height: 1rem;
+	--br-text-sm: 0.875rem; /* 14 UI body default */
+	--br-text-sm--line-height: 1.25rem;
+	--br-text-base: 1rem; /* 16 content areas, marketing body */
+	--br-text-base--line-height: 1.5rem;
+	--br-text-lg: 1.25rem; /* 20 card/section titles */
+	--br-text-lg--line-height: 1.75rem;
+	--br-text-lg--letter-spacing: -0.01em;
+	--br-text-xl: 1.5rem; /* 24 page titles */
+	--br-text-xl--line-height: 2rem;
+	--br-text-xl--letter-spacing: -0.015em;
+	--br-text-2xl: 2rem; /* 32 marketing h1/h2, empty-state headlines */
+	--br-text-2xl--line-height: 2.5rem;
+	--br-text-2xl--letter-spacing: -0.02em;
+	--br-text-3xl: 2.5rem; /* 40 marketing hero only */
+	--br-text-3xl--line-height: 3rem;
+	--br-text-3xl--letter-spacing: -0.02em;
+
+	/* Uppercase micro-labels: 12px / 600 / +0.04em. */
+	--br-tracking-micro: 0.04em;
+
+	/* Radius — 4/6/8/12/full. Controls sm, cards md, panels lg, chips full. */
+	--br-radius-xs: 0.25rem;
+	--br-radius-sm: 0.375rem;
+	--br-radius-md: 0.5rem;
+	--br-radius-lg: 0.75rem;
+	--br-radius-full: 9999px;
+
+	/* Elevation — surface + shadow pairs (see `--elev-*` roles). */
+	--br-elev-0: none;
+	--br-elev-1: 0 1px 2px oklch(0 0 0 / 0.06), 0 1px 1px oklch(0 0 0 / 0.04);
+	--br-elev-2: 0 2px 4px oklch(0 0 0 / 0.06), 0 4px 8px oklch(0 0 0 / 0.06);
+	--br-elev-3:
+		0 2px 4px oklch(0 0 0 / 0.05), 0 8px 16px oklch(0 0 0 / 0.08),
+		0 16px 32px oklch(0 0 0 / 0.1);
+
+	/* Motion — 120/180/240ms, one easing family. */
+	--br-duration-fast: 120ms; /* hover/press state layers, colour changes */
+	--br-duration-base: 180ms; /* dropdowns, tooltips, accordions */
+	--br-duration-slow: 240ms; /* dialogs, sheets, page transitions */
+	--br-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+	--br-ease-decelerate: cubic-bezier(0, 0, 0, 1);
+	--br-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+
+	/* z-index — one ladder. Use `z-(--br-z-…)`; never a raw z number. */
+	--br-z-base: 0;
+	--br-z-raised: 10; /* hover-lifted cards, sticky row actions */
+	--br-z-sticky: 100; /* sticky headers, panel toolbars */
+	--br-z-dropdown: 1000; /* menus, combobox lists */
+	--br-z-overlay: 1100; /* modal scrim */
+	--br-z-dialog: 1200; /* dialogs, sheets */
+	--br-z-popover: 1300; /* popovers above dialogs */
+	--br-z-toast: 1400;
+	--br-z-tooltip: 1500; /* always on top */
+}
+
 @theme inline {
+	/* ── Alias layer ──────────────────────────────────────────────────────
+	   What components consume. Every entry resolves to a role below, which in
+	   turn resolves to a primitive. The shadcn names survive so the 29
+	   primitives in `src/components/ui/` migrate without class churn. */
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
-	--color-card: var(--card);
-	--color-card-foreground: var(--card-foreground);
-	--color-popover: var(--popover);
-	--color-popover-foreground: var(--popover-foreground);
+	--color-surface: var(--surface);
+	--color-surface-foreground: var(--surface-foreground);
+	--color-surface-raised: var(--surface-raised);
+	--color-surface-raised-foreground: var(--surface-raised-foreground);
+	--color-card: var(--surface);
+	--color-card-foreground: var(--surface-foreground);
+	--color-popover: var(--surface-raised);
+	--color-popover-foreground: var(--surface-raised-foreground);
 	--color-primary: var(--primary);
 	--color-primary-foreground: var(--primary-foreground);
 	--color-secondary: var(--secondary);
@@ -46,19 +201,41 @@
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);
 	--color-destructive-foreground: var(--destructive-foreground);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-success-soft: var(--br-success-soft);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-warning-soft: var(--br-warning-soft);
+	--color-danger: var(--danger);
+	--color-danger-foreground: var(--danger-foreground);
+	--color-danger-soft: var(--br-danger-soft);
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+	--color-info-soft: var(--br-info-soft);
+	--color-link: var(--link);
 	--color-border: var(--border);
+	--color-border-strong: var(--border-strong);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	/* Modal dimming layers. Static: a scrim dims toward ink in both themes. */
+	--color-scrim: oklch(0.145 0.005 250 / 0.8);
+	--color-scrim-soft: oklch(0.145 0.005 250 / 0.5);
+	/* Radius aliases — `rounded-xl` is kept for compatibility and resolves to
+	   `lg`; the closed set is xs/sm/md/lg/full (R8). */
+	--radius-xs: var(--br-radius-xs);
+	--radius-sm: var(--br-radius-sm);
+	--radius-md: var(--br-radius-md);
+	--radius-lg: var(--br-radius-lg);
+	--radius-xl: var(--br-radius-lg);
 	/* Elevation. Shadows create depth; borders create structure. See `:root` below. */
+	--shadow-elev-0: var(--elev-0);
 	--shadow-elev-1: var(--elev-1);
 	--shadow-elev-2: var(--elev-2);
 	--shadow-elev-3: var(--elev-3);
-	--ease-enter: cubic-bezier(0.2, 0, 0, 1);
-	--ease-exit: cubic-bezier(0.2, 0, 0, 1);
+	--ease-enter: var(--br-ease-standard);
+	--ease-exit: var(--br-ease-standard);
+	--tracking-micro: var(--br-tracking-micro);
 	--color-chart-1: var(--chart-1);
 	--color-chart-2: var(--chart-2);
 	--color-chart-3: var(--chart-3);
@@ -74,43 +251,72 @@
 	--color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ==========================================================================
+   ROLES — light. Components read these (through the alias layer), never the
+   ramps. Light and dark swap these bindings, not the ramp.
+   ========================================================================== */
 :root {
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.965 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.965 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.965 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.577 0.245 27.325);
-	--destructive-foreground: oklch(0.985 0 0);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
+	/* Surface ladder: page → card → floating layer. Separation is tonal in
+	   dark and border+shadow in light; every rung is distinct. */
+	--background: var(--br-neutral-50);
+	--foreground: var(--br-neutral-950);
+	--surface: var(--br-neutral-0);
+	--surface-foreground: var(--br-neutral-950);
+	--surface-raised: var(--br-neutral-0);
+	--surface-raised-foreground: var(--br-neutral-950);
+
+	/* Sunken fills: wells sit a step toward the page colour. */
+	--muted: var(--br-neutral-100);
+	--muted-foreground: var(--br-neutral-600);
+	--secondary: var(--br-neutral-100);
+	--secondary-foreground: var(--br-neutral-800);
+	/* Icons and decorative meta only — text uses --muted-foreground (R6). */
+	--subtle: var(--br-neutral-500);
+
+	/* Interaction. Hover/press are alpha state layers, never new solids (R9). */
+	--accent: color-mix(in oklab, var(--br-neutral-500) 10%, transparent);
+	--accent-foreground: var(--br-neutral-900);
+	--primary: var(--br-accent-600);
+	--primary-foreground: var(--br-neutral-0);
+	--link: var(--br-accent-500);
+	--selection: color-mix(in oklab, var(--br-accent-500) 20%, transparent);
+
+	/* Status. Solid fills pair with their -foreground; text and icons use the
+	   status value directly. Derived tints stay derived (color-mix). */
+	--success: var(--br-success);
+	--success-foreground: var(--br-neutral-0);
+	--warning: var(--br-warning);
+	--warning-foreground: var(--br-neutral-0);
+	--danger: var(--br-danger);
+	--danger-foreground: var(--br-neutral-0);
+	--info: var(--br-info);
+	--info-foreground: var(--br-neutral-0);
+	--destructive: var(--danger);
+	--destructive-foreground: var(--danger-foreground);
+
+	/* Structure vs control boundary. `--border` is decorative structure and is
+	   not held to 3:1; `--input` carries the edge of every interactive control
+	   and clears 3:1 on every surface it may sit on (WCAG 1.4.11). */
+	--border: var(--br-neutral-300);
+	--border-strong: var(--br-neutral-400);
+	--input: var(--br-neutral-500);
 	/*
 	 * Focus indicator colour. This used to be `oklch(0.708 0 0)`, a grey that measures
 	 * 2.3:1 against white — below the 3:1 that a non-text indicator needs (WCAG 1.4.11),
 	 * so keyboard users were getting a ring that was technically present and practically
-	 * invisible. Now a saturated blue that clears 3:1 on both paper and card.
+	 * invisible. Now the accent-600 blue: 5.2:1 on paper, 5.3:1 on card.
 	 */
-	--ring: oklch(0.532 0.232 255.07);
-	--radius: 0.625rem;
+	--ring: var(--br-accent-600);
 	/*
 	 * Elevation: layered transparent shadows, never borders, for depth. A border is
 	 * structure — dividers, separators, selected and focus states — and using it for
-	 * depth is what makes nested cards look stacked out of paper.
+	 * depth is what makes nested cards look stacked out of paper. Pairs with the
+	 * surface roles: elev-1 = --surface, elev-2 = --surface, elev-3 = --surface-raised.
 	 */
-	--elev-1: 0 1px 2px oklch(0 0 0 / 0.06), 0 1px 1px oklch(0 0 0 / 0.04);
-	--elev-2: 0 2px 4px oklch(0 0 0 / 0.06), 0 4px 8px oklch(0 0 0 / 0.06);
-	--elev-3:
-		0 2px 4px oklch(0 0 0 / 0.05), 0 8px 16px oklch(0 0 0 / 0.08),
-		0 16px 32px oklch(0 0 0 / 0.1);
+	--elev-0: var(--br-elev-0);
+	--elev-1: var(--br-elev-1);
+	--elev-2: var(--br-elev-2);
+	--elev-3: var(--br-elev-3);
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
@@ -126,33 +332,66 @@
 	--sidebar-ring: oklch(0.708 0 0);
 }
 
+/* ==========================================================================
+   ROLES — dark. Same bindings, swapped: the ladder runs page → card → floating
+   layer with real tonal steps (the audit found card == background == popover),
+   wells sink between page and card, and every control boundary clears 3:1.
+   ========================================================================== */
 .dark {
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.145 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.145 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.985 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.396 0.141 25.723);
-	--destructive-foreground: oklch(0.985 0 0);
-	--border: oklch(0.269 0 0);
-	--input: oklch(0.269 0 0);
+	--background: var(--br-neutral-950);
+	--foreground: var(--br-neutral-50);
+	--surface: var(--br-neutral-900);
+	--surface-foreground: var(--br-neutral-50);
+	--surface-raised: var(--br-neutral-800);
+	--surface-raised-foreground: var(--br-neutral-50);
+
+	/* Wells sink a step toward the page instead of lifting off the card. */
+	--muted: color-mix(
+		in oklab,
+		var(--br-neutral-950) 50%,
+		var(--br-neutral-900)
+	);
+	--muted-foreground: var(--br-neutral-400);
+	--secondary: color-mix(
+		in oklab,
+		var(--br-neutral-950) 50%,
+		var(--br-neutral-900)
+	);
+	--secondary-foreground: var(--br-neutral-50);
+	--subtle: var(--br-neutral-500);
+
+	--accent: color-mix(in oklab, var(--br-neutral-0) 10%, transparent);
+	--accent-foreground: var(--br-neutral-50);
+	--primary: var(--br-accent-400);
+	--primary-foreground: var(--br-neutral-950);
+	--link: var(--br-accent-300);
+	--selection: color-mix(in oklab, var(--br-accent-500) 30%, transparent);
+
+	/* Status fills lighten toward white and pair with ink text (on-* discipline).
+	   As text they clear 4.5:1 on every dark surface. */
+	--success: color-mix(in oklab, var(--br-success) 70%, white);
+	--success-foreground: var(--br-neutral-950);
+	--warning: color-mix(in oklab, var(--br-warning) 70%, white);
+	--warning-foreground: var(--br-neutral-950);
+	--danger: color-mix(in oklab, var(--br-danger) 72%, white);
+	--danger-foreground: var(--br-neutral-950);
+	--info: color-mix(in oklab, var(--br-info) 70%, white);
+	--info-foreground: var(--br-neutral-950);
+	--destructive: var(--danger);
+	--destructive-foreground: var(--danger-foreground);
+
+	--border: var(--br-neutral-700);
+	--border-strong: var(--br-neutral-600);
+	--input: var(--br-neutral-500);
 	/* Lighter than the light-mode ring: dark surfaces swallow a mid-tone blue. */
-	--ring: oklch(0.72 0.17 255);
+	--ring: var(--br-accent-400);
 	--chart-1: oklch(0.488 0.243 264.376);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.769 0.188 70.08);
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
 	/* Shadows need more alpha to read at all on a dark surface. */
+	--elev-0: var(--br-elev-0);
 	--elev-1: 0 1px 2px oklch(0 0 0 / 0.35), 0 1px 1px oklch(0 0 0 / 0.25);
 	--elev-2: 0 2px 4px oklch(0 0 0 / 0.35), 0 4px 8px oklch(0 0 0 / 0.3);
 	--elev-3:
@@ -198,7 +437,7 @@ body {
 
 /* Selection styles */
 ::selection {
-	background: oklch(from var(--primary) l c h / 0.2);
+	background: var(--selection);
 	color: var(--foreground);
 }
 

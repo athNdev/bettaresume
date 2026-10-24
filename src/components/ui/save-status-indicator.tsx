@@ -105,14 +105,14 @@ export function SaveStatusIndicator({
 	return (
 		<div
 			className={cn(
-				"relative flex h-5 min-w-[80px] items-center justify-end",
+				"relative flex h-5 min-w-20 items-center justify-end",
 				className,
 			)}
 		>
 			<div
 				aria-hidden={!isVisible}
 				className={cn(
-					"absolute right-0 flex items-center gap-2 text-sm transition-[opacity,transform] duration-300 ease-enter",
+					"absolute right-0 flex items-center gap-2 text-sm transition-[opacity,transform] duration-(--br-duration-slow) ease-enter",
 					isVisible && !isAnimatingOut ? "opacity-100" : "opacity-0",
 					"pointer-events-auto transform-gpu",
 				)}
@@ -128,10 +128,8 @@ export function SaveStatusIndicator({
 
 				{displayState === "saved" && (
 					<>
-						<Check className="h-3.5 w-3.5 text-green-600 dark:text-green-500" />
-						<span className="whitespace-nowrap text-green-600 dark:text-green-500">
-							Saved
-						</span>
+						<Check className="h-3.5 w-3.5 text-success" />
+						<span className="whitespace-nowrap text-success">Saved</span>
 					</>
 				)}
 

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { StateIcon } from "../src/components/ui/state-icon";
 import { contrast, NON_TEXT } from "../src/lib/color/contrast";
 import { codeOf } from "./helpers/code-source";
+import { loadTokenTheme, resolveValue } from "./helpers/token-theme";
 
 /**
  * The polish rules from `better-ui`, asserted against the source rather than
@@ -45,15 +46,11 @@ function sourceFiles(): string[] {
 	return out;
 }
 
-/** Tokens read from `:root` / `.dark`, so the assertions use the real values. */
+/** Tokens from `:root` / `.dark`, resolved through their `var()` chains. */
+const tokens = loadTokenTheme();
+
 function token(name: string, block: "root" | "dark"): string {
-	const source =
-		block === "root"
-			? css.slice(0, css.indexOf(".dark {"))
-			: css.slice(css.indexOf(".dark {"));
-	const match = new RegExp(`\\s${name}:\\s*([^;]+);`).exec(source);
-	if (!match?.[1]) throw new Error(`token ${name} not found in ${block}`);
-	return match[1].trim();
+	return resolveValue(tokens, block === "root" ? "light" : "dark", name);
 }
 
 describe("nothing transitions everything", () => {

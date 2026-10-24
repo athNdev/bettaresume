@@ -1,16 +1,37 @@
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * A card is either in flow or floating — it never carries both an edge and a
+ * lift (component inventory rule 24: "elev-1 or border, never both"). A border
+ * is structure; a shadow is depth. Stacking both is what makes nested cards
+ * look like cut paper.
+ *
+ * - `inline` (default): a container inside a panel. Its edge is the border
+ *   (the elev-0 pair — surface + 1px border, no shadow).
+ * - `floating`: a card that lifts off the page — interactive tiles, hover
+ *   lifts. The elev-1 pair: surface + `shadow-elev-1`, no border.
+ */
+const cardVariants = cva("rounded-lg bg-card text-card-foreground", {
+	variants: {
+		elevation: {
+			inline: "border shadow-elev-0",
+			floating: "shadow-elev-1",
+		},
+	},
+	defaultVariants: {
+		elevation: "inline",
+	},
+});
+
 const Card = React.forwardRef<
 	HTMLDivElement,
-	React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+	React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof cardVariants>
+>(({ className, elevation, ...props }, ref) => (
 	<div
-		className={cn(
-			"rounded-lg border bg-card text-card-foreground shadow-sm",
-			className,
-		)}
+		className={cn(cardVariants({ elevation, className }))}
 		ref={ref}
 		{...props}
 	/>
@@ -22,7 +43,7 @@ const CardHeader = React.forwardRef<
 	React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
 	<div
-		className={cn("flex flex-col space-y-1.5 p-6", className)}
+		className={cn("flex flex-col space-y-2 p-6", className)}
 		ref={ref}
 		{...props}
 	/>
@@ -35,7 +56,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<div
 		className={cn(
-			"font-semibold text-2xl leading-none tracking-tight",
+			"font-semibold text-xl leading-none tracking-tight",
 			className,
 		)}
 		ref={ref}
@@ -83,4 +104,5 @@ export {
 	CardFooter,
 	CardHeader,
 	CardTitle,
+	cardVariants,
 };
