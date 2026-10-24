@@ -26,6 +26,7 @@ import type { Reference } from "@/features/resume-editor/types";
 import { createDefaultReference } from "@/features/resume-editor/types";
 import { useAutoSave, useBeforeUnload } from "@/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
+import { moveItem } from "@/lib/collections";
 
 interface ReferencesFormProps {
 	data: Reference[];
@@ -82,13 +83,7 @@ export function ReferencesForm({
 		(index: number, direction: "up" | "down") => {
 			const newIndex = direction === "up" ? index - 1 : index + 1;
 			if (newIndex < 0 || newIndex >= localData.length) return;
-			setLocalData((prev) => {
-				const newData = [...prev];
-				const temp = newData[index]!;
-				newData[index] = newData[newIndex]!;
-				newData[newIndex] = temp;
-				return newData;
-			});
+			setLocalData((prev) => moveItem(prev, index, newIndex));
 		},
 		[localData.length, setLocalData],
 	);

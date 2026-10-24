@@ -146,10 +146,19 @@ export async function createContext({
 				})
 				.onConflictDoNothing();
 
+			/**
+			 * The smallest object `auth.upsert` can read.
+			 *
+			 * It used to be `as any`. A full Clerk `User` has dozens of fields and none of
+			 * the other ones are read anywhere in the backend — `loadUser` exists for the
+			 * email/name/image fallbacks in `auth.upsert` and for nothing else. Casting
+			 * through `unknown` keeps the shape honest at the boundary and stops the `any`
+			 * from spreading into any caller that touches `ctx.user`.
+			 */
 			const devUser = {
 				id: "user-1",
 				emailAddresses: [{ emailAddress: "demo@example.com" }],
-			} as any;
+			} as unknown as Awaited<ReturnType<typeof clerkClient.users.getUser>>;
 			return {
 				db,
 				userId: "user-1",

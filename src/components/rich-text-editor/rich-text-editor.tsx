@@ -226,6 +226,7 @@ function MenuBar({ editor }: { editor: Editor | null }) {
 								key={color}
 								onClick={() => editor.chain().focus().setColor(color).run()}
 								style={{ backgroundColor: color }}
+								type="button"
 							/>
 						))}
 					</div>
@@ -249,11 +250,13 @@ function MenuBar({ editor }: { editor: Editor | null }) {
 									editor.chain().focus().toggleHighlight({ color }).run()
 								}
 								style={{ backgroundColor: color }}
+								type="button"
 							/>
 						))}
 						<button
 							className="flex h-6 w-6 items-center justify-center rounded border border-border text-xs transition-transform hover:scale-110"
 							onClick={() => editor.chain().focus().unsetHighlight().run()}
+							type="button"
 						>
 							✕
 						</button>

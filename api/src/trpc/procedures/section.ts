@@ -361,7 +361,7 @@ export const sectionRouter = router({
 							: {}),
 						updatedAt: now,
 					})
-					.where(sectionWriteScope(input.id!, input.resumeId));
+					.where(sectionWriteScope(existing.id, input.resumeId));
 			} else {
 				// Insert
 				await ctx.db.insert(sections).values({
@@ -453,7 +453,7 @@ export const sectionRouter = router({
 							content: JSON.stringify(sectionData.content),
 							updatedAt: now,
 						})
-						.where(sectionWriteScope(sectionData.id!, input.resumeId));
+						.where(sectionWriteScope(existing.id, input.resumeId));
 				} else {
 					await ctx.db.insert(sections).values({
 						id: sectionId,

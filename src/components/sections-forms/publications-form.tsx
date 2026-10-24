@@ -28,6 +28,7 @@ import type { Publication } from "@/features/resume-editor/types";
 import { createDefaultPublication } from "@/features/resume-editor/types";
 import { useAutoSave, useBeforeUnload } from "@/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
+import { moveItem } from "@/lib/collections";
 
 interface PublicationsFormProps {
 	data: Publication[];
@@ -85,13 +86,7 @@ export function PublicationsForm({
 		(index: number, direction: "up" | "down") => {
 			const newIndex = direction === "up" ? index - 1 : index + 1;
 			if (newIndex < 0 || newIndex >= localData.length) return;
-			setLocalData((prev) => {
-				const newData = [...prev];
-				const temp = newData[index]!;
-				newData[index] = newData[newIndex]!;
-				newData[newIndex] = temp;
-				return newData;
-			});
+			setLocalData((prev) => moveItem(prev, index, newIndex));
 		},
 		[localData.length, setLocalData],
 	);
@@ -262,11 +257,13 @@ export function PublicationsForm({
 										<Label>Authors</Label>
 										<div className="mt-2 flex flex-wrap gap-2">
 											{pub.authors?.map((author, i) => (
+												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<Badge className="gap-1" key={i} variant="secondary">
 													{author}
 													<button
 														className="ml-1 hover:text-destructive"
 														onClick={() => removeAuthor(pub.id, i)}
+														type="button"
 													>
 														<X className="h-3 w-3" />
 													</button>

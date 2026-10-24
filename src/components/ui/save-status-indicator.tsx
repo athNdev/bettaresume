@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Check, Loader2, RefreshCw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { SaveStatus } from "@/hooks/use-auto-save";
 import { cn } from "@/lib/utils";
@@ -60,12 +60,17 @@ export function SaveStatusIndicator({
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	// Clear any pending timers
-	const clearTimers = () => {
+	//
+	// `useCallback` because this is a dependency of the effect below. Defined inline it
+	// was a new function on every render, so the effect re-ran on every parent render —
+	// restarting the 1.7s "Saved" timer each time. In the editor, which re-renders on
+	// every keystroke, the toast could stay on screen indefinitely.
+	const clearTimers = useCallback(() => {
 		if (timerRef.current) {
 			clearTimeout(timerRef.current);
 			timerRef.current = null;
 		}
-	};
+	}, []);
 
 	// Handle status changes - only depends on status prop
 	useEffect(() => {

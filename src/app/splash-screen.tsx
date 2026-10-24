@@ -16,6 +16,7 @@ export function SplashScreen({ message = "Loading..." }: SplashScreenProps) {
 		<div className="flex min-h-screen flex-col items-center justify-center bg-background">
 			{/* Logo */}
 			<div className="mb-8">
+				{/* biome-ignore lint/performance/noImgElement: a 4 kB static SVG, rendered before any JS runs */}
 				<img alt="Betta Resume Logo" className="h-24 w-auto" src="/logo.svg" />
 			</div>
 

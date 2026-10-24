@@ -64,8 +64,12 @@ export function matchRoute(
 	const params: Record<string, string> = {};
 
 	for (let i = 0; i < patternParts.length; i++) {
-		const patternPart = patternParts[i]!;
-		const pathPart = pathParts[i]!;
+		const patternPart = patternParts[i];
+		const pathPart = pathParts[i];
+		// Both arrays have the same length (checked above), so this is unreachable — but
+		// `noUncheckedIndexedAccess` cannot know that, and a `!` here would turn a future
+		// change to the length check into a runtime TypeError inside the router.
+		if (patternPart === undefined || pathPart === undefined) return null;
 
 		if (patternPart.startsWith(":")) {
 			// Dynamic segment

@@ -41,6 +41,7 @@ import {
 } from "@/features/resume-editor/types";
 import { useAutoSave, useBeforeUnload } from "@/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
+import { moveItem } from "@/lib/collections";
 
 interface SkillsFormProps {
 	data: SkillCategory[];
@@ -124,13 +125,12 @@ export function SkillsForm({
 		(index: number, direction: "up" | "down") => {
 			const newIndex = direction === "up" ? index - 1 : index + 1;
 			if (newIndex < 0 || newIndex >= localData.length) return;
-			setLocalData((prev) => {
-				const newData = [...prev];
-				const temp = newData[index]!;
-				newData[index] = newData[newIndex]!;
-				newData[newIndex] = temp;
-				return newData.map((cat, i) => ({ ...cat, order: i }));
-			});
+			setLocalData((prev) =>
+				moveItem(prev, index, newIndex).map((cat, i) => ({
+					...cat,
+					order: i,
+				})),
+			);
 		},
 		[localData.length, setLocalData],
 	);
