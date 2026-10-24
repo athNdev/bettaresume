@@ -49,9 +49,10 @@ const read = (file: string) =>
 	readFileSync(fileURLToPath(new URL(file, root)), "utf8");
 
 /** Visible copy only: strip tags so a claim in an attribute cannot satisfy a text check. */
-const visible = html
-	.replace(/<[^>]+>/g, " ")
-	.replace(/&[a-z]+;/g, " ")
+const visible = [...html.matchAll(/>([^<]*)</g)]
+	.map((m) => m[1] ?? "")
+	.join(" ")
+	.replace(/&#?\w+;/g, " ")
 	.replace(/\s+/g, " ");
 
 describe("the page renders", () => {
@@ -290,9 +291,13 @@ describe("the hero artefact matches the real exporter", () => {
 		// The document is `role="img"`, so a screen reader hears one description rather
 		// than fiction announced as sections of the site.
 		expect(html).toMatch(/aria-label="A resume document for Avery Chen/);
-		const headings = [...html.matchAll(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/g)].map(
-			(m) => (m[1] ?? "").replace(/<[^>]+>/g, "").trim(),
-		);
+		// Raw inner HTML, not tag-stripped: these headings contain plain text only, and a
+		// sanitiser in a test is a CodeQL finding waiting to happen. `toContain` is also a
+		// stronger assertion here — it catches the fiction appearing inside any heading,
+		// not only as the whole heading.
+		const headings = [...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/g)]
+			.map((m) => (m[1] ?? "").trim())
+			.join(" | ");
 		expect(headings).not.toContain("Work Experience");
 		expect(headings).not.toContain("Avery Chen");
 	});
