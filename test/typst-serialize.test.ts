@@ -382,3 +382,75 @@ describe("invisible and unordered sections", () => {
 		expect(types).toEqual(["projects", "education", "experience"]);
 	});
 });
+
+describe("the font family the document actually asks for", () => {
+	/**
+	 * The chain has three links and only two were connected: `prepareFont` resolved the
+	 * requested family and loaded a file for it, but the serialised document still named
+	 * the *requested* family. Typst does not have "Times New Roman", so it used its own
+	 * fallback and the loaded file went unread — the export of a Times New Roman resume
+	 * embedded LibertinusSerif, and the metric-compatible substitute never reached a PDF.
+	 */
+	const withFont = (fontFamily: string) => {
+		const resume = makeResume([]);
+		(
+			resume.metadata as { settings: { fontFamily: string } }
+		).settings.fontFamily = fontFamily;
+		return JSON.parse(resumeToTypstJson(resume)).settings.fontFamily as string;
+	};
+
+	it("passes a shipped family through unchanged", () => {
+		expect(withFont("Inter")).toBe("Inter");
+		expect(withFont("Playfair Display")).toBe("Playfair Display");
+	});
+
+	it("resolves Times New Roman to its metric-compatible clone", () => {
+		// Not a Computer Modern serif: Tinos is built to Times' own advance widths, so
+		// the page count in the preview matches the page count in Word.
+		expect(withFont("Times New Roman")).toBe("Tinos");
+	});
+
+	it("resolves Arial, Helvetica and Calibri to metric-compatible sans", () => {
+		expect(withFont("Arial")).toBe("Arimo");
+		expect(withFont("Helvetica")).toBe("Arimo");
+		expect(withFont("Calibri")).toBe("Carlito");
+	});
+
+	it("keeps Computer Modern, which Typst already has", () => {
+		expect(withFont("Computer Modern")).toBe("New Computer Modern");
+	});
+
+	it("falls back to a built-in for families with no free equivalent", () => {
+		expect(withFont("Georgia")).toBe("New Computer Modern");
+		expect(withFont("Garamond")).toBe("New Computer Modern");
+	});
+
+	it("never emits a family the compiler has no file for", () => {
+		// The invariant behind the whole bug: whatever lands in the document must be a
+		// name Typst can resolve to bytes, either ours or its own built-in.
+		const resolvable = new Set([
+			"Inter",
+			"Roboto",
+			"Open Sans",
+			"Lato",
+			"Montserrat",
+			"Playfair Display",
+			"Tinos",
+			"Arimo",
+			"Carlito",
+			"New Computer Modern",
+		]);
+		for (const requested of [
+			"Inter",
+			"Times New Roman",
+			"Arial",
+			"Helvetica",
+			"Calibri",
+			"Georgia",
+			"Garamond",
+			"Computer Modern",
+		]) {
+			expect(resolvable.has(withFont(requested)), requested).toBe(true);
+		}
+	});
+});

@@ -294,3 +294,119 @@ describe("collectBulletFindings", () => {
 		});
 	});
 });
+
+describe("each entry gets its own finding", () => {
+	/**
+	 * The shipped bug: the loop pushed one finding per entry but hardcoded
+	 * `index: 0` and gave the panel `key={sectionId}`. A section with two roles
+	 * therefore produced two findings with the same identity — React logged
+	 * "Encountered two children with the same key, `sec-exp`" and the panel drew two
+	 * unlabelled blocks of bullets with no way to tell which job they came from.
+	 */
+	const twoRoles = () =>
+		resume({
+			sections: [
+				section({
+					type: "experience",
+					content: {
+						data: [
+							{
+								company: "Acme",
+								highlights: ["Built the thing"],
+							},
+							{
+								company: "Globex",
+								highlights: ["Maintained the other thing"],
+							},
+						],
+					} as never,
+				}),
+			],
+		});
+
+	it("produces one finding per entry, not one per section", () => {
+		expect(collectBulletFindings(twoRoles()).bullets).toHaveLength(2);
+	});
+
+	it("gives each finding a distinct index", () => {
+		const indices = collectBulletFindings(twoRoles()).bullets.map(
+			(b) => b.index,
+		);
+		expect(indices).toEqual([0, 1]);
+	});
+
+	it("makes the key the panel uses unique", () => {
+		const keys = collectBulletFindings(twoRoles()).bullets.map(
+			(b) => `${b.sectionId}:${b.index}`,
+		);
+		expect(new Set(keys).size).toBe(keys.length);
+	});
+
+	it("names the entry the bullets belong to", () => {
+		const labels = collectBulletFindings(twoRoles()).bullets.map(
+			(b) => b.label,
+		);
+		expect(labels).toEqual(["Acme", "Globex"]);
+	});
+
+	it("falls back through the shapes other sections use", () => {
+		const label = (data: unknown[]) =>
+			collectBulletFindings(
+				resume({
+					sections: [
+						section({
+							type: "education",
+							content: { data } as never,
+						}),
+					],
+				}),
+			).bullets[0]?.label;
+
+		expect(label([{ institution: "MIT", highlights: ["Studied"] }])).toBe(
+			"MIT",
+		);
+		expect(label([{ organization: "Shelter", highlights: ["Helped"] }])).toBe(
+			"Shelter",
+		);
+		expect(label([{ name: "CoachCraft", highlights: ["Built"] }])).toBe(
+			"CoachCraft",
+		);
+	});
+
+	it("leaves the label empty rather than inventing one", () => {
+		// The panel renders the heading only when there is something to say.
+		const { bullets } = collectBulletFindings(
+			resume({
+				sections: [
+					section({
+						type: "experience",
+						content: { data: [{ highlights: ["Did it"] }] } as never,
+					}),
+				],
+			}),
+		);
+		expect(bullets[0]?.label).toBe("");
+	});
+
+	it("keeps the entry's real index when an earlier entry has no bullets", () => {
+		// Index comes from `data.entries()`, not from the position in the filtered list,
+		// so a finding still points at the entry the user can see.
+		const { bullets } = collectBulletFindings(
+			resume({
+				sections: [
+					section({
+						type: "experience",
+						content: {
+							data: [
+								{ company: "Empty", highlights: [] },
+								{ company: "Real", highlights: ["Did the work"] },
+							],
+						} as never,
+					}),
+				],
+			}),
+		);
+		expect(bullets.map((b) => b.index)).toEqual([1]);
+		expect(bullets[0]?.label).toBe("Real");
+	});
+});

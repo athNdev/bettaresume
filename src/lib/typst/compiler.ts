@@ -8,14 +8,20 @@
  * downloaded and instantiated on the first compile call, then cached for
  * the lifetime of the page.
  *
- * Fonts are vendored under `public/fonts/` and loaded from this origin on demand, then
- * cached per family. Nothing here touches a CDN.
+ * Fonts are vendored under `public/fonts/` and registered with the compiler at init, so
+ * nothing here touches a CDN.
  */
+
+// The library's font loaders. Their default driver pulls Typst's own faces from
+// jsDelivr; these let every byte come from this origin instead.
+import {
+	loadFonts,
+	preloadFontAssets,
+} from "@myriaddreamin/typst.ts/options.init";
 import {
 	FONT_FILES,
 	type FontResolution,
 	fontSubstitutionWarning,
-	isEmbeddableFont,
 	resolveTypstFont,
 } from "./fonts";
 
@@ -23,18 +29,25 @@ import {
 interface TypstInitOptions {
 	getModule: () => string;
 	/**
-	 * `false` disables the library's bundled default, which is a jsDelivr font bundle
-	 * (`cdn.jsdelivr.net/gh/typst/typst-assets@…/files/fonts/`). Left at its default, that
-	 * URL is still a remote asset source even though every module and typeface we need is
-	 * served from this origin.
+	 * Stage the compiler's own default text fonts from this origin.
+	 *
+	 * This replaces the library default — `TypstCompilerDriver.defaultAssets` pushes
+	 * `loadFonts([], { assets: ['text'] })`, which resolves its prefix to
+	 * `cdn.jsdelivr.net/gh/typst/typst-assets@…/files/fonts/`. An earlier attempt passed
+	 * `assets: false` to this object instead; that key is not part of `InitOptions`, so it
+	 * was silently ignored and the compiler kept fetching 17 files from jsDelivr. Passing
+	 * `assets` **and** `assetUrlPrefix` is what makes `hasSpecifiedAssets` true and stops
+	 * the default from being added at all.
+	 *
+	 * The fonts must stay: they are the substitution target for any family this app does
+	 * not ship, so dropping them would leave those resumes with no fallback face.
 	 */
-	assets?: false;
+	beforeBuild?: unknown[];
 }
 
 interface TypstSnippet {
 	setCompilerInitOptions(opts: TypstInitOptions): void;
 	setRendererInitOptions(opts: TypstInitOptions): void;
-	addFonts(fonts: Uint8Array[]): Promise<void>;
 	/** May return a single combined SVG string or an array (one per page). */
 	svg(opts: { mainContent: string }): Promise<string | string[]>;
 	pdf(opts: { mainContent: string }): Promise<Uint8Array>;
@@ -45,8 +58,6 @@ interface TypstSnippet {
 // -------------------------------------------------------
 let compilerReady = false;
 let initPromise: Promise<void> | null = null;
-const loadedFonts = new Set<string>();
-const fontCache = new Map<string, Uint8Array[]>();
 
 // Dynamically imported typst instance (avoids SSR issues)
 let $typst: TypstSnippet | null = null;
@@ -54,6 +65,32 @@ let $typst: TypstSnippet | null = null;
 // -------------------------------------------------------
 // Initialization
 // -------------------------------------------------------
+
+/**
+ * Register every vendored family with the compiler at init.
+ *
+ * This is the library's documented path for fonts it has no metadata for
+ * ("preLoad fonts from remote url (because font info is not provided)"), and it is the
+ * only one that does not require hand-building a `FontInfo` — `setFonts` wants a
+ * `{ family, variant }` descriptor that is otherwise produced by the internal font
+ * resolver, and guessing it produced `missing field variant`.
+ *
+ * The alternative, `loadFonts` with `{ info, url }` per family, is lazy and would fetch
+ * only the family in use. It needs that same descriptor, so it is not reachable from
+ * here without re-implementing the resolver.
+ *
+ * What it costs: every family is fetched on the first compile of a session — about 7 MB,
+ * once, cached by the browser afterwards. That is the price of the fonts actually being
+ * embedded, which they were not before: the previous code called `$typst.addFonts`, a
+ * method that does not exist, and every export silently fell back to LibertinusSerif.
+ */
+function allFontUrls(): string[] {
+	const paths = new Set<string>();
+	for (const list of Object.values(FONT_FILES)) {
+		for (const path of list ?? []) paths.add(`${assetBase()}${path}`);
+	}
+	return [...paths];
+}
 
 /**
  * Prefix for the WASM paths.
@@ -65,42 +102,6 @@ let $typst: TypstSnippet | null = null;
  */
 function assetBase(): string {
 	return process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-}
-
-/**
- * Load a family's vendored files and hand them to the compiler.
- *
- * The bytes come from `public/fonts/` on this origin. They used to come from
- * `fonts.gstatic.com`, and three of the nine pinned URLs had rotted to 404 — including
- * both Inter files, so the default export had been quietly substituting a face.
- */
-async function loadFontFamily(fontFamily: string): Promise<void> {
-	if (loadedFonts.has(fontFamily)) return;
-	loadedFonts.add(fontFamily); // mark early to prevent duplicate loads
-
-	const paths = FONT_FILES[fontFamily];
-	if (!paths || paths.length === 0) return;
-
-	try {
-		const buffers = await Promise.all(
-			paths.map(async (path: string) => {
-				const url = `${assetBase()}${path}`;
-				const res = await fetch(url);
-				if (!res.ok) throw new Error(`Failed to fetch font: ${url}`);
-				return new Uint8Array(await res.arrayBuffer());
-			}),
-		);
-		fontCache.set(fontFamily, buffers);
-
-		if ($typst && buffers.length > 0) {
-			for (const buf of buffers) {
-				await $typst.addFonts([buf]);
-			}
-		}
-	} catch (err) {
-		console.warn(`[typst] Failed to load font "${fontFamily}":`, err);
-		loadedFonts.delete(fontFamily); // allow retry
-	}
 }
 
 async function initCompiler(): Promise<void> {
@@ -124,18 +125,20 @@ async function initCompiler(): Promise<void> {
 		// visitor's IP to somebody else's server.
 		inst.setCompilerInitOptions({
 			getModule: () => `${assetBase()}/wasm/typst_ts_web_compiler_bg.wasm`,
-			assets: false,
+			beforeBuild: [
+				loadFonts(allFontUrls()),
+				preloadFontAssets({
+					assets: ["text"],
+					assetUrlPrefix: `${assetBase()}/fonts/typst/`,
+				}),
+			],
 		});
 		inst.setRendererInitOptions({
 			getModule: () => `${assetBase()}/wasm/typst_ts_renderer_bg.wasm`,
-			assets: false,
 		});
 
 		// Trigger a minimal compile to warm up the WASM modules
 		await inst.svg({ mainContent: "#set page(width: 1pt, height: 1pt)\n" });
-
-		// Pre-load the default font (Inter) in the background
-		await loadFontFamily("Inter");
 
 		compilerReady = true;
 	})();
@@ -197,20 +200,17 @@ export async function compileToPdf(
 // -------------------------------------------------------
 
 /**
- * Resolve a requested family, load its font file when one exists, and warn when
- * the request cannot be honoured.
+ * Resolve a requested family and warn when the request cannot be honoured.
  *
  * Every compile path goes through here. Callers used to pass an already-resolved
  * family, which is how the preview and the export drifted apart.
+ *
+ * Loading is no longer part of this: every vendored family is registered with the
+ * compiler once at init (see `allFontUrls`), so there is nothing to fetch per compile
+ * and nothing that can fail silently at this point.
  */
 async function prepareFont(fontFamily: string): Promise<FontResolution> {
 	const resolution = resolveTypstFont(fontFamily);
-
-	// Only families with a real font file need downloading; a substituted one
-	// resolves to either another embeddable family or Typst's builtin.
-	if (isEmbeddableFont(resolution.typstFamily)) {
-		await loadFontFamily(resolution.typstFamily);
-	}
 
 	const warning = fontSubstitutionWarning(resolution);
 	if (warning) console.warn(`[typst] ${warning}`);
@@ -338,6 +338,4 @@ export function resetTypstCompiler(): void {
 	compilerReady = false;
 	initPromise = null;
 	$typst = null;
-	loadedFonts.clear();
-	fontCache.clear();
 }

@@ -319,6 +319,56 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		[handleDraftSummaryUpdate],
 	);
 	const [previewScale, setPreviewScale] = useState(1);
+	/*
+	 * Zoom the document to the panel on first paint.
+	 *
+	 * At 100% a Letter page is 612pt x 96/72 = 816px, so in a ~650px preview panel
+	 * most of the document was outside the viewport — and because the scroll wrapper
+	 * centres its child, the overflow to the LEFT was unreachable. A browser pass
+	 * caught the document cut in half: headings read "tion", "r of Science".
+	 *
+	 * The rule here is "fit until the user says otherwise": the first measurement sets
+	 * the scale, and any explicit zoom from the toolbar wins from then on.
+	 */
+	const [previewPane, setPreviewPane] = useState<HTMLDivElement | null>(null);
+	const userZoomedRef = useRef(false);
+	/*
+	 * Page width in **points**, which is what the Typst page is measured in: Letter is
+	 * 8.5in = 612pt and A4 is 210mm ≈ 595pt. (`getPageWidthPx` in resume-thumbnail.tsx
+	 * uses 816/794 because it works in CSS pixels.) Multiply by 96/72 for the on-screen
+	 * size at 100%.
+	 */
+	const pageWidthPt =
+		(
+			(draftResume ?? activeResume)?.metadata?.settings as
+				| ResumeSettings
+				| undefined
+		)?.pageSize === "A4"
+			? 595
+			: 612;
+
+	useEffect(() => {
+		// The pane is inside a collapsible, so it mounts after the first effect run. Watching
+		// the node itself means the measurement happens whenever it appears, not once before
+		// it exists.
+		if (!previewPane) return;
+
+		const fitToPane = () => {
+			if (userZoomedRef.current) return;
+			const pageWidthPx = pageWidthPt * (96 / 72);
+			// `p-6` on both sides, plus room for the page shadow.
+			const available = previewPane.clientWidth - 48 - 8;
+			if (available <= 0) return;
+			const next = Math.min(1, Math.max(0.25, available / pageWidthPx));
+			setPreviewScale(Number(next.toFixed(2)));
+		};
+
+		fitToPane();
+		if (typeof ResizeObserver === "undefined") return;
+		const ro = new ResizeObserver(fitToPane);
+		ro.observe(previewPane);
+		return () => ro.disconnect();
+	}, [previewPane, pageWidthPt]);
 	/* Page count is published by the preview once it compiles; null until then. */
 	const pageCount = usePreviewPages((s) => s.pageCount);
 	const [contentOpen, setContentOpen] = useState(true);
@@ -1479,7 +1529,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									</div>
 									<CollapsibleContent>
 										<FormattingToolbar
-											onScaleChange={setPreviewScale}
+											onScaleChange={(next) => {
+												userZoomedRef.current = true;
+												setPreviewScale(next);
+											}}
 											onSettingsChange={handleSettingsChange}
 											scale={previewScale}
 											settings={
@@ -1493,8 +1546,16 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							) : null}
 
 							{/* Preview Area */}
-							<div className="flex-1 overflow-auto">
-								<div className="flex min-h-full items-start justify-center p-6">
+							{/*
+							 * `min-w-max` on the inner wrapper, not just `justify-center`.
+							 *
+							 * A centred flex child that is wider than its scroll container overflows
+							 * equally in both directions, and the left half cannot be scrolled to —
+							 * the classic "my document is cut off" bug. Letting the wrapper size to
+							 * its content keeps the whole page reachable at any zoom.
+							 */}
+							<div className="flex-1 overflow-auto" ref={setPreviewPane}>
+								<div className="flex min-h-full min-w-max items-start justify-center p-6">
 									<TypstPreview
 										resume={draftResume ?? activeResume}
 										scale={previewScale}

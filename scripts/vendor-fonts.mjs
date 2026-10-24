@@ -50,17 +50,56 @@ const FAMILIES = {
 		remote: "ofl/playfairdisplay/PlayfairDisplay[wght].ttf",
 		weights: [400, 700],
 	},
+	// Metric-compatible substitutes. A resume set in Times New Roman must wrap like
+	// Times New Roman, or the page count in the preview disagrees with the page count in
+	// Word — which is the one thing this product promises not to get wrong.
+	arimo: { remote: "ofl/arimo/Arimo[wght].ttf", weights: [400, 700] },
 };
 
 /** Files taken as published, keyed by local filename. */
 const COPY = {
 	"lato.ttf": "ofl/lato/Lato-Regular.ttf",
 	"lato-bold.ttf": "ofl/lato/Lato-Bold.ttf",
+	"tinos-400.ttf": "ofl/tinos/Tinos-Regular.ttf",
+	"tinos-700.ttf": "ofl/tinos/Tinos-Bold.ttf",
+	"carlito-400.ttf": "ofl/carlito/Carlito-Regular.ttf",
+	"carlito-700.ttf": "ofl/carlito/Carlito-Bold.ttf",
 	"montserrat-400.ttf":
 		"https://raw.githubusercontent.com/JulietaUla/Montserrat/master/fonts/ttf/Montserrat-Regular.ttf",
 	"montserrat-700.ttf":
 		"https://raw.githubusercontent.com/JulietaUla/Montserrat/master/fonts/ttf/Montserrat-Bold.ttf",
 };
+
+/**
+ * Typst's own default text fonts, served from this origin.
+ *
+ * The compiler loads these on first compile unless something else is configured, and
+ * its default source is jsDelivr. They are also the substitution target for any family
+ * we do not ship, so dropping them is not an option — hosting them is. The names are
+ * `TypstCompilerDriver.defaultAssets`'s list, fetched from the same release the library
+ * pins; `assetUrlPrefix` in `compiler.ts` points at this directory.
+ */
+const TYPST_ASSETS_BASE =
+	"https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts";
+const TYPST_DEFAULT_FONTS = [
+	"DejaVuSansMono-Bold.ttf",
+	"DejaVuSansMono-BoldOblique.ttf",
+	"DejaVuSansMono-Oblique.ttf",
+	"DejaVuSansMono.ttf",
+	"LibertinusSerif-Bold.otf",
+	"LibertinusSerif-BoldItalic.otf",
+	"LibertinusSerif-Italic.otf",
+	"LibertinusSerif-Regular.otf",
+	"LibertinusSerif-Semibold.otf",
+	"LibertinusSerif-SemiboldItalic.otf",
+	"NewCM10-Bold.otf",
+	"NewCM10-BoldItalic.otf",
+	"NewCM10-Italic.otf",
+	"NewCM10-Regular.otf",
+	"NewCMMath-Bold.otf",
+	"NewCMMath-Book.otf",
+	"NewCMMath-Regular.otf",
+];
 
 const OUT = path.join(process.cwd(), "public", "fonts");
 fs.mkdirSync(OUT, { recursive: true });
@@ -146,4 +185,25 @@ for (const [slug, spec] of Object.entries(FAMILIES)) {
 
 console.log(
 	`\n${written} files, ${(total / 1024 / 1024).toFixed(1)} MB in public/fonts/`,
+);
+
+// ── Typst's own default text fonts ────────────────────────────────────────────
+const TYPST_DIR = path.join(OUT, "typst");
+fs.mkdirSync(TYPST_DIR, { recursive: true });
+
+let typstBytes = 0;
+for (const name of TYPST_DEFAULT_FONTS) {
+	const res = await fetch(`${TYPST_ASSETS_BASE}/${name}`);
+	if (!res.ok) throw new Error(`${name}: ${res.status}`);
+	const bytes = Buffer.from(await res.arrayBuffer());
+	const magic = bytes.subarray(0, 4).toString("latin1");
+	if (!["\x00\x01\x00\x00", "true", "OTTO", "ttcf"].includes(magic)) {
+		throw new Error(`${name}: not a font`);
+	}
+	fs.writeFileSync(path.join(TYPST_DIR, name), bytes);
+	typstBytes += bytes.length;
+}
+
+console.log(
+	`${TYPST_DEFAULT_FONTS.length} Typst default fonts, ${(typstBytes / 1024 / 1024).toFixed(1)} MB in public/fonts/typst/`,
 );

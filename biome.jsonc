@@ -8,7 +8,16 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!node_modules", "!generated"]
+		// The browser harness under `scripts/probe/` is developer tooling: CommonJS, run by
+		// hand against a local server, never shipped. Linting it as application code would
+		// spend the ratchet's budget on `require` and `console`.
+		"includes": [
+			"**",
+			"!node_modules",
+			"!generated",
+			"!scripts/probe/**",
+			"!scripts/probe-start.cjs"
+		]
 	},
 	"assist": {
 		"enabled": true,

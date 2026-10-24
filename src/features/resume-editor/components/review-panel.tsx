@@ -282,8 +282,17 @@ export function ReviewPanel({
 									{bulletReport.bullets.map((finding) => (
 										<li
 											className="space-y-2 rounded-md border p-3"
-											key={finding.sectionId}
+											key={`${finding.sectionId}:${finding.index}`}
 										>
+											{/*
+											 * Which entry these bullets belong to. Without it a resume with two
+											 * jobs showed two unlabelled blocks and no way to tell them apart —
+											 * and the two used the same React key, because the finding's index
+											 * was hardcoded to 0 for every entry in the section.
+											 */}
+											{finding.label ? (
+												<p className="font-medium text-sm">{finding.label}</p>
+											) : null}
 											{finding.report.bullets.every(
 												(b) => b.severity === "none",
 											) ? (
