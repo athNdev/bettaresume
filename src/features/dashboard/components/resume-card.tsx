@@ -83,7 +83,20 @@ export function ResumeCard({
 			<CardHeader className="pb-2">
 				<div className="flex items-start justify-between">
 					<div className="min-w-0 flex-1">
-						<CardTitle className="truncate text-lg">{resume.name}</CardTitle>
+						<CardTitle className="truncate text-lg">
+							{/*
+							 * The card's real control. Its own text is the accessible name, so a screen
+							 * reader says "Harvard Application, button" — once — and the redundant
+							 * preview target beside it stays out of the tab order.
+							 */}
+							<button
+								className="block max-w-full truncate rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								onClick={onEdit}
+								type="button"
+							>
+								{resume.name}
+							</button>
+						</CardTitle>
 						<CardDescription className="mt-1 flex items-center gap-2">
 							<Badge className="text-xs" variant="secondary">
 								{templateName ?? resume.template}
@@ -111,7 +124,12 @@ export function ResumeCard({
 					</div>
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button className="h-8 w-8" size="icon" variant="ghost">
+							<Button
+								aria-label={`Actions for ${resume.name}`}
+								className="h-8 w-8"
+								size="icon"
+								variant="ghost"
+							>
 								<MoreHorizontal className="h-4 w-4" />
 							</Button>
 						</DropdownMenuTrigger>

@@ -38,6 +38,10 @@ const SELF_HOSTED = [
 	"Lato",
 	"Montserrat",
 	"Playfair Display",
+	// Metric-compatible substitutes, shipped so a substitution does not reflow.
+	"Tinos",
+	"Arimo",
+	"Carlito",
 ];
 
 describe("font resolution", () => {
@@ -80,14 +84,28 @@ describe("font resolution", () => {
 	});
 
 	it("keeps serif requests on a serif", () => {
-		for (const family of ["Georgia", "Times New Roman", "Garamond"]) {
+		// Times now resolves to Tinos, the metric-compatible clone. Georgia and Garamond
+		// stay on the built-in serif because no free metric-compatible equivalent exists —
+		// substituting one of those would reflow *more*, not less.
+		expect(resolveTypstFont("Times New Roman").typstFamily).toBe("Tinos");
+		expect(resolveTypstFont("Times New Roman").kind).toBe("serif");
+
+		for (const family of ["Georgia", "Garamond"]) {
 			const r = resolveTypstFont(family);
 			expect(r.kind).toBe("serif");
 			expect(r.substituted).toBe(true);
-			// Georgia/Times/Garamond deliberately stay on the builtin serif; Playfair
-			// Display is a display face and would reflow more, not less.
 			expect(r.typstFamily).toBe(TYPST_BUILTIN_FONT);
 		}
+	});
+
+	it("substitutes metric-compatible faces for the common Office families", () => {
+		// The point of these four: same advance widths as the font the user asked for, so
+		// the page count here matches the page count in Word. Before this, every one of
+		// them landed on a Computer Modern or Inter, and the export quietly reflowed.
+		expect(resolveTypstFont("Times New Roman").typstFamily).toBe("Tinos");
+		expect(resolveTypstFont("Arial").typstFamily).toBe("Arimo");
+		expect(resolveTypstFont("Helvetica").typstFamily).toBe("Arimo");
+		expect(resolveTypstFont("Calibri").typstFamily).toBe("Carlito");
 	});
 
 	it("honours Computer Modern rather than calling it a substitution", () => {
@@ -117,7 +135,7 @@ describe("font resolution", () => {
 
 	it("warns only for real substitutions, and names the replacement", () => {
 		expect(fontSubstitutionWarning(resolveTypstFont("Arial"))).toContain(
-			"Inter",
+			"Arimo",
 		);
 		expect(fontSubstitutionWarning(resolveTypstFont("Arial"))).toContain(
 			"Arial",

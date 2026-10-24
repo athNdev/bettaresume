@@ -115,9 +115,45 @@ export function buildParseAuditInput(resume: Resume): AuditInput {
 export interface BulletFinding {
 	/** Section id the bullet belongs to, for "jump to" navigation. */
 	sectionId: string;
-	/** Index within that section's highlights array. */
+	/**
+	 * Index of the entry inside that section, so a finding can be identified.
+	 *
+	 * This was hardcoded to `0` while the loop pushed one finding per *entry*. A section
+	 * with two roles therefore produced two findings that claimed the same identity, which
+	 * React reported as a duplicate key and the panel rendered as two unlabelled blocks
+	 * of bullets. Carrying the real index is what makes the key unique and the heading
+	 * truthful.
+	 */
 	index: number;
+	/** The entry's own name — company, institution, project — for the row heading. */
+	label: string;
 	report: HighlightsReport;
+}
+
+/**
+ * A display name for one entry, so the review can say which job a bullet came from.
+ *
+ * Every list-shaped section names its subject differently (a job has a company, a
+ * degree has an institution, a project has a name), so this reads the first key that
+ * exists rather than making the panel know about eleven schemas.
+ */
+function entryLabel(entry: unknown): string {
+	const record = asRecord(entry);
+	if (!record) return "";
+	for (const key of [
+		"company",
+		"institution",
+		"organization",
+		"name",
+		"title",
+		"position",
+		"role",
+		"degree",
+	]) {
+		const value = record[key];
+		if (typeof value === "string" && value.trim() !== "") return value.trim();
+	}
+	return "";
 }
 
 export interface ReviewBundle {
@@ -149,14 +185,19 @@ export function collectBulletFindings(resume: Resume): {
 		const data = (section.content as SectionContent | undefined)?.data;
 		if (!Array.isArray(data)) continue;
 
-		const highlights = data
-			.map((entry) => asRecord(entry)?.highlights)
-			.filter(Array.isArray) as string[][];
+		for (const [index, entry] of data.entries()) {
+			const highlights = asRecord(entry)?.highlights;
+			if (!Array.isArray(highlights)) continue;
 
-		for (const list of highlights) {
-			const report = analyzeHighlights(list);
+			const report = analyzeHighlights(highlights as string[]);
 			if (report.total === 0) continue;
-			bullets.push({ sectionId: section.id, index: 0, report });
+
+			bullets.push({
+				sectionId: section.id,
+				index,
+				label: entryLabel(entry),
+				report,
+			});
 		}
 	}
 	return {

@@ -18,6 +18,7 @@ import type {
 	Volunteer,
 } from "@/features/resume-editor/types";
 
+import { formatDateRange, formatResumeDate } from "@/lib/format-date";
 import { resolveTypstFont } from "@/lib/typst/fonts";
 import { cn } from "@/lib/utils";
 
@@ -186,6 +187,16 @@ export function Preview({
 		},
 	};
 	const personalInfo = metadata?.personalInfo ?? defaultPersonalInfo;
+	// The same formatter the PDF serialiser uses, bound to the document's own setting.
+	// Drawing the stored value here would make the preview disagree with the export.
+	const dateFmt = (value: string | null | undefined) =>
+		formatResumeDate(value, settings.dateFormat);
+	const rangeFmt = (
+		start: string | null | undefined,
+		end: string | null | undefined,
+		current: boolean | undefined,
+	) => formatDateRange(start, end, current, settings.dateFormat);
+
 	const colors = settings.colors;
 	const typography = settings.typography;
 
@@ -367,7 +378,7 @@ export function Preview({
 									color: colors.secondary,
 								}}
 							>
-								{exp.startDate} - {exp.current ? "Present" : exp.endDate}
+								{rangeFmt(exp.startDate, exp.endDate, exp.current)}
 							</div>
 						</div>
 						{exp.description && (
@@ -441,7 +452,7 @@ export function Preview({
 									color: colors.secondary,
 								}}
 							>
-								{edu.graduationDate}
+								{dateFmt(edu.graduationDate)}
 							</div>
 						</div>
 					</div>
@@ -519,7 +530,7 @@ export function Preview({
 										color: colors.secondary,
 									}}
 								>
-									{proj.startDate} - {proj.current ? "Present" : proj.endDate}
+									{rangeFmt(proj.startDate, proj.endDate, proj.current)}
 								</div>
 							)}
 						</div>
@@ -601,7 +612,7 @@ export function Preview({
 									color: colors.secondary,
 								}}
 							>
-								{cert.date}
+								{dateFmt(cert.date)}
 							</div>
 						</div>
 					</div>
@@ -676,7 +687,7 @@ export function Preview({
 									color: colors.secondary,
 								}}
 							>
-								{award.date}
+								{dateFmt(award.date)}
 							</div>
 						</div>
 						{award.description && (
@@ -737,7 +748,7 @@ export function Preview({
 									color: colors.secondary,
 								}}
 							>
-								{vol.startDate} - {vol.current ? "Present" : vol.endDate}
+								{rangeFmt(vol.startDate, vol.endDate, vol.current)}
 							</div>
 						</div>
 						{vol.description && (
@@ -798,7 +809,7 @@ export function Preview({
 								color: colors.secondary,
 							}}
 						>
-							{pub.publisher} • {pub.date}
+							{pub.publisher} • {dateFmt(pub.date)}
 						</div>
 						{pub.authors && pub.authors.length > 0 && (
 							<div

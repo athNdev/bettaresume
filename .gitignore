@@ -64,3 +64,9 @@ proxmox-jobs.sqlite3-wal
 
 # Typst WASM modules copied out of node_modules by scripts/copy-typst-assets.mjs
 /public/wasm/
+
+# Local browser-probe artefacts (scripts/probe, scripts/probe-start.cjs)
+.probe-shots/
+.probe-downloads/
+.probe-*.log
+.probe-*.pid

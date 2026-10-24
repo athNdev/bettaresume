@@ -23,6 +23,8 @@ import type {
 	SkillCategory,
 	Volunteer,
 } from "@/features/resume-editor/types";
+import { formatResumeDate } from "@/lib/format-date";
+import { resolveTypstFont } from "./fonts";
 
 // Canonical font names as Typst knows them (keys are lowercase for lookup)
 const CANONICAL_FONT_NAMES: Record<string, string> = {
@@ -218,7 +220,23 @@ function serializeSettings(settings: ResumeSettings) {
 			bottom: merged.margins.bottom,
 			left: merged.margins.left,
 		},
-		fontFamily: normalizeFont(merged.fontFamily ?? defaultSettings.fontFamily),
+		/*
+		 * The **resolved** family, not the requested one.
+		 *
+		 * This is the end of the substitution chain, and it was missing. `prepareFont`
+		 * resolved "Times New Roman" to a family it then loaded, and the document still
+		 * said `fontFamily: "Times New Roman"` — a family Typst does not have — so Typst
+		 * picked its own fallback and the loaded file went unused. The export of a
+		 * Times New Roman resume embedded LibertinusSerif, and the app's carefully chosen
+		 * metric-compatible substitute never appeared in a single PDF.
+		 *
+		 * Only the Typst document is affected: the HTML preview resolves independently
+		 * (see `resolveFontFamily` in preview.tsx), and `resumeToTypstJson` has no other
+		 * consumer.
+		 */
+		fontFamily: resolveTypstFont(
+			normalizeFont(merged.fontFamily ?? defaultSettings.fontFamily),
+		).typstFamily,
 		fontSize: merged.fontSize ?? defaultSettings.fontSize,
 		fontScale: merged.fontScale ?? defaultSettings.fontScale,
 		lineHeight: merged.lineHeight ?? defaultSettings.lineHeight,
@@ -255,8 +273,13 @@ function serializeSection(
 		visible: boolean;
 		content: Record<string, unknown>;
 	},
-	resolved: { personalInfo: PersonalInfo },
+	resolved: { personalInfo: PersonalInfo; dateFormat: string },
 ) {
+	// One formatter for the whole document, driven by settings.dateFormat. The setting
+	// existed and nothing read it: the PDF printed the stored value, so a resume set to
+	// "MMM YYYY" exported "2020-09 - 2024-05".
+	const fmt = (value: unknown) =>
+		formatResumeDate(safeStr(value), resolved.dateFormat);
 	const { type, content } = section;
 	const base = {
 		id: section.id,
@@ -283,8 +306,8 @@ function serializeSection(
 					id: safeStr(exp.id),
 					company: safeStr(exp.company),
 					position: safeStr(exp.position),
-					startDate: safeStr(exp.startDate),
-					endDate: safeStr(exp.endDate),
+					startDate: fmt(exp.startDate),
+					endDate: fmt(exp.endDate),
 					current: safeBool(exp.current),
 					location: safeStr(exp.location),
 					description: safeStr(exp.description),
@@ -303,8 +326,8 @@ function serializeSection(
 					institution: safeStr(edu.institution),
 					degree: safeStr(edu.degree),
 					field: safeStr(edu.field),
-					graduationDate: safeStr(edu.graduationDate),
-					startDate: safeStr(edu.startDate),
+					graduationDate: fmt(edu.graduationDate),
+					startDate: fmt(edu.startDate),
 					current: safeBool(edu.current),
 					gpa: safeStr(edu.gpa),
 					location: safeStr(edu.location),
@@ -345,8 +368,8 @@ function serializeSection(
 					technologies: safeArr<string>(p.technologies),
 					url: safeStr(p.url),
 					github: safeStr(p.github),
-					startDate: safeStr(p.startDate),
-					endDate: safeStr(p.endDate),
+					startDate: fmt(p.startDate),
+					endDate: fmt(p.endDate),
 					current: safeBool(p.current),
 					highlights: safeArr<string>(p.highlights),
 				})),
@@ -361,8 +384,8 @@ function serializeSection(
 					id: safeStr(c.id),
 					name: safeStr(c.name),
 					issuer: safeStr(c.issuer),
-					date: safeStr(c.date),
-					expirationDate: safeStr(c.expirationDate),
+					date: fmt(c.date),
+					expirationDate: fmt(c.expirationDate),
 					credentialId: safeStr(c.credentialId),
 					url: safeStr(c.url),
 					description: safeStr(c.description),
@@ -378,7 +401,7 @@ function serializeSection(
 					id: safeStr(a.id),
 					title: safeStr(a.title),
 					issuer: safeStr(a.issuer),
-					date: safeStr(a.date),
+					date: fmt(a.date),
 					description: safeStr(a.description),
 				})),
 			};
@@ -405,7 +428,7 @@ function serializeSection(
 					id: safeStr(p.id),
 					title: safeStr(p.title),
 					publisher: safeStr(p.publisher),
-					date: safeStr(p.date),
+					date: fmt(p.date),
 					authors: safeArr<string>(p.authors),
 					url: safeStr(p.url),
 					summary: safeStr(p.summary),
@@ -421,8 +444,8 @@ function serializeSection(
 					id: safeStr(v.id),
 					organization: safeStr(v.organization),
 					role: safeStr(v.role),
-					startDate: safeStr(v.startDate),
-					endDate: safeStr(v.endDate),
+					startDate: fmt(v.startDate),
+					endDate: fmt(v.endDate),
 					current: safeBool(v.current),
 					location: safeStr(v.location),
 					description: safeStr(v.description),
@@ -552,7 +575,7 @@ export function resumeToTypstJson(resume: Resume): string {
 					visible: s.visible,
 					content: s.content as Record<string, unknown>,
 				},
-				{ personalInfo },
+				{ personalInfo, dateFormat: settings.dateFormat },
 			),
 		);
 

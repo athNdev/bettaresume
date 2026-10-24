@@ -6,6 +6,7 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 
@@ -83,35 +84,158 @@ interface HashRouterProviderProps {
 }
 
 export function HashRouterProvider({ children }: HashRouterProviderProps) {
-	const [state, setState] = useState(() => {
-		if (typeof window === "undefined") {
-			return { path: "/", params: {} };
-		}
-		return parseHash(window.location.hash);
-	});
+	const initialHash = typeof window === "undefined" ? "" : window.location.hash;
+
+	const [state, setState] = useState(() => parseHash(initialHash));
+
+	/**
+	 * The hash this router wants the URL to carry, exactly as written.
+	 *
+	 * Seeded from `location.hash` rather than from empty so a deep link is protected from
+	 * the moment the provider mounts. Empty means "no route to protect": the root is the
+	 * only case where the URL legitimately has no fragment, and forcing `#/` onto it would
+	 * be noise.
+	 */
+	const desiredHashRef = useRef(
+		initialHash === "" || initialHash === "#" ? "" : initialHash,
+	);
 
 	useEffect(() => {
 		const handleHashChange = () => {
+			desiredHashRef.current = window.location.hash;
 			setState(parseHash(window.location.hash));
 		};
 
 		// Handle initial load
 		handleHashChange();
 
+		// `popstate` covers back/forward; `hashchange` covers a fragment typed into the
+		// address bar. Neither fires for our own `pushState`, so there is no echo.
 		window.addEventListener("hashchange", handleHashChange);
-		return () => window.removeEventListener("hashchange", handleHashChange);
+		window.addEventListener("popstate", handleHashChange);
+		return () => {
+			window.removeEventListener("hashchange", handleHashChange);
+			window.removeEventListener("popstate", handleHashChange);
+		};
 	}, []);
 
-	const navigate = useCallback((to: string) => {
-		window.location.hash = to.startsWith("/") ? to : `/${to}`;
-	}, []);
+	/**
+	 * Keep Next's App Router from deleting the route.
+	 *
+	 * ## The defect this exists for
+	 *
+	 * Next's App Router believes it owns `history`. After an in-app navigation it runs an
+	 * effect that calls `history.replaceState(state, "", "/app/")` to restore its
+	 * canonical route — which drops our fragment. Verified in a browser: clicking a resume
+	 * set `#/resume-editor/resume-1`, and 876 ms later `next/dist/client/components/
+	 * app-router.js` replaced the URL with `/app/`. The page still rendered the editor,
+	 * because our own state had already moved, but the address bar said `/app/`.
+	 *
+	 * Consequences, all of which were live: the open document was not linkable, a reload
+	 * dropped you back on the dashboard, and back/forward had nothing to move between.
+	 *
+	 * ## Why a patch rather than a different router
+	 *
+	 * The app has to be hash-addressed. It is a static export on GitHub Pages, which
+	 * cannot serve `resume-editor/<id>` for arbitrary ids, so real paths are not available
+	 * — the fragment is the routing scheme, not a leftover. Next has no supported way to
+	 * tell its router "the fragment is mine", so the fragment is restored on the way out.
+	 *
+	 * The wrapper is narrow on purpose: it only rewrites a write that has no fragment of
+	 * its own, and only while a route is desired. Anything Next writes *with* a fragment,
+	 * and every write made after this provider unmounts, passes through untouched.
+	 */
+	/*
+	 * Captured at module load, before Next's App Router patches `history`.
+	 *
+	 * Our rewrite is a URL correction, not a navigation. Routing it back through Next's
+	 * patched `replaceState` made Next dispatch a router action, and during hydration that
+	 * threw `Internal Next.js error: Router action dispatched before initialization` — a
+	 * blank editor on a cold deep link. Calling the native method directly keeps the
+	 * correction invisible to the router, which is what it is.
+	 */
+	const nativeReplaceState =
+		typeof window === "undefined"
+			? null
+			: window.History.prototype.replaceState;
 
-	const replace = useCallback((to: string) => {
-		const newHash = to.startsWith("/") ? to : `/${to}`;
-		window.location.replace(
-			`${window.location.pathname}${window.location.search}#${newHash}`,
-		);
-	}, []);
+	useEffect(() => {
+		if (!nativeReplaceState) return;
+
+		const patched = history.replaceState;
+		const guarded = function (
+			this: History,
+			data: unknown,
+			unused: string,
+			url?: string | URL | null,
+		) {
+			const desired = desiredHashRef.current;
+			if (desired && url != null && !String(url).includes("#")) {
+				return nativeReplaceState.call(
+					this,
+					data,
+					unused,
+					`${String(url)}${desired}`,
+				);
+			}
+			return patched.call(this, data, unused, url);
+		} as History["replaceState"];
+
+		history.replaceState = guarded;
+		return () => {
+			if (history.replaceState === guarded) history.replaceState = patched;
+		};
+		// `nativeReplaceState` is captured once at module scope, before Next patches
+		// `history`. Listing it keeps the rule honest without changing behaviour.
+	}, [nativeReplaceState]);
+
+	/**
+	 * Navigation helpers.
+	 *
+	 * `history.pushState`, not `location.hash = …`.
+	 *
+	 * Assigning to `location.hash` makes the browser emit a `popstate`, and Next's App
+	 * Router listens for `popstate` and dispatches a router action. During hydration that
+	 * throws `Internal Next.js error: Router action dispatched before initialization`, which
+	 * surfaced as a blank editor on a cold deep link. `pushState` changes the URL, fires no
+	 * event at all, and leaves the router untouched — so the state update below is the only
+	 * thing that happens.
+	 *
+	 * Back and forward still work: the browser emits `popstate` for those, and the listener
+	 * above re-reads the fragment.
+	 */
+	const toHash = useCallback(
+		(to: string) => (to.startsWith("/") ? to : `/${to}`),
+		[],
+	);
+
+	const navigate = useCallback(
+		(to: string) => {
+			const hash = toHash(to);
+			desiredHashRef.current = `#${hash}`;
+			history.pushState(
+				history.state,
+				"",
+				`${window.location.pathname}${window.location.search}#${hash}`,
+			);
+			setState(parseHash(`#${hash}`));
+		},
+		[toHash],
+	);
+
+	const replace = useCallback(
+		(to: string) => {
+			const hash = toHash(to);
+			desiredHashRef.current = `#${hash}`;
+			history.replaceState(
+				history.state,
+				"",
+				`${window.location.pathname}${window.location.search}#${hash}`,
+			);
+			setState(parseHash(`#${hash}`));
+		},
+		[toHash],
+	);
 
 	return (
 		<RouterContext.Provider value={{ ...state, navigate, replace }}>

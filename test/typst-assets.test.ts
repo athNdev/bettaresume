@@ -39,13 +39,30 @@ describe("nothing is fetched from a CDN at runtime", () => {
 		expect(compiler).toMatch(/wasm\/typst_ts_renderer_bg\.wasm/);
 	});
 
-	it("the library's bundled CDN asset list is disabled", () => {
-		// typst.ts merges its defaults into the init options, and its default `assets` is
-		// `cdn.jsdelivr.net/gh/typst/typst-assets@.../files/fonts/`. Leaving it at the
-		// default keeps a remote font source reachable even though every module and
-		// typeface is now served from this origin.
-		const disables = compiler.match(/assets: false/g) ?? [];
-		expect(disables).toHaveLength(2);
+	it("the library's bundled CDN asset list is replaced, not merely discouraged", () => {
+		// typst.ts merges its own defaults: `TypstCompilerDriver.defaultAssets` pushes
+		// `loadFonts([], { assets: ['text'] })`, whose prefix is a jsDelivr URL. Passing
+		// `assets: false` in the init object does nothing — that key is not part of
+		// `InitOptions`, and the compiler went on fetching 17 files from jsDelivr while a
+		// test asserting the string `assets: false` sat green.
+		//
+		// What actually replaces it: a beforeBuild loader that names this origin.
+		expect(compiler).toMatch(/preloadFontAssets\(/);
+		expect(compiler).toMatch(
+			/assetUrlPrefix:\s*`\$\{assetBase\(\)\}\/fonts\/typst\/`/,
+		);
+		expect(compiler).not.toMatch(/assets:\s*false/);
+	});
+
+	it("every vendored family is registered with the compiler", () => {
+		// The other half of the same defect: fonts were fetched and then handed to
+		// `$typst.addFonts`, a method that does not exist. Every export fell back to
+		// Typst's own face and the failure was a console warning. `loadFonts` is the
+		// supported path, and it must receive every family or a resume in that family
+		// silently renders in a substitute.
+		expect(compiler).toMatch(/loadFonts\(allFontUrls\(\)\)/);
+		expect(compiler).toMatch(/function allFontUrls\(\)/);
+		expect(compiler).not.toMatch(/addFonts/);
 	});
 
 	it("no CDN hostname survives in code", () => {

@@ -54,6 +54,10 @@ const FONT_SPECS: Record<string, FontSpec> = {
 	Lato: { kind: "sans", embeddable: true },
 	Montserrat: { kind: "sans", embeddable: true },
 	"Playfair Display": { kind: "serif", embeddable: true },
+	// Metric-compatible substitutes, shipped so a substitution does not reflow.
+	Tinos: { kind: "serif", embeddable: true },
+	Arimo: { kind: "sans", embeddable: true },
+	Carlito: { kind: "sans", embeddable: true },
 	Georgia: { kind: "serif", embeddable: false },
 	"Times New Roman": { kind: "serif", embeddable: false },
 	Garamond: { kind: "serif", embeddable: false },
@@ -64,30 +68,37 @@ const FONT_SPECS: Record<string, FontSpec> = {
 	"Computer Modern": { kind: "serif", embeddable: false },
 };
 
+/** Typst's built-in family. Always available; no download required. */
+export const TYPST_BUILTIN_FONT = "New Computer Modern";
+
 /**
- * What each non-embeddable family becomes. Chosen to preserve the generic family.
+ * What each non-embeddable family becomes.
  *
- * The sans entries are the substantive fix: they previously resolved to a serif.
- * `Inter` is used because it is already loaded, is the app's own UI font, and is a
- * neutral UI sans — so the document keeps the *shape* the user asked for.
+ * These are **metric-compatible** faces wherever one exists:
  *
- * The serif entries stay on Typst's built-in `New Computer Modern`. Playfair
- * Display is available but is a high-contrast display face; swapping a screen
- * serif (Georgia) or a text serif (Times) for it would reflow *more*, not less.
+ * | Requested | Substitute | Why |
+ * |---|---|---|
+ * | Times New Roman, Arial, Helvetica, Calibri | Tinos, Arimo, Arimo, Carlito | The free clones built to the same advance widths |
+ * | Georgia, Garamond | New Computer Modern | No metric-compatible free equivalent |
+ *
+ * Why it matters: a substitute with different advance widths changes line wrapping,
+ * which changes the **page count**. A resume that reads "two pages" here and spills to
+ * three in Word is the failure this product exists to prevent, and it was happening for
+ * every Times New Roman resume — the most common choice in the category — because Times
+ * resolved to a Computer Modern serif.
+ *
+ * The generic family is preserved as well: a sans request never becomes a serif.
  *
  * `Computer Modern` is absent on purpose: it is honoured, not substituted.
  */
 const SUBSTITUTES: Record<string, string> = {
-	Georgia: "New Computer Modern",
-	"Times New Roman": "New Computer Modern",
-	Garamond: "New Computer Modern",
-	Arial: "Inter",
-	Helvetica: "Inter",
-	Calibri: "Inter",
+	Georgia: TYPST_BUILTIN_FONT,
+	"Times New Roman": "Tinos",
+	Garamond: TYPST_BUILTIN_FONT,
+	Arial: "Arimo",
+	Helvetica: "Arimo",
+	Calibri: "Carlito",
 };
-
-/** Typst's built-in family. Always available; no download required. */
-export const TYPST_BUILTIN_FONT = "New Computer Modern";
 
 export interface FontResolution {
 	/** The family name to hand Typst. */
@@ -190,6 +201,10 @@ export const FONT_FILES: Partial<Record<string, string[]>> = {
 		"/fonts/playfair-display-400.ttf",
 		"/fonts/playfair-display-700.ttf",
 	],
+	// Metric-compatible substitutes; see `SUBSTITUTES` for why these exist.
+	Tinos: ["/fonts/tinos-400.ttf", "/fonts/tinos-700.ttf"],
+	Arimo: ["/fonts/arimo-400.ttf", "/fonts/arimo-700.ttf"],
+	Carlito: ["/fonts/carlito-400.ttf", "/fonts/carlito-700.ttf"],
 };
 
 /**
