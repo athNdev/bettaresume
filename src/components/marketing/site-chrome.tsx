@@ -23,9 +23,13 @@ export function SiteHeader() {
 			 * WCAG 2.4.1 bypass block. The header is sticky and first in tab
 			 * order, so without this a keyboard user tabs through the nav on
 			 * every page before reaching content. Visually hidden until focused.
+			 *
+			 * `--br-z-dropdown`, not `sticky`: it must clear the sticky header
+			 * below it (the ladder's `sticky` rung), and the first rung above
+			 * that is the dropdown one.
 			 */}
 			<a
-				className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:rounded-lg focus:bg-[var(--brand-ink)] focus:px-4 focus:py-2.5 focus:font-medium focus:text-[var(--brand-text-on-ink)] focus:text-sm"
+				className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-(--br-z-dropdown) focus:rounded-lg focus:bg-[var(--brand-ink)] focus:px-4 focus:py-2 focus:font-medium focus:text-[var(--brand-text-on-ink)] focus:text-sm"
 				href="#main"
 			>
 				Skip to content
@@ -37,14 +41,14 @@ export function SiteHeader() {
 			 * text sat on a moving background — which is a legibility problem
 			 * before it is a taste problem.
 			 */}
-			<header className="sticky top-0 z-50 border-[var(--brand-rule)] border-b bg-[var(--brand-paper)]">
+			<header className="sticky top-0 z-(--br-z-sticky) border-[var(--brand-rule)] border-b bg-[var(--brand-paper)]">
 				<div className="marketing-shell flex h-16 items-center justify-between gap-3 sm:gap-6">
 					<Link
-						className="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-semibold text-[var(--brand-text)] tracking-tight"
+						className="flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold text-[var(--brand-text)] text-base"
 						href="/"
 					>
 						<BrandMark />
-						<span className="text-[0.95rem]">Betta Resume</span>
+						<span>Betta Resume</span>
 					</Link>
 
 					{/*
@@ -54,7 +58,7 @@ export function SiteHeader() {
 					 */}
 					<nav
 						aria-label="Primary"
-						className="hidden items-center gap-6 text-[0.9rem] text-[var(--brand-text-muted)] md:flex lg:gap-7"
+						className="hidden items-center gap-6 text-[var(--brand-text-muted)] text-base md:flex"
 					>
 						{NAV.map((item) => (
 							<Link
@@ -75,13 +79,13 @@ export function SiteHeader() {
 					 */}
 					<div className="flex shrink-0 items-center gap-2">
 						<Link
-							className="hidden whitespace-nowrap rounded-lg px-2.5 py-2 font-medium text-[0.9rem] text-[var(--brand-text-muted)] transition-colors hover:bg-[var(--brand-ink)]/5 hover:text-[var(--brand-text)] sm:block sm:px-3.5"
+							className="hidden whitespace-nowrap rounded-lg px-3 py-2 font-medium text-[var(--brand-text-muted)] text-base transition-colors hover:bg-[var(--brand-ink)]/5 hover:text-[var(--brand-text)] sm:block sm:px-4"
 							href="/app"
 						>
 							Sign in
 						</Link>
 						<Link
-							className="whitespace-nowrap rounded-lg bg-[var(--brand-ink)] px-3 py-2 font-medium text-[0.9rem] text-[var(--brand-text-on-ink)] transition-transform hover:-translate-y-px hover:bg-[var(--brand-ink-soft)] sm:px-4"
+							className="whitespace-nowrap rounded-lg bg-[var(--brand-ink)] px-3 py-2 font-medium text-[var(--brand-text-on-ink)] text-base transition-transform hover:-translate-y-px hover:bg-[var(--brand-ink-soft)] sm:px-4"
 							href="/app"
 						>
 							Check your resume
@@ -96,20 +100,20 @@ export function SiteHeader() {
 export function SiteFooter() {
 	return (
 		<footer className="bg-[var(--brand-ink)] text-[var(--brand-text-on-ink-muted)]">
-			<div className="marketing-shell py-14">
-				<div className="flex flex-col gap-10 md:flex-row md:justify-between">
+			<div className="marketing-shell py-12">
+				<div className="flex flex-col gap-12 md:flex-row md:justify-between">
 					<div className="max-w-xs">
-						<div className="flex items-center gap-2.5 text-[var(--brand-text-on-ink)]">
+						<div className="flex items-center gap-2 text-[var(--brand-text-on-ink)]">
 							<BrandMark />
-							<span className="font-semibold tracking-tight">Betta Resume</span>
+							<span className="font-semibold">Betta Resume</span>
 						</div>
-						<p className="mt-3.5 text-[0.9rem] leading-relaxed">
+						<p className="mt-3 text-base">
 							One master record of your career, a variant for every role, and an
 							export you can inspect before you send it.
 						</p>
 					</div>
 
-					<div className="grid grid-cols-2 gap-8 text-[0.9rem] sm:grid-cols-3">
+					<div className="grid grid-cols-2 gap-8 text-base sm:grid-cols-3">
 						<FooterCol
 							heading="Product"
 							links={[
@@ -136,7 +140,7 @@ export function SiteFooter() {
 					</div>
 				</div>
 
-				<div className="mt-12 flex flex-col gap-3 border-white/10 border-t pt-6 text-[0.8rem] sm:flex-row sm:items-center sm:justify-between">
+				<div className="mt-12 flex flex-col gap-3 border-[var(--brand-ink-soft)] border-t pt-6 text-xs sm:flex-row sm:items-center sm:justify-between">
 					<p>© {new Date().getFullYear()} Betta Resume.</p>
 					<p className="text-[var(--brand-text-on-ink-faint)]">
 						No invented content. No score. No trackers.
@@ -159,7 +163,7 @@ function FooterCol({
 			<h2 className="font-semibold text-[var(--brand-text-on-ink)]">
 				{heading}
 			</h2>
-			<ul className="mt-3.5 space-y-2.5">
+			<ul className="mt-3 space-y-2">
 				{links.map(([label, href]) => (
 					<li key={href + label}>
 						<Link
@@ -193,7 +197,7 @@ export function BrandMark({ className = "" }: { className?: string }) {
 			<rect fill="var(--brand-accent)" height="32" rx="7" />
 			<path
 				d="M10 9h7.2c3.5 0 5.6 1.7 5.6 4.3 0 1.7-.9 3-2.4 3.6 1.9.6 3.1 2 3.1 4 0 2.9-2.4 4.8-6.2 4.8H10V9Zm3.4 6.6h3c1.3 0 2.1-.7 2.1-1.8s-.8-1.8-2.1-1.8h-3v3.6Zm0 6.8h3.4c1.5 0 2.4-.8 2.4-2s-.9-2-2.4-2h-3.4v4Z"
-				fill="#fff"
+				fill="var(--brand-card)"
 			/>
 		</svg>
 	);

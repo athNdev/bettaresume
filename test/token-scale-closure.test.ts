@@ -163,6 +163,28 @@ describe("the scales are the documented sets", () => {
 		expect(declared).toEqual([12, 14, 16, 20, 24, 32, 40]);
 	});
 
+	/**
+	 * The scale is only real if the utilities render it. `text-lg` reads
+	 * `--text-lg`, so the alias layer must bind it to `--br-text-lg` — without
+	 * that binding the utilities fall back to Tailwind's own defaults
+	 * (18/20/24/30px for lg/xl/2xl/3xl) and every documented size above 16px is
+	 * fiction. That is exactly the state this repo shipped once: the tokens said
+	 * 20px, `text-lg` painted 18px, and the wave briefs' "~20px" targets were
+	 * unreachable on-scale.
+	 */
+	it("binds the text-* utilities to the type scale", async () => {
+		const { loadTokenTheme, resolveValue } = await import(
+			"./helpers/token-theme"
+		);
+		const theme = loadTokenTheme();
+		for (const step of ["xs", "sm", "base", "lg", "xl", "2xl", "3xl"]) {
+			expect(
+				resolveValue(theme, "light", `--text-${step}`),
+				`text-${step} does not resolve to --br-text-${step}`,
+			).toBe(resolveValue(theme, "light", `--br-text-${step}`));
+		}
+	});
+
 	it("matches the token file's radius scale", async () => {
 		const { loadTokenTheme, resolveValue } = await import(
 			"./helpers/token-theme"

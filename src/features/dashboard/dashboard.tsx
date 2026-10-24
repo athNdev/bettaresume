@@ -52,6 +52,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { ResumeCard } from "@/features/dashboard/components/resume-card";
+import { ThumbnailSkeleton } from "@/features/dashboard/components/resume-thumbnail";
 import { ThemeToggle } from "@/features/dashboard/components/theme-toggle";
 import { UserMenu } from "@/features/dashboard/components/user-menu";
 import { greetingName } from "@/features/dashboard/greeting";
@@ -122,8 +123,12 @@ function DashboardSkeleton() {
 				 *
 				 * `repeat(1, minmax(0, 1fr))` is what lets the track shrink below its content. The
 				 * `minmax(0, …)` is the part that matters; a bare `1fr` still floors at min-content.
+				 *
+				 * Columns match the real grid exactly (skeleton → content, audit §7): one at
+				 * phone, two at `sm`, three at `xl` — bigger cards that fill the width rather
+				 * than four cramped ones with a dead lower half (audit #5).
 				 */}
-				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
 					{Array.from({ length: 8 }).map((_, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length row of placeholders
 						<ResumeCardSkeleton key={i} />
@@ -136,18 +141,23 @@ function DashboardSkeleton() {
 
 function ResumeCardSkeleton() {
 	return (
-		<div className="rounded-lg border bg-card p-4">
-			<div className="mb-4 flex items-start justify-between">
-				<div className="flex-1">
-					<Skeleton className="mb-2 h-5 w-3/4" />
-					<Skeleton className="h-4 w-16" />
+		<div className="rounded-lg border bg-card p-6">
+			{/* The real card's anatomy: title row with the menu pinned top-right,
+			    meta row, sheet-shaped thumbnail, one meta line. */}
+			<div className="relative pb-2">
+				<Skeleton className="absolute top-0 right-0 h-8 w-8 rounded-md" />
+				<Skeleton className="h-5 w-3/4" />
+				<div className="mt-1 flex gap-2">
+					<Skeleton className="h-5 w-16 rounded-full" />
 				</div>
-				<Skeleton className="h-8 w-8 rounded-md" />
 			</div>
-			<Skeleton className="aspect-[8.5/11] w-full rounded-md" />
-			<div className="mt-4 flex justify-between">
+			<div className="relative flex aspect-[8.5/11] w-full items-start justify-center overflow-hidden rounded-md border bg-muted/50">
+				<div className="absolute inset-0 flex items-start justify-center p-1">
+					<ThumbnailSkeleton height={296} width={228} />
+				</div>
+			</div>
+			<div className="mt-6">
 				<Skeleton className="h-3 w-24" />
-				<Skeleton className="h-3 w-16" />
 			</div>
 		</div>
 	);
@@ -278,6 +288,16 @@ function DashboardContent() {
 		() => resumes.filter((r: Resume) => r.isArchived).length,
 		[resumes],
 	);
+
+	/*
+	 * The welcome guide *is* the empty state while it is up. It and the generic
+	 * EmptyState below both offered "Create Your First Resume" — two primary
+	 * buttons for one action in one region (R11) — and said the same thing twice.
+	 * Filters are excluded because a search or the archived view is asking a
+	 * question the welcome copy does not answer.
+	 */
+	const welcomeVisible =
+		showWelcomeGuide && totalResumes === 0 && !searchQuery && !showArchived;
 
 	// Show skeleton while loading
 	if (isLoading) {
@@ -601,7 +621,7 @@ function DashboardContent() {
 				<div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					<div className="flex items-center gap-4">
 						<button
-							className="font-bold text-xl"
+							className="font-semibold text-lg"
 							onClick={() => navigate("/")}
 							type="button"
 						>
@@ -667,7 +687,7 @@ function DashboardContent() {
 										<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 										<Input
 											aria-label="Search resumes"
-											className="pl-10"
+											className="pl-8"
 											onChange={(e) => {
 												setSearchQuery(e.target.value);
 												setPage(1);
@@ -705,13 +725,14 @@ function DashboardContent() {
 										</Select>
 									</div>
 
+									{/* h-10 like every other control in this stack — the input
+									    spine. `sm` made it 36px beside 40px inputs. */}
 									<Button
 										className="w-full"
 										onClick={() => {
 											setShowArchived(!showArchived);
 											setPage(1);
 										}}
-										size="sm"
 										variant={showArchived ? "default" : "outline"}
 									>
 										<Archive className="mr-2 h-4 w-4" />
@@ -726,13 +747,14 @@ function DashboardContent() {
 										<CardTitle className="text-base">Your library</CardTitle>
 									</CardHeader>
 									<CardContent>
+										{/*
+										 * The counts this card is *for*. "Resumes" is not here on
+										 * purpose: the result line above the grid already says
+										 * "N resumes" (and "N of M" under a filter), live and
+										 * announced — the audit found the two disagreeing by design.
+										 * What is left here is what the result line does not say.
+										 */}
 										<dl className="space-y-2 text-sm">
-											<div className="flex items-baseline justify-between gap-2">
-												<dt className="text-muted-foreground">Resumes</dt>
-												<dd className="font-medium tabular-nums">
-													{totalResumes}
-												</dd>
-											</div>
 											<div className="flex items-baseline justify-between gap-2">
 												<dt className="text-muted-foreground">Variants</dt>
 												<dd className="font-medium tabular-nums">
@@ -767,14 +789,18 @@ function DashboardContent() {
 				 * welcome guide below is the heading, and two of them would compete.
 				 */}
 						{user && totalResumes > 0 ? (
-							<h1 className="mb-6 font-bold text-2xl">
+							<h1 className="mb-6 font-bold text-xl">
 								{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
 							</h1>
 						) : null}
 
-						{/* Welcome Guide */}
-						{showWelcomeGuide && totalResumes === 0 && (
-							<Card className="mb-8 border-primary/20 bg-primary/5">
+						{/* Welcome Guide. Greyscale like everything else (R: colour is for
+						    state and action, not for making a callout look important), and
+						    it *is* the empty state while it is up — the generic EmptyState
+						    below waits its turn, so the region never offers the same primary
+						    action twice (R11). */}
+						{welcomeVisible && (
+							<Card className="mb-8">
 								<CardHeader className="relative">
 									<Button
 										className="absolute top-4 right-4"
@@ -794,14 +820,14 @@ function DashboardContent() {
 								</CardHeader>
 								<CardContent>
 									<div className="grid gap-4 sm:grid-cols-3">
-										<div className="rounded-lg border bg-card p-4">
+										<div>
 											<h4 className="mb-2 font-medium">1. Create a Resume</h4>
 											<p className="text-muted-foreground text-sm">
 												Click &quot;New Resume&quot; to start building your
 												professional resume.
 											</p>
 										</div>
-										<div className="rounded-lg border bg-card p-4">
+										<div>
 											<h4 className="mb-2 font-medium">
 												2. Customize Sections
 											</h4>
@@ -809,7 +835,7 @@ function DashboardContent() {
 												Add your experience, education, skills, and more.
 											</p>
 										</div>
-										<div className="rounded-lg border bg-card p-4">
+										<div>
 											<h4 className="mb-2 font-medium">3. Export & Share</h4>
 											<p className="text-muted-foreground text-sm">
 												Download your resume as PDF or share it online.
@@ -858,7 +884,7 @@ function DashboardContent() {
 										total: totalResumes,
 									})}
 								</p>
-								<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+								<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
 									{pagedResumes.map((resume: Resume) => (
 										<ResumeCard
 											isArchiving={archivingId === resume.id}
@@ -915,7 +941,7 @@ function DashboardContent() {
 									</div>
 								)}
 							</>
-						) : (
+						) : welcomeVisible ? null : (
 							<EmptyState
 								onCreateNew={() => setIsCreateDialogOpen(true)}
 								searchQuery={searchQuery}
@@ -1030,7 +1056,9 @@ function DashboardContent() {
 	);
 }
 
-// Empty State Component
+// Empty State Component. Icon + headline + body + the one action that fixes the
+// emptiness (component inventory #27: 32px icon, 20/600 headline, 14px muted
+// body, `py-12 px-6`) — the audit found a 64px icon floating in `py-16` of void.
 interface EmptyStateProps {
 	showArchived: boolean;
 	searchQuery: string;
@@ -1043,8 +1071,11 @@ function EmptyState({
 	onCreateNew,
 }: EmptyStateProps) {
 	return (
-		<div className="flex flex-col items-center justify-center py-16 text-center">
-			<FileText className="mb-4 h-16 w-16 text-muted-foreground/50" />
+		<div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+			<FileText
+				aria-hidden="true"
+				className="mb-4 h-8 w-8 text-muted-foreground"
+			/>
 			<h3 className="mb-2 font-semibold text-lg">
 				{searchQuery
 					? "No resumes found"
