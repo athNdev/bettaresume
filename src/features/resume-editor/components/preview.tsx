@@ -20,6 +20,7 @@ import type {
 
 import { keyedByContent } from "@/lib/collections";
 import { formatDateRange, formatResumeDate } from "@/lib/format-date";
+import { richTextToPlain } from "@/lib/rich-text";
 import { resolveTypstFont } from "@/lib/typst/fonts";
 import { cn } from "@/lib/utils";
 
@@ -278,14 +279,12 @@ export function Preview({
 		</h2>
 	);
 
-	const stripHtml = (input: string) => input.replace(/<[^>]*>/g, "");
-
 	const renderSummary = (section: ResumeSection) => {
 		const html =
 			section.content.html ||
 			(section.content.data as { summary?: string })?.summary ||
 			"";
-		const summaryText = stripHtml(html);
+		const summaryText = richTextToPlain(html);
 		return (
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>

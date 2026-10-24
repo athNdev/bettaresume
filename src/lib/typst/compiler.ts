@@ -255,37 +255,81 @@ function buildMainContent(templateSource: string, dataJson: string): string {
  *   the viewBox Y offset — the browser clips everything outside the viewport,
  *   giving a pixel-perfect page slice without touching any SVG internals.
  */
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * The two things Typst adds that are not part of the page.
+ *
+ * `--format svg` appends a `<script>` that implements interactive text selection, and a
+ * `<foreignObject>` holding its transparent overlay. Neither belongs in a rendered page,
+ * and both are actively harmful here:
+ *
+ *  - the script executes in the app's origin when the SVG is injected as markup, which is
+ *    what `dangerouslySetInnerHTML` was doing;
+ *  - the `<foreignObject>` contains `h5:div`, whose `h5` prefix is declared on the root
+ *    `<svg>` — so a *page slice* is not well-formed XML and a browser refuses to load it
+ *    as an image at all. That is how this was found: the preview went blank.
+ */
+const NOT_PAGE_CONTENT = "script, foreignObject";
+
+/**
+ * Read the compiler's SVG leniently.
+ *
+ * `image/svg+xml` parsing rejects the document outright because of the unbound `h5:`
+ * prefix, which sends every caller down the string-slicing fallback. The HTML parser is
+ * forgiving, and it still puts `<svg>` and its children in the SVG namespace, which is
+ * all this needs.
+ */
+function parseSvgLeniently(rawSvg: string): Element | null {
+	if (typeof DOMParser === "undefined") return null;
+	const doc = new DOMParser().parseFromString(rawSvg, "text/html");
+	const svg = doc.querySelector("svg");
+	return svg ?? null;
+}
+
+/** Strip Typst's selection overlay, then serialise a standalone document. */
+function toStandaloneSvg(el: Element): string {
+	for (const node of el.querySelectorAll(NOT_PAGE_CONTENT)) node.remove();
+	return new XMLSerializer().serializeToString(el);
+}
+
 function splitSvgPages(rawSvg: string): string[] {
 	if (!rawSvg || rawSvg.trim().length === 0) return [];
 
 	// ── Strategy 1: DOM attribute markers ───────────────────────────────────
-	// Available in the browser only (always the case here — called after WASM init)
-	if (typeof DOMParser !== "undefined") {
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(rawSvg, "image/svg+xml");
+	// Available in the browser only (always the case here — called after WASM init).
+	const root = parseSvgLeniently(rawSvg);
+	if (root) {
+		const svgEl = root;
+		// Look at direct children only to avoid matching nested groups
+		const pageGroups = Array.from(svgEl.children).filter((el) =>
+			el.hasAttribute("data-typst-page-width"),
+		);
 
-		if (!doc.querySelector("parsererror")) {
-			const svgEl = doc.documentElement;
-			// Look at direct children only to avoid matching nested groups
-			const pageGroups = Array.from(svgEl.children).filter((el) =>
-				el.hasAttribute("data-typst-page-width"),
-			);
+		if (pageGroups.length > 0) {
+			const defsEl = svgEl.querySelector("defs");
 
-			if (pageGroups.length > 0) {
-				const defsEl = svgEl.querySelector("defs");
-				const defsHtml = defsEl ? defsEl.outerHTML : "";
-				const NS =
-					'xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"';
+			return pageGroups.map((g) => {
+				const w = g.getAttribute("data-typst-page-width") ?? "612";
+				const h = g.getAttribute("data-typst-page-height") ?? "792";
 
-				return pageGroups.map((g) => {
-					const w = g.getAttribute("data-typst-page-width") ?? "612";
-					const h = g.getAttribute("data-typst-page-height") ?? "792";
-					return (
-						`<svg ${NS} width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n` +
-						`${defsHtml}\n<g>${g.innerHTML}</g>\n</svg>`
-					);
-				});
-			}
+				// Build the page rather than string-concatenating it: the parts that must
+				// not survive (the script, the overlay) are removed from a tree, so there is
+				// no pattern to bypass.
+				const page = document.createElementNS(SVG_NS, "svg");
+				page.setAttribute("width", w);
+				page.setAttribute("height", h);
+				page.setAttribute("viewBox", `0 0 ${w} ${h}`);
+				if (defsEl) page.appendChild(defsEl.cloneNode(true));
+
+				const body = document.createElementNS(SVG_NS, "g");
+				for (const child of Array.from(g.childNodes)) {
+					body.appendChild(child.cloneNode(true));
+				}
+				page.appendChild(body);
+
+				return toStandaloneSvg(page);
+			});
 		}
 	}
 
@@ -320,17 +364,30 @@ function splitSvgPages(rawSvg: string): string[] {
 
 				return Array.from({ length: numPages }, (_, i) => {
 					const pageY = i * pageHeight;
-					return (
+					return sanitiseRawSvg(
 						`<svg ${NS} width="${vbW}" height="${pageHeight}" ` +
-						`viewBox="${vbX} ${pageY} ${vbW} ${pageHeight}">\n${inner}\n</svg>`
+							`viewBox="${vbX} ${pageY} ${vbW} ${pageHeight}">\n${inner}\n</svg>`,
 					);
 				});
 			}
 		}
 	}
 
-	// Single page or unrecognised format — return as-is
-	return [rawSvg];
+	// Single page or unrecognised format
+	return [sanitiseRawSvg(rawSvg)];
+}
+
+/**
+ * Last-resort clean-up for a page that could not be rebuilt from a DOM.
+ *
+ * Deliberately structural rather than textual where a DOM is available: parse it, remove
+ * the nodes, serialise. The regex branch only runs where there is no DOM at all, which is
+ * never the preview path.
+ */
+function sanitiseRawSvg(rawSvg: string): string {
+	const parsed = parseSvgLeniently(rawSvg);
+	if (parsed) return toStandaloneSvg(parsed);
+	return rawSvg;
 }
 
 /** Resets the compiler state (useful for testing / HMR). */

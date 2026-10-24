@@ -9,7 +9,7 @@
  */
 
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePreviewPages } from "@/features/resume-editor/lib/preview-pages";
 import type { Resume } from "@/features/resume-editor/types";
 import { cn } from "@/lib/utils";
@@ -110,12 +110,7 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 	const cssWidth = dims.width * PT_TO_PX * scale;
 	const cssHeight = dims.height * PT_TO_PX * scale;
 
-	// Stamp the CSS pixel size onto the SVG element so the browser renders it
-	// at exactly the right size (the viewBox coordinates are in pt, so the
-	// browser needs explicit pixel dimensions to know the display size).
-	const scaledSvg = svg
-		.replace(/width="[^"]*"/, `width="${cssWidth}"`)
-		.replace(/height="[^"]*"/, `height="${cssHeight}"`);
+	const src = useSvgObjectUrl(svg);
 
 	return (
 		<div
@@ -131,13 +126,58 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 				transition: "opacity 150ms ease",
 			}}
 		>
-			<div
-				// biome-ignore lint/security/noDangerouslySetInnerHtml: Typst WASM output
-				dangerouslySetInnerHTML={{ __html: scaledSvg }}
-				style={{ display: "block", lineHeight: 0 }}
-			/>
+			{src ? (
+				/*
+				 * An `<img>`, NOT `dangerouslySetInnerHTML`.
+				 *
+				 * The SVG comes from the Typst compiler and is safe today because Typst
+				 * escapes the text it lays out. Injecting it as markup made the whole
+				 * preview depend on that being true forever, and a hand-rolled strip of
+				 * script tags was both a CodeQL finding and the wrong shape of fix.
+				 *
+				 * An SVG loaded through `<img>` is parsed as an image: scripts do not run,
+				 * event-handler attributes do nothing, and external references are not
+				 * fetched. That is guaranteed by the spec rather than by this code, which
+				 * is the property worth having. Nothing here renders a photo or any other
+				 * external resource — Typst outlines its glyphs — so there is nothing to
+				 * lose.
+				 *
+				 * The size comes from CSS now instead of string-replacing `width`/`height`
+				 * attributes, so the compiler's own output is passed through untouched.
+				 */
+				// biome-ignore lint/performance/noImgElement: the image is a blob URL the browser just created; `next/image` cannot optimise a compiled page
+				<img
+					alt=""
+					aria-hidden="true"
+					src={src}
+					style={{
+						display: "block",
+						width: cssWidth,
+						height: cssHeight,
+					}}
+				/>
+			) : null}
 		</div>
 	);
+}
+
+/**
+ * A blob URL for one compiled page, revoked when the page or its SVG changes.
+ *
+ * A blob URL keeps the SVG string out of the DOM entirely and costs no base64
+ * inflation, which a `data:` URL would. `image/svg+xml` in `<img>` is an image context,
+ * so the browser's SVG script and external-resource restrictions apply.
+ */
+function useSvgObjectUrl(svg: string): string | null {
+	const [src, setSrc] = useState<string | null>(null);
+
+	useEffect(() => {
+		const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+		setSrc(url);
+		return () => URL.revokeObjectURL(url);
+	}, [svg]);
+
+	return src;
 }
 
 // -------------------------------------------------------

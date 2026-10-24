@@ -1,6 +1,6 @@
-import { convert } from "html-to-text";
 import { TEMPLATE_SECTION_HEADINGS } from "@/features/resume-editor/lib/review-input";
 import type { Resume } from "@/features/resume-editor/types";
+import { richTextToPlain } from "@/lib/rich-text";
 
 /**
  * DOCX export — Feature 3 from docs/ROADMAP.md.
@@ -212,39 +212,22 @@ export function escapeXml(value: string): string {
 /**
  * Strip HTML to plain text.
  *
- * Uses `html-to-text`, which is ALREADY a dependency (export-buttons.tsx imports it),
- * rather than a hand-rolled regex stripper.
+ * Delegates to `richTextToPlain`, which is the one converter every render path uses.
  *
- * That is not tidiness. CodeQL flagged three real defects in the hand-rolled version
- * and all three are the kind that hand-rolled sanitisation always has:
+ * This function used to be the sanitiser: a hand-rolled regex stripper that CodeQL
+ * flagged three real defects in, all of them the kind hand-rolled sanitisation always
+ * has — `</script >` slipping past the filter, a bare `<script` left when no `>`
+ * followed, and an `&amp;` double-unescape. None could escape into the DOCX because
+ * every string is XML-escaped on the way out, but a sanitiser whose safety depends on a
+ * *later* stage breaks the moment someone reuses it somewhere else.
  *
- *   - `</script >` (space before the `>`) slipped past the script filter
- *   - the generic `<[^>]*>` strip left a bare `<script` when no `>` followed
- *   - decoding `&amp;` to `&` mid-pipeline read as a double-unescape hazard
- *
- * None of those could escape into the DOCX, because every string is XML-escaped on the
- * way out. But a sanitiser whose safety depends on a *later* stage is a sanitiser that
- * breaks the moment someone reuses it somewhere else. A maintained library removes the
- * whole class, adds no bundle weight, and is not my regex to maintain.
+ * It was then a private `html-to-text` wrapper for the same reason, while `preview.tsx`
+ * and the Typst serialiser still regex-stripped and the plain-text exporter called the
+ * library with different options. Four converters, four answers to "what does this
+ * summary say". Now there is one.
  */
 export function htmlToPlainText(html: string): string {
-	if (!html) return "";
-	return convert(html, {
-		wordwrap: false,
-		// `li` needs an explicit format, not just options -- the library rejects a
-		// selector with options but no format.
-		selectors: [
-			{ selector: "li", format: "text", options: { prefix: "• " } },
-			// Script and style bodies are dropped wholesale rather than emitted as
-			// visible text, which is what those elements are.
-			{ selector: "script", format: "skip" },
-			{ selector: "style", format: "skip" },
-		],
-	})
-		.replace(/\u00a0/g, " ")
-		.replace(/[ \t]+/g, " ")
-		.replace(/\n{3,}/g, "\n\n")
-		.trim();
+	return richTextToPlain(html);
 }
 
 type Align = "left" | "center" | "right";
