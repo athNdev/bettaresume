@@ -3,6 +3,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { TRPCError } from "@trpc/server";
 import { createDb } from "../db";
 import { users } from "../db/schema";
+import type { RateLimitBinding } from "../rate-limit";
 
 export interface Env {
 	CLERK_PUBLISHABLE_KEY: string;
@@ -26,6 +27,14 @@ export interface Env {
 	 */
 	ALLOWED_ORIGINS?: string;
 	bettaresume_d1: D1Database;
+	/**
+	 * Cloudflare's per-colo rate limiter, declared in `wrangler.jsonc`.
+	 *
+	 * Optional because a preview environment or a test harness can deploy the Worker
+	 * without it, and `checkRateLimit` treats a missing binding as "allow" rather than
+	 * taking the API down.
+	 */
+	RATE_LIMITER?: RateLimitBinding;
 }
 
 /**

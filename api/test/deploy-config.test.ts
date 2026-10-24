@@ -171,6 +171,24 @@ describe("migrations are applied by the deploy pipeline", () => {
 	});
 });
 
+describe("the rate limiter is declared, not assumed", () => {
+	it("wrangler.jsonc binds RATE_LIMITER", () => {
+		// `checkRateLimit` treats a missing binding as "allow", so a Worker deployed
+		// without this would silently accept everything and look fine.
+		expect(wrangler).toMatch(/"name": "RATE_LIMITER"/);
+	});
+
+	it("uses a supported period and a finite limit", () => {
+		// Cloudflare accepts 10 or 60 seconds only; anything else is a config error at
+		// deploy time, which is the worst moment to discover it.
+		const simple = wrangler.match(/"simple":\s*\{([^}]*)\}/)?.[1] ?? "";
+		const period = Number(simple.match(/"period":\s*(\d+)/)?.[1] ?? 0);
+		const limit = Number(simple.match(/"limit":\s*(\d+)/)?.[1] ?? 0);
+		expect([10, 60]).toContain(period);
+		expect(limit).toBeGreaterThan(0);
+	});
+});
+
 describe("the CORS allow-list is configured, not assumed", () => {
 	/** The allow-list entries, comments and blanks removed. */
 	function originEntries(): string[] {
