@@ -60,7 +60,7 @@ export function PanelError({
 			<p className="font-medium text-destructive text-sm">{message}</p>
 			{onRetry ? (
 				<Button onClick={onRetry} size="sm" variant="outline">
-					<RotateCcw aria-hidden className="mr-1.5 h-3.5 w-3.5" />
+					<RotateCcw aria-hidden className="mr-1 h-3.5 w-3.5" />
 					{retryLabel}
 				</Button>
 			) : null}

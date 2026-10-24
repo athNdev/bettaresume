@@ -1,5 +1,6 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2 } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ const buttonVariants = cva(
 	 * - `static` switches the press motion off where it would distract (the
 	 *   theme toggle, toolbar icon buttons).
 	 */
-	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm ring-offset-background transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 ease-enter focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:[stroke-width:1.5]",
+	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm ring-offset-background transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-(--br-duration-fast) ease-enter focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:[stroke-width:1.5]",
 	{
 		variants: {
 			variant: {
@@ -55,22 +56,45 @@ export interface ButtonProps
 	extends React.ButtonHTMLAttributes<HTMLButtonElement>,
 		VariantProps<typeof buttonVariants> {
 	asChild?: boolean;
+	/**
+	 * Pending state. Renders a spinner, sets `aria-busy` and blocks interaction —
+	 * the loading slot in the state matrix (default/hover/active/focus-visible/
+	 * disabled/loading). A button that is waiting on a mutation must say so;
+	 * `disabled` alone reads as "not applicable".
+	 */
+	loading?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 	(
-		{ className, variant, size, asChild = false, static: isStatic, ...props },
+		{
+			className,
+			variant,
+			size,
+			asChild = false,
+			static: isStatic,
+			loading = false,
+			disabled,
+			children,
+			...props
+		},
 		ref,
 	) => {
 		const Comp = asChild ? Slot : "button";
 		return (
 			<Comp
+				aria-busy={loading || undefined}
 				className={cn(
 					buttonVariants({ variant, size, static: isStatic, className }),
+					loading && "cursor-progress",
 				)}
+				disabled={loading || disabled}
 				ref={ref}
 				{...props}
-			/>
+			>
+				{loading ? <Loader2 aria-hidden className="animate-spin" /> : null}
+				{children}
+			</Comp>
 		);
 	},
 );

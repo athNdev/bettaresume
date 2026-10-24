@@ -16,12 +16,12 @@ export function DevBadge() {
 
 	return (
 		<div
-			className="fixed bottom-2 left-2 z-50 flex items-center gap-1.5 rounded-full bg-amber-500/90 px-2.5 py-1 font-medium text-amber-950 text-xs shadow-lg backdrop-blur-sm"
+			className="fixed bottom-2 left-2 z-(--br-z-sticky) flex items-center gap-1 rounded-full bg-warning/90 px-2 py-1 font-medium text-warning-foreground text-xs shadow-elev-2 backdrop-blur-sm"
 			title="Development mode is enabled"
 		>
 			<span className="relative flex h-2 w-2">
-				<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-300 opacity-75" />
-				<span className="relative inline-flex h-2 w-2 rounded-full bg-amber-200" />
+				<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning-foreground/75 opacity-75" />
+				<span className="relative inline-flex h-2 w-2 rounded-full bg-warning-foreground" />
 			</span>
 			DEV
 		</div>

@@ -89,7 +89,7 @@ export function AppRouter() {
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-background">
 			<div className="space-y-4 text-center">
-				<h1 className="font-bold text-4xl">404</h1>
+				<h1 className="font-bold text-2xl">404</h1>
 				<p className="text-muted-foreground">Page not found</p>
 				<button
 					className="text-primary hover:underline"

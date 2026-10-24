@@ -15,6 +15,10 @@ const Progress = React.forwardRef<
 			className,
 		)}
 		ref={ref}
+		// The loading declaration in the state matrix: a progress bar is the
+		// busy state made visible (Radix renders `role="progressbar"` itself;
+		// making it explicit keeps the contract in this file).
+		role="progressbar"
 		{...props}
 	>
 		<ProgressPrimitive.Indicator
