@@ -18,12 +18,15 @@ import {
 	loadFonts,
 	preloadFontAssets,
 } from "@myriaddreamin/typst.ts/options.init";
+import type { FitProbe } from "@/lib/layout/page-fit";
+import { parseFitProbe } from "@/lib/layout/page-fit";
 import {
 	FONT_FILES,
 	type FontResolution,
 	fontSubstitutionWarning,
 	resolveTypstFont,
 } from "./fonts";
+import { withFitProbe } from "./probe";
 
 // Minimal typing for the @myriaddreamin/typst.ts snippet API surface we use.
 interface TypstInitOptions {
@@ -45,12 +48,36 @@ interface TypstInitOptions {
 	beforeBuild?: unknown[];
 }
 
+interface TypstWorld {
+	/** Compile the document; `query` is only valid afterwards. */
+	compile(opts?: { diagnostics?: string }): Promise<unknown>;
+	query<T>(opts: { selector: string; field?: string }): Promise<T>;
+}
+
+/**
+ * The part of the compiler driver the fit probe needs.
+ *
+ * `query` exists on the snippet (`$typst.query`), but in the bundled build it snapshots a
+ * world and queries it **without compiling first**, which throws `document is not
+ * compiled`. Driving the world directly — compile, then query — is the supported path and
+ * is what `runWithWorld` is for.
+ */
+interface TypstQueryCompiler {
+	addSource(path: string, content: string): void;
+	runWithWorld<T>(
+		opts: { root: string; mainFilePath: string },
+		cb: (world: TypstWorld) => Promise<T>,
+	): Promise<T>;
+}
+
 interface TypstSnippet {
 	setCompilerInitOptions(opts: TypstInitOptions): void;
 	setRendererInitOptions(opts: TypstInitOptions): void;
 	/** May return a single combined SVG string or an array (one per page). */
 	svg(opts: { mainContent: string }): Promise<string | string[]>;
 	pdf(opts: { mainContent: string }): Promise<Uint8Array>;
+	/** The initialized compiler driver, shared with `svg`/`pdf`. */
+	getCompiler(): Promise<TypstQueryCompiler>;
 }
 
 // -------------------------------------------------------
@@ -193,6 +220,42 @@ export async function compileToPdf(
 	const mainContent = buildMainContent(templateSource, dataJson);
 	if (!$typst) throw new Error("[typst] Compiler not initialized");
 	return $typst.pdf({ mainContent });
+}
+
+/**
+ * Measure the document: page count, where the content ends, and where each entry starts.
+ *
+ * This is a **separate compile** that appends the invisible probe (`./probe.ts`), so the
+ * preview SVG and the PDF are untouched. It returns `null` rather than throwing when the
+ * probe cannot be read: the meter says "not measured", it does not invent a number.
+ */
+export async function compileFitProbe(
+	templateSource: string,
+	dataJson: string,
+	fontFamily = "Inter",
+): Promise<FitProbe | null> {
+	await initCompiler();
+	await prepareFont(fontFamily);
+
+	const mainContent = withFitProbe(buildMainContent(templateSource, dataJson));
+	if (!$typst) throw new Error("[typst] Compiler not initialized");
+
+	const compiler = await $typst.getCompiler();
+	const mainFilePath = "/fit-probe.typ";
+	compiler.addSource(mainFilePath, mainContent);
+
+	const raw = await compiler.runWithWorld(
+		{ root: "/", mainFilePath },
+		async (world) => {
+			await world.compile({ diagnostics: "none" });
+			return world.query<unknown>({
+				selector: "metadata",
+				field: "value",
+			});
+		},
+	);
+
+	return parseFitProbe(raw);
 }
 
 // -------------------------------------------------------

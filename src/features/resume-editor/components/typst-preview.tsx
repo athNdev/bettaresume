@@ -27,19 +27,29 @@ export function TypstPreview({
 	scale = 1,
 	className,
 }: TypstPreviewProps) {
-	const { svgPages, isLoading, error, fallbackPageWidth, fallbackPageHeight } =
-		useTypstPreview(resume);
+	const {
+		svgPages,
+		isLoading,
+		error,
+		fallbackPageWidth,
+		fallbackPageHeight,
+		fit,
+	} = useTypstPreview(resume);
 
 	/*
-	 * Publish the page count. It is only knowable here, after compilation, and the
-	 * review panel's rubric needs it — "how many pages is my resume" is the question
-	 * a candidate actually asks. `null` while nothing has compiled, which the rubric
-	 * reports as unknown rather than as zero.
+	 * Publish the page count and the measured fit. They are only knowable here, after
+	 * compilation, and the review panel's rubric and the toolbar's fit meter need them —
+	 * "how many pages is my resume" is the question a candidate actually asks. `null`
+	 * while nothing has compiled, which the rubric reports as unknown rather than as zero.
 	 */
 	const setPageCount = usePreviewPages((s) => s.setPageCount);
+	const setFit = usePreviewPages((s) => s.setFit);
 	useEffect(() => {
 		setPageCount(svgPages.length > 0 ? svgPages.length : null);
 	}, [svgPages, setPageCount]);
+	useEffect(() => {
+		setFit(fit);
+	}, [fit, setFit]);
 
 	// Use fallback dimensions (in pt) only for the skeleton/error placeholders.
 	// Real pages derive their size from the actual SVG attributes.

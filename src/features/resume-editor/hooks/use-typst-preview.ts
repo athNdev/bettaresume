@@ -9,7 +9,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Resume } from "@/features/resume-editor/types";
 import { getTemplateSource } from "@/features/resume-editor/typst_templates";
-import { compileToSvgPages } from "@/lib/typst/compiler";
+import {
+	deriveFit,
+	type FitReport,
+	resolvePageTarget,
+} from "@/lib/layout/page-fit";
+import { compileFitProbe, compileToSvgPages } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
 
 export interface UseTypstPreviewResult {
@@ -25,6 +30,8 @@ export interface UseTypstPreviewResult {
 	 */
 	fallbackPageWidth: number;
 	fallbackPageHeight: number;
+	/** Measured page fit, or `null` until the measurement compile lands. */
+	fit: FitReport | null;
 }
 
 const DEBOUNCE_MS = 350;
@@ -35,6 +42,7 @@ export function useTypstPreview(
 	const [svgPages, setSvgPages] = useState<string[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<Error | null>(null);
+	const [fit, setFit] = useState<FitReport | null>(null);
 
 	// Stable refs so the effect closure always reads the latest values
 	const resumeRef = useRef(resume);
@@ -69,6 +77,32 @@ export function useTypstPreview(
 				setSvgPages(pages);
 				setError(null);
 			}
+
+			/*
+			 * The fit probe is a second, probe-only compile. It appends an invisible
+			 * `metadata` block and reads it back with `query`, so the SVG above is untouched.
+			 * It is measured on the same debounce as the preview — never while typing — and a
+			 * failure leaves the meter saying "not measured" instead of breaking the preview.
+			 */
+			let report: FitReport | null = null;
+			try {
+				const probe = await compileFitProbe(
+					templateSource,
+					dataJson,
+					fontFamily,
+				);
+				const settings = r.metadata?.settings;
+				report = probe
+					? deriveFit(probe, settings, resolvePageTarget(settings, r.template))
+					: null;
+			} catch (err) {
+				// The meter says "not measured" rather than breaking the preview, but the
+				// cause has to be visible: a silently dead probe is a feature that looks
+				// like it works.
+				console.warn("[fit] the page-fit probe did not compile", err);
+				report = null;
+			}
+			if (cancelTokenRef.current === token) setFit(report);
 		} catch (err) {
 			if (cancelTokenRef.current === token) {
 				setError(err instanceof Error ? err : new Error(String(err)));
@@ -86,6 +120,7 @@ export function useTypstPreview(
 			setSvgPages([]);
 			setIsLoading(false);
 			setError(null);
+			setFit(null);
 			return;
 		}
 
@@ -112,5 +147,12 @@ export function useTypstPreview(
 	const fallbackPageWidth = pageSize === "A4" ? 595 : 612;
 	const fallbackPageHeight = pageSize === "A4" ? 842 : 792;
 
-	return { svgPages, isLoading, error, fallbackPageWidth, fallbackPageHeight };
+	return {
+		svgPages,
+		isLoading,
+		error,
+		fallbackPageWidth,
+		fallbackPageHeight,
+		fit,
+	};
 }

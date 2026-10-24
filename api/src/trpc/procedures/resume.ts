@@ -203,6 +203,9 @@ function formatResumeWithSections<
 		sections: resume.sections.map((section) => ({
 			...section,
 			content: safeJsonParse<Record<string, unknown>>(section.content, {}),
+			layout: section.layout
+				? safeJsonParse<Record<string, unknown>>(section.layout, {})
+				: undefined,
 		})),
 	};
 }
@@ -256,6 +259,9 @@ export const resumeRouter = router({
 				sections: resume.sections.map((section) => ({
 					...section,
 					content: safeJsonParse<Record<string, unknown>>(section.content, {}),
+					layout: section.layout
+						? safeJsonParse<Record<string, unknown>>(section.layout, {})
+						: undefined,
 				})),
 			}));
 		}),
@@ -293,6 +299,9 @@ export const resumeRouter = router({
 				sections: resume.sections.map((section) => ({
 					...section,
 					content: safeJsonParse<Record<string, unknown>>(section.content, {}),
+					layout: section.layout
+						? safeJsonParse<Record<string, unknown>>(section.layout, {})
+						: undefined,
 				})),
 			};
 		}),
@@ -576,6 +585,7 @@ export const resumeRouter = router({
 					order: section.order,
 					visible: section.visible,
 					content: section.content,
+					layout: section.layout,
 					createdAt: now,
 					updatedAt: now,
 				});
@@ -695,6 +705,9 @@ export const resumeRouter = router({
 					order: section.order,
 					visible: section.visible,
 					content: section.content,
+					// Break flags are layout of this document, so a variant starts with the
+					// base's breaks and may change them without taking the text over.
+					layout: section.layout,
 					// Keep the library placement: the variant shows the same master item.
 					contentItemId: section.contentItemId ?? null,
 					baseSectionId: section.id,

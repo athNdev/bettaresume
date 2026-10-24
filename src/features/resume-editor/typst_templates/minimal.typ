@@ -29,10 +29,10 @@
 // HEADER — personal info
 // ──────────────────────────────────────────────
 
-// `space-2xl` below the block plus `space-m` below the hairline rule is the 16pt
-// header → body gap (`space-3xl`); the first section heading does not add its
-// `section-gap` on top of it (see `section-title`).
-#block(width: 100%, below: space-2xl)[
+// `header-gap-half` below the block plus `space-m` below the hairline rule is the
+// header → body gap (`header-gap`, 16pt at Normal); the first section heading does not
+// add its `section-gap` on top of it (see `section-title`).
+#block(width: 100%, below: header-gap-half)[
   // Name
   #text(
     size:   typo.at("name", default: 18pt),
@@ -49,7 +49,7 @@
   }
 
   // Contact row
-  #v(space-l)
+  #v(contact-gap)
   #let contacts = ()
   #if personal.email    != "" { contacts.push(personal.email) }
   #if personal.phone    != "" { contacts.push(personal.phone) }
@@ -72,3 +72,7 @@
 #for section in sections {
   render-section(section)
 }
+
+// The fit meter's end-of-content marker. Invisible, and the only thing the probe reads
+// from this template.
+#fit-end()

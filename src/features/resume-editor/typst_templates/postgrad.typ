@@ -43,8 +43,9 @@
 // HEADER — centred, academic
 // ──────────────────────────────────────────────
 
-// 16pt header → body: `space-2xl` below the block + `space-m` below the rule.
-#block(width: 100%, below: space-2xl)[
+// `header-gap-half` below the block plus `space-m` below the rule is the header → body
+// gap (`header-gap`, 16pt at Normal).
+#block(width: 100%, below: header-gap-half)[
   #align(center)[
     #text(
       size: typo.at("name", default: 18pt),
@@ -61,7 +62,7 @@
       )[#personal.professionalTitle]
     }
 
-    #v(space-l)
+    #v(contact-gap)
     #let contacts = ()
     #if personal.email    != "" { contacts.push(personal.email) }
     #if personal.phone    != "" { contacts.push(personal.phone) }
@@ -87,3 +88,6 @@
 #for section in sections {
   render-section(section)
 }
+
+// The fit meter's end-of-content marker (see `sections.typ`).
+#fit-end()

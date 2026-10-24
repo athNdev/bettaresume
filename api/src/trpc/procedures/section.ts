@@ -15,6 +15,21 @@ import { protectedProcedure, router } from "../index";
 import { sectionScopeError, sectionWriteScope } from "../middleware/ownership";
 import { maybeSnapshot } from "./revision";
 
+/**
+ * A stored layout column is JSON, and a malformed one must not make the whole section
+ * unreadable. An unparseable value reads as "no overrides" — the same thing a NULL means.
+ */
+function parseLayout(
+	value: string | null,
+): Record<string, unknown> | undefined {
+	if (!value) return undefined;
+	try {
+		return JSON.parse(value) as Record<string, unknown>;
+	} catch {
+		return undefined;
+	}
+}
+
 export const sectionRouter = router({
 	/**
 	 * List all sections for a resume
@@ -42,6 +57,7 @@ export const sectionRouter = router({
 			return resumeSections.map((section) => ({
 				...section,
 				content: JSON.parse(section.content || "{}"),
+				layout: parseLayout(section.layout),
 			}));
 		}),
 
@@ -65,6 +81,7 @@ export const sectionRouter = router({
 			return {
 				...section,
 				content: JSON.parse(section.content || "{}"),
+				layout: parseLayout(section.layout),
 			};
 		}),
 
@@ -102,6 +119,7 @@ export const sectionRouter = router({
 				order: input.order ?? maxOrder + 1,
 				visible: input.visible ?? true,
 				content: JSON.stringify(input.content),
+				layout: input.layout ? JSON.stringify(input.layout) : null,
 				createdAt: now,
 				updatedAt: now,
 			});
@@ -122,6 +140,7 @@ export const sectionRouter = router({
 				? {
 						...newSection,
 						content: JSON.parse(newSection.content || "{}"),
+						layout: parseLayout(newSection.layout),
 					}
 				: null;
 		}),
@@ -160,6 +179,10 @@ export const sectionRouter = router({
 				updateData.visible = input.data.visible;
 			if (input.data.content !== undefined)
 				updateData.content = JSON.stringify(input.data.content);
+			// Break semantics are layout, so this write deliberately does **not** clear
+			// `linkedToBase`: a variant may re-break a section it still follows.
+			if (input.data.layout !== undefined)
+				updateData.layout = JSON.stringify(input.data.layout);
 
 			// "Linked until you edit it" has to be mechanical, or it is a description of
 			// intent. Editing a linked variant section *is* taking it over, so the link is
@@ -219,6 +242,7 @@ export const sectionRouter = router({
 				? {
 						...updated,
 						content: JSON.parse(updated.content || "{}"),
+						layout: parseLayout(updated.layout),
 					}
 				: null;
 		}),
@@ -295,7 +319,11 @@ export const sectionRouter = router({
 			});
 
 			return updated
-				? { ...updated, content: JSON.parse(updated.content || "{}") }
+				? {
+						...updated,
+						content: JSON.parse(updated.content || "{}"),
+						layout: parseLayout(updated.layout),
+					}
 				: null;
 		}),
 
@@ -356,6 +384,7 @@ export const sectionRouter = router({
 						order: input.order,
 						visible: input.visible,
 						content: JSON.stringify(input.content),
+						layout: input.layout ? JSON.stringify(input.layout) : null,
 						...(existing.baseSectionId && existing.linkedToBase
 							? { linkedToBase: false }
 							: {}),
@@ -371,6 +400,7 @@ export const sectionRouter = router({
 					order: input.order,
 					visible: input.visible,
 					content: JSON.stringify(input.content),
+					layout: input.layout ? JSON.stringify(input.layout) : null,
 					createdAt: now,
 					updatedAt: now,
 				});
@@ -392,6 +422,7 @@ export const sectionRouter = router({
 				? {
 						...result,
 						content: JSON.parse(result.content || "{}"),
+						layout: parseLayout(result.layout),
 					}
 				: null;
 		}),
@@ -451,6 +482,9 @@ export const sectionRouter = router({
 							order: sectionData.order,
 							visible: sectionData.visible,
 							content: JSON.stringify(sectionData.content),
+							layout: sectionData.layout
+								? JSON.stringify(sectionData.layout)
+								: null,
 							updatedAt: now,
 						})
 						.where(sectionWriteScope(existing.id, input.resumeId));
@@ -462,6 +496,9 @@ export const sectionRouter = router({
 						order: sectionData.order,
 						visible: sectionData.visible,
 						content: JSON.stringify(sectionData.content),
+						layout: sectionData.layout
+							? JSON.stringify(sectionData.layout)
+							: null,
 						createdAt: now,
 						updatedAt: now,
 					});
