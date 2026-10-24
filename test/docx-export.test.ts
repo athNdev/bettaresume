@@ -126,6 +126,32 @@ interface PythonResult {
  * records the error and leaves `bad` absent, and callers assert `error` is undefined
  * first.
  */
+/**
+ * Is a Python interpreter available?
+ *
+ * The ZIP and XML checks below are deliberately validated by a *second, independent*
+ * implementation rather than by the code under test. Python's `zipfile` + `xml.etree`
+ * are that implementation, and CI (ubuntu-latest) has them.
+ *
+ * A Windows dev box often has neither `python3` nor `python` on PATH. Without this
+ * guard the suite would report five failures for code that is correct, which trains
+ * people to ignore red — the opposite of what these tests are for. The suites are
+ * skipped, not silently weakened, and the skip reason names the missing dependency.
+ */
+const PYTHON = (() => {
+	for (const candidate of ["python3", "python"]) {
+		try {
+			execFileSync(candidate, ["--version"], { stdio: "ignore" });
+			return candidate;
+		} catch {
+			// Try the next spelling.
+		}
+	}
+	return null;
+})();
+
+const pythonMissing = PYTHON === null;
+
 function validateWithPython(bytes: Uint8Array): PythonResult {
 	const dir = mkdtempSync(join(tmpdir(), "docx-"));
 	const file = join(dir, "out.docx");
@@ -150,7 +176,9 @@ function validateWithPython(bytes: Uint8Array): PythonResult {
 	// `execFileSync` throws on a non-zero exit, which surfaces as an opaque "Command
 	// failed" instead of Python's actual complaint. The script handles its own errors and
 	// always exits 0 so the message survives in `error`.
-	const out = execFileSync("python3", ["-c", script], { encoding: "utf8" });
+	const out = execFileSync(PYTHON as string, ["-c", script], {
+		encoding: "utf8",
+	});
 	return JSON.parse(out) as PythonResult;
 }
 
@@ -167,7 +195,7 @@ describe("crc32", () => {
 	});
 });
 
-describe("the archive is a valid ZIP", () => {
+describe.skipIf(pythonMissing)("the archive is a valid ZIP", () => {
 	let bytes: Uint8Array;
 	let result: PythonResult;
 
@@ -214,7 +242,7 @@ describe("the archive is a valid ZIP", () => {
 	});
 });
 
-describe("document.xml is well-formed XML", () => {
+describe.skipIf(pythonMissing)("document.xml is well-formed XML", () => {
 	// The container check cannot see this class of bug: `testzip()` was returning `None`
 	// on a DOCX whose `document.xml` was not parseable XML at all.
 
@@ -284,7 +312,7 @@ describe("document.xml is well-formed XML", () => {
 	});
 });
 
-describe("buildZip", () => {
+describe.skipIf(pythonMissing)("buildZip", () => {
 	it("round-trips content through an independent reader", () => {
 		const enc = new TextEncoder();
 		const bytes = buildZip([

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, rmSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -109,10 +109,14 @@ describe("wrangler can actually apply every migration", () => {
 		// The end-to-end check the harness could never give us. Slow, and worth it:
 		// this is the command `npm run db:reset` runs, so a failure here is a broken
 		// setup path rather than a hypothetical.
-		execFileSync("rm", ["-rf", ".wrangler/state/v3/d1"]);
+		//
+		// `rmSync`, not `execFileSync("rm", …)`, and `npx.cmd` on Windows: neither `rm`
+		// nor a bare `npx` is an executable file there, so the suite failed on the
+		// harness rather than on the migration.
+		rmSync(".wrangler/state/v3/d1", { recursive: true, force: true });
 
 		const out = execFileSync(
-			"npx",
+			process.platform === "win32" ? "npx.cmd" : "npx",
 			[
 				"wrangler",
 				"d1",
@@ -123,7 +127,7 @@ describe("wrangler can actually apply every migration", () => {
 				"--config",
 				"wrangler.dev.jsonc",
 			],
-			{ encoding: "utf8", input: "Y\n", cwd: process.cwd() },
+			{ encoding: "utf8", input: "Y\n", cwd: process.cwd(), shell: process.platform === "win32" },
 		);
 
 		expect(out).not.toMatch(/SQLITE_AUTH/);

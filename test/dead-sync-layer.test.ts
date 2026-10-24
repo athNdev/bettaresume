@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -32,14 +33,16 @@ const DEAD_FILES = [
 
 describe("the dead persistence layer stays deleted", () => {
 	it.each(DEAD_FILES)("%s does not exist", (f) => {
-		expect(existsSync(new URL(`../${f}`, import.meta.url).pathname)).toBe(
-			false,
-		);
+		// `resolve(process.cwd(), …)`, not `new URL(…).pathname`: on Windows the
+		// latter yields `/C:/…`, which `existsSync` reads as a relative path on the
+		// current drive and reports missing — so the assertion passed for the wrong
+		// reason on every file.
+		expect(existsSync(resolve(process.cwd(), f))).toBe(false);
 	});
 
 	it("no source file references the removed modules", async () => {
 		const { readdirSync } = await import("node:fs");
-		const root = new URL("../src/", import.meta.url).pathname;
+		const root = resolve(process.cwd(), "src");
 		const files: string[] = [];
 		const walk = (dir: string) => {
 			for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -63,7 +66,7 @@ describe("the dead persistence layer stays deleted", () => {
 
 	it("no test asserts behaviour of the removed sync manager", async () => {
 		const { readdirSync } = await import("node:fs");
-		const root = new URL("../test/", import.meta.url).pathname;
+		const root = resolve(process.cwd(), "test");
 		const offenders = readdirSync(root)
 			.filter((f) => f.endsWith(".ts"))
 			.filter((f) =>
@@ -79,7 +82,7 @@ describe("the dead persistence layer stays deleted", () => {
 
 describe("real persistence is the tRPC path, not a local queue", () => {
 	const src = (p: string) =>
-		readFileSync(new URL(`../${p}`, import.meta.url).pathname, "utf8");
+		readFileSync(resolve(process.cwd(), p), "utf8");
 
 	it("section edits go through the live updateSection mutation", () => {
 		const editor = src("src/features/resume-editor/resume-editor.tsx");

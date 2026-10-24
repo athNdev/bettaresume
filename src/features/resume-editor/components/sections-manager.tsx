@@ -30,11 +30,13 @@ import {
 	GraduationCap,
 	GripVertical,
 	Heart,
+	Link2,
 	MoreVertical,
 	Plus,
 	Rocket,
 	Trash2,
 	Trophy,
+	Unlink2,
 	User,
 	Users,
 	Zap,
@@ -72,6 +74,14 @@ interface SectionsManagerProps {
 	onAddSection: (type: SectionType) => void;
 	onDeleteSection: (id: string) => void;
 	onSelectSection: (id: string) => void;
+	/**
+	 * Link or detach one section from the base resume it mirrors.
+	 *
+	 * Optional so the outline still renders for a base resume, which has nothing to
+	 * link to. When absent the per-section control is not offered at all, rather than
+	 * offered and inert.
+	 */
+	onSetLink?: (id: string, linked: boolean) => void;
 	selectedSectionId?: string;
 	isLoading?: boolean;
 }
@@ -106,6 +116,8 @@ interface SortableSectionItemProps {
 	onToggleVisibility: (id: string) => void;
 	onDelete: (id: string) => void;
 	onSelect: (id: string) => void;
+	/** Absent when the resume has no base, or when the host cannot write links. */
+	onSetLink?: (id: string, linked: boolean) => void;
 }
 
 /**
@@ -139,6 +151,7 @@ export function SortableSectionItem({
 	onToggleVisibility,
 	onDelete,
 	onSelect,
+	onSetLink,
 	personalInfo,
 }: SortableSectionItemProps) {
 	const {
@@ -157,6 +170,11 @@ export function SortableSectionItem({
 	};
 
 	const title = titleOf(section);
+	// A section is only "linked" if it has a base counterpart AND still follows it.
+	// The two are separate because deleting a base section nulls the pointer via
+	// ON DELETE SET NULL, and the copy must then behave as an ordinary local section.
+	const baseLinked = Boolean(section.baseSectionId);
+	const isLinked = baseLinked && Boolean(section.linkedToBase);
 
 	return (
 		<div
@@ -206,6 +224,21 @@ export function SortableSectionItem({
 				 * Dotted outline = visible but empty. A hidden section already says so, and
 				 * showing both would be noise, so the dot is suppressed there.
 				 */}
+				{baseLinked ? (
+					<span className="shrink-0" title={isLinked ? "Linked to the base resume" : "Detached from the base resume"}>
+						{isLinked ? (
+							<Link2
+								aria-label="Linked to the base resume"
+								className="h-3 w-3 text-primary"
+							/>
+						) : (
+							<Unlink2
+								aria-label="Detached from the base resume"
+								className="h-3 w-3 text-muted-foreground"
+							/>
+						)}
+					</span>
+				) : null}
 				{!section.visible ? (
 					<span className="shrink-0 text-[10px] text-muted-foreground uppercase">
 						Hidden
@@ -246,6 +279,23 @@ export function SortableSectionItem({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
+						{baseLinked && onSetLink ? (
+							<DropdownMenuItem
+								onSelect={() => onSetLink(section.id, !isLinked)}
+							>
+								{isLinked ? (
+									<>
+										<Unlink2 aria-hidden className="mr-2 h-4 w-4" />
+										Detach from base
+									</>
+								) : (
+									<>
+										<Link2 aria-hidden className="mr-2 h-4 w-4" />
+										Re-link to base
+									</>
+								)}
+							</DropdownMenuItem>
+						) : null}
 						<DropdownMenuItem
 							className="text-destructive"
 							onSelect={() => onDelete(section.id)}
@@ -267,6 +317,7 @@ export function SectionsManager({
 	onAddSection,
 	onDeleteSection,
 	onSelectSection,
+	onSetLink,
 	selectedSectionId,
 }: SectionsManagerProps) {
 	const sensors = useSensors(
@@ -407,6 +458,7 @@ export function SectionsManager({
 									isSelected={section.id === selectedSectionId}
 									onDelete={onDeleteSection}
 									onSelect={onSelectSection}
+									onSetLink={onSetLink}
 									onToggleVisibility={toggleVisibility}
 									personalInfo={personalInfo}
 									section={section}

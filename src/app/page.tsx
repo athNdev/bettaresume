@@ -2,20 +2,19 @@ import type { Metadata } from "next";
 
 import { Hero } from "@/components/marketing/hero";
 import {
-	Audit,
 	ClosingCta,
-	Coverage,
-	Export,
 	Faq,
-	Policy,
-	Proof,
-	Trust,
+	Features,
+	Inspect,
+	Principles,
+	Templates,
+	Workflow,
 } from "@/components/marketing/sections";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 
-const TITLE = "Betta Resume — see the text an ATS actually reads";
+const TITLE = "Betta Resume — one master resume, tailored per role";
 const DESCRIPTION =
-	"Other builders render your resume in a browser, so their score is a guess about software they never ran. Betta Resume typesets a single-column text layer and shows it to you, with every parser constraint named and no score.";
+	"Keep one master record of your career, fork a variant for each application, and export a PDF whose text layer you can read before you send it.";
 
 export const metadata: Metadata = {
 	title: TITLE,
@@ -44,12 +43,12 @@ export const metadata: Metadata = {
  * hero preview is CSS, deliberately avoiding the Typst WASM compiler that
  * `src/lib/typst/` would otherwise pull in.
  *
- * Section order is trust order, not feature order: the hero states the claim
- * and shows the artefact; the audit makes it checkable; the policy section
- * earns the rest; the feature sections then have something to be believed
- * about. Do not reorder by what sounds most impressive.
+ * Section order is the order a visitor's questions arrive in: what is it (hero),
+ * what does it do (features), what does using it look like (workflow), why is this
+ * one different (inspect), what will my document look like (templates), what are the
+ * boundaries (principles), details (FAQ), close.
  *
- * The app itself moved to `/app`.
+ * The app itself lives at `/app`.
  */
 export default function MarketingHome() {
 	return (
@@ -57,12 +56,11 @@ export default function MarketingHome() {
 			<SiteHeader />
 			<main id="main">
 				<Hero />
-				<Audit />
-				<Policy />
-				<Coverage />
-				<Proof />
-				<Export />
-				<Trust />
+				<Features />
+				<Workflow />
+				<Inspect />
+				<Templates />
+				<Principles />
 				<Faq />
 				<ClosingCta />
 			</main>

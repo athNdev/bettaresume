@@ -85,8 +85,11 @@ describe("the shipped allow-list is usable by a real browser", () => {
 	 * skipped when CI egress is blocked.
 	 */
 	const { readFileSync } = require("node:fs") as typeof import("node:fs");
+	const { resolve } = require("node:path") as typeof import("node:path");
 	const entries = readFileSync(
-		new URL("../allowed-origins.txt", import.meta.url).pathname,
+		// `resolve`, not `new URL(…).pathname`: the URL form yields `/C:/…` on
+		// Windows, which reads as a path on the current drive and reports ENOENT.
+		resolve(process.cwd(), "allowed-origins.txt"),
 		"utf8",
 	)
 		.split("\n")

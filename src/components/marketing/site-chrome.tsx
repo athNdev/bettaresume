@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
  * Hash fragments are invisible to crawlers, so the app cannot own `/`.
  */
 const NAV = [
-	{ href: "/#audit", label: "Audit" },
-	{ href: "/#coverage", label: "Coverage" },
-	{ href: "/#proof", label: "Proof" },
-	{ href: "/#export", label: "Export" },
+	{ href: "/#features", label: "Features" },
+	{ href: "/#workflow", label: "How it works" },
+	{ href: "/#inspect", label: "Parser fit" },
+	{ href: "/#templates", label: "Templates" },
 	{ href: "/#faq", label: "FAQ" },
 ];
 
@@ -104,8 +104,8 @@ export function SiteFooter() {
 							<span className="font-semibold tracking-tight">Betta Resume</span>
 						</div>
 						<p className="mt-3.5 text-[0.9rem] leading-relaxed">
-							A resume workbench that shows you the text an applicant tracking
-							system reads — and never invents the rest.
+							One master record of your career, a variant for every role, and an
+							export you can inspect before you send it.
 						</p>
 					</div>
 
@@ -113,17 +113,16 @@ export function SiteFooter() {
 						<FooterCol
 							heading="Product"
 							links={[
-								["Parse audit", "/#audit"],
-								["Coverage", "/#coverage"],
-								["Version history", "/#proof"],
+								["Features", "/#features"],
+								["How it works", "/#workflow"],
+								["Templates", "/#templates"],
 							]}
 						/>
 						<FooterCol
 							heading="Resources"
 							links={[
-								["Export formats", "/#export"],
-								["What we won't build", "/#policy"],
-								["Your data", "/#trust"],
+								["Parser fit", "/#inspect"],
+								["What we won't build", "/#principles"],
 								["FAQ", "/#faq"],
 							]}
 						/>
@@ -140,7 +139,7 @@ export function SiteFooter() {
 				<div className="mt-12 flex flex-col gap-3 border-white/10 border-t pt-6 text-[0.8rem] sm:flex-row sm:items-center sm:justify-between">
 					<p>© {new Date().getFullYear()} Betta Resume.</p>
 					<p className="text-[var(--brand-text-on-ink-faint)]">
-						No score. No invented numbers. No trackers.
+						No invented content. No score. No trackers.
 					</p>
 				</div>
 			</div>

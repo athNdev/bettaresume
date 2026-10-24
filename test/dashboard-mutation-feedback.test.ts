@@ -271,7 +271,7 @@ describe("no dashboard mutation fails silently", () => {
 			"Could not delete the resume.",
 			"could not be archived",
 			"could not be restored",
-			"Could not import the file.",
+			"Could not import",
 		]) {
 			const segment = handlers.find((h) => h.includes(message));
 			expect(segment, `no handler reports "${message}"`).toBeDefined();

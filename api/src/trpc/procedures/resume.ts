@@ -8,6 +8,7 @@ import type {
 } from "@bettaresume/types";
 import {
 	createResumeInputSchema,
+	createVariationInputSchema,
 	updateResumeInputSchema,
 } from "@bettaresume/types";
 import { and, desc, eq } from "drizzle-orm";
@@ -15,6 +16,7 @@ import { z } from "zod";
 import { resumes, sections } from "../../db/schema";
 import { protectedProcedure, router } from "../index";
 import { resumeWriteScope } from "../middleware/ownership";
+import { maybeSnapshot } from "./revision";
 
 function normalizePersonalInfo(value: unknown): PersonalInfo {
 	const info =
@@ -287,6 +289,38 @@ function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
 	} catch {
 		return fallback;
 	}
+}
+
+/**
+ * Shape a resume row for the client: JSON columns parsed, sections' content parsed.
+ *
+ * Every read path has to do this, and the copy that lived inline in each of them is why
+ * a newly added column could be returned by one procedure and silently dropped by
+ * another. Kept generic over the row so a caller passing `with: { sections: true }` keeps
+ * the exact inferred type.
+ */
+function formatResumeWithSections<
+	T extends typeof resumes.$inferSelect & {
+		sections: (typeof sections.$inferSelect)[];
+	},
+>(resume: T | undefined) {
+	if (!resume) return null;
+	return {
+		...resume,
+		tags: safeJsonParse<string[]>(resume.tags, []),
+		metadata: resume.metadata
+			? normalizeMetadata(
+					safeJsonParse<Record<string, unknown> | null>(
+						resume.metadata,
+						null,
+					),
+				)
+			: null,
+		sections: resume.sections.map((section) => ({
+			...section,
+			content: safeJsonParse<Record<string, unknown>>(section.content, {}),
+		})),
+	};
 }
 
 export const resumeRouter = router({
@@ -562,6 +596,10 @@ export const resumeRouter = router({
 				.set(updateData)
 				.where(resumeWriteScope(input.id, ctx.userId));
 
+			// History without a button press. Coalesced by `maybeSnapshot` so a burst of
+			// settings changes is one entry rather than fifty.
+			await maybeSnapshot(ctx.db, input.id);
+
 			return ctx.db.query.resumes
 				.findFirst({
 					where: eq(resumes.id, input.id),
@@ -698,6 +736,224 @@ export const resumeRouter = router({
 						})),
 					};
 				});
+		}),
+
+	/**
+	 * Create a variant of a resume, with every section linked to its base counterpart.
+	 *
+	 * ## Why the root is resolved here, not stored as given
+	 *
+	 * A variant-of-a-variant would make propagation a chain: editing the root has to
+	 * reach grandchildren, and each hop is another chance to miss one. Flattening at
+	 * creation time keeps linkage exactly two levels deep -- every variant points at the
+	 * root -- so `Section.baseSectionId` is always a root section and propagation is a
+	 * single indexed update.
+	 *
+	 * ## Why sections are copied rather than referenced
+	 *
+	 * A variant must survive the base being edited, detached from, or deleted. Copying
+	 * gives each variant its own rows -- so it can be exported, reordered and partially
+	 * detached -- while `baseSectionId` records where each copy came from. Referencing
+	 * would make a variant unusable the moment it diverged.
+	 */
+	createVariation: protectedProcedure
+		.input(createVariationInputSchema)
+		.mutation(async ({ ctx, input }) => {
+			const anchor = await ctx.db.query.resumes.findFirst({
+				where: and(
+					eq(resumes.id, input.baseResumeId),
+					eq(resumes.userId, ctx.userId),
+				),
+				columns: { id: true, baseResumeId: true },
+			});
+
+			if (!anchor) {
+				throw new Error("Resume not found or access denied");
+			}
+
+			// Flatten `variation -> variation` to the root by walking ids, then load the root
+			// once. The guard bounds a corrupt or hand-edited pointer chain rather than
+			// looping forever.
+			let rootId = anchor.id;
+			for (let depth = 0; depth < 16; depth++) {
+				const parent = await ctx.db.query.resumes.findFirst({
+					where: and(
+						eq(resumes.id, rootId),
+						eq(resumes.userId, ctx.userId),
+					),
+					columns: { id: true, baseResumeId: true },
+				});
+				if (!parent?.baseResumeId) break;
+				rootId = parent.baseResumeId;
+			}
+
+			const root = await ctx.db.query.resumes.findFirst({
+				where: and(eq(resumes.id, rootId), eq(resumes.userId, ctx.userId)),
+				with: { sections: true },
+			});
+
+			if (!root) {
+				throw new Error("Resume not found or access denied");
+			}
+
+			const now = new Date();
+			const newResumeId = crypto.randomUUID();
+
+			await ctx.db.insert(resumes).values({
+				id: newResumeId,
+				userId: ctx.userId,
+				name: input.name,
+				variationType: "variation",
+				baseResumeId: root.id,
+				domain: input.domain ?? root.domain ?? null,
+				template: root.template,
+				// Copied rather than shared: a variant is a document in its own right, and
+				// tagging it should not retag the base.
+				tags: root.tags,
+				isArchived: false,
+				metadata: root.metadata,
+				createdAt: now,
+				updatedAt: now,
+			});
+
+			for (const section of root.sections) {
+				await ctx.db.insert(sections).values({
+					id: crypto.randomUUID(),
+					resumeId: newResumeId,
+					type: section.type,
+					order: section.order,
+					visible: section.visible,
+					content: section.content,
+					// Keep the library placement: the variant shows the same master item.
+					contentItemId: section.contentItemId ?? null,
+					baseSectionId: section.id,
+					linkedToBase: true,
+					createdAt: now,
+					updatedAt: now,
+				});
+			}
+
+			// The starting point of a variant is worth recording: it is the state the user
+			// will compare every later change against, and by definition nothing in the
+			// base's history describes it.
+			await maybeSnapshot(ctx.db, newResumeId, {
+				force: true,
+				label: "Created from base",
+			});
+
+			return formatResumeWithSections(
+				await ctx.db.query.resumes.findFirst({
+					where: eq(resumes.id, newResumeId),
+					with: { sections: true },
+				}),
+			);
+		}),
+
+	/**
+	 * Variants of a resume, newest first.
+	 *
+	 * Accepts either the root or one of its variants, because the editor asks from
+	 * whichever document is open. Always resolves to the same set, so the selector
+	 * cannot show a different list depending on where you are standing.
+	 */
+	listVariations: protectedProcedure
+		.input(z.object({ baseResumeId: z.string().min(1) }))
+		.query(async ({ ctx, input }) => {
+			const anchor = await ctx.db.query.resumes.findFirst({
+				where: and(
+					eq(resumes.id, input.baseResumeId),
+					eq(resumes.userId, ctx.userId),
+				),
+			});
+
+			if (!anchor) {
+				throw new Error("Resume not found or access denied");
+			}
+
+			const rootId = anchor.baseResumeId ?? anchor.id;
+			const rows = await ctx.db.query.resumes.findMany({
+				where: and(
+					eq(resumes.baseResumeId, rootId),
+					eq(resumes.userId, ctx.userId),
+				),
+				orderBy: [desc(resumes.createdAt)],
+			});
+
+			return rows.map((row) => ({
+				...row,
+				tags: safeJsonParse<string[]>(row.tags, []),
+			}));
+		}),
+
+	/**
+	 * Re-pull every linked section from the base resume.
+	 *
+	 * This is "sync with base" as an explicit action. Detached sections are untouched:
+	 * taking a section over is a decision, and a sync button must not quietly undo it.
+	 */
+	pullFromBase: protectedProcedure
+		.input(z.object({ resumeId: z.string().min(1) }))
+		.mutation(async ({ ctx, input }) => {
+			const variant = await ctx.db.query.resumes.findFirst({
+				where: and(
+					eq(resumes.id, input.resumeId),
+					eq(resumes.userId, ctx.userId),
+				),
+			});
+
+			if (!variant) {
+				throw new Error("Resume not found or access denied");
+			}
+			if (!variant.baseResumeId) {
+				throw new Error("This resume is not a variation of another");
+			}
+
+			const variantSections = await ctx.db.query.sections.findMany({
+				where: eq(sections.resumeId, variant.id),
+			});
+			const linked = variantSections.filter(
+				(s) => s.linkedToBase && s.baseSectionId,
+			);
+			if (linked.length === 0) return { updated: 0 };
+
+			const now = new Date();
+			let updated = 0;
+			for (const section of linked) {
+				const base = await ctx.db.query.sections.findFirst({
+					where: and(
+						eq(sections.id, section.baseSectionId as string),
+						eq(sections.resumeId, variant.baseResumeId),
+					),
+				});
+				// The base section was deleted. The FK would normally have nulled the
+				// pointer; if it has not, leave the local copy alone rather than blanking it.
+				if (!base) continue;
+
+				await ctx.db
+					.update(sections)
+					.set({
+						type: base.type,
+						content: base.content,
+						contentItemId: base.contentItemId ?? null,
+						updatedAt: now,
+					})
+					.where(
+						and(
+							eq(sections.id, section.id),
+							eq(sections.resumeId, variant.id),
+						),
+					);
+				updated++;
+			}
+
+			await ctx.db
+				.update(resumes)
+				.set({ updatedAt: now })
+				.where(eq(resumes.id, variant.id));
+
+			await maybeSnapshot(ctx.db, variant.id, { force: true, label: "Synced with base" });
+
+			return { updated };
 		}),
 
 	/**

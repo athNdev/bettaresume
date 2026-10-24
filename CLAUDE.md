@@ -127,7 +127,7 @@ npm run check:unsafe     # Biome auto-fix (unsafe)
 npm run typecheck        # TypeScript type check (no emit)
 
 # Build
-npm run build            # build:types + next build + postbuild
+npm run build            # build:types + next build (webpack) + postbuild lifecycle
 npm run build:types      # Build @bettaresume/types package only
 
 # Database (delegates to api/ workspace)
@@ -263,16 +263,38 @@ Created for every request. Contains:
 ### Procedure Files
 ```
 api/src/trpc/procedures/
-├── auth.ts           # auth.getUser
-├── user.ts           # user.get, user.upsert
-├── resume.ts         # resume.list, resume.getById, resume.create, resume.update, resume.delete
-├── resume-section.ts # section operations on resumes
-└── section.ts        # section.upsert, section.reorder, section.delete
+├── auth.ts           # auth.verifySession, auth.healthCheck
+├── user.ts           # user.getMe, user.upsert
+├── resume.ts         # resume.list/getById/create/update/delete/duplicate/archive
+│                     # resume.createVariation, resume.listVariations, resume.pullFromBase
+├── section.ts        # section.listByResume/create/update/upsert/bulkUpsert/reorder/delete
+│                     # section.setLink (link or detach a variant section)
+├── revision.ts       # revision.create/list/get/restore/count + maybeSnapshot (auto history)
+└── content.ts        # content library: list/get/create/update/archive/attach/detach
+                      # divergence/propagate/additions/backfill
 ```
 
+### Variants
+
+A variant is a copy of a resume whose sections remember where they came from.
+`Section.baseSectionId` points at the base section; `Section.linkedToBase` says whether it
+still follows it.
+
+- `resume.createVariation` resolves the **root** base (a variation of a variation does not
+  chain) and copies every section with `baseSectionId` set and `linkedToBase: true`.
+- Editing a **base** section propagates its content to every linked copy, in one indexed
+  update.
+- Editing a **variant** section clears `linkedToBase`. Taking a section over *is* a local
+  edit; requiring a second gesture would mean the link silently overwrote the edit instead.
+- `section.setLink` re-attaches (pulling the base content immediately) or detaches.
+- `resume.pullFromBase` re-pulls only linked sections.
+- Deleting a base section relies on `ON DELETE SET NULL` to orphan the copies, which then
+  behave as ordinary detached sections.
+
 ### Database: `api/src/db/`
-- **Schema** (`schema.ts`): `users`, `resumes`, `sections`, `accounts`, `sessions`, `verificationTokens`
-- **Migrations** (`api/drizzle/`): SQL files applied by Wrangler
+- **Schema** (`schema.ts`): `users`, `resumes`, `sections`, `contentItems`, `resumeRevisions`
+- **Migrations** (`api/drizzle/`): SQL files applied by Wrangler. `0006` adds the variant
+  columns. Every migration is listed in `drizzle/meta/_journal.json`; a test enforces that.
 - **Seed** (`api/src/db/seed.sql`): Dummy data for local dev
 
 ### Wrangler Config: `api/wrangler.jsonc`
@@ -448,9 +470,13 @@ It records the traps that will otherwise cost you hours:
 - **Do not add providers to `src/app/layout.tsx`.** It wraps every route, so a
   suspending provider (Clerk) silently breaks static prerendering of the public
   marketing page at `/`. The provider tree lives in `src/app/app/layout.tsx`.
-- **The `x-dev-mode` header is a live production auth bypass** with no
-  environment gate, and CORS allow-lists the header. Do not build new write
-  paths on the API until it is closed.
+- **`x-dev-mode` is gated on `ENVIRONMENT === "development"`** on the API and on
+  `NEXT_PUBLIC_DEV_MODE` + `NODE_ENV` on the frontend. `wrangler.jsonc` sets
+  `production`, so the header is inert in the deployed Worker. Do not relax either gate.
+- **Build with webpack, not Turbopack.** `build:next` runs `next build --webpack`
+  because Turbopack's `next/font/google` resolution fails on a Windows host
+  (`Can't resolve '@vercel/turbopack-next/internal/font/google/font'`) while webpack
+  completes in ~20s. `dev:frontend` already pinned webpack for the same reason.
 - `output: "export"` needs `dynamic = "force-static"` on metadata routes.
 - On ~4 GB nodes, `next build` needs `NODE_OPTIONS="--max-old-space-size=1400"`
   or it dies with `Bus error`.

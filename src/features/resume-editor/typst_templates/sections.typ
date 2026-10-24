@@ -20,8 +20,32 @@
 #let personal  = data.at("personalInfo", default: (:))
 #let sections  = data.at("sections", default: ())
 #let colors    = settings.at("colors", default: default-settings.colors)
-#let typo      = settings.at("typography", default: default-settings.typography)
 #let margins   = settings.at("margins", default: default-settings.margins)
+
+// Global type scale, applied to the typography values the helpers read.
+//
+// `fontScale` is a control in the formatting toolbar (80%–120%). For a long time it was
+// serialised into the document and read by nothing, so moving the slider changed the
+// setting and not the page — the exact "control that does nothing" defect this file has
+// already been bitten by twice. Scaling the scale object here means every size that goes
+// through `typo.*` follows the control, including the header, which templates read
+// directly rather than through `px-to-pt`.
+//
+// Spacing and margins are deliberately NOT scaled: those are layout, and a user asking for
+// larger type does not automatically want a wider margin.
+#let font-scale = float(settings.at("fontScale", default: 1))
+#let typo = {
+  let base = settings.at("typography", default: default-settings.typography)
+  let scale(v) = float(v) * font-scale
+  (
+    name: scale(base.name),
+    title: scale(base.title),
+    sectionHeading: scale(base.sectionHeading),
+    itemTitle: scale(base.itemTitle),
+    body: scale(base.body),
+    small: scale(base.small),
+  )
+}
 
 #let section-spacing = settings.at("sectionSpacing", default: "normal")
 #let spacing-val = if section-spacing == "compact" {
@@ -437,6 +461,41 @@
 // Dispatcher
 // ──────────────────────────────────────────────
 
+// ──────────────────────────────────────────────
+// Custom — a title plus free-form body
+// ──────────────────────────────────────────────
+//
+// `serialize.ts` has produced `{body, items}` for this type since #125, but this
+// dispatcher never called it, so a custom section that the editor accepted, the preview
+// drew and the API stored exported as nothing at all. A section type the UI offers has to
+// survive the round trip.
+#let render-custom(section) = {
+  let body = section.at("body", default: "")
+  let items = section.at("items", default: ())
+  if body == "" and items.len() == 0 { return }
+  section-title(if section.title != "" { section.title } else { "Additional Information" })
+
+  if body != "" {
+    text(size: px-to-pt(typo.body))[#body]
+    v(spacing-val * 0.4)
+  }
+
+  for item in items {
+    if item.title != "" {
+      text(
+        size: px-to-pt(typo.itemTitle),
+        weight: "semibold",
+        fill: rgb(colors.heading),
+      )[#item.title]
+      linebreak()
+    }
+    if item.body != "" {
+      text(size: px-to-pt(typo.body))[#item.body]
+    }
+    v(spacing-val * 0.4)
+  }
+}
+
 #let render-section(section) = {
   let t = section.type
   if t == "summary"        { render-summary(section) }
@@ -450,4 +509,5 @@
   else if t == "volunteer"     { render-volunteer(section) }
   else if t == "publications"  { render-publications(section) }
   else if t == "references"    { render-references(section) }
+  else if t == "custom"        { render-custom(section) }
 }

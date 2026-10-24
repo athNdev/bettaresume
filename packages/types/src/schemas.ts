@@ -424,6 +424,30 @@ export const createSectionInputSchema = z.object({
 	layout: sectionLayoutSchema.optional(),
 });
 
+/**
+ * Create a variant of a base resume.
+ *
+ * `baseResumeId` is the resume being copied, not necessarily the root: the server
+ * flattens a variation-of-a-variation to the root base so linkage never chains.
+ */
+export const createVariationInputSchema = z.object({
+	baseResumeId: z.string().min(1),
+	name: z.string().min(1).max(100),
+	domain: z.string().max(100).optional(),
+});
+
+/**
+ * Link or detach one section from the base resume it mirrors.
+ *
+ * Linking pulls the base content immediately; detaching freezes the current copy.
+ * The operation is per section because a user tailoring a summary usually still
+ * wants their experience bullets to follow the master.
+ */
+export const setSectionLinkInputSchema = z.object({
+	id: z.string().min(1),
+	linked: z.boolean(),
+});
+
 export const updateSectionInputSchema = z.object({
 	type: sectionTypeSchema.optional(),
 	order: z.number().optional(),

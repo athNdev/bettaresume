@@ -1,0 +1,28 @@
+# Normalise line endings to LF in the repository and in every checkout.
+#
+# Without this, `core.autocrlf=true` on Windows checked these files out as CRLF
+# while the index held LF. Tests that assert on source text with a regex such as
+# `isArchiving,\n\t} = useResumeMutations()` then fail on Windows only, against
+# code that is correct — the assertion is matching `\n` and the file has `\r\n`.
+# CI runs Linux and never saw it, so the suite was green in one place and red in
+# another for the same commit.
+#
+# Explicit `eol=lf` also stops a Windows checkout from rewriting files on the way
+# in, so `git status` stays clean across platforms.
+* text=auto eol=lf
+
+# Binary assets: never translate, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Generated artefacts that live in git and must byte-match.
+*.min.js binary
+*.wasm binary

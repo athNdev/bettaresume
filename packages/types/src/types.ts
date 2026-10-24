@@ -99,7 +99,21 @@ export interface ResumeSection {
 	content: SectionContent;
 	layout?: SectionLayout;
 	pageId?: string;
+	/**
+	 * Whether this section still follows its base counterpart.
+	 *
+	 * Only meaningful on a variant. Editing a linked variant section clears it;
+	 * `section.setLink` sets it again and pulls the base content.
+	 */
 	linkedToBase?: boolean;
+	/**
+	 * The section in the base resume this one mirrors, when it is linked.
+	 *
+	 * Null for a base section, and for anything added to a variant directly. This is
+	 * the identity of the relationship: ids are regenerated on copy, and `type` or
+	 * `order` stop matching as soon as the user reorders anything.
+	 */
+	baseSectionId?: string | null;
 	/**
 	 * The content-library item this section places, when it has one.
 	 *
