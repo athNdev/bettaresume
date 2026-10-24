@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Resume } from "../src/features/resume-editor/types";
+import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import { resumeToTypstJson } from "../src/lib/typst/serialize";
 
 /**
@@ -83,7 +84,7 @@ const resumeWith = (sections: Array<Record<string, unknown>>): Resume =>
 		variationType: "base",
 		baseResumeId: null,
 		domain: null,
-		template: "minimal",
+		template: "standard",
 		tags: [],
 		isArchived: false,
 		createdAt: "2026-01-01T00:00:00.000Z",
@@ -161,7 +162,11 @@ describe("the payload carries Typst markup for every mark", () => {
 	});
 });
 
-const TEMPLATES = ["minimal", "postgrad", "undergrad"] as const;
+// Every archetype, including `compact` (which shares `standard.typ` but is a distinct
+// document once its defaults are applied).
+const TEMPLATES = Object.keys(TEMPLATE_CONFIGS) as Array<
+	keyof typeof TEMPLATE_CONFIGS
+>;
 
 async function pdfText(path: string) {
 	const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -219,7 +224,10 @@ describe.skipIf(!hasTypst)("marks survive to the PDF text layer", () => {
 	it.each(TEMPLATES)(
 		"%s keeps every word and renders markup characters literally",
 		async (template) => {
-			const body = readFileSync(join(TEMPLATE_DIR, `${template}.typ`), "utf8");
+			const body = readFileSync(
+				join(TEMPLATE_DIR, `${TEMPLATE_CONFIGS[template].sourceFile}.typ`),
+				"utf8",
+			);
 			const sourcePath = join(dir, `${template}.typ`);
 			const pdfPath = join(dir, `${template}.pdf`);
 			writeFileSync(

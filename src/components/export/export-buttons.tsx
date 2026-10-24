@@ -91,7 +91,7 @@ export function ExportButtons({
 	const exportPDF = async () => {
 		setIsExporting(true);
 		try {
-			const templateSource = getTemplateSource(resume.template ?? "minimal");
+			const templateSource = getTemplateSource(resume.template ?? "standard");
 			const dataJson = resumeToTypstJson(resume);
 			const fontFamily = resume.metadata?.settings?.fontFamily ?? "Inter";
 			const pdfBytes = await compileToPdf(templateSource, dataJson, fontFamily);

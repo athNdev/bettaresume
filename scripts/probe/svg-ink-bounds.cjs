@@ -1,4 +1,5 @@
 // One-off: measure where the ink ends in the generated template specimens.
+const fs = require("node:fs");
 const { chromium } = require("playwright");
 const path = require("node:path");
 
@@ -6,9 +7,10 @@ const path = require("node:path");
 	const dir = process.argv[2] ?? "public/templates";
 	const browser = await chromium.launch({ headless: true, channel: "chrome" });
 	const page = await browser.newPage();
-	for (const t of ["minimal", "postgrad", "undergrad"]) {
-		const file = path.resolve(dir, `${t}.svg`);
-		await page.goto(`file:///${file.replace(/\\/g, "/")}`);
+	for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".svg"))) {
+		const t = file.replace(/\.svg$/, "");
+		const resolved = path.resolve(dir, file);
+		await page.goto(`file:///${resolved.replace(/\\/g, "/")}`);
 		const box = await page.evaluate(() => {
 			const svg = document.querySelector("svg");
 			const s = svg.getBoundingClientRect();

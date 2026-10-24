@@ -371,7 +371,7 @@ export const resumeRouter = router({
 				variationType: input.variationType ?? "base",
 				baseResumeId: input.baseResumeId ?? null,
 				domain: input.domain ?? null,
-				template: input.template ?? "minimal",
+				template: input.template ?? "standard",
 				tags: JSON.stringify(input.tags ?? []),
 				isArchived: input.isArchived ?? false,
 				metadata: JSON.stringify(input.metadata ?? defaultMetadata),
@@ -1063,7 +1063,7 @@ export const resumeRouter = router({
 			const resumeDefs: Parameters<typeof createResume>[0][] = [
 				{
 					name: "Senior Software Engineer — Platform & Reliability",
-					template: "minimal",
+					template: "standard",
 					tags: ["engineering", "platform", "sre"],
 					personalInfo: {
 						fullName: "Alex Chen",
@@ -1118,7 +1118,7 @@ export const resumeRouter = router({
 				},
 				{
 					name: "Product Engineer — Growth & Experimentation",
-					template: "minimal",
+					template: "standard",
 					tags: ["product", "growth", "experimentation"],
 					personalInfo: {
 						fullName: "Sam Rivera",
@@ -1173,7 +1173,7 @@ export const resumeRouter = router({
 				},
 				{
 					name: "Consulting — Strategy & Operations",
-					template: "minimal",
+					template: "standard",
 					tags: ["consulting", "strategy", "ops"],
 					personalInfo: {
 						fullName: "Jordan Patel",

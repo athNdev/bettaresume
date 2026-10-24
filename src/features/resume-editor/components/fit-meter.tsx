@@ -105,7 +105,7 @@ function useReliefEstimates(
 				} as Resume;
 				try {
 					const probe = await compileFitProbe(
-						getTemplateSource(modified.template ?? "minimal"),
+						getTemplateSource(modified.template ?? "standard"),
 						resumeToTypstJson(modified),
 						merged.fontFamily,
 					);

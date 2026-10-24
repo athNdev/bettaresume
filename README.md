@@ -17,7 +17,7 @@
 
 ## Overview
 
-BettaResume is a full-stack resume builder that lets you create, manage, and export professional resumes with ease. It features a split-panel editor with live PDF preview, 12 section types, 7 templates, rich text formatting, auto-save, and offline-first sync.
+BettaResume is a full-stack resume builder that lets you create, manage, and export professional resumes with ease. It features a split-panel editor with live PDF preview, 13 section types, 6 templates, rich text formatting, auto-save, and offline-first sync.
 
 The frontend is a statically exported Next.js app that can be hosted on any CDN or static host. The backend runs on Cloudflare Workers with a Cloudflare D1 (SQLite) database, making it extremely cheap to self-host or deploy globally.
 
@@ -27,7 +27,7 @@ The frontend is a statically exported Next.js app that can be hosted on any CDN 
 - **Rich text editor** — Powered by Tiptap with support for bold/italic/underline, colors, fonts, highlights, links, and text alignment
 - **Live PDF preview** — See exactly how your resume will look as you type
 - **12 section types** — Work experience, education, skills, projects, certifications, awards, languages, publications, volunteer work, references, and more
-- **7 resume templates** — Minimal, modern, classic, professional, creative, executive, and tech
+- **6 resume templates** — Standard, Compact, Technical, Graduate, Academic CV, and Executive
 - **Resume variations** — Branch a base resume into targeted variations for different job applications without duplicating content
 - **Customizable styling** — Full control over fonts, colors, margins, spacing, and typography
 - **PDF & DOCX export** — Download your resume in standard formats

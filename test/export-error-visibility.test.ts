@@ -10,10 +10,12 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/features/resume-editor/typst_templates", () => ({
 	getTemplateSource: () => "",
 	resumeToTypstJson: () => ({}),
-	minimalSource: "",
-	postgradSource: "",
+	academicSource: "",
+	executiveSource: "",
+	graduateSource: "",
 	sectionsSource: "",
-	undergradSource: "",
+	standardSource: "",
+	technicalSource: "",
 }));
 
 /**

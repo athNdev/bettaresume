@@ -10,6 +10,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GALLERY_SAMPLE_RESUME } from "../src/components/marketing/sample-resume";
+import { withTemplateDefaults } from "../src/features/resume-editor/lib/template-defaults";
+import type { TemplateType } from "../src/features/resume-editor/types";
 import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import { resumeToTypstJson } from "../src/lib/typst/serialize";
 
@@ -64,14 +66,31 @@ const TYPST = (() => {
 	return null;
 })();
 
-/** One page of one template, as SVG. */
-function renderFirstPage(template: string, dir: string): string {
+/** One page of one archetype, as SVG. */
+function renderFirstPage(template: TemplateType, dir: string): string {
 	const sections = readFileSync(join(TEMPLATE_DIR, "sections.typ"), "utf8");
-	const body = readFileSync(join(TEMPLATE_DIR, `${template}.typ`), "utf8");
-	writeFileSync(
-		join(dir, "sample.json"),
-		resumeToTypstJson(GALLERY_SAMPLE_RESUME),
+	const config = TEMPLATE_CONFIGS[template];
+	// `compact` shares `standard.typ`; its specimen differs because of the settings
+	// defaults applied below, which is exactly what the config variant means.
+	const body = readFileSync(
+		join(TEMPLATE_DIR, `${config.sourceFile}.typ`),
+		"utf8",
 	);
+
+	// Each specimen is the archetype as selected, not the sample's own settings with a
+	// different file: density is half of what distinguishes these documents.
+	const metadata = GALLERY_SAMPLE_RESUME.metadata;
+	const sample = metadata
+		? {
+				...GALLERY_SAMPLE_RESUME,
+				metadata: {
+					...metadata,
+					settings: withTemplateDefaults(template, metadata.settings),
+				},
+			}
+		: GALLERY_SAMPLE_RESUME;
+
+	writeFileSync(join(dir, "sample.json"), resumeToTypstJson(sample));
 	const sourcePath = join(dir, `${template}.typ`);
 	writeFileSync(
 		sourcePath,
@@ -92,9 +111,7 @@ function renderFirstPage(template: string, dir: string): string {
 	return readFileSync(svgPath, "utf8");
 }
 
-const TEMPLATE_IDS = Object.keys(TEMPLATE_CONFIGS) as Array<
-	keyof typeof TEMPLATE_CONFIGS
->;
+const TEMPLATE_IDS = Object.keys(TEMPLATE_CONFIGS) as TemplateType[];
 
 describe.skipIf(!TYPST)(
 	"the template gallery is rendered by the real pipeline",

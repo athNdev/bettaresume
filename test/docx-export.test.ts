@@ -68,7 +68,7 @@ const resume = (sections: unknown[], personalInfo = {}) =>
 	({
 		id: "r1",
 		name: "Ada Lovelace",
-		template: "minimal",
+		template: "standard",
 		sections,
 		metadata: {
 			personalInfo: {

@@ -10,6 +10,48 @@
   accentStyle: "underline",
 )
 
+// ──────────────────────────────────────────────
+// Archetype profile — what a template may change about a section
+// ──────────────────────────────────────────────
+//
+// An archetype is a document, not a skin. The things that genuinely differ between the
+// six documents (docs/research/template-research.md §7) are collected here so each
+// template declares its structure in one line instead of copying twelve renderers:
+//
+//   heading      rule | hairline | plain
+//                How a section heading is emphasised. `rule` is the accent rule the
+//                accentStyle setting also draws; `hairline` is a 0.5pt text-ink rule;
+//                `plain` is weight alone.
+//   education    standard | full
+//                `full` adds the coursework, honours and achievements the payload has
+//                always carried and the standard renderer dropped.
+//   skills       labels | lines | inline
+//                `labels` is a chip cluster; `lines` is `Category: item, item`; `inline`
+//                is one comma-separated line with no category labels (core expertise).
+//   projects     standard | detail
+//                `detail` adds the project's highlights and a labelled stack line.
+//   publications plain | numbered
+//                `numbered` prefixes each entry — the academic CV convention.
+//   experience   standard | stack
+//                `stack` adds a labelled technologies line to each role.
+//
+// Everything here is structure or typography. No field selects a colour, a fill or an
+// icon: the research deletes all three outright (§6).
+#let default-profile = (
+  heading: "rule",
+  education: "standard",
+  skills: "labels",
+  projects: "standard",
+  publications: "plain",
+  experience: "standard",
+)
+
+// A template names only the parts it changes; everything else keeps the standard
+// behaviour. Typst dictionaries do not fall back to a default, so the merge happens here
+// rather than requiring every template to repeat all six keys (and silently break when a
+// seventh is added).
+#let archetype-profile(overrides) = default-profile + overrides
+
 // `data` is always injected by the compiler preamble as:
 //   #let data = json(bytes("..."))
 // The sys.inputs path was for standalone CLI use but is NOT used in the WASM
@@ -96,10 +138,10 @@
 //
 // `header-gap` is the WHOLE header → body distance (16pt at Normal, which is what the
 // templates assemble today: 12pt below the block + a rule + 4pt). `header-gap-half` is
-// the part below the header block before the rule, and `contact-gap` / the inline
-// variant are the name → contact-line gaps the templates used to hard-code at 6pt and
-// 4pt. Normal reproduces those exact values; Compact and Relaxed move them with the
-// rest of the document instead of needing a second set of controls.
+// the part below the header block before the rule, and `contact-gap` is the name →
+// contact-line gap. Normal reproduces the values the templates used to hard-code; Compact
+// and Relaxed move them with the rest of the document instead of needing a second set of
+// controls.
 #let header-gap = if section-spacing == "compact" {
   space-2xl
 } else if section-spacing == "spacious" {
@@ -114,14 +156,6 @@
   space-xl
 } else {
   space-l
-}
-// The undergrad header keeps its contacts one step tighter than the other templates.
-#let contact-gap-inline = if section-spacing == "compact" {
-  space-s
-} else if section-spacing == "spacious" {
-  space-l
-} else {
-  space-m
 }
 
 // ──────────────────────────────────────────────
@@ -238,7 +272,7 @@
 // Section title
 // ──────────────────────────────────────────────
 
-#let section-title(content, section) = {
+#let section-title(content, section, profile: default-profile) = {
   // `section-gap` is the gap ABOVE a heading between sections. The first section must
   // not add it: the header block already separates the header from the body by
   // `space-3xl` (16pt), and stacking the two would spend 26pt before the first word.
@@ -255,7 +289,20 @@
     weight: "semibold",
     fill: rgb(colors.text),
   )[#content]
-  if style == "underline" {
+  if profile.heading == "hairline" {
+    // The researched "optional hairline rule": 0.5pt, text ink, one style per
+    // document. Used by the executive archetype, which is deliberately quieter than
+    // the accent rule.
+    stack(
+      dir: ttb,
+      head,
+      v(space-xs),
+      line(length: 100%, stroke: 0.5pt + rgb(colors.text)),
+    )
+  } else if profile.heading == "plain" {
+    // Weight alone. `space-m` below still separates the heading from its first entry.
+    head
+  } else if style == "underline" {
     stack(
       dir: ttb,
       head,
@@ -282,9 +329,9 @@
 // Summary
 // ──────────────────────────────────────────────
 
-#let render-summary(section) = {
+#let render-summary(section, profile: default-profile) = {
   if section.summaryText == "" { return }
-  section-title(if section.title != "" { section.title } else { "Professional Summary" }, section)
+  section-title(if section.title != "" { section.title } else { "Professional Summary" }, section, profile: profile)
   // `summaryText` is escaped Typst markup (`richContentToTypst` in
   // `src/lib/rich-text.ts`): the editor's marks reach the PDF as `#strong[]`,
   // `#emph[]`, `#underline[]`, `#strike[]` and `#link(...)[]`, and every markup
@@ -296,10 +343,10 @@
 // Experience
 // ──────────────────────────────────────────────
 
-#let render-experience(section) = {
+#let render-experience(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Work Experience" }, section)
+  section-title(if section.title != "" { section.title } else { "Work Experience" }, section, profile: profile)
 
   for i in range(items.len()) {
     let exp = items.at(i)
@@ -337,6 +384,18 @@
         v(space-m)
         bullets(hl)
       }
+
+      // "Say what language you used" (research §7.3). Only the technical archetype
+      // turns this on; the standard document keeps the stack as project metadata.
+      if profile.experience == "stack" {
+        let techs = exp.at("technologies", default: ())
+        if techs.len() > 0 {
+          v(space-s)
+          text(size: typo.small, fill: rgb(colors.secondary))[
+            Technologies: #techs.join(", ")
+          ]
+        }
+      }
     })
   }
 }
@@ -345,10 +404,10 @@
 // Education
 // ──────────────────────────────────────────────
 
-#let render-education(section) = {
+#let render-education(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Education" }, section)
+  section-title(if section.title != "" { section.title } else { "Education" }, section, profile: profile)
 
   for i in range(items.len()) {
     let edu = items.at(i)
@@ -377,6 +436,32 @@
           ]
         ],
       )
+
+      // The payload has carried coursework, honors and achievements since the
+      // serialiser was written; the standard renderer dropped all three, which is
+      // exactly why a student CV looked thinner than its own data. The graduate and
+      // academic archetypes turn this on.
+      if profile.education == "full" {
+        let coursework = edu.at("coursework", default: ())
+        if coursework.len() > 0 {
+          v(space-s)
+          text(size: typo.small, fill: rgb(colors.secondary))[
+            Coursework: #coursework.join(", ")
+          ]
+        }
+        let honors = edu.at("honors", default: ())
+        if honors.len() > 0 {
+          v(space-s)
+          text(size: typo.small, fill: rgb(colors.secondary))[
+            Honors: #honors.join(", ")
+          ]
+        }
+        let achievements = edu.at("achievements", default: ())
+        if achievements.len() > 0 {
+          v(space-m)
+          bullets(achievements)
+        }
+      }
     })
   }
 }
@@ -385,24 +470,50 @@
 // Skills
 // ──────────────────────────────────────────────
 
-#let render-skills(section) = {
+#let render-skills(section, profile: default-profile) = {
   let cats = section.at("categories", default: ())
   if cats.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Skills" }, section)
+  section-title(if section.title != "" { section.title } else { "Skills" }, section, profile: profile)
 
-  for i in range(cats.len()) {
-    let cat = cats.at(i)
-    if i > 0 { v(space-l) }
-    mark-entry(section, cat, cat.name)
-    entry-block(keep-mode(cat), {
-      text(
-        size: typo.itemTitle,
-        weight: "semibold",
-        fill: rgb(colors.text),
-      )[#cat.name]
-      v(space-s)
-      cat.skills.map(s => badge(s.name)).join(h(space-m))
-    })
+  if profile.skills == "inline" {
+    // Core expertise: one comma-separated line, no category labels (research §7.6).
+    // Not a table and not a grid — both change extraction order.
+    let names = ()
+    for cat in cats {
+      names = names + cat.skills.map(s => s.name)
+    }
+    if names.len() > 0 {
+      text(size: typo.body)[#names.join(", ")]
+    }
+  } else if profile.skills == "lines" {
+    // `Category: item, item` (research §7.3). One line per category rather than a
+    // label line plus a chip cluster, which is the density the technical CV wants.
+    for i in range(cats.len()) {
+      let cat = cats.at(i)
+      if cat.skills.len() == 0 { continue }
+      if i > 0 { v(space-s) }
+      mark-entry(section, cat, cat.name)
+      entry-block(keep-mode(cat), {
+        text(size: typo.body, weight: "semibold", fill: rgb(colors.text))[#cat.name]
+        text(size: typo.body)[: ]
+        text(size: typo.body)[#cat.skills.map(s => s.name).join(", ")]
+      })
+    }
+  } else {
+    for i in range(cats.len()) {
+      let cat = cats.at(i)
+      if i > 0 { v(space-l) }
+      mark-entry(section, cat, cat.name)
+      entry-block(keep-mode(cat), {
+        text(
+          size: typo.itemTitle,
+          weight: "semibold",
+          fill: rgb(colors.text),
+        )[#cat.name]
+        v(space-s)
+        cat.skills.map(s => badge(s.name)).join(h(space-m))
+      })
+    }
   }
 }
 
@@ -410,10 +521,10 @@
 // Projects
 // ──────────────────────────────────────────────
 
-#let render-projects(section) = {
+#let render-projects(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Projects" }, section)
+  section-title(if section.title != "" { section.title } else { "Projects" }, section, profile: profile)
 
   for i in range(items.len()) {
     let proj = items.at(i)
@@ -427,7 +538,7 @@
           size: typo.itemTitle,
           weight: "semibold",
           fill: rgb(colors.text),
-        )[#proj.name],
+        )[#proj.name#if proj.role != "" and profile.projects == "detail" { " — " + proj.role }],
         align(right)[
           #text(size: typo.small, fill: rgb(colors.secondary))[
             #if proj.startDate != "" {
@@ -441,7 +552,22 @@
         text(size: typo.body)[#proj.description]
       }
       let techs = proj.at("technologies", default: ())
-      if techs.len() > 0 {
+      if profile.projects == "detail" {
+        // A project is evidence, so the technical and graduate archetypes draw the
+        // highlights the standard renderer dropped, then the stack as a labelled line
+        // rather than a chip cluster.
+        let hl = proj.at("highlights", default: ())
+        if hl.len() > 0 {
+          v(space-m)
+          bullets(hl)
+        }
+        if techs.len() > 0 {
+          v(space-s)
+          text(size: typo.small, fill: rgb(colors.secondary))[
+            Technologies: #techs.join(", ")
+          ]
+        }
+      } else if techs.len() > 0 {
         v(space-s)
         techs.map(badge).join(h(space-m))
       }
@@ -453,10 +579,10 @@
 // Certifications
 // ──────────────────────────────────────────────
 
-#let render-certifications(section) = {
+#let render-certifications(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Certifications" }, section)
+  section-title(if section.title != "" { section.title } else { "Certifications" }, section, profile: profile)
 
   for i in range(items.len()) {
     let cert = items.at(i)
@@ -487,10 +613,10 @@
 // Awards
 // ──────────────────────────────────────────────
 
-#let render-awards(section) = {
+#let render-awards(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Awards & Honors" }, section)
+  section-title(if section.title != "" { section.title } else { "Awards & Honors" }, section, profile: profile)
 
   for i in range(items.len()) {
     let award = items.at(i)
@@ -525,10 +651,10 @@
 // Languages
 // ──────────────────────────────────────────────
 
-#let render-languages(section) = {
+#let render-languages(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Languages" }, section)
+  section-title(if section.title != "" { section.title } else { "Languages" }, section, profile: profile)
   items.map(l => badge(l.name + " (" + l.proficiency + ")")).join(h(space-m))
 }
 
@@ -536,10 +662,10 @@
 // Volunteer
 // ──────────────────────────────────────────────
 
-#let render-volunteer(section) = {
+#let render-volunteer(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Volunteer Experience" }, section)
+  section-title(if section.title != "" { section.title } else { "Volunteer Experience" }, section, profile: profile)
 
   for i in range(items.len()) {
     let vol = items.at(i)
@@ -583,16 +709,21 @@
 // Publications
 // ──────────────────────────────────────────────
 
-#let render-publications(section) = {
+#let render-publications(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Publications" }, section)
+  section-title(if section.title != "" { section.title } else { "Publications" }, section, profile: profile)
 
   for i in range(items.len()) {
     let pub = items.at(i)
     if i > 0 { v(space-l) }
     mark-entry(section, pub, pub.title)
     entry-block(keep-mode(pub), {
+      // The academic CV convention: a numbered list, so a reviewer can cite "[7]".
+      // It is a prefix in the body flow, not a second column.
+      if profile.publications == "numbered" {
+        text(size: typo.small, fill: rgb(colors.secondary))[#(i + 1).#h(space-s)]
+      }
       text(
         size: typo.itemTitle,
         weight: "semibold",
@@ -621,10 +752,10 @@
 // References
 // ──────────────────────────────────────────────
 
-#let render-references(section) = {
+#let render-references(section, profile: default-profile) = {
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "References" }, section)
+  section-title(if section.title != "" { section.title } else { "References" }, section, profile: profile)
 
   for i in range(items.len()) {
     let ref = items.at(i)
@@ -656,11 +787,11 @@
 // dispatcher never called it, so a custom section that the editor accepted, the preview
 // drew and the API stored exported as nothing at all. A section type the UI offers has to
 // survive the round trip.
-#let render-custom(section) = {
+#let render-custom(section, profile: default-profile) = {
   let body = section.at("body", default: "")
   let items = section.at("items", default: ())
   if body == "" and items.len() == 0 { return }
-  section-title(if section.title != "" { section.title } else { "Additional Information" }, section)
+  section-title(if section.title != "" { section.title } else { "Additional Information" }, section, profile: profile)
 
   if body != "" {
     // Markup for the same reason as `summaryText` in `render-summary`.
@@ -692,31 +823,31 @@
 // Dispatcher
 // ──────────────────────────────────────────────
 
-#let section-body(section) = {
+#let section-body(section, profile: default-profile) = {
   let t = section.type
-  if t == "summary"        { render-summary(section) }
-  else if t == "experience"    { render-experience(section) }
-  else if t == "education"     { render-education(section) }
-  else if t == "skills"        { render-skills(section) }
-  else if t == "projects"      { render-projects(section) }
-  else if t == "certifications"{ render-certifications(section) }
-  else if t == "awards"        { render-awards(section) }
-  else if t == "languages"     { render-languages(section) }
-  else if t == "volunteer"     { render-volunteer(section) }
-  else if t == "publications"  { render-publications(section) }
-  else if t == "references"    { render-references(section) }
-  else if t == "custom"        { render-custom(section) }
+  if t == "summary"        { render-summary(section, profile: profile) }
+  else if t == "experience"    { render-experience(section, profile: profile) }
+  else if t == "education"     { render-education(section, profile: profile) }
+  else if t == "skills"        { render-skills(section, profile: profile) }
+  else if t == "projects"      { render-projects(section, profile: profile) }
+  else if t == "certifications"{ render-certifications(section, profile: profile) }
+  else if t == "awards"        { render-awards(section, profile: profile) }
+  else if t == "languages"     { render-languages(section, profile: profile) }
+  else if t == "volunteer"     { render-volunteer(section, profile: profile) }
+  else if t == "publications"  { render-publications(section, profile: profile) }
+  else if t == "references"    { render-references(section, profile: profile) }
+  else if t == "custom"        { render-custom(section, profile: profile) }
 }
 
 // Section-level break semantics. `pagebreak(weak: true)` is Word's "page break before"
 // with the edge case fixed: when the section is already at the top of a page it does
 // nothing, so asking for it cannot leave a blank page behind.
-#let render-section(section) = {
+#let render-section(section, profile: default-profile) = {
   let layout = section.at("layout", default: (:))
   if layout.at("pageBreakBefore", default: false) {
     pagebreak(weak: true)
   }
-  let body = section-body(section)
+  let body = section-body(section, profile: profile)
   if layout.at("keepSectionTogether", default: false) {
     block(breakable: false, body)
   } else {

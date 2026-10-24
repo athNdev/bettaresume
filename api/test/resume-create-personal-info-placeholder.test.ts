@@ -34,7 +34,7 @@ import { createHarness, type TestHarness, USER_A } from "./helpers/harness";
 async function createResume(h: TestHarness, name: string): Promise<string> {
 	const created = await h
 		.callerAs(USER_A)
-		.resume.create({ name, template: "minimal" });
+		.resume.create({ name, template: "standard" });
 	expect(created, "resume.create returned nothing").not.toBeNull();
 	if (!created) throw new Error("unreachable: asserted above");
 	return created.id;

@@ -62,6 +62,13 @@ export const resumes = sqliteTable(
 		domain: text("domain"),
 		template: text("template")
 			.notNull()
+			// `minimal` is a retired id, deliberately left as the column default. Changing it
+			// means a SQLite table rebuild (`ALTER COLUMN … SET DEFAULT` does not exist), and
+			// `0001_resume_base_resume_fk.sql` is the cautionary tale: that rebuild had to
+			// snapshot and restore `Section` by hand or it would have deleted every row.
+			// Every write goes through `resume.create`/`update`, which supply one of the six
+			// archetypes, and reads normalise a legacy id (`normalizeTemplateId`). The default
+			// is reachable only by a raw insert that omits the column, so it is inert.
 			.default("minimal")
 			.$type<TemplateType>(),
 		tags: text("tags").notNull().default("[]"),

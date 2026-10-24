@@ -62,7 +62,7 @@ describe("Resume.baseResumeId foreign key", () => {
 			expect(() =>
 				h.sqlite
 					.prepare(
-						"INSERT INTO Resume (id, userId, name, variationType, baseResumeId, template, tags, isArchived, createdAt, updatedAt) VALUES (?, ?, ?, 'variation', ?, 'minimal', '[]', 0, ?, ?)",
+						"INSERT INTO Resume (id, userId, name, variationType, baseResumeId, template, tags, isArchived, createdAt, updatedAt) VALUES (?, ?, ?, 'variation', ?, 'standard', '[]', 0, ?, ?)",
 					)
 					.run(
 						"variation-dangling",

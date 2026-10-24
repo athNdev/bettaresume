@@ -158,7 +158,7 @@ const pageOf = (pages: string[], needle: string) =>
 describe.skipIf(!hasTypst)("semantic page breaks", () => {
 	const dir = mkdtempSync(join(tmpdir(), "typst-breaks-"));
 	const sections = readFileSync(join(TEMPLATE_DIR, "sections.typ"), "utf8");
-	const body = readFileSync(join(TEMPLATE_DIR, "minimal.typ"), "utf8");
+	const body = readFileSync(join(TEMPLATE_DIR, "standard.typ"), "utf8");
 
 	async function compile(keepTogether: "always" | "never") {
 		const json = join(dir, `${keepTogether}.json`);

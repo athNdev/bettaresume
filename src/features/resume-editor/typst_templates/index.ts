@@ -2,51 +2,65 @@
  * Barrel export for all Typst resume templates.
  *
  * Each .typ file is loaded as a raw string by webpack's `asset/source` loader
- * (configured in next.config.js).  Import individual templates by name, or
+ * (configured in next.config.js). Import individual templates by name, or
  * use `getTemplateSource` to look one up by the TemplateType string stored on
  * the resume.
  *
- * To add a new template:
- *   1. Create `<name>.typ` in this directory
- *   2. Import it below
- *   3. Add it to TEMPLATE_SOURCES with the matching TemplateType key
+ * To add a new archetype:
+ *   1. Create `<name>.typ` in this directory (or reuse an existing file and say why)
+ *   2. Import it below and add it to TEMPLATE_SOURCES
+ *   3. Add the `TEMPLATE_CONFIGS` entry in `../types.ts`, including `sourceFile`
+ *   4. Run `npm run templates:render`
  */
 
-import minimalSource from "./minimal.typ";
-import postgradSource from "./postgrad.typ";
+import type { TemplateType } from "@bettaresume/types";
+import { normalizeTemplateId } from "@bettaresume/types";
+import academicSource from "./academic.typ";
+import executiveSource from "./executive.typ";
+import graduateSource from "./graduate.typ";
 import sectionsSource from "./sections.typ";
-import undergradSource from "./undergrad.typ";
+import standardSource from "./standard.typ";
+import technicalSource from "./technical.typ";
 
-export { minimalSource, postgradSource, sectionsSource, undergradSource };
+export {
+	academicSource,
+	executiveSource,
+	graduateSource,
+	sectionsSource,
+	standardSource,
+	technicalSource,
+};
 
 // ── Template registry ────────────────────────────────────────────────────────
 //
-// Keys must match the TemplateType union from @bettaresume/types:
-//   "minimal" | "postgrad" | "undergrad"
+// Keys are the six archetypes in `templateTypeSchema`. Every entry is a real file, except
+// `compact`, which is deliberately the *same* file as `standard`: that archetype changes
+// only density, so a second copy would be two sources of truth for one layout. Its
+// settings defaults (which are what make it compact) live in `TEMPLATE_CONFIGS`.
 //
-// Every template is a real file. `postgrad.typ` and `undergrad.typ` used to be 0 bytes
-// while `TEMPLATE_CONFIGS` advertised all three, and the `|| minimalSource` fallback made
-// that invisible: picking Postgrad produced a Minimal document with no warning anywhere.
-// The fallback is gone and `test/typst-templates.test.ts` asserts each file has content
-// and sets a page, so an empty template fails CI instead of silently rendering the wrong
-// thing.
+// The old three files were removed with the archetypes, not left as aliases. A missing
+// template is a bug; `test/typst-templates.test.ts` asserts every schema id has a source
+// and every source has content.
 
-export const TEMPLATE_SOURCES: Record<string, string> = {
-	minimal: minimalSource,
-	postgrad: postgradSource,
-	undergrad: undergradSource,
+export const TEMPLATE_SOURCES: Record<TemplateType, string> = {
+	standard: standardSource,
+	compact: standardSource,
+	technical: technicalSource,
+	graduate: graduateSource,
+	academic: academicSource,
+	executive: executiveSource,
 };
 
 /**
- * Returns the fully assembled Typst source for the given template name.
+ * Returns the fully assembled Typst source for the given template id.
  *
  * `sections.typ` is always prepended because it defines all `render-*` helpers and the
- * `render-section` dispatcher that every template calls. Falls back to `minimal` for an
- * unrecognised template name — that is a forward-compatibility allowance for a stored
- * resume naming a template this build does not have, not a fallback for a missing file.
+ * `render-section` dispatcher that every template calls. The id is resolved through
+ * `normalizeTemplateId`, the one place a pre-archetype id (`minimal`, `postgrad`,
+ * `undergrad`) is translated to its successor — so a resume stored before this change
+ * renders the closest archetype instead of silently rendering the default.
  */
 export function getTemplateSource(template: string): string {
-	const body =
-		TEMPLATE_SOURCES[template] ?? TEMPLATE_SOURCES.minimal ?? minimalSource;
+	const body = TEMPLATE_SOURCES[normalizeTemplateId(template)];
 	return `${sectionsSource}\n\n${body}`;
 }

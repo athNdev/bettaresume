@@ -64,6 +64,6 @@ export const DEV_USER = {
 		theme: "dark" as const,
 		emailNotifications: true,
 		autoSave: true,
-		defaultTemplate: "minimal" as const,
+		defaultTemplate: "standard" as const,
 	},
 };

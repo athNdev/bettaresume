@@ -40,12 +40,13 @@ describe("the template selector shows the template, not its name", () => {
 		expect(templates).not.toMatch(/#[0-9a-f]{6}/i);
 	});
 
-	it("every template gets the header treatment its .typ actually uses", () => {
-		// minimal rules under the name; postgrad centres and italicises; undergrad
-		// tints a band. These are the real differences between the three files.
-		expect(templates).toMatch(/template\.id === "minimal"/);
-		expect(templates).toMatch(/isPostgrad/);
-		expect(templates).toMatch(/isUndergrad/);
+	it("every archetype gets a specimen, from data rather than a branch", () => {
+		// The map is `Record<TemplateType, Specimen>`, so adding a seventh archetype is a
+		// type error instead of a selector that quietly draws the standard specimen for it.
+		expect(templates).toMatch(/Record<TemplateType, Specimen>/);
+		expect(templates).toMatch(/SPECIMENS\[template\.id\]/);
+		// The old selector branched on three hard-coded ids; the archetypes are data now.
+		expect(templates).not.toMatch(/isPostgrad|isUndergrad/);
 	});
 
 	it("the specimen is decorative, not a second announcement", () => {

@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { sectionTypeSchema } from "@bettaresume/types";
+import {
+	normalizeTemplateId,
+	sectionTypeSchema,
+	templateTypeSchema,
+} from "@bettaresume/types";
 import { describe, expect, it } from "vitest";
+import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import { codeOf } from "./helpers/code-source";
 
 /**
@@ -10,13 +15,17 @@ import { codeOf } from "./helpers/code-source";
  * `postgrad.typ` and `undergrad.typ` were **0 bytes** while `TEMPLATE_CONFIGS` advertised
  * three templates and `getTemplateSource` fell back to Minimal. Picking Postgrad produced
  * a Minimal document, the preview looked plausible, and no test, type check or lint rule
- * could see it. Both files now have content; these assertions exist so the next empty one
+ * could see it. Those files are gone with the archetypes, but the failure mode is not:
+ * these assertions exist so a new archetype with no source, or a source with no content,
  * fails here instead of in front of a user.
  *
  * They also cover the dispatcher. `serialize.ts` emits a `{body, items}` payload for
  * `custom` sections, and `render-section` had no branch for it — so a section the editor
  * offered, the preview drew and the API stored exported as nothing. A section type that
  * the product can create has to be renderable by every template.
+ *
+ * The archetype list is derived from `templateTypeSchema` and `TEMPLATE_CONFIGS`, so
+ * adding a seventh document cannot leave this file pinning the previous five.
  */
 
 const DIR = resolve(
@@ -26,9 +35,46 @@ const DIR = resolve(
 
 const read = (file: string) => readFileSync(resolve(DIR, file), "utf8");
 
-const TEMPLATES = ["minimal.typ", "postgrad.typ", "undergrad.typ"] as const;
+const ARCHETYPES = templateTypeSchema.options;
 
-describe("every template is a real document", () => {
+/**
+ * The `.typ` files actually compiled, deduplicated.
+ *
+ * `compact` points at `standard.typ` on purpose: its difference is density, which lives in
+ * `TEMPLATE_CONFIGS.defaults`. A copy of the file would be a second source of truth for one
+ * layout, so sharing is asserted rather than merely allowed.
+ */
+const SOURCE_FILES = [
+	...new Set(ARCHETYPES.map((id) => TEMPLATE_CONFIGS[id].sourceFile)),
+];
+const TEMPLATES = SOURCE_FILES.map((file) => `${file}.typ`);
+
+describe("every archetype is a real document", () => {
+	it("declares a source file for every id in templateTypeSchema", () => {
+		expect(ARCHETYPES).toHaveLength(6);
+		for (const id of ARCHETYPES) {
+			expect(
+				TEMPLATE_CONFIGS[id].sourceFile,
+				`${id} has no sourceFile`,
+			).toBeTruthy();
+		}
+	});
+
+	it("shares a source file only between standard and compact", () => {
+		const byFile = new Map<string, string[]>();
+		for (const id of ARCHETYPES) {
+			const file = TEMPLATE_CONFIGS[id].sourceFile;
+			byFile.set(file, [...(byFile.get(file) ?? []), id]);
+		}
+		const shared = [...byFile.values()]
+			.filter((ids) => ids.length > 1)
+			.map((ids) => [...ids].sort());
+		expect(shared).toEqual([["compact", "standard"]]);
+		// And the variant is not accidentally identical to the base.
+		expect(TEMPLATE_CONFIGS.compact.defaults).not.toEqual({});
+		expect(TEMPLATE_CONFIGS.standard.defaults).toEqual({});
+	});
+
 	it.each(TEMPLATES)("%s has content", (file) => {
 		const source = read(file);
 		expect(source.trim().length).toBeGreaterThan(200);
@@ -40,7 +86,8 @@ describe("every template is a real document", () => {
 		// Letter choice is ignored. Without the loop the document has a header and no body.
 		expect(source).toMatch(/#set page\(/);
 		expect(source).toMatch(/#for section in sections\s*\{/);
-		expect(source).toMatch(/render-section\(section\)/);
+		// The archetype profile is passed in, so allow the named argument.
+		expect(source).toMatch(/render-section\(section[\s,)]/);
 	});
 
 	it.each(TEMPLATES)(
@@ -48,7 +95,7 @@ describe("every template is a real document", () => {
 		(file) => {
 			// A template that prints another template's source is the failure mode the
 			// `|| minimalSource` fallback used to hide.
-			expect(read(file)).not.toMatch(/minimalSource|getTemplateSource/);
+			expect(read(file)).not.toMatch(/getTemplateSource/);
 		},
 	);
 });
@@ -57,23 +104,38 @@ describe("the template registry", () => {
 	/*
 	 * Read from source rather than importing the barrel: it imports `.typ` files through
 	 * webpack's `asset/source` loader, which Vite does not implement, so importing it in
-	 * Node parses Typst as JavaScript. The extension files themselves are asserted above,
-	 * so this only needs to prove the registry names each one.
+	 * Node parses Typst as JavaScript. The files themselves are asserted above, so this
+	 * only needs to prove the registry names each id.
 	 */
 	const registry = codeOf(
 		"src/features/resume-editor/typst_templates/index.ts",
 	);
 
-	it("registers exactly the three templates the schema declares", () => {
-		const keys = [
-			...registry.matchAll(/^\t(minimal|postgrad|undergrad):/gm),
-		].map((m) => m[1]);
-		expect(keys.sort()).toEqual(["minimal", "postgrad", "undergrad"]);
+	it("registers exactly the archetypes the schema declares", () => {
+		const keys = [...registry.matchAll(/^\t([a-z-]+):/gm)].map((m) => m[1]);
+		expect(keys.sort()).toEqual([...ARCHETYPES].sort());
 	});
 
-	it("does not fall back from an empty template to minimal", () => {
+	it("does not fall back from an empty template to another one", () => {
 		// `undergrad: undergradSource || minimalSource` is what hid two blank files.
-		expect(registry).not.toMatch(/\|\|\s*minimalSource/);
+		expect(registry).not.toMatch(/\|\|\s*\w+Source/);
+		// An old resume is handled by translating the id, not by substituting a document.
+		expect(registry).toMatch(/normalizeTemplateId\(template\)/);
+	});
+});
+
+describe("resumes stored before the archetypes keep rendering", () => {
+	it("maps each retired id to the archetype that replaces it", () => {
+		expect(normalizeTemplateId("minimal")).toBe("standard");
+		expect(normalizeTemplateId("postgrad")).toBe("academic");
+		expect(normalizeTemplateId("undergrad")).toBe("graduate");
+	});
+
+	it("leaves shipped ids and an absent one alone", () => {
+		for (const id of ARCHETYPES) {
+			expect(normalizeTemplateId(id)).toBe(id);
+		}
+		expect(normalizeTemplateId(null)).toBe("standard");
 	});
 });
 
@@ -121,9 +183,48 @@ describe("semantic page breaks reach Typst", () => {
 		// the regression test in `page-fit.test.ts` pins the settings side.
 		const dispatcher = read("sections.typ");
 		expect(dispatcher).toContain("#let header-gap = if section-spacing");
-		expect(read("minimal.typ")).toContain("below: header-gap-half");
-		expect(read("postgrad.typ")).toContain("below: header-gap-half");
-		expect(read("undergrad.typ")).toContain("below: header-gap");
+		for (const file of TEMPLATES) {
+			expect(read(file), `${file} has no density-aware header gap`).toMatch(
+				/below: header-gap(-half)?\b/,
+			);
+		}
+	});
+});
+
+describe("the archetype profile changes structure, never decoration", () => {
+	const dispatcher = read("sections.typ");
+
+	it("declares the profile the templates pass in", () => {
+		expect(dispatcher).toMatch(/#let default-profile = \(/);
+		for (const key of [
+			"heading",
+			"education",
+			"skills",
+			"projects",
+			"publications",
+			"experience",
+		]) {
+			expect(dispatcher, `profile.${key} is not read`).toMatch(
+				new RegExp(`profile\\.${key}`),
+			);
+		}
+	});
+
+	it("offers no colour, fill or icon knob", () => {
+		const profile = dispatcher.slice(
+			dispatcher.indexOf("#let default-profile"),
+			dispatcher.indexOf("#let settings"),
+		);
+		expect(profile).not.toMatch(/colou?r|fill|icon|badge/i);
+	});
+
+	it("the full education renderer draws the fields the payload carries", () => {
+		// These three have always been serialised and were never drawn.
+		for (const field of ["coursework", "honors", "achievements"]) {
+			expect(dispatcher, `${field} is not rendered`).toContain(
+				`edu.at("${field}"`,
+			);
+		}
 	});
 });
 

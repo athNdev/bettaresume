@@ -5,6 +5,7 @@
  * Uses React Query (tRPC) for data fetching instead of localStorage.
  */
 
+import { normalizeTemplateId } from "@bettaresume/types";
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -59,6 +60,7 @@ import {
 	isDraftDirty,
 } from "@/features/resume-editor/lib/draft-state";
 import { usePreviewPages } from "@/features/resume-editor/lib/preview-pages";
+import { withTemplateDefaults } from "@/features/resume-editor/lib/template-defaults";
 import type {
 	Award,
 	Certification,
@@ -441,30 +443,21 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	const handleTemplateSelect = (templateId: TemplateType) => {
 		if (!activeResume?.metadata) return;
 
-		const config = TEMPLATE_CONFIGS[templateId];
 		const metadata = activeResume.metadata as ResumeMetadata;
-
-		// Apply the template's default colors while preserving all other settings
-		const newSettings: PartialResumeSettings = {
-			...metadata.settings,
-			colors: {
-				...metadata.settings.colors,
-				...config.defaultColors,
-			},
-		};
+		// An archetype is a layout, not a skin: selecting one applies its density and its
+		// palette together, in one settings write (and therefore one revision snapshot).
+		// A user's later tweak to a margin or the leading still wins, because these are
+		// defaults applied at selection time, not values read at render time.
+		const settings = withTemplateDefaults(templateId, metadata.settings);
 
 		setDraftResume((prev) => {
 			if (!prev?.metadata) return prev;
-			const baseSettings = prev.metadata.settings;
 			return {
 				...prev,
 				template: templateId,
 				metadata: {
 					...prev.metadata,
-					settings: {
-						...baseSettings,
-						colors: { ...baseSettings.colors, ...config.defaultColors },
-					},
+					settings,
 				},
 				updatedAt: new Date(),
 			};
@@ -474,7 +467,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			template: templateId,
 			metadata: {
 				...metadata,
-				settings: newSettings,
+				settings,
 			},
 		});
 	};
@@ -1149,8 +1142,8 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						 * the thing being edited. The audit measured it at 14px — smaller than
 						 * the form's own headings — so nothing on screen led.
 						 *
-						 * The subtitle prints the template's display name ("Postgrad"), not the
-						 * raw key ("postgrad"), and the resume's domain when it has one.
+						 * The subtitle prints the archetype's display name ("Academic CV"), not the
+						 * raw key ("academic"), and the resume's domain when it has one.
 						 */}
 						<div className="min-w-0">
 							<h1 className="truncate font-semibold text-lg">
@@ -1159,10 +1152,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							<p className="truncate text-muted-foreground text-xs">
 								{activeResume.domain ? `${activeResume.domain} · ` : ""}
 								{TEMPLATE_CONFIGS[
-									(draftResume?.template ||
-										activeResume.template ||
-										"minimal") as TemplateType
-								]?.name ?? "Minimal"}
+									normalizeTemplateId(
+										draftResume?.template || activeResume.template,
+									)
+								]?.name ?? TEMPLATE_CONFIGS.standard.name}
 							</p>
 						</div>
 					</div>
@@ -1347,11 +1340,9 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									<CollapsibleContent>
 										<div className="px-2 pb-2">
 											<TemplateSelector
-												currentTemplate={
-													(draftResume?.template ||
-														activeResume.template ||
-														"minimal") as TemplateType
-												}
+												currentTemplate={normalizeTemplateId(
+													draftResume?.template ?? activeResume.template,
+												)}
 												onSelect={handleTemplateSelect}
 											/>
 										</div>
@@ -1538,10 +1529,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 											</span>
 											<span className="truncate text-muted-foreground">
 												{TEMPLATE_CONFIGS[
-													(draftResume?.template ??
-														activeResume.template ??
-														"minimal") as TemplateType
-												]?.name ?? "Minimal"}
+													normalizeTemplateId(
+														draftResume?.template ?? activeResume.template,
+													)
+												]?.name ?? TEMPLATE_CONFIGS.standard.name}
 												{" · "}
 												{Math.round(previewScale * 100)}%
 												{pageCount !== null ? (

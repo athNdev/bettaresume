@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 
 /**
  * Every template must actually compile.
@@ -115,7 +116,11 @@ const SAMPLE = {
 	],
 };
 
-const TEMPLATES = ["minimal", "postgrad", "undergrad"] as const;
+// Every archetype, including `compact`, which shares `standard.typ` but is a distinct
+// document once its settings defaults are applied.
+const TEMPLATES = Object.keys(TEMPLATE_CONFIGS) as Array<
+	keyof typeof TEMPLATE_CONFIGS
+>;
 
 async function pdfText(path: string) {
 	const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -139,7 +144,7 @@ describe.skipIf(!hasTypst)(
 			"%s produces a readable PDF",
 			async (template) => {
 				const body = readFileSync(
-					join(TEMPLATE_DIR, `${template}.typ`),
+					join(TEMPLATE_DIR, `${TEMPLATE_CONFIGS[template].sourceFile}.typ`),
 					"utf8",
 				);
 				const source = `#let data = json("sample.json")\n${sections}\n\n${body}`;

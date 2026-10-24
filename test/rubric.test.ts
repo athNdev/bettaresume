@@ -63,7 +63,7 @@ function resume(overrides: Partial<Resume> = {}): Resume {
 		variationType: "base",
 		baseResumeId: null,
 		domain: null,
-		template: "minimal",
+		template: "standard",
 		tags: [],
 		isArchived: false,
 		createdAt: new Date(),
