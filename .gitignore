@@ -70,3 +70,6 @@ proxmox-jobs.sqlite3-wal
 .probe-downloads/
 .probe-*.log
 .probe-*.pid
+
+# Local scratch file for PR descriptions
+.pr-body.md
