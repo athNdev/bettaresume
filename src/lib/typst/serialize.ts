@@ -29,7 +29,11 @@ import type {
 	Volunteer,
 } from "@/features/resume-editor/types";
 import { formatResumeDate } from "@/lib/format-date";
-import { richTextToPlain } from "@/lib/rich-text";
+import {
+	escapeTypst,
+	richContentToTypst,
+	richTextToPlain,
+} from "@/lib/rich-text";
 import { resolveTypstFont } from "./fonts";
 
 // Canonical font names as Typst knows them (keys are lowercase for lookup)
@@ -271,7 +275,18 @@ function serializeSection(
 				(content.html as string) ||
 					((content.data as { summary?: string })?.summary ?? ""),
 			);
-			return { ...base, summaryText: stripHtml(html) };
+			/*
+			 * The summary is the one field the editor writes marks into
+			 * (`content.json`). `summaryText` is therefore Typst MARKUP, laid out with
+			 * `#eval(..., mode: "markup")` in `sections.typ` — marks survive the PDF,
+			 * and every markup character in the text is escaped on the way in.
+			 * Content without a stored document is escaped plain text: the same
+			 * bytes this field always carried, now parse-safe.
+			 */
+			return {
+				...base,
+				summaryText: richContentToTypst(content.json, stripHtml(html)),
+			};
 		}
 
 		case "experience": {
@@ -461,23 +476,30 @@ function serializeSection(
 
 		case "custom": {
 			// Free-form section: a title plus a rich body. `content.html` is the
-			// shape the rich-text editor produces; `content.data` is accepted as an
-			// array of blocks or a plain string.
+			// shape the rich-text editor produces; `content.json` is the document it
+			// derives the HTML from and the only place marks live. `content.data` is
+			// accepted as an array of blocks or a plain string.
 			const html = safeStr(content.html as string);
-			const body = stripHtml(html);
+			// The body is markup for the same reason `summaryText` is (see above).
+			const body = richContentToTypst(content.json, stripHtml(html));
 			const raw = content.data;
 			const items: { title: string; body: string }[] = [];
 
 			if (Array.isArray(raw)) {
 				for (const entry of raw) {
 					if (typeof entry === "string") {
-						items.push({ title: "", body: stripHtml(entry) });
+						// Plain strings, escaped: `render-custom` evals item bodies too.
+						items.push({ title: "", body: escapeTypst(stripHtml(entry)) });
 					} else if (entry && typeof entry === "object") {
 						const rec = entry as Record<string, unknown>;
 						items.push({
 							title: safeStr(rec.title ?? rec.name ?? rec.heading),
-							body: stripHtml(
-								safeStr(rec.body ?? rec.content ?? rec.text ?? rec.description),
+							body: escapeTypst(
+								stripHtml(
+									safeStr(
+										rec.body ?? rec.content ?? rec.text ?? rec.description,
+									),
+								),
 							),
 						});
 					}
@@ -486,8 +508,10 @@ function serializeSection(
 				const rec = raw as Record<string, unknown>;
 				items.push({
 					title: safeStr(rec.title ?? rec.name ?? rec.heading),
-					body: stripHtml(
-						safeStr(rec.body ?? rec.content ?? rec.text ?? rec.description),
+					body: escapeTypst(
+						stripHtml(
+							safeStr(rec.body ?? rec.content ?? rec.text ?? rec.description),
+						),
 					),
 				});
 			}

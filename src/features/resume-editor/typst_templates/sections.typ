@@ -71,6 +71,24 @@
 
 #let section-spacing = settings.at("sectionSpacing", default: "normal")
 
+// ──────────────────────────────────────────────
+// Leading (line spacing) — one mapping for every template
+// ──────────────────────────────────────────────
+//
+// `settings.lineHeight` is the CSS-style line height the HTML preview applies
+// directly (`line-height: lineHeight`, i.e. baseline-to-baseline = lineHeight·em).
+// Typst's `par.leading` is the gap ON TOP of the text line box, and the line box is
+// font-dependent (measured with the bundled families at 10.5pt: 0.642em Carlito,
+// 0.655 Tinos, 0.658 New Computer Modern, 0.688 Arimo, 0.700 Montserrat, 0.716
+// Lato, 0.728 Inter). So the mapping that makes the PDF and the preview agree is
+// `leading = (lineHeight − 0.7)em`: 0.7 is the middle of that measured range, and
+// the residual is ±0.03em of line height — under 3% — for every shipped family.
+//
+// Each template used to hard-code its own factor (0.45em undergrad / 0.5em minimal
+// / 0.55em postgrad), so the same `lineHeight` setting produced three different
+// line rhythms and none of them matched the preview. One mapping, defined once.
+#let par-leading = calc.max(float(settings.at("lineHeight", default: 1.35)) - 0.7, 0) * 1em
+
 // Gap above a section heading: the research's 8–12pt band, picked by `sectionSpacing`
 // — compact 8pt, normal 10pt, spacious ("relaxed" in the brief) 12pt. 10pt is the one
 // value outside the modular steps; it is the band midpoint the brief fixes for normal.
@@ -160,7 +178,11 @@
 #let render-summary(section) = {
   if section.summaryText == "" { return }
   section-title(if section.title != "" { section.title } else { "Professional Summary" }, section)
-  text(size: typo.body)[#section.summaryText]
+  // `summaryText` is escaped Typst markup (`richContentToTypst` in
+  // `src/lib/rich-text.ts`): the editor's marks reach the PDF as `#strong[]`,
+  // `#emph[]`, `#underline[]`, `#strike[]` and `#link(...)[]`, and every markup
+  // character in the user's text is escaped so it renders literally.
+  text(size: typo.body)[#eval(section.summaryText, mode: "markup")]
 }
 
 // ──────────────────────────────────────────────
@@ -507,7 +529,8 @@
   section-title(if section.title != "" { section.title } else { "Additional Information" }, section)
 
   if body != "" {
-    text(size: typo.body)[#body]
+    // Markup for the same reason as `summaryText` in `render-summary`.
+    text(size: typo.body)[#eval(body, mode: "markup")]
     if items.len() > 0 { v(space-m) }
   }
 
@@ -523,7 +546,7 @@
       linebreak()
     }
     if item.body != "" {
-      text(size: typo.body)[#item.body]
+      text(size: typo.body)[#eval(item.body, mode: "markup")]
     }
   }
 }

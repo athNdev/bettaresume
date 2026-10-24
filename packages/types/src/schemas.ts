@@ -212,6 +212,13 @@ export const sectionContentSchema = z
 		title: z.string().optional(),
 		data: z.union([z.record(z.string(), z.any()), z.array(z.any())]).optional(),
 		html: z.string().optional(),
+		/**
+		 * The ProseMirror document for rich-text content, when authored in the editor.
+		 * Declared explicitly rather than only surviving `.passthrough()` because it is
+		 * what the export pipeline reads to preserve marks (`SectionContent.json` in
+		 * `types.ts`); content without it falls back to `html` as plain text.
+		 */
+		json: z.unknown().optional(),
 	})
 	.passthrough();
 

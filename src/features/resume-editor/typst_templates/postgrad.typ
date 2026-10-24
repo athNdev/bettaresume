@@ -2,9 +2,8 @@
 //
 // Same content model and the same `render-*` helpers as `minimal.typ`; the difference is
 // presentation, because that is the only thing a template should own. The header is
-// centred, body text is justified, and leading is slightly looser, which is the
-// convention for a multi-page academic CV. Type sizes and margins are true points (see
-// `sections.typ`).
+// centred and body text is justified. Type sizes and margins are true points (see
+// `sections.typ`); leading is the shared `par-leading` mapping.
 //
 // Deliberately NOT changed here:
 //   * Section order, headings or fields — those come from the document and the parser
@@ -32,10 +31,11 @@
   font: settings.at("fontFamily", default: "Inter"),
 )
 
-// Justified and a little looser than `minimal`: academic CVs are read as prose and run
-// to several pages, so the right rag costs more than the extra leading.
+// Justified — the convention for a multi-page academic CV, where the right rag
+// costs more than the extra line gaps. Leading is the shared `par-leading`
+// mapping: a template does not get to reinterpret `lineHeight`.
 #set par(
-  leading: float(settings.at("lineHeight", default: 1.35)) * 0.55em,
+  leading: par-leading,
   justify: true,
 )
 

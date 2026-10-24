@@ -1,6 +1,10 @@
 import { TEMPLATE_SECTION_HEADINGS } from "@/features/resume-editor/lib/review-input";
 import type { Resume } from "@/features/resume-editor/types";
-import { richTextToPlain } from "@/lib/rich-text";
+import {
+	type RichRun,
+	richContentToRuns,
+	richTextToPlain,
+} from "@/lib/rich-text";
 
 /**
  * DOCX export — Feature 3 from docs/ROADMAP.md.
@@ -250,6 +254,87 @@ function paragraph(
 	return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
 }
 
+/* ------------------------------------------------------------------ *
+ * Mark-preserving runs
+ * ------------------------------------------------------------------ */
+
+/** A hyperlink relationship for `word/_rels/document.xml.rels`. */
+interface HyperlinkRel {
+	id: string;
+	href: string;
+}
+
+/** One relationship per target, numbered in first-use order (so output is deterministic). */
+function hyperlinkRelId(rels: HyperlinkRel[], href: string): string {
+	const existing = rels.find((rel) => rel.href === href);
+	if (existing) return existing.id;
+	const id = `rIdH${rels.length + 1}`;
+	rels.push({ id, href });
+	return id;
+}
+
+/**
+ * A paragraph built from marked runs.
+ *
+ * This is the mark-preserving half of the "the two outputs cannot drift in
+ * content" promise: the editor's bold, italic, underline, strikethrough and
+ * links reach Word as `<w:b/>`, `<w:i/>`, `<w:u/>`, `<w:strike/>` and
+ * `<w:hyperlink>`. A run with no marks emits exactly what `paragraph()` emits,
+ * so plain content serialises byte-identically to before.
+ *
+ * Marks beyond the palette (colour, highlight, per-run font, code) are dropped
+ * by the run walker in `rich-text.ts` — the text is always kept. The link's
+ * target is also spelled out as plain ` [url]` text after the label (a run the
+ * walker adds), because that is the text layer the plain-text export predicts
+ * and a parser must not lose a URL to an annotation layer.
+ */
+function runsParagraph(
+	runs: RichRun[],
+	opts: { size?: number; spaceBefore?: number } = {},
+	rels: HyperlinkRel[],
+): string {
+	const { size = 20, spaceBefore = 0 } = opts;
+	const pPr = `<w:pPr><w:spacing w:before="${spaceBefore}"/></w:pPr>`;
+	const parts: string[] = [];
+	for (const run of runs) {
+		if (run.text === "") continue;
+		const marks =
+			(run.bold ? "<w:b/>" : "") +
+			(run.italic ? "<w:i/>" : "") +
+			(run.underline ? "<w:u/>" : "") +
+			(run.strike ? "<w:strike/>" : "");
+		const rPr = `<w:rPr>${marks}<w:sz w:val="${size}"/><w:szCs w:val="${size}"/></w:rPr>`;
+		const xml = `<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(run.text)}</w:t></w:r>`;
+		if (run.href) {
+			parts.push(
+				`<w:hyperlink r:id="${hyperlinkRelId(rels, run.href)}">${xml}</w:hyperlink>`,
+			);
+		} else {
+			parts.push(xml);
+		}
+	}
+	if (parts.length === 0) return "";
+	return `<w:p>${pPr}${parts.join("")}</w:p>`;
+}
+
+/** `word/_rels/document.xml.rels` — emitted only when the document has hyperlinks. */
+export function buildRelsXml(rels: HyperlinkRel[]): string {
+	const items = rels
+		.map(
+			(rel) =>
+				`<Relationship Id="${rel.id}" ` +
+				'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" ' +
+				`Target="${escapeXml(rel.href)}" TargetMode="External"/>`,
+		)
+		.join("");
+	return (
+		'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+		'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+		items +
+		"</Relationships>"
+	);
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
 	return value && typeof value === "object" && !Array.isArray(value)
 		? (value as Record<string, unknown>)
@@ -289,6 +374,12 @@ function dateRange(start: string, end: string, current: boolean): string {
 
 /** Build `word/document.xml` from a resume. */
 export function buildDocumentXml(resume: Resume): string {
+	return buildDocument(resume).xml;
+}
+
+/** The document XML plus the hyperlink relationships its `r:id`s reference. */
+function buildDocument(resume: Resume): { xml: string; rels: HyperlinkRel[] } {
+	const hyperlinkRels: HyperlinkRel[] = [];
 	const body: string[] = [];
 
 	const personalInfo =
@@ -329,8 +420,12 @@ export function buildDocumentXml(resume: Resume): string {
 			// real stored shape, not a theoretical one.
 			const stored =
 				str(content?.html) || str(asRecord(content?.data)?.summary);
-			const text = htmlToPlainText(stored);
-			if (text) body.push(paragraph(text, { size: 20 }));
+			// `content.json` is the stored ProseMirror document: the only place marks
+			// live, and what the PDF exporter walks too. Without one the summary is
+			// plain text, byte-identically to before marks existed.
+			const runs = richContentToRuns(content?.json, htmlToPlainText(stored));
+			const xml = runsParagraph(runs, { size: 20 }, hyperlinkRels);
+			if (xml) body.push(xml);
 			continue;
 		}
 
@@ -448,11 +543,14 @@ export function buildDocumentXml(resume: Resume): string {
 		'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>' +
 		'<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
 
-	return (
-		'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-		'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-		`<w:body>${body.join("")}${sectPr}</w:body></w:document>`
-	);
+	return {
+		xml:
+			'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+			'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"' +
+			' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+			`<w:body>${body.join("")}${sectPr}</w:body></w:document>`,
+		rels: hyperlinkRels,
+	};
 }
 
 const CONTENT_TYPES =
@@ -476,14 +574,25 @@ const ROOT_RELS =
  */
 export function resumeToDocx(resume: Resume): Uint8Array {
 	const encoder = new TextEncoder();
+	const { xml, rels } = buildDocument(resume);
 	const entries: ZipEntry[] = [
 		{ name: "[Content_Types].xml", data: encoder.encode(CONTENT_TYPES) },
 		{ name: "_rels/.rels", data: encoder.encode(ROOT_RELS) },
 		{
 			name: "word/document.xml",
-			data: encoder.encode(buildDocumentXml(resume)),
+			data: encoder.encode(xml),
 		},
 	];
+	// Only when the document has hyperlinks: a document part with no relationships
+	// needs no rels part, and the archive's part list is a pinned contract — Word
+	// opens a four-part and a three-part DOCX alike, so the extra part appears
+	// exactly when it carries something.
+	if (rels.length > 0) {
+		entries.push({
+			name: "word/_rels/document.xml.rels",
+			data: encoder.encode(buildRelsXml(rels)),
+		});
+	}
 	return buildZip(entries);
 }
 
