@@ -4,8 +4,9 @@ import type {
 	ResumeSection,
 } from "../src/features/resume-editor/types";
 import { buildPlainText } from "../src/lib/export/text";
-import { richTextToPlain, sanitizeTypstSvg } from "../src/lib/rich-text";
+import { richTextToPlain } from "../src/lib/rich-text";
 import { resumeToTypstJson } from "../src/lib/typst/serialize";
+import { codeOf } from "./helpers/code-source";
 
 /**
  * One converter, every render path.
@@ -122,51 +123,20 @@ describe("one converter, so every path agrees", () => {
 	});
 });
 
-describe("sanitizeTypstSvg", () => {
-	const page = (body: string) =>
-		`<svg width="100" height="200" viewBox="0 0 100 200">${body}</svg>`;
-
-	it("leaves legitimate compiler output byte-identical", () => {
-		// A page with text, a path and a fill. This is what Typst actually emits, and a
-		// sanitiser that rewrites it would be a rendering bug.
-		const legit = page(
-			'<g transform="translate(10 20)"><path d="M0 0L5 5" fill="#000"/><text x="1">Avery Chen</text></g>',
+describe("the preview does not inject markup", () => {
+	it("renders compiled pages as images, not as HTML", () => {
+		// `codeOf`, not `readFileSync`: the comment above the `<img>` names
+		// `dangerouslySetInnerHTML` to explain why it is not used, and a raw-source
+		// assertion fails on the explanation rather than on a call site.
+		const preview = codeOf(
+			"src/features/resume-editor/components/typst-preview.tsx",
 		);
-		expect(sanitizeTypstSvg(legit)).toBe(legit);
-	});
-
-	it("removes a script element", () => {
-		const out = sanitizeTypstSvg(
-			page("<script>alert(1)</script><text>x</text>"),
-		);
-		expect(out).not.toContain("script");
-		expect(out).toContain("<text>x</text>");
-	});
-
-	it("removes foreignObject, the one SVG element that interprets HTML", () => {
-		const out = sanitizeTypstSvg(
-			page('<foreignObject><img src=x onerror="alert(1)"></foreignObject>'),
-		);
-		expect(out).not.toContain("foreignObject");
-		expect(out).not.toContain("onerror");
-	});
-
-	it("removes event handlers from otherwise legitimate elements", () => {
-		const out = sanitizeTypstSvg(page('<path d="M0 0" onload="alert(1)"/>'));
-		expect(out).not.toContain("onload");
-		expect(out).toContain('<path d="M0 0"');
-	});
-
-	it("removes an executable href but keeps a real one", () => {
-		const bad = sanitizeTypstSvg(page('<a href="javascript:alert(1)">x</a>'));
-		expect(bad).not.toMatch(/javascript:/);
-
-		const good = sanitizeTypstSvg(page('<a href="https://example.com">x</a>'));
-		expect(good).toContain('href="https://example.com"');
-	});
-
-	it("handles an empty string without throwing", () => {
-		expect(sanitizeTypstSvg("")).toBe("");
+		// An SVG loaded through `<img>` is an image context: scripts do not run and
+		// external references are not fetched, by specification. That is a property of the
+		// browser, not of a strip this repo maintains and CodeQL has to audit.
+		expect(preview).not.toMatch(/dangerouslySetInnerHTML/);
+		expect(preview).toMatch(/createObjectURL/);
+		expect(preview).toMatch(/image\/svg\+xml/);
 	});
 });
 

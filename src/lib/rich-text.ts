@@ -32,8 +32,12 @@ import { convert } from "html-to-text";
  * Nothing here inserts HTML into the DOM: every caller renders the result as a React
  * text node or a Typst string, both of which escape. The sanitiser is what stops a
  * stored `<script>` from *reading* as visible garbage, and what keeps the four render
- * paths telling the user the same thing. `sanitizeTypstSvg` covers the one place raw
- * markup is injected.
+ * paths telling the user the same thing.
+ *
+ * The one place the app injects markup — the Typst preview — no longer does. It renders
+ * the compiled page as an `<img>` with a blob URL, which is an image context: scripts do
+ * not run there and external references are not fetched, by specification rather than by
+ * a strip this code maintains. See `typst-preview.tsx`.
  */
 export function richTextToPlain(html: string): string {
 	if (!html) return "";
@@ -63,65 +67,4 @@ export function richTextToPlain(html: string): string {
 		.replace(/[ \t]+/g, " ")
 		.replace(/\n{3,}/g, "\n\n")
 		.trim();
-}
-
-/**
- * Attribute values that can execute, or that can embed a document which can.
- *
- * `data:` is included because `data:text/html` in an `href` navigates; `blob:` and
- * `javascript:` are the obvious two. `file:` is Windows-only but free to block.
- */
-const UNSAFE_URL = /^(?:javascript|data|vbscript|blob|file):/i;
-
-/**
- * Elements that are never part of a typeset page and exist only to execute or embed.
- *
- * `foreignObject` matters most: it is the one SVG element whose children are interpreted
- * as HTML, so an `<svg><foreignObject><script>` would otherwise be a script tag inside a
- * server-trusted string.
- */
-const DANGEROUS_ELEMENTS =
-	/<\s*(script|foreignObject|iframe|object|embed|link|meta|base)\b[\s\S]*?<\s*\/\s*\1\s*>|<\s*(script|foreignObject|iframe|object|embed|link|meta|base)\b[^>]*\/?\s*>/gi;
-
-/** `onclick=`, `onload=` and the rest of the event-handler family. */
-const EVENT_HANDLER = /\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
-
-/**
- * Neutralise compiler output before it is injected with `dangerouslySetInnerHTML`.
- *
- * The SVG comes from the Typst WASM compiler, which escapes the text it lays out — so
- * this is not defending against a known hole. It is defending against the assumption:
- * the string is inserted as markup, and the only thing that currently makes that safe is
- * a property of a third-party compiler that this code does not control and does not
- * assert. One `setCompilerInitOptions` change, one Typst release with an HTML-export
- * feature, or one template that links a user-supplied URL, and the assumption is gone.
- *
- * Stripping is deliberately conservative: it removes elements and attributes that a
- * typeset page never contains, and leaves paths, text, transforms and fill untouched, so
- * a legitimate page comes out byte-identical unless it contained something it should not.
- */
-export function sanitizeTypstSvg(svg: string): string {
-	if (!svg) return "";
-
-	return (
-		svg
-			.replace(DANGEROUS_ELEMENTS, "")
-			.replace(EVENT_HANDLER, "")
-			// `href`/`xlink:href` with an executable scheme. Anchors in a resume point at
-			// http(s) or mailto; anything else is not something a CV can mean.
-			.replace(
-				/\s((?:xlink:)?href)\s*=\s*("([^"]*)"|'([^']*)')/gi,
-				(
-					match: string,
-					_attr: string,
-					_quoted: string,
-					dq?: string,
-					sq?: string,
-				) => {
-					const value = (dq ?? sq ?? "").trim();
-					return UNSAFE_URL.test(value) ? "" : match;
-				},
-			)
-			.trim()
-	);
 }

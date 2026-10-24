@@ -55,12 +55,16 @@ const overflow = (page) =>
 
 	await page.waitForTimeout(8000);
 	await check("editor: preview renders two Letter pages", async () => {
+		// Pages are `<img>` elements with a blob URL now, not inline SVG: an image context
+		// cannot execute script, which is what makes the compiler's own `<script>` inert.
+		// `naturalWidth` is the assertion that means something — a broken blob still
+		// produces an element with the right `width` attribute.
 		const pages = await page.evaluate(() =>
-			[...document.querySelectorAll("svg")]
-				.map((s) => s.getAttribute("viewBox") ?? "")
-				.filter((vb) => /^0 \d+ 612 792$/.test(vb)),
+			[...document.querySelectorAll('img[src^="blob:"]')]
+				.map((i) => `${i.naturalWidth}x${i.naturalHeight}`)
+				.filter((d) => d === "612x792"),
 		);
-		if (pages.length === 0) throw new Error("no 612x792 page SVGs");
+		if (pages.length === 0) throw new Error("no rendered 612x792 page images");
 		return `${pages.length} pages`;
 	});
 
