@@ -76,8 +76,8 @@ describe("export failures are visible to the user", () => {
 
 	it("reports that text export has nothing to export, rather than returning silently", () => {
 		const guard = source.slice(
-			source.indexOf("if (!metadata) {"),
-			source.indexOf("const { personalInfo }"),
+			source.indexOf("if (!resume.metadata) {"),
+			source.indexOf("const text = buildPlainText"),
 		);
 		expect(guard).not.toMatch(/^\s*if \(!metadata\) return;/m);
 		expect(guard).toMatch(/toast\.error\(/);

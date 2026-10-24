@@ -279,11 +279,13 @@ describe("the hero artefact matches the real exporter", () => {
 	});
 
 	it("uses the exporter's own section-rule width", () => {
-		// `exportText` writes a `=` rule around headings. A pretty mock-up would
+		// `buildPlainText` writes a `=` rule around headings. A pretty mock-up would
 		// undercut the only claim on this page that a reader can verify on their own
-		// machine, so the width is pinned to the real exporter.
-		const exporter = read("src/components/export/export-buttons.tsx");
-		expect(exporter).toMatch(/repeat\(50\)|={10}/);
+		// machine, so the page imports the exporter's constant rather than restating it.
+		const rules = read("src/lib/export/rules.ts");
+		expect(rules).toMatch(/SECTION_RULE\s*=\s*"="\.repeat\(50\)/);
+		const hero = read("src/components/marketing/hero.tsx");
+		expect(hero).toMatch(/import \{ SECTION_RULE \} from "@\/lib\/export\/rules"/);
 		expect(html).toContain("=".repeat(50));
 	});
 

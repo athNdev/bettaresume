@@ -1,6 +1,5 @@
 "use client";
 
-import { htmlToText } from "html-to-text";
 import { Download, FileJson, FileText, FileType, Loader2 } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -14,6 +13,7 @@ import {
 import type { Resume } from "@/features/resume-editor/types";
 import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import { DOCX_MIME, resumeToDocx } from "@/lib/export/docx";
+import { buildPlainText } from "@/lib/export/text";
 import { compileToPdf } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
 
@@ -138,9 +138,11 @@ export function ExportButtons({
 	};
 
 	const exportText = () => {
-		// Generate plain text version of resume
-		const { metadata, sections } = resume;
-		if (!metadata) {
+		// The text layer is built by `src/lib/export/text.ts`, which the review panel's
+		// Plain Text Test and the rubric also read. Keeping one builder is the point:
+		// the page tells users "copy this and read it", so the export and the test
+		// cannot be allowed to produce different strings.
+		if (!resume.metadata) {
 			// Previously a bare `return`: clicking "Plain text" did nothing at all,
 			// with no way to tell that from a working export.
 			console.error("[export] exportText called with no resume metadata");
@@ -150,47 +152,8 @@ export function ExportButtons({
 			);
 			return;
 		}
-		const { personalInfo } = metadata;
 
-		let text = `${personalInfo.fullName}\n`;
-		if (personalInfo.professionalTitle)
-			text += `${personalInfo.professionalTitle}\n`;
-		text += `\n`;
-
-		if (personalInfo.email) text += `Email: ${personalInfo.email}\n`;
-		if (personalInfo.phone) text += `Phone: ${personalInfo.phone}\n`;
-		if (personalInfo.location) text += `Location: ${personalInfo.location}\n`;
-		if (personalInfo.linkedin) text += `LinkedIn: ${personalInfo.linkedin}\n`;
-		if (personalInfo.github) text += `GitHub: ${personalInfo.github}\n`;
-		text += `\n`;
-
-		sections
-			.filter((s) => s.visible)
-			.sort((a, b) => a.order - b.order)
-			.forEach((section) => {
-				const title =
-					section.content.title ||
-					section.type.replace(/-/g, " ").toUpperCase();
-				text += `${"=".repeat(50)}\n${title}\n${"=".repeat(50)}\n\n`;
-
-				if (section.type === "summary") {
-					const html = section.content.html || "";
-					const plainSummary = htmlToText(html, { wordwrap: false });
-					text += `${plainSummary}\n\n`;
-				} else if (Array.isArray(section.content.data)) {
-					(section.content.data as Array<Record<string, unknown>>).forEach(
-						(item) => {
-							Object.entries(item).forEach(([key, value]) => {
-								if (key !== "id" && value) {
-									text += `${key}: ${value}\n`;
-								}
-							});
-							text += "\n";
-						},
-					);
-				}
-			});
-
+		const text = buildPlainText(resume);
 		const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
 		downloadFile(text, filename, "text/plain");
 	};

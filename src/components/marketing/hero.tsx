@@ -12,6 +12,8 @@
  * `key: value` lines the exporter writes), not a fictional screenshot.
  */
 
+import { SECTION_RULE } from "@/lib/export/rules";
+
 /** Contact block. Field names and order mirror the text export. */
 const CONTACT = [
 	"Avery Chen",
@@ -36,8 +38,15 @@ const EXPERIENCE_TEXT = [
 
 const SKILLS = ["Go", "TypeScript", "Postgres", "Terraform"];
 
-/** The rule the plain-text exporter writes around every section heading. */
-const RULE = "=".repeat(50);
+/**
+ * The rule the plain-text exporter writes around every section heading.
+ *
+ * Imported rather than redefined: the whole claim of this panel is "this is what the
+ * exporter produces", and a second constant is how the page and the artefact drift
+ * apart. `src/lib/export/rules.ts` is the one definition, and it carries no imports so
+ * this page stays free of the export path's dependencies.
+ */
+const RULE = SECTION_RULE;
 
 export function Hero() {
 	return (

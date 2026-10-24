@@ -208,7 +208,14 @@ describe("every tab panel is reachable", () => {
 	it("names every panel it ships", () => {
 		// Guards against a future refactor deleting a trigger and its content together
 		// being "consistent" again.
-		expect(values("TabsContent")).toEqual(["bullets", "history", "job", "parse"]);
+		expect(values("TabsContent")).toEqual([
+			"bullets",
+			"checklist",
+			"history",
+			"job",
+			"parse",
+			"plaintext",
+		]);
 	});
 
 	/**
