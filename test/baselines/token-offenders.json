@@ -1,8 +1,5 @@
 {
 	"spacing": {
-		"src/components/export/export-buttons.tsx": {
-			"py-1.5": 1
-		},
 		"src/components/marketing/hero.tsx": {
 			"py-14": 1,
 			"py-20": 1,
@@ -45,67 +42,8 @@
 			"mt-3.5": 2,
 			"space-y-2.5": 1
 		},
-		"src/components/sections-forms/certifications-form.tsx": {
-			"pl-9": 1
-		},
-		"src/components/sections-forms/education-form.tsx": {
-			"py-1.5": 3
-		},
-		"src/components/sections-forms/experience-form.tsx": {
-			"py-1.5": 1
-		},
-		"src/components/sections-forms/personal-info-form.tsx": {
-			"pl-9": 7
-		},
-		"src/components/sections-forms/projects-form.tsx": {
-			"pl-9": 2,
-			"py-1.5": 1
-		},
-		"src/components/sections-forms/publications-form.tsx": {
-			"pl-9": 1
-		},
-		"src/components/sections-forms/references-form.tsx": {
-			"pl-9": 2
-		},
-		"src/components/sections-forms/volunteer-form.tsx": {
-			"py-1.5": 1
-		},
 		"src/features/dashboard/dashboard.tsx": {
 			"pl-10": 1
-		},
-		"src/features/resume-editor/components/change-log.tsx": {
-			"p-1.5": 1
-		},
-		"src/features/resume-editor/components/content-library-panel.tsx": {
-			"gap-1.5": 2
-		},
-		"src/features/resume-editor/components/formatting-toolbar.tsx": {
-			"mr-1.5": 1,
-			"gap-1.5": 8
-		},
-		"src/features/resume-editor/components/history-panel.tsx": {
-			"py-1.5": 1,
-			"gap-1.5": 1
-		},
-		"src/features/resume-editor/components/job-match-panel.tsx": {
-			"space-y-1.5": 2,
-			"pl-5": 1
-		},
-		"src/features/resume-editor/components/review-panel.tsx": {
-			"pl-5": 1
-		},
-		"src/features/resume-editor/components/save-state.tsx": {
-			"gap-1.5": 3
-		},
-		"src/features/resume-editor/components/template-selector.tsx": {
-			"py-1.5": 1,
-			"mt-1.5": 2,
-			"gap-[3px]": 1
-		},
-		"src/features/resume-editor/resume-editor.tsx": {
-			"py-2.5": 1,
-			"px-1.5": 1,
-			"py-1.5": 1
 		}
 	},
 	"type": {
@@ -138,23 +76,6 @@
 			"text-[0.95rem]": 1,
 			"text-[0.9rem]": 5,
 			"text-[0.8rem]": 1
-		},
-		"src/features/resume-editor/components/formatting-toolbar.tsx": {
-			"text-[10px]": 11
-		},
-		"src/features/resume-editor/components/rubric-panel.tsx": {
-			"text-[10px]": 2,
-			"text-[11px]": 1
-		},
-		"src/features/resume-editor/components/sections-manager.tsx": {
-			"text-[10px]": 1
-		},
-		"src/features/resume-editor/components/template-selector.tsx": {
-			"text-[11px]": 1,
-			"text-[6.5px]": 2
-		},
-		"src/features/resume-editor/resume-editor.tsx": {
-			"text-[10px]": 1
 		}
 	},
 	"radius": {
@@ -164,9 +85,6 @@
 		},
 		"src/components/marketing/sections.tsx": {
 			"rounded-xl": 2
-		},
-		"src/features/resume-editor/components/template-selector.tsx": {
-			"rounded-[3px]": 1
 		}
 	},
 	"z": {
@@ -175,43 +93,6 @@
 		},
 		"src/components/marketing/site-chrome.tsx": {
 			"z-100": 1,
-			"z-50": 1
-		},
-		"src/components/sections-forms/awards-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/certifications-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/education-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/experience-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/languages-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/personal-info-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/projects-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/publications-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/references-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/skills-form.tsx": {
-			"z-10": 1
-		},
-		"src/components/sections-forms/volunteer-form.tsx": {
-			"z-10": 1
-		},
-		"src/features/resume-editor/resume-editor.tsx": {
-			"z-10": 2,
 			"z-50": 1
 		}
 	},
@@ -239,106 +120,6 @@
 		},
 		"src/components/marketing/site-chrome.tsx": {
 			"border-white/10": 1
-		},
-		"src/features/resume-editor/components/change-log.tsx": {
-			"bg-green-100": 1,
-			"text-green-700": 1,
-			"bg-green-900": 1,
-			"text-green-300": 1,
-			"bg-blue-100": 1,
-			"text-blue-700": 1,
-			"bg-blue-900": 1,
-			"text-blue-300": 1,
-			"bg-red-100": 1,
-			"text-red-700": 1,
-			"bg-red-900": 1,
-			"text-red-300": 1,
-			"bg-purple-100": 1,
-			"text-purple-700": 1,
-			"bg-purple-900": 1,
-			"text-purple-300": 1,
-			"bg-orange-100": 1,
-			"text-orange-700": 1,
-			"bg-orange-900": 1,
-			"text-orange-300": 1,
-			"bg-cyan-100": 1,
-			"text-cyan-700": 1,
-			"bg-cyan-900": 1,
-			"text-cyan-300": 1,
-			"bg-indigo-100": 1,
-			"text-indigo-700": 1,
-			"bg-indigo-900": 1,
-			"text-indigo-300": 1,
-			"bg-teal-100": 1,
-			"text-teal-700": 1,
-			"bg-teal-900": 1,
-			"text-teal-300": 1,
-			"bg-yellow-100": 1,
-			"text-yellow-700": 1,
-			"bg-yellow-900": 1,
-			"text-yellow-300": 1,
-			"bg-emerald-100": 1,
-			"text-emerald-700": 1,
-			"bg-emerald-900": 1,
-			"text-emerald-300": 1,
-			"bg-rose-100": 1,
-			"text-rose-700": 1,
-			"bg-rose-900": 1,
-			"text-rose-300": 1,
-			"bg-violet-100": 1,
-			"text-violet-700": 1,
-			"bg-violet-900": 1,
-			"text-violet-300": 1,
-			"bg-slate-100": 1,
-			"text-slate-700": 1,
-			"bg-slate-800": 1,
-			"text-slate-300": 1,
-			"bg-sky-100": 1,
-			"text-sky-700": 1,
-			"bg-sky-900": 1,
-			"text-sky-300": 1,
-			"bg-gray-100": 1,
-			"text-gray-700": 1
-		},
-		"src/features/resume-editor/components/history-panel.tsx": {
-			"text-emerald-600": 1,
-			"text-emerald-400": 1,
-			"text-amber-600": 1,
-			"text-amber-400": 1
-		},
-		"src/features/resume-editor/components/import-review-panel.tsx": {
-			"border-amber-500/70": 1,
-			"bg-amber-500/5": 1
-		},
-		"src/features/resume-editor/components/import-review-view.tsx": {
-			"border-amber-500/70": 1,
-			"bg-amber-500/5": 1,
-			"text-amber-700": 4,
-			"text-amber-400": 4
-		},
-		"src/features/resume-editor/components/job-match-panel.tsx": {
-			"text-emerald-600": 1,
-			"text-emerald-500": 1,
-			"text-amber-600": 1,
-			"text-amber-500": 1
-		},
-		"src/features/resume-editor/components/preview.tsx": {
-			"bg-white": 1
-		},
-		"src/features/resume-editor/components/review-panel.tsx": {
-			"text-amber-600": 1,
-			"text-amber-500": 1,
-			"text-emerald-600": 2,
-			"text-emerald-500": 2
-		},
-		"src/features/resume-editor/components/save-state.tsx": {
-			"text-amber-700": 1,
-			"text-amber-500": 1,
-			"text-emerald-600": 1,
-			"text-emerald-500": 1
-		},
-		"src/features/resume-editor/components/template-selector.tsx": {
-			"bg-white": 2
 		}
 	}
 }

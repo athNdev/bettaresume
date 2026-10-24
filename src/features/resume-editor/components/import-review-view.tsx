@@ -187,7 +187,7 @@ function ConfidenceRow({
 		<li
 			className={
 				low
-					? "space-y-1 rounded-md border border-amber-500/70 border-dashed bg-amber-500/5 p-2 pl-3"
+					? "space-y-1 rounded-md border border-warning/70 border-dashed bg-warning-soft p-2 pl-3"
 					: "space-y-1 rounded-md border p-2 pl-3"
 			}
 			data-confidence={low ? "low" : "high"}
@@ -221,9 +221,7 @@ function ConfidenceRow({
 			)}
 			<p
 				className={
-					low
-						? "text-amber-700 text-xs dark:text-amber-400"
-						: "text-muted-foreground text-xs"
+					low ? "text-warning text-xs" : "text-muted-foreground text-xs"
 				}
 				id={reasonId}
 			>
@@ -302,7 +300,7 @@ export function ImportReviewView({
 					{fields.length + contactFields.length} field
 					{fields.length + contactFields.length === 1 ? "" : "s"}.{" "}
 					{lowCount > 0 ? (
-						<span className="font-medium text-amber-700 dark:text-amber-400">
+						<span className="font-medium text-warning">
 							{lowCount} need
 							{lowCount === 1 ? "s" : ""} checking — they were guessed, not
 							read. Correct them or remove them.
@@ -336,7 +334,7 @@ export function ImportReviewView({
 				<ul className="space-y-1">
 					{result.warnings.map((warning) => (
 						<li
-							className="text-amber-700 text-xs dark:text-amber-400"
+							className="text-warning text-xs"
 							data-import-warning=""
 							key={warning}
 						>
@@ -393,7 +391,7 @@ export function ImportReviewView({
 								</Badge>
 							)}
 							{sectionLow > 0 ? (
-								<span className="text-amber-700 text-xs dark:text-amber-400">
+								<span className="text-warning text-xs">
 									{sectionLow} field{sectionLow === 1 ? "" : "s"} guessed
 								</span>
 							) : null}

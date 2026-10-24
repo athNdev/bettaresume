@@ -8,8 +8,9 @@
  * inside a fixed-size container that matches the exact page dimensions.
  */
 
-import { Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePreviewPages } from "@/features/resume-editor/lib/preview-pages";
 import type { Resume } from "@/features/resume-editor/types";
 import { cn } from "@/lib/utils";
@@ -54,11 +55,34 @@ export function TypstPreview({
 
 	return (
 		<div className={cn("flex flex-col items-center", className)}>
-			{/* Loading state — show skeleton page placeholder */}
+			{/*
+			 * Loading: a skeleton page at the real page's dimensions, shaped like the
+			 * document it stands in for (name, rule, heading + body lines). The audit
+			 * found the page area blank while the WASM compiles; the skeleton matches
+			 * the loaded layout's metrics so the transition does not jump, and the
+			 * region is a polite status so it is announced.
+			 */}
 			{isLoading && svgPages.length === 0 && (
-				<div style={placeholderStyle}>
-					<div className="flex h-full items-center justify-center">
-						<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+				<div aria-busy="true" role="status" style={placeholderStyle}>
+					<span className="sr-only">Rendering preview</span>
+					<div
+						className="flex h-full flex-col"
+						style={{ padding: 48 * scale, gap: 12 * scale }}
+					>
+						<Skeleton className="h-3 w-1/2 rounded-xs" />
+						<Skeleton className="h-px w-full rounded-xs" />
+						{[0, 1].map((group) => (
+							<div
+								className="flex flex-col"
+								key={group}
+								style={{ gap: 8 * scale }}
+							>
+								<Skeleton className="h-2 w-1/3 rounded-xs" />
+								<Skeleton className="h-1.5 w-full rounded-xs" />
+								<Skeleton className="h-1.5 w-11/12 rounded-xs" />
+								<Skeleton className="h-1.5 w-4/5 rounded-xs" />
+							</div>
+						))}
 					</div>
 				</div>
 			)}
@@ -67,6 +91,7 @@ export function TypstPreview({
 			{error && !isLoading && svgPages.length === 0 && (
 				<div style={placeholderStyle}>
 					<div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+						<AlertTriangle aria-hidden className="h-5 w-5 text-destructive" />
 						<p className="font-medium text-destructive text-sm">
 							Preview unavailable
 						</p>

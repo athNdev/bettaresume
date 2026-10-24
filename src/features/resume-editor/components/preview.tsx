@@ -26,7 +26,6 @@ import { keyedByContent } from "@/lib/collections";
 import { formatDateRange, formatResumeDate } from "@/lib/format-date";
 import { richTextToPlain } from "@/lib/rich-text";
 import { resolveTypstFont } from "@/lib/typst/fonts";
-import { cn } from "@/lib/utils";
 
 interface PreviewProps {
 	resume: Resume;
@@ -990,10 +989,14 @@ export function Preview({
 		);
 	};
 
+	/*
+	 * Paper: the document's own background colour (Surface B data), not a chrome
+	 * class — the page must stay paper-white whatever the app theme is.
+	 */
 	return (
 		<div
-			className={cn("bg-white", className)}
-			style={{ width: pageWidth * scale }}
+			className={className}
+			style={{ width: pageWidth * scale, backgroundColor: colors.background }}
 		>
 			{renderSingleColumnPages()}
 			{paginate && (

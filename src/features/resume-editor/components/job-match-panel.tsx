@@ -66,7 +66,7 @@ function CoverageList({
 					{covered} of {items.length}
 				</Badge>
 			</div>
-			<ul className="space-y-1.5">
+			<ul className="space-y-2">
 				{items.map((item) => {
 					// Expand the RESOLVED canonical, not the raw keyword.
 					// `expandSkillVariants` looks up by canonical name, so passing
@@ -80,12 +80,12 @@ function CoverageList({
 							{item.covered ? (
 								<CheckCircle2
 									aria-hidden="true"
-									className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-500"
+									className="mt-0.5 h-4 w-4 shrink-0 text-success"
 								/>
 							) : (
 								<CircleAlert
 									aria-hidden="true"
-									className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-500"
+									className="mt-0.5 h-4 w-4 shrink-0 text-warning"
 								/>
 							)}
 							<span className="min-w-0">
@@ -214,9 +214,9 @@ export function JobMatchPanel({
 						</section>
 
 						{report.suggestions.length > 0 ? (
-							<section className="space-y-1.5 border-t pt-3">
+							<section className="space-y-2 border-t pt-3">
 								<h3 className="font-medium text-sm">Next steps</h3>
-								<ul className="list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+								<ul className="list-disc space-y-1 pl-4 text-muted-foreground text-sm">
 									{report.suggestions.map((s) => (
 										<li key={s}>{s}</li>
 									))}

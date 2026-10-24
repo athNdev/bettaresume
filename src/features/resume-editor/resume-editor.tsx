@@ -47,7 +47,11 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { PanelEmpty } from "@/components/ui/panel-state";
+import {
+	PanelEmpty,
+	PanelError,
+	PanelLoading,
+} from "@/components/ui/panel-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
@@ -94,6 +98,7 @@ import { resolvePersonalInfo } from "@/lib/typst/serialize";
 import { flushPendingSaves } from "@/lib/ui/save-registry";
 import { cn } from "@/lib/utils";
 import {
+	AddSectionMenu,
 	FormattingToolbar,
 	SaveState,
 	SectionsManager,
@@ -124,7 +129,12 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	const setActiveResumeId = useActiveResumeStore((s) => s.setActiveResumeId);
 
 	// Data fetching via tRPC
-	const { data: activeResume, isLoading, isError } = useResume(resumeId);
+	const {
+		data: activeResume,
+		isLoading,
+		isError,
+		refetch,
+	} = useResume(resumeId);
 	const { data: allResumes = [] } = useResumes({ includeArchived: true });
 	const {
 		updateResume,
@@ -875,22 +885,16 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						key={selectedSection.id}
 						onChange={handlePersonalInfoChange}
 						onLocalUpdate={handleDraftPersonalInfoUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			}
 			case "summary":
+				/*
+				 * No title block here: the form column's header already names the
+				 * section, and the audit found this title printed twice more below it.
+				 */
 				return (
 					<div className="space-y-4">
-						<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center border-b bg-background/95 px-4 py-2 backdrop-blur">
-							<h3 className="font-semibold">
-								{content.title ||
-									SECTION_CONFIGS[selectedSection.type].defaultTitle}
-							</h3>
-						</div>
 						<RichTextEditor
 							content={content.html || ""}
 							json={content.json}
@@ -912,16 +916,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				 *
 				 * A dead end the UI offered and then refused. It now mirrors `summary`:
 				 * free-form rich text under a title, which is the honest shape for a
-				 * section the product does not model.
+				 * a section the product does not model.
 				 */
 				return (
 					<div className="space-y-4">
-						<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center border-b bg-background/95 px-4 py-2 backdrop-blur">
-							<h3 className="font-semibold">
-								{content.title ||
-									SECTION_CONFIGS[selectedSection.type].defaultTitle}
-							</h3>
-						</div>
 						<RichTextEditor
 							content={content.html || ""}
 							json={content.json}
@@ -942,10 +940,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "education":
@@ -957,10 +951,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "skills":
@@ -972,10 +962,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "projects":
@@ -987,10 +973,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "certifications":
@@ -1002,10 +984,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "awards":
@@ -1017,10 +995,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "languages":
@@ -1032,10 +1006,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "volunteer":
@@ -1047,10 +1017,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "publications":
@@ -1062,10 +1028,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			case "references":
@@ -1077,10 +1039,6 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							handleSectionDataChange(selectedSection.id, data)
 						}
 						onLocalUpdate={stableDraftSectionDataUpdate}
-						title={
-							content.title ||
-							SECTION_CONFIGS[selectedSection.type as SectionType].defaultTitle
-						}
 					/>
 				);
 			default:
@@ -1095,49 +1053,45 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="flex h-screen items-center justify-center">
-				<div className="space-y-4 text-center">
-					<Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-					<p className="text-muted-foreground">Loading resume...</p>
-				</div>
+			<div className="flex h-screen items-center justify-center bg-background">
+				<PanelLoading label="Loading resume..." />
 			</div>
 		);
 	}
 
-	// Error state
+	// Error state — a live alert with the one action that fixes it (retry), plus
+	// the escape hatch back to the dashboard.
 	if (isError) {
 		return (
-			<div className="flex h-screen items-center justify-center">
-				<div className="space-y-4 text-center">
-					<h2 className="font-semibold text-destructive text-xl">
-						Error loading resume
-					</h2>
-					<p className="text-muted-foreground">
-						Failed to load resume. Please try again.
-					</p>
-					<Button onClick={() => navigate("/dashboard")}>
-						<ArrowLeft className="mr-2 h-4 w-4" />
-						Back to Dashboard
-					</Button>
-				</div>
+			<div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+				<PanelError
+					className="max-w-sm"
+					message="Failed to load resume. Please try again."
+					onRetry={() => refetch()}
+				/>
+				<Button onClick={() => navigate("/dashboard")} variant="ghost">
+					<ArrowLeft className="mr-2 h-4 w-4" />
+					Back to Dashboard
+				</Button>
 			</div>
 		);
 	}
 
-	// Resume not found
+	// Resume not found — never a dead end: say what happened and offer the way out.
 	if (!activeResume) {
 		return (
-			<div className="flex h-screen items-center justify-center">
-				<div className="space-y-4 text-center">
-					<h2 className="font-semibold text-xl">Resume not found</h2>
-					<p className="text-muted-foreground">
-						The resume you're looking for doesn't exist.
-					</p>
-					<Button onClick={() => navigate("/dashboard")}>
-						<ArrowLeft className="mr-2 h-4 w-4" />
-						Back to Dashboard
-					</Button>
-				</div>
+			<div className="flex h-screen items-center justify-center bg-background">
+				<PanelEmpty
+					action={
+						<Button onClick={() => navigate("/dashboard")} variant="outline">
+							<ArrowLeft className="mr-2 h-4 w-4" />
+							Back to Dashboard
+						</Button>
+					}
+					className="max-w-sm"
+					hint="The resume you're looking for doesn't exist."
+					title="Resume not found"
+				/>
 			</div>
 		);
 	}
@@ -1145,7 +1099,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	return (
 		<div className="flex h-screen flex-col bg-background">
 			{/* Header */}
-			<header className="z-50 border-b bg-background/95 backdrop-blur">
+			<header className="z-(--br-z-sticky) border-b bg-background/95 backdrop-blur">
 				{/*
 				 * `min-h-14` + wrap, for the same reason as the dashboard header and worse:
 				 * at 390px this row measured Back, the resume identity, Import, Review and
@@ -1169,12 +1123,25 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						>
 							<ArrowLeft aria-hidden="true" className="h-5 w-5" />
 						</Button>
+						{/*
+						 * The document name is the largest thing in the chrome (20px): it is
+						 * the thing being edited. The audit measured it at 14px — smaller than
+						 * the form's own headings — so nothing on screen led.
+						 *
+						 * The subtitle prints the template's display name ("Postgrad"), not the
+						 * raw key ("postgrad"), and the resume's domain when it has one.
+						 */}
 						<div className="min-w-0">
-							<h1 className="truncate font-semibold text-sm">
+							<h1 className="truncate font-semibold text-lg">
 								{activeResume.name}
 							</h1>
-							<p className="text-muted-foreground text-xs">
-								{activeResume.domain || activeResume.template}
+							<p className="truncate text-muted-foreground text-xs">
+								{activeResume.domain ? `${activeResume.domain} · ` : ""}
+								{TEMPLATE_CONFIGS[
+									(draftResume?.template ||
+										activeResume.template ||
+										"minimal") as TemplateType
+								]?.name ?? "Minimal"}
 							</p>
 						</div>
 					</div>
@@ -1271,7 +1238,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			 */}
 			{editorError ? (
 				<div
-					className="flex items-start gap-3 border-destructive/30 border-b bg-destructive/10 px-4 py-2.5 text-sm"
+					className="flex items-start gap-3 border-destructive/30 border-b bg-destructive/10 px-4 py-2 text-sm"
 					role="alert"
 				>
 					<AlertTriangle
@@ -1315,7 +1282,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 												<Loader2 className="h-3 w-3 animate-spin" />
 											)}
 										</div>
-										<span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+										<span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
 											{activeResume.sections.length}
 										</span>
 									</CollapsibleTrigger>
@@ -1424,7 +1391,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 											 */}
 											<div className="mb-4 flex items-start justify-between gap-3">
 												<div className="min-w-0">
-													<h2 className="truncate font-semibold text-sm">
+													<h2 className="truncate font-semibold text-base">
 														{String(selectedSection.content.title ?? "") ||
 															SECTION_CONFIGS[selectedSection.type]
 																.defaultTitle}
@@ -1471,7 +1438,16 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 													<p className="text-xs">
 														Or pick one from the list on the left.
 													</p>
-												) : null
+												) : (
+													/*
+													 * The one action that fixes the emptiness. A state that
+													 * only describes itself is a dead end.
+													 */
+													<AddSectionMenu
+														onAddSection={handleAddSection}
+														sections={activeResume.sections}
+													/>
+												)
 											}
 											hint="Your form appears here, beside a live preview of the document."
 											icon={
@@ -1514,7 +1490,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									onOpenChange={setTypeControlsOpen}
 									open={typeControlsOpen}
 								>
-									<div className="flex items-center gap-2 border-b bg-background px-3 py-1.5">
+									<div className="flex items-center gap-2 border-b bg-background px-3 py-1">
 										<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent/50">
 											<ChevronDown
 												aria-hidden

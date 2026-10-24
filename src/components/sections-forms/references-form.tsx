@@ -32,14 +32,12 @@ interface ReferencesFormProps {
 	data: Reference[];
 	onChange: (data: Reference[]) => Promise<void>;
 	onLocalUpdate?: (data: Reference[]) => void;
-	title?: string;
 }
 
 export function ReferencesForm({
 	data,
 	onChange,
 	onLocalUpdate,
-	title,
 }: ReferencesFormProps) {
 	const confirm = useConfirm();
 	const [expandedItems, setExpandedItems] = useState<string[]>(
@@ -90,9 +88,8 @@ export function ReferencesForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -103,7 +100,11 @@ export function ReferencesForm({
 					<p className="text-muted-foreground text-sm">
 						{localData.length} reference{localData.length !== 1 ? "s" : ""}
 					</p>
-					<Button onClick={addReference} size="sm">
+					<Button
+						onClick={addReference}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Reference
 					</Button>
 				</div>
@@ -231,7 +232,7 @@ export function ReferencesForm({
 											<div className="relative mt-1">
 												<Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 												<Input
-													className="pl-9"
+													className="pl-8"
 													onChange={(e) =>
 														updateReference(ref.id, { email: e.target.value })
 													}
@@ -245,7 +246,7 @@ export function ReferencesForm({
 											<div className="relative mt-1">
 												<Phone className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 												<Input
-													className="pl-9"
+													className="pl-8"
 													onChange={(e) =>
 														updateReference(ref.id, { phone: e.target.value })
 													}

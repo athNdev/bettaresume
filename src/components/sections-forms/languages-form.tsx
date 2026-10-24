@@ -23,7 +23,6 @@ interface LanguagesFormProps {
 	data: Language[];
 	onChange: (data: Language[]) => Promise<void>;
 	onLocalUpdate?: (data: Language[]) => void;
-	title?: string;
 }
 
 const PROFICIENCY_LEVELS = [
@@ -51,7 +50,6 @@ export function LanguagesForm({
 	data,
 	onChange,
 	onLocalUpdate,
-	title,
 }: LanguagesFormProps) {
 	const confirm = useConfirm();
 
@@ -92,9 +90,8 @@ export function LanguagesForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -105,7 +102,11 @@ export function LanguagesForm({
 					<p className="text-muted-foreground text-sm">
 						{localData.length} language{localData.length !== 1 ? "s" : ""}
 					</p>
-					<Button onClick={() => addLanguage()} size="sm">
+					<Button
+						onClick={() => addLanguage()}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Language
 					</Button>
 				</div>

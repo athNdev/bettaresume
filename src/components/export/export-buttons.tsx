@@ -1,6 +1,12 @@
 "use client";
 
-import { Download, FileJson, FileText, FileType, Loader2 } from "lucide-react";
+import {
+	AlignLeft,
+	Download,
+	FileJson,
+	FileText,
+	FileType,
+} from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -161,13 +167,21 @@ export function ExportButtons({
 		return (
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button disabled={isExporting}>
+					{/*
+					 * The in-progress state is designed, not just disabled: the primitive's
+					 * `loading` slot (spinner + `aria-busy` + cursor-progress) and a label
+					 * that says what is happening, so a slow compile cannot read as a dead
+					 * button.
+					 */}
+					<Button loading={isExporting}>
 						{isExporting ? (
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							"Exporting…"
 						) : (
-							<Download className="mr-2 h-4 w-4" />
+							<>
+								<Download className="mr-2 h-4 w-4" />
+								Export
+							</>
 						)}
-						Export
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
@@ -176,7 +190,7 @@ export function ExportButtons({
 					 * tells you the file will contain edits the server has not seen.
 					 */}
 					{hasUnsavedChanges ? (
-						<p className="max-w-56 px-2 py-1.5 text-muted-foreground text-xs">
+						<p className="max-w-56 px-2 py-1 text-muted-foreground text-xs">
 							Exports include your unsaved changes. Reload or switch away and
 							they will be lost.
 						</p>
@@ -194,7 +208,7 @@ export function ExportButtons({
 						Export as JSON
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={exportText}>
-						<FileText className="mr-2 h-4 w-4" />
+						<AlignLeft className="mr-2 h-4 w-4" />
 						Export as Text
 					</DropdownMenuItem>
 				</DropdownMenuContent>
@@ -204,15 +218,15 @@ export function ExportButtons({
 
 	return (
 		<div className="flex gap-2">
-			<Button disabled={isExporting} onClick={exportPDF}>
-				{isExporting ? (
-					<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-				) : (
-					<FileText className="mr-2 h-4 w-4" />
-				)}
+			<Button loading={isExporting} onClick={exportPDF}>
+				<FileText className="mr-2 h-4 w-4" />
 				PDF
 			</Button>
-			<Button onClick={exportJSON} variant="outline">
+			{/*
+			 * One primary per region: PDF is the export this product is for, so
+			 * JSON is a quiet secondary rather than a second slab of the same size.
+			 */}
+			<Button onClick={exportJSON} variant="ghost">
 				<FileJson className="mr-2 h-4 w-4" />
 				JSON
 			</Button>

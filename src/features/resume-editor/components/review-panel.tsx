@@ -61,7 +61,7 @@ const SEVERITY_STYLE = {
 	},
 	warning: {
 		Icon: AlertTriangle,
-		iconClass: "text-amber-600 dark:text-amber-500",
+		iconClass: "text-warning",
 		badge: "secondary",
 		label: "Check",
 	},
@@ -117,10 +117,7 @@ const TAB_PANEL = "min-h-0 flex-1 px-6 pb-6 data-[state=inactive]:hidden";
 function ClearState({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed p-8 text-center">
-			<CheckCircle2
-				aria-hidden="true"
-				className="h-6 w-6 text-emerald-600 dark:text-emerald-500"
-			/>
+			<CheckCircle2 aria-hidden="true" className="h-6 w-6 text-success" />
 			<p className="font-medium text-sm">{children}</p>
 		</div>
 	);
@@ -190,7 +187,14 @@ export function ReviewPanel({
 				</SheetHeader>
 
 				<Tabs className="min-h-0 flex-1" defaultValue="checklist">
-					<TabsList className="mx-6 mt-4">
+					{/*
+					 * The strip wraps (it was 579px of pills in a 342px column at 390px,
+					 * with History and Bullets past the viewport and unclickable) and the
+					 * count badges are gone from the labels: each badge widened its tab and
+					 * clipped "Bullets 10" at the sheet edge even at 1440px. The counts now
+					 * lead their own panels instead.
+					 */}
+					<TabsList className="mx-6 mt-4 h-auto flex-wrap">
 						{/*
 						 * The checklist is first and default: it is the one surface that
 						 * answers "what should I do next", which is the question a user opens
@@ -198,22 +202,8 @@ export function ReviewPanel({
 						 */}
 						<TabsTrigger value="checklist">Checklist</TabsTrigger>
 						<TabsTrigger value="plaintext">Plain text</TabsTrigger>
-						<TabsTrigger value="parse">
-							Parser fit
-							{diagnostics.length > 0 ? (
-								<Badge className="ml-2" variant="outline">
-									{diagnostics.length}
-								</Badge>
-							) : null}
-						</TabsTrigger>
-						<TabsTrigger value="job">
-							Job target
-							{jobTarget?.description ? (
-								<Badge className="ml-2" variant="outline">
-									set
-								</Badge>
-							) : null}
-						</TabsTrigger>
+						<TabsTrigger value="parse">Parser fit</TabsTrigger>
+						<TabsTrigger value="job">Job target</TabsTrigger>
 						<TabsTrigger value="history">History</TabsTrigger>
 						{/*
 					  PR #166 shipped the `library` TabsContent without its trigger, so the
@@ -224,17 +214,10 @@ export function ReviewPanel({
 					  cannot ship dead either.
 					*/}
 						{/*
-						  The Library tab is gone: it moved to the editor rail, beside the
-						  Sections list it feeds. See `resume-editor.tsx`.
-						*/}
-						<TabsTrigger value="bullets">
-							Bullets
-							{bulletCount > 0 ? (
-								<Badge className="ml-2" variant="outline">
-									{bulletCount}
-								</Badge>
-							) : null}
-						</TabsTrigger>
+					  The Library tab is gone: it moved to the editor rail, beside the
+					  Sections list it feeds. See `resume-editor.tsx`.
+					*/}
+						<TabsTrigger value="bullets">Bullets</TabsTrigger>
 					</TabsList>
 
 					<TabsContent className={TAB_PANEL} forceMount value="checklist">
@@ -256,11 +239,22 @@ export function ReviewPanel({
 									No parser-fit issues found in this resume.
 								</ClearState>
 							) : (
-								<ul className="space-y-2">
-									{diagnostics.map((d) => (
-										<DiagnosticRow diagnostic={d} key={`${d.id}::${d.title}`} />
-									))}
-								</ul>
+								<>
+									{/* The count lives here, not in the tab label: a badge inside
+									 * the trigger widened the strip and clipped at 1440px. */}
+									<p className="mb-3 font-medium text-sm">
+										{diagnostics.length}{" "}
+										{diagnostics.length === 1 ? "finding" : "findings"}
+									</p>
+									<ul className="space-y-2">
+										{diagnostics.map((d) => (
+											<DiagnosticRow
+												diagnostic={d}
+												key={`${d.id}::${d.title}`}
+											/>
+										))}
+									</ul>
+								</>
 							)}
 						</ScrollArea>
 					</TabsContent>
@@ -274,61 +268,69 @@ export function ReviewPanel({
 							{bulletReport.bullets.length === 0 ? (
 								<ClearState>No bullets to review yet.</ClearState>
 							) : (
-								<ul className="space-y-3">
-									{bulletReport.bullets.map((finding) => (
-										<li
-											className="space-y-2 rounded-md border p-3"
-											key={`${finding.sectionId}:${finding.index}`}
-										>
-											{/*
-											 * Which entry these bullets belong to. Without it a resume with two
-											 * jobs showed two unlabelled blocks and no way to tell them apart —
-											 * and the two used the same React key, because the finding's index
-											 * was hardcoded to 0 for every entry in the section.
-											 */}
-											{finding.label ? (
-												<p className="font-medium text-sm">{finding.label}</p>
-											) : null}
-											{finding.report.bullets.every(
-												(b) => b.severity === "none",
-											) ? (
-												<p className="flex items-center gap-2 text-sm">
-													<CheckCircle2
-														aria-hidden="true"
-														className="h-4 w-4 text-emerald-600 dark:text-emerald-500"
-													/>
-													{finding.report.total} bullet
-													{finding.report.total === 1 ? "" : "s"} with evidence.
-												</p>
-											) : (
-												/* `withIndex` keeps the ORIGINAL position, because
+								<>
+									{/* The count moved out of the tab label; see the strip. */}
+									<p className="mb-3 font-medium text-sm">
+										{bulletCount}{" "}
+										{bulletCount === 1 ? "bullet needs" : "bullets need"} work
+									</p>
+									<ul className="space-y-3">
+										{bulletReport.bullets.map((finding) => (
+											<li
+												className="space-y-2 rounded-md border p-3"
+												key={`${finding.sectionId}:${finding.index}`}
+											>
+												{/*
+												 * Which entry these bullets belong to. Without it a resume with two
+												 * jobs showed two unlabelled blocks and no way to tell them apart —
+												 * and the two used the same React key, because the finding's index
+												 * was hardcoded to 0 for every entry in the section.
+												 */}
+												{finding.label ? (
+													<p className="font-medium text-sm">{finding.label}</p>
+												) : null}
+												{finding.report.bullets.every(
+													(b) => b.severity === "none",
+												) ? (
+													<p className="flex items-center gap-2 text-sm">
+														<CheckCircle2
+															aria-hidden="true"
+															className="h-4 w-4 text-success"
+														/>
+														{finding.report.total} bullet
+														{finding.report.total === 1 ? "" : "s"} with
+														evidence.
+													</p>
+												) : (
+													/* `withIndex` keeps the ORIGINAL position, because
 												   report.bullets is index-aligned with the source and the
 												   render index shifts once items are filtered out. */
-												finding.report.bullets
-													.map((bullet, sourceIndex) => ({
-														bullet,
-														sourceIndex,
-													}))
-													.filter(({ bullet }) => bullet.severity !== "none")
-													.map(({ bullet, sourceIndex }) => (
-														<div
-															className="space-y-1"
-															key={`${sourceIndex}-${bullet.text.slice(0, 40)}`}
-														>
-															<p className="text-sm italic">
-																&quot;{bullet.text}&quot;
-															</p>
-															<ul className="list-disc space-y-0.5 pl-5 text-muted-foreground text-sm">
-																{bullet.reasons.map((reason) => (
-																	<li key={reason}>{reason}</li>
-																))}
-															</ul>
-														</div>
-													))
-											)}
-										</li>
-									))}
-								</ul>
+													finding.report.bullets
+														.map((bullet, sourceIndex) => ({
+															bullet,
+															sourceIndex,
+														}))
+														.filter(({ bullet }) => bullet.severity !== "none")
+														.map(({ bullet, sourceIndex }) => (
+															<div
+																className="space-y-1"
+																key={`${sourceIndex}-${bullet.text.slice(0, 40)}`}
+															>
+																<p className="text-sm italic">
+																	&quot;{bullet.text}&quot;
+																</p>
+																<ul className="list-disc space-y-0.5 pl-4 text-muted-foreground text-sm">
+																	{bullet.reasons.map((reason) => (
+																		<li key={reason}>{reason}</li>
+																	))}
+																</ul>
+															</div>
+														))
+												)}
+											</li>
+										))}
+									</ul>
+								</>
 							)}
 						</ScrollArea>
 					</TabsContent>

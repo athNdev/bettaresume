@@ -35,14 +35,12 @@ interface ProjectsFormProps {
 	data: Project[];
 	onChange: (data: Project[]) => Promise<void>;
 	onLocalUpdate?: (data: Project[]) => void;
-	title?: string;
 }
 
 export function ProjectsForm({
 	data,
 	onChange,
 	onLocalUpdate,
-	title,
 }: ProjectsFormProps) {
 	const confirm = useConfirm();
 	const [expandedItems, setExpandedItems] = useState<string[]>(
@@ -143,9 +141,8 @@ export function ProjectsForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -156,7 +153,11 @@ export function ProjectsForm({
 					<p className="text-muted-foreground text-sm">
 						{localData.length} project{localData.length !== 1 ? "s" : ""}
 					</p>
-					<Button onClick={addProject} size="sm">
+					<Button
+						onClick={addProject}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Project
 					</Button>
 				</div>
@@ -326,7 +327,7 @@ export function ProjectsForm({
 											<div className="relative mt-1">
 												<ExternalLink className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 												<Input
-													className="pl-9"
+													className="pl-8"
 													onChange={(e) =>
 														updateProject(proj.id, { url: e.target.value })
 													}
@@ -340,7 +341,7 @@ export function ProjectsForm({
 											<div className="relative mt-1">
 												<ExternalLink className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 												<Input
-													className="pl-9"
+													className="pl-8"
 													onChange={(e) =>
 														updateProject(proj.id, { github: e.target.value })
 													}
@@ -395,7 +396,7 @@ export function ProjectsForm({
 											{proj.highlights?.map((highlight, i) => (
 												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
-													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
+													<span className="flex-1 rounded bg-muted px-3 py-1 text-sm">
 														{highlight}
 													</span>
 													<Button

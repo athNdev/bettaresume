@@ -33,14 +33,12 @@ interface CertificationsFormProps {
 	data: Certification[];
 	onChange: (data: Certification[]) => Promise<void>;
 	onLocalUpdate?: (data: Certification[]) => void;
-	title?: string;
 }
 
 export function CertificationsForm({
 	data,
 	onChange,
 	onLocalUpdate,
-	title,
 }: CertificationsFormProps) {
 	const confirm = useConfirm();
 	const [expandedItems, setExpandedItems] = useState<string[]>(
@@ -91,9 +89,8 @@ export function CertificationsForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
 				<div className="flex items-center gap-3">
-					{title && <h3 className="font-semibold">{title}</h3>}
 					<SaveStatusIndicator
 						error={error}
 						onRetry={retrySave}
@@ -104,7 +101,11 @@ export function CertificationsForm({
 					<p className="text-muted-foreground text-sm">
 						{localData.length} certification{localData.length !== 1 ? "s" : ""}
 					</p>
-					<Button onClick={addCertification} size="sm">
+					<Button
+						onClick={addCertification}
+						size="sm"
+						variant={localData.length === 0 ? "outline" : "default"}
+					>
 						<Plus className="mr-2 h-4 w-4" /> Add Certification
 					</Button>
 				</div>
@@ -283,7 +284,7 @@ export function CertificationsForm({
 										<div className="relative mt-1">
 											<ExternalLink className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 											<Input
-												className="pl-9"
+												className="pl-8"
 												onChange={(e) =>
 													updateCertification(cert.id, { url: e.target.value })
 												}

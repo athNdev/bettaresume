@@ -302,7 +302,11 @@ describe("the keyboard does the obvious thing", () => {
 
 describe("the section you are editing says what it is", () => {
 	it("shows the section name and type above its form", () => {
-		expect(editor).toMatch(/<h2 className="truncate font-semibold text-sm">/);
+		// Not pinned to a type step: wave 2b re-based the editor's type hierarchy
+		// (the document name leads at 20px), and which step this heading wears is
+		// a design decision, not behaviour. What must hold is that it is THE
+		// heading, and that it truncates rather than pushing the link control out.
+		expect(editor).toMatch(/<h2 className="truncate font-semibold/);
 	});
 
 	it("offers the link control where the field is, not in an overflow menu", () => {

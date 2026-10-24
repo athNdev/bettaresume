@@ -426,7 +426,7 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 			) : null}
 
 			<section>
-				<h3 className="mb-2 flex items-center gap-1.5 font-medium text-sm">
+				<h3 className="mb-2 flex items-center gap-2 font-medium text-sm">
 					<Library aria-hidden className="size-4" />
 					Library
 				</h3>
@@ -552,7 +552,7 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 			</section>
 
 			<section>
-				<h3 className="mb-2 flex items-center gap-1.5 font-medium text-sm">
+				<h3 className="mb-2 flex items-center gap-2 font-medium text-sm">
 					<Undo2 aria-hidden className="size-4" />
 					Available to add
 				</h3>
