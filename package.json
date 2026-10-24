@@ -31,7 +31,10 @@
 		"test": "npm run test:root && npm run test -w api",
 		"test:root": "vitest run",
 		"test:watch": "vitest",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"copy:typst": "node scripts/copy-typst-assets.mjs",
+		"prebuild": "npm run copy:typst",
+		"predev": "npm run copy:typst"
 	},
 	"dependencies": {
 		"@bettaresume/types": "*",
