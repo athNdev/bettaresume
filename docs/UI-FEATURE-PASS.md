@@ -239,6 +239,67 @@ the product name as its title.
 
 ---
 
+## 8. The cleanup pass — what a second browser sweep found
+
+After the five waves above, a session went back over the whole app with the browser
+harness (`scripts/probe/`) and with the Plane board as the checklist. Three kinds of thing
+came out, and only the first was what the plan expected.
+
+### 8.1 Real defects the plan did not anticipate
+
+| Found | Why it mattered |
+|---|---|
+| `forceMount` on every Review `TabsContent` | Radix treats a force-mounted panel as always *present*, so it stops setting `hidden`. All six panels rendered stacked: the sheet was ~3,000px tall and clicking "History" appeared to do nothing because its content sat 2,400px below the tab strip. The test asserting `forceMount` **documented the opposite** — it claimed Radix still hid them. |
+| The marketing hero's "exported text" panel | A hand-written `key: value` list whose comment claimed it matched the exporter. It stopped matching when the exporter was fixed, so the most prominent panel on the site advertised `startDate: 2020-09` as the product's output. It now calls `buildPlainText(SAMPLE_RESUME)` — the same function the export button uses. |
+| Typst's SVG contains a `<script>` | Injected with `dangerouslySetInnerHTML`, it ran in the app's origin on every preview render. `splitSvgPages` now rebuilds each page from a DOM, and the preview renders it as an `<img>` with a blob URL — an image context, where script cannot run by specification. |
+| Four divergent HTML→text converters | `&amp;` rendered as `&` in one path and `&amp;` in another; a list item was `• x` in two and `x` in the rest. `src/lib/rich-text.ts` owns it now. |
+| Index keys on editable lists | The remove handler takes the index too, so deleting the first of two identical achievements made React reuse the second row's DOM. Keyed by content + occurrence. |
+| `SaveStatusIndicator`'s inline `clearTimers` | A new function every render made the effect re-run and restart the 1.7s auto-hide timer, so "Saved" could stay on screen indefinitely in the editor. |
+| The optimistic metadata update | A shallow spread behind an `as any`: a font change replaced the whole blob, so `personalInfo` disappeared from the cache until the refetch. It now calls the server's own `deepMergeMetadata`, moved to `@bettaresume/types`. |
+| Four `<button>`s with no `type` | Inside forms. A "remove this bullet" control was submitting the form it sits in. |
+
+### 8.2 Controls that promised something the code did not do
+
+`settings.layout` accepted two-column and sidebar, the preview drew both, and **no Typst
+template ever read it**. The earlier fix kept the field, kept the dropdown and offered one
+option — the same broken promise with less code. It, `settings.showIcons`, the dropdown and
+~150 lines of unreachable preview branching are gone; single-column is not a preference the
+product takes.
+
+The marketing copy had the matching overclaim: History "diff any two" while the panel diffs
+a version against the current document.
+
+### 8.3 The board itself was stale
+
+Several items described code that earlier PRs had already fixed (`resume.createVariation`,
+the three real templates, the import review gate, `SyncManager`, the hardcoded activity
+log). Two were closed with reasons rather than code:
+
+- **Application tracking** contradicts `docs/ROADMAP.md` ("Never"), the marketing page's
+  "No tracker, no auto-apply" and `CLAUDE.md`. `metadata.jobTarget` already records what a
+  variant was aimed at, which is the useful part.
+- **The `Tag` relation** has no UI to set a tag at all, so building indexed tables first
+  would produce a correct table nobody can put a value into. Deferred with the item's own
+  two-release sequencing quoted back. The independent half — the composite index
+  `(userId, isArchived, updatedAt)` that `resume.list` was silently sorting in a temp
+  b-tree without — did ship.
+
+### 8.4 What the sweep changed about the gates
+
+- **Biome: 272 → 0**, baseline now `0`, so the ratchet can fail on the next finding.
+  165 of the 272 were in `api/wrangler-configuration.d.ts`, which `wrangler types`
+  regenerates.
+- **A migration-drift step.** `drizzle-kit generate` exits 0 and prints "No schema changes"
+  whether or not it wrote anything, so running it proved nothing; the step compares the
+  `api/drizzle/*.sql` file count before and after.
+- **The TipTap document is now stored** next to the HTML, from the same transaction. The
+  HTML stays because three exporters read it; making them walk the document is the
+  remaining ADR-gated work.
+- **Rate limiting** at the edge, keyed on `CF-Connecting-IP`, before any parsing or token
+  verification — the user id only exists after `createContext` has run.
+
+---
+
 ## Deliberately not in this pass
 
 - **A composite 0–100 score.** See §1. Roadmap rejects it; the research confirms why.
