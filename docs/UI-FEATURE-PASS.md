@@ -186,6 +186,59 @@ every Worker log line for a failure so a user's quoted id finds its entry with o
 
 ---
 
+## 7. Beyond the plan — found while executing
+
+Things that were not on the list and turned out to matter more than some of what was.
+
+### 7.1 The export path depended on two CDNs, and one of them was already broken
+
+`src/lib/typst/fonts.ts` pinned nine `fonts.gstatic.com` URLs. **Three returned 404 —
+including both Inter files.** Inter is the default family, so every export that did not
+pick another family had been silently substituting a face. That is the same defect
+`[IO] Font substitution silently changing the rendered page` was meant to close: a
+regression that produced a warning, not a failure.
+
+The nine families are now vendored in `public/fonts/`. The WASM modules are copied out of
+`node_modules` into `public/wasm/` before build and dev, so the 28 MB compiler no longer
+comes from jsDelivr with no Subresource Integrity — and no third party learns that
+somebody is exporting a resume.
+
+**The first attempt at this was wrong and the fix is the interesting part.** Vendoring the
+upstream files meant vendoring one *variable* font per family. Typst loads it and reports
+the right family, so nothing looks broken — but this build does not apply the `wght` axis.
+Measured, not assumed: the same word at weights 400, 700 and 900 produced byte-identical
+SVG path data **and** byte-identical PDFs, while static Lato differed correctly. So the
+fix would have rendered every bold heading in every export at regular weight.
+
+Every family now ships one static file per weight, instantiated from the upstream variable
+font with HarfBuzz. Montserrat comes from its own static builds because the instancer keeps
+the default instance's name — "Montserrat Thin" — which Typst cannot find under
+"Montserrat". `scripts/vendor-fonts.mjs` verifies each instance's `familyName` and
+`usWeightClass`; `test/typst-assets.test.ts` re-checks both from disk.
+
+### 7.2 `useConfirm` leaked a promise
+
+Found by writing the assertion for Wave 4's "Esc closes, focus returns to the trigger".
+Radix already supplies Escape handling, focus trapping and focus return, so the work was
+verifying nothing bypasses it — and that verification found that `close()` set
+`isOpen: false` without resolving the promise the caller was `await`ing. Escape, dismissal
+and the Cancel button all took that path, so `await confirm(...)` never settled and the
+action silently did nothing. Every exit now routes through one `settle()`.
+
+### 7.3 The canonical origin named the redirecting host
+
+Wiring the link-preview card surfaced that `https://athndev.github.io/bettaresume` was the
+default in three files while production is served from `app.bettaresume.com`. Every
+canonical, sitemap entry and image URL pointed at the host that redirects — precisely the
+duplicate-origin signal a canonical tag exists to prevent.
+
+### 7.4 The tab read "Betta Resume · Betta Resume"
+
+The root layout's `title.template` appended the product name to a page that had declared
+the product name as its title.
+
+---
+
 ## Deliberately not in this pass
 
 - **A composite 0–100 score.** See §1. Roadmap rejects it; the research confirms why.
