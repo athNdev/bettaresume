@@ -59,7 +59,7 @@ Local UI state:
 shadcn/ui primitives:
 - `button.tsx`, `input.tsx`, `card.tsx`
 - `accordion.tsx`, `dialog.tsx`, `select.tsx`
-- `form-save-bar.tsx` - Unsaved changes indicator
+- `save-status-indicator.tsx` - Auto-save state, driven by `useAutoSave`
 
 ### Section Forms (`src/components/sections-forms/`)
 Resume section editors:
@@ -71,20 +71,19 @@ Resume section editors:
 - Plus: certifications, awards, volunteer, publications, references, languages
 
 #### Form Pattern
+The forms auto-save. There is no save button and no `FormSaveBar` — it was documented
+here while nothing imported it. `useAutoSave` debounces, flushes on unmount, and reports
+through `SaveStatusIndicator`; `useBeforeUnload` stops the browser leaving mid-write.
+
 ```typescript
 function ExperienceForm({ data, onChange }) {
-  // Local state for editing
   const [localData, setLocalData] = useState(data);
-  
-  // Track unsaved changes
-  const hasChanges = JSON.stringify(localData) !== JSON.stringify(data);
-  
-  // Save handler
-  const handleSave = () => onChange(localData);
-  
+  const { status } = useAutoSave({ data: localData, onSave: onChange });
+  useBeforeUnload(status === "saving" || status === "dirty");
+
   return (
     <div>
-      <FormSaveBar hasChanges={hasChanges} onSave={handleSave} />
+      <SaveStatusIndicator status={status} />
       {/* Form fields */}
     </div>
   );

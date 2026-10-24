@@ -2,6 +2,7 @@ import { buildParseAuditInput } from "@/features/resume-editor/lib/review-input"
 import type { Resume, ResumeSection } from "@/features/resume-editor/types";
 import { findDutyPhrase, hasQuantification } from "@/lib/analysis/metrics";
 import { auditParseFidelity } from "@/lib/analysis/parse-fidelity";
+import { AA_BODY, contrastRatio, parseColor } from "@/lib/color/contrast";
 import { buildPlainText, visibleSections } from "@/lib/export/text";
 
 /**
@@ -265,6 +266,57 @@ export function buildRubric(
 					size(t.sectionHeading) <= TYPE_RULES.headingMax,
 				effort: "quick",
 				detail: `Headings are ${size(t.sectionHeading).toFixed(1)}pt.`,
+			}),
+		);
+	}
+
+	/*
+	 * Legibility.
+	 *
+	 * A resume is a document someone reads, possibly after printing it in black and white,
+	 * and the colour picker in the formatting toolbar lets the user set `text` to anything.
+	 * Nothing checked that the result was visible — the contrast maths in
+	 * `src/lib/color/contrast.ts` existed and was called by nothing.
+	 *
+	 * WCAG AA body text is the bar: 4.5:1. The detail names both ratios and the pair that
+	 * produced them, because "increase contrast" is not actionable and "your body text on
+	 * your background is 2.1:1" is.
+	 */
+	if (settings?.colors) {
+		const background = parseColor(settings.colors.background).rgb;
+		const bodyRatio = contrastRatio(
+			parseColor(settings.colors.text).rgb,
+			background,
+		);
+		const mutedRatio = contrastRatio(
+			parseColor(settings.colors.secondary).rgb,
+			background,
+		);
+		const round = (n: number) => Math.round(n * 10) / 10;
+
+		checks.push(
+			check({
+				id: "contrast-body",
+				group: "parse-fit",
+				title: "Body text is readable against the page",
+				ok: bodyRatio >= AA_BODY,
+				effort: "quick",
+				detail:
+					bodyRatio >= AA_BODY
+						? `Body text is ${round(bodyRatio)}:1 against the page, above the ${AA_BODY}:1 a reader needs.`
+						: `Body text is ${round(bodyRatio)}:1 against the page. WCAG AA asks for ${AA_BODY}:1; below that the document is hard to read on screen and usually unreadable printed greyscale. Darken the text colour or lighten the page.`,
+			}),
+			check({
+				id: "contrast-muted",
+				group: "parse-fit",
+				title: "Secondary text is readable against the page",
+				ok: mutedRatio >= AA_BODY,
+				soft: true,
+				effort: "quick",
+				detail:
+					mutedRatio >= AA_BODY
+						? `Dates and locations are ${round(mutedRatio)}:1 against the page.`
+						: `Dates and locations are ${round(mutedRatio)}:1 against the page, below the ${AA_BODY}:1 a reader needs. They are still content, not decoration.`,
 			}),
 		);
 	}
