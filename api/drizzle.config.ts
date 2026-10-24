@@ -2,23 +2,27 @@ import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
 /**
- * Read an environment variable or fail with the name of the missing one.
+ * Drizzle Kit configuration.
  *
- * These were three non-null assertions, so a missing variable became `undefined`
- * and drizzle-kit reported whatever its HTTP client made of that. This is a
- * developer running `db:generate` against production D1; the useful error names
- * the variable and the file it belongs in.
+ * ## Why nothing here throws on a missing variable
+ *
+ * `db:generate` only needs `schema` and `out` — it diffs two files and never opens a
+ * connection. The credentials below are for `db:push`/`db:migrate`/`db:studio`. Building
+ * them eagerly means a missing secret fails `generate` too, which is how a CI drift check
+ * ("does `generate` produce an empty migration?") would require production credentials it
+ * has no business holding.
+ *
+ * They were three non-null assertions, so a missing variable silently became `undefined`.
+ * Now they are empty strings: `generate` works with no environment at all, and the
+ * commands that actually connect report a missing credential through drizzle-kit's own
+ * validation, which names the field.
+ *
+ * ## Which database
+ *
+ * `LOCAL_DB_PATH` selects a local SQLite file. Anything that connects without it goes to
+ * the real D1 over HTTP — that is the intended default for `db:studio`, and the reason
+ * `db:migrate` in this repo goes through `wrangler d1 migrations apply` instead.
  */
-function required(name: string): string {
-	const value = process.env[name];
-	if (!value) {
-		throw new Error(
-			`${name} is not set. It belongs in api/.dev.vars or the shell.`,
-		);
-	}
-	return value;
-}
-
 export default defineConfig({
 	schema: "./src/db/schema.ts",
 	out: "./drizzle",
@@ -32,9 +36,9 @@ export default defineConfig({
 		: {
 				driver: "d1-http",
 				dbCredentials: {
-					accountId: required("CLOUDFLARE_ACCOUNT_ID"),
-					databaseId: required("CLOUDFLARE_DATABASE_ID"),
-					token: required("CLOUDFLARE_D1_TOKEN"),
+					accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? "",
+					databaseId: process.env.CLOUDFLARE_DATABASE_ID ?? "",
+					token: process.env.CLOUDFLARE_D1_TOKEN ?? "",
 				},
 			}),
 });

@@ -80,6 +80,29 @@ jobs:
             echo "::warning::biome findings fell to ${total}. Lower .github/biome-baseline.txt to lock in the improvement."
           fi
 
+      - name: Migration drift
+        # `schema.ts` is the source of truth and `drizzle/*.sql` is generated from it.
+        # Nothing checked that they agreed, so a hand-edit to either side could sit
+        # unreviewed until the next `db:generate` emitted a surprise table rebuild —
+        # which is exactly what the `Resume.template` default drift was.
+        #
+        # `generate` needs no database and no credentials (see api/drizzle.config.ts),
+        # so this runs anywhere. Any new file in api/drizzle means the schema and the
+        # migrations have diverged.
+        run: |
+          before=$(ls api/drizzle/*.sql | wc -l)
+          (cd api && npx drizzle-kit generate >/dev/null 2>&1) || {
+            echo "::error::db:generate failed. Run it locally and read the error."
+            exit 1
+          }
+          after=$(ls api/drizzle/*.sql | wc -l)
+          if [ "$before" != "$after" ]; then
+            echo "::error::api/src/db/schema.ts and api/drizzle/*.sql have diverged. "
+            echo "::error::drizzle-kit generated $((after - before)) new migration(s):"
+            git status --porcelain api/drizzle
+            exit 1
+          fi
+
       - name: Dependency audit (production)
         # Hard gate. `--omit=dev` is deliberate: only these packages ship. Today
         # this is clean (0 vulnerabilities), so a new high advisory in shipped code
