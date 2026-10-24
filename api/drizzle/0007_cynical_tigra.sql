@@ -1,0 +1,13 @@
+-- One index for the query the dashboard actually runs.
+--
+-- `resume.list` filters on `userId` (and `isArchived` when archived rows are hidden) and
+-- orders by `updatedAt DESC`. `Resume_userId_idx` covers the first column only, so SQLite
+-- still sorted every one of the user's resumes in a temp b-tree to return the page.
+--
+-- Equality columns first, then the sort column, so the sort is satisfied by walking the
+-- index backwards and no temp b-tree is built.
+--
+-- Kept as its own migration rather than folded into an earlier one: a CREATE INDEX is
+-- cheap to apply and cheap to drop, and mixing it into a table rebuild would make the
+-- rebuild's SQL say two unrelated things.
+CREATE INDEX `Resume_userId_archived_updated_idx` ON `Resume` (`userId`,`isArchived`,`updatedAt`);

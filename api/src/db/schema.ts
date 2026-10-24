@@ -79,6 +79,23 @@ export const resumes = sqliteTable(
 	(table) => [
 		index("Resume_userId_idx").on(table.userId),
 		index("Resume_baseResumeId_idx").on(table.baseResumeId),
+		/*
+		 * The index `resume.list` actually needs.
+		 *
+		 * Its predicate is `userId = ? [AND isArchived = false]` ordered by `updatedAt
+		 * DESC`. `Resume_userId_idx` covers the first column and nothing else, so SQLite
+		 * still sorted every row of the user's library in a temp b-tree before returning
+		 * the page. At three resumes that is invisible; at the point where a library is
+		 * worth managing it is the whole cost of the dashboard.
+		 *
+		 * Column order matters: the two equality columns first, then the sort column, so
+		 * the index can satisfy the ORDER BY by walking backwards.
+		 */
+		index("Resume_userId_archived_updated_idx").on(
+			table.userId,
+			table.isArchived,
+			table.updatedAt,
+		),
 	],
 );
 
