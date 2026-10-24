@@ -46,6 +46,7 @@ export const TEMPLATE_SOURCES: Record<string, string> = {
  * resume naming a template this build does not have, not a fallback for a missing file.
  */
 export function getTemplateSource(template: string): string {
-	const body = TEMPLATE_SOURCES[template] ?? TEMPLATE_SOURCES.minimal ?? minimalSource;
+	const body =
+		TEMPLATE_SOURCES[template] ?? TEMPLATE_SOURCES.minimal ?? minimalSource;
 	return `${sectionsSource}\n\n${body}`;
 }

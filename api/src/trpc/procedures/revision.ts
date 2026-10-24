@@ -289,7 +289,10 @@ export async function maybeSnapshot(
 	db: Database,
 	resumeId: string,
 	options: { force?: boolean; label?: string } = {},
-): Promise<{ created: boolean; revision?: typeof resumeRevisions.$inferSelect }> {
+): Promise<{
+	created: boolean;
+	revision?: typeof resumeRevisions.$inferSelect;
+}> {
 	try {
 		const [resume, resumeSections] = await Promise.all([
 			db.query.resumes.findFirst({ where: eq(resumes.id, resumeId) }),

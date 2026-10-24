@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { registerPendingSave } from "@/lib/ui/save-registry";
 
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -291,6 +292,19 @@ export function useAutoSave<T>({
 		}
 		await performSave(localData);
 	}, [localData, performSave]);
+
+	/*
+	 * Register a save with the global registry so ⌘/Ctrl+S in the editor can flush
+	 * whatever is pending. Only a dirty form registers as one worth running: a
+	 * shortcut that saves twelve clean forms would flash twelve "Saved" states for
+	 * nothing, which is worse than doing nothing at all.
+	 */
+	const saveIfDirty = useCallback(async () => {
+		if (JSON.stringify(localData) === savedDataRef.current) return;
+		await saveNow();
+	}, [localData, saveNow]);
+
+	useEffect(() => registerPendingSave(saveIfDirty), [saveIfDirty]);
 
 	// Retry failed save
 	const retrySave = useCallback(async () => {

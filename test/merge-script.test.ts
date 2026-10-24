@@ -56,14 +56,14 @@ exit 99
 	try {
 		const stdout = execFileSync("bash", ["scripts/merge-pr.sh", "999"], {
 			encoding: "utf8",
-				env: {
-					...process.env,
-					PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
-					HOME: dir,
-					// Shrink the real 20-minute budget so the timeout path is testable.
-					MERGE_PR_MAX_POLLS: "2",
-					MERGE_PR_POLL_SECONDS: "0",
-				} as unknown as NodeJS.ProcessEnv,
+			env: {
+				...process.env,
+				PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+				HOME: dir,
+				// Shrink the real 20-minute budget so the timeout path is testable.
+				MERGE_PR_MAX_POLLS: "2",
+				MERGE_PR_POLL_SECONDS: "0",
+			} as unknown as NodeJS.ProcessEnv,
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 		return { code: 0, stdout };

@@ -10834,6 +10834,7 @@ declare module "cloudflare:email" {
 		prototype: EmailMessage;
 		new (from: string, to: string, raw: ReadableStream | string): EmailMessage;
 	};
+
 	export { _EmailMessage as EmailMessage };
 }
 /**
@@ -11672,6 +11673,7 @@ declare module "cloudflare:sockets" {
 		address: string | SocketAddress,
 		options?: SocketOptions,
 	): Socket;
+
 	export { _connect as connect };
 }
 type MarkdownDocument = {

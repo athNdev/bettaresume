@@ -4,8 +4,8 @@ import {
 	reorderSectionsInputSchema,
 	sectionContentSchema,
 	sectionLayoutSchema,
-	setSectionLinkInputSchema,
 	sectionTypeSchema,
+	setSectionLinkInputSchema,
 	updateSectionInputSchema,
 } from "@bettaresume/types";
 import { and, asc, eq } from "drizzle-orm";
@@ -168,7 +168,11 @@ export const sectionRouter = router({
 			// exists to hide and reorder sections, and doing so must not freeze their text.
 			const changesOwnedContent =
 				input.data.content !== undefined || input.data.type !== undefined;
-			if (changesOwnedContent && section.baseSectionId && section.linkedToBase) {
+			if (
+				changesOwnedContent &&
+				section.baseSectionId &&
+				section.linkedToBase
+			) {
 				updateData.linkedToBase = false;
 			}
 

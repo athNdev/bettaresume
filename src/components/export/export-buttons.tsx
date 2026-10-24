@@ -13,6 +13,7 @@ import {
 import type { Resume } from "@/features/resume-editor/types";
 import { getTemplateSource } from "@/features/resume-editor/typst_templates";
 import { DOCX_MIME, resumeToDocx } from "@/lib/export/docx";
+import { exportFileName } from "@/lib/export/filename";
 import { buildPlainText } from "@/lib/export/text";
 import { compileToPdf } from "@/lib/typst/compiler";
 import { resumeToTypstJson } from "@/lib/typst/serialize";
@@ -90,7 +91,7 @@ export function ExportButtons({
 			const pdfBytes = await compileToPdf(templateSource, dataJson, fontFamily);
 			// Handed over as the view, NOT pre-wrapped: wrapping the view's backing
 			// ArrayBuffer would have shipped the whole WASM heap with the PDF inside it.
-			const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
+			const filename = exportFileName(resume, "pdf");
 			downloadFile(pdfBytes, filename, "application/pdf");
 		} catch (error) {
 			// Previously only console.error, so a failed export looked identical to a
@@ -116,9 +117,7 @@ export function ExportButtons({
 		// Typst paginate independently, so page breaks will not match.
 		try {
 			const bytes = resumeToDocx(resume);
-			const filename = `${resume.name.replace(/\s+/g, "_")}_${
-				new Date().toISOString().split("T")[0]
-			}.docx`;
+			const filename = exportFileName(resume, "docx");
 			downloadFile(bytes, filename, DOCX_MIME);
 		} catch (error) {
 			console.error("DOCX export error:", error);
@@ -133,7 +132,7 @@ export function ExportButtons({
 
 	const exportJSON = () => {
 		const json = JSON.stringify(resume, null, 2);
-		const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.json`;
+		const filename = exportFileName(resume, "json");
 		downloadFile(json, filename, "application/json");
 	};
 
@@ -154,7 +153,7 @@ export function ExportButtons({
 		}
 
 		const text = buildPlainText(resume);
-		const filename = `${resume.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
+		const filename = exportFileName(resume, "txt");
 		downloadFile(text, filename, "text/plain");
 	};
 

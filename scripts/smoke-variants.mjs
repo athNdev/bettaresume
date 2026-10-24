@@ -81,7 +81,9 @@ await mutate("section.update", {
 	},
 });
 
-const variantFull = payload(await query("resume.getById", { id: variation.id }));
+const variantFull = payload(
+	await query("resume.getById", { id: variation.id }),
+);
 console.log(
 	"propagation              ",
 	JSON.stringify(variantFull.sections[0].content).includes("Acme Renamed"),
@@ -99,11 +101,19 @@ console.log(
 	`base untouched=${JSON.stringify(baseAfter.sections[0].content).includes("Acme Renamed")}`,
 );
 
-const pulled = payload(await mutate("resume.pullFromBase", { resumeId: variation.id }));
-console.log("pullFromBase             ", `updated=${pulled.updated} (detached, so 0)`);
+const pulled = payload(
+	await mutate("resume.pullFromBase", { resumeId: variation.id }),
+);
+console.log(
+	"pullFromBase             ",
+	`updated=${pulled.updated} (detached, so 0)`,
+);
 
 const relinked = payload(
-	await mutate("section.setLink", { id: variation.sections[0].id, linked: true }),
+	await mutate("section.setLink", {
+		id: variation.sections[0].id,
+		linked: true,
+	}),
 );
 console.log(
 	"section.setLink          ",
@@ -111,7 +121,9 @@ console.log(
 	`pulled base=${JSON.stringify(relinked.content).includes("Acme Renamed")}`,
 );
 
-const variations = payload(await query("resume.listVariations", { baseResumeId: variation.id }));
+const variations = payload(
+	await query("resume.listVariations", { baseResumeId: variation.id }),
+);
 console.log("listVariations (from var)", variations.length);
 
 const history = payload(await query("revision.list", { resumeId: baseId }));

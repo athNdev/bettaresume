@@ -77,7 +77,9 @@ export function useSectionMutations(resumeId: string | null | undefined) {
 				const reorderedSections = sectionIds
 					.map((id, index) => {
 						const section = previousResume.sections.find((s) => s.id === id);
-						return section ? { ...section, order: index } as ResumeSection : null;
+						return section
+							? ({ ...section, order: index } as ResumeSection)
+							: null;
 					})
 					.filter((s): s is ResumeSection => s !== null);
 

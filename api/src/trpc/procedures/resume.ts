@@ -310,10 +310,7 @@ function formatResumeWithSections<
 		tags: safeJsonParse<string[]>(resume.tags, []),
 		metadata: resume.metadata
 			? normalizeMetadata(
-					safeJsonParse<Record<string, unknown> | null>(
-						resume.metadata,
-						null,
-					),
+					safeJsonParse<Record<string, unknown> | null>(resume.metadata, null),
 				)
 			: null,
 		sections: resume.sections.map((section) => ({
@@ -777,10 +774,7 @@ export const resumeRouter = router({
 			let rootId = anchor.id;
 			for (let depth = 0; depth < 16; depth++) {
 				const parent = await ctx.db.query.resumes.findFirst({
-					where: and(
-						eq(resumes.id, rootId),
-						eq(resumes.userId, ctx.userId),
-					),
+					where: and(eq(resumes.id, rootId), eq(resumes.userId, ctx.userId)),
 					columns: { id: true, baseResumeId: true },
 				});
 				if (!parent?.baseResumeId) break;
@@ -938,10 +932,7 @@ export const resumeRouter = router({
 						updatedAt: now,
 					})
 					.where(
-						and(
-							eq(sections.id, section.id),
-							eq(sections.resumeId, variant.id),
-						),
+						and(eq(sections.id, section.id), eq(sections.resumeId, variant.id)),
 					);
 				updated++;
 			}
@@ -951,7 +942,10 @@ export const resumeRouter = router({
 				.set({ updatedAt: now })
 				.where(eq(resumes.id, variant.id));
 
-			await maybeSnapshot(ctx.db, variant.id, { force: true, label: "Synced with base" });
+			await maybeSnapshot(ctx.db, variant.id, {
+				force: true,
+				label: "Synced with base",
+			});
 
 			return { updated };
 		}),

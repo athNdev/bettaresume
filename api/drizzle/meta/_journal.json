@@ -1,55 +1,55 @@
 {
-  "version": "7",
-  "dialect": "sqlite",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "6",
-      "when": 1767831696254,
-      "tag": "0000_init-schema",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1790977191374,
-      "tag": "0001_resume_base_resume_fk",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1791017000000,
-      "tag": "0002_resume_revisions",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1791028580926,
-      "tag": "0003_content_library",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1791038500000,
-      "tag": "0004_section_content_item_unique",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1791065965302,
-      "tag": "0005_drop_nextauth_tables",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1792792284098,
-      "tag": "0006_colorful_jasper_sitwell",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "sqlite",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "6",
+			"when": 1767831696254,
+			"tag": "0000_init-schema",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "6",
+			"when": 1790977191374,
+			"tag": "0001_resume_base_resume_fk",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "6",
+			"when": 1791017000000,
+			"tag": "0002_resume_revisions",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "6",
+			"when": 1791028580926,
+			"tag": "0003_content_library",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "6",
+			"when": 1791038500000,
+			"tag": "0004_section_content_item_unique",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "6",
+			"when": 1791065965302,
+			"tag": "0005_drop_nextauth_tables",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "6",
+			"when": 1792792284098,
+			"tag": "0006_colorful_jasper_sitwell",
+			"breakpoints": true
+		}
+	]
 }

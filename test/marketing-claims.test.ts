@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-
+import { sectionTypeSchema } from "@bettaresume/types";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
-import { sectionTypeSchema } from "@bettaresume/types";
 import MarketingHome from "../src/app/page";
 import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import {
@@ -147,7 +145,9 @@ describe("the counts on the page are the counts in the code", () => {
 		expect(visible).toContain("Three templates");
 		// `postgrad.typ` and `undergrad.typ` were 0 bytes while the page advertised them.
 		for (const file of ["minimal", "postgrad", "undergrad"]) {
-			const source = read(`src/features/resume-editor/typst_templates/${file}.typ`);
+			const source = read(
+				`src/features/resume-editor/typst_templates/${file}.typ`,
+			);
 			expect(source.trim().length, `${file}.typ is empty`).toBeGreaterThan(200);
 		}
 	});
@@ -214,7 +214,9 @@ describe("the job-match claims match the matcher", () => {
 		// The copy no longer quotes the ratio, but it does claim a weighting exists —
 		// and it must stay in the right direction, or the claim is simply wrong.
 		expect(REQUIRED_WEIGHT).toBeGreaterThan(PREFERRED_WEIGHT);
-		expect(visible).toContain("Required terms are weighted over preferred ones");
+		expect(visible).toContain(
+			"Required terms are weighted over preferred ones",
+		);
 	});
 
 	it("does not claim the detector fills in a missing number", () => {
@@ -268,14 +270,18 @@ describe("no unsubstantiated numbers or outcome claims", () => {
 	});
 
 	it("has no social proof or invented testimonial", () => {
-		expect(html).not.toMatch(/testimonial|Trustpilot|G2\b|\bstars\b|\brated\b/i);
+		expect(html).not.toMatch(
+			/testimonial|Trustpilot|G2\b|\bstars\b|\brated\b/i,
+		);
 	});
 });
 
 describe("the hero artefact matches the real exporter", () => {
 	it("labels the text panel as exported text, not as a description", () => {
 		expect(visible).toContain("Exported text");
-		expect(visible).toContain("Copy this from the editor before you send the file");
+		expect(visible).toContain(
+			"Copy this from the editor before you send the file",
+		);
 	});
 
 	it("uses the exporter's own section-rule width", () => {
@@ -285,7 +291,9 @@ describe("the hero artefact matches the real exporter", () => {
 		const rules = read("src/lib/export/rules.ts");
 		expect(rules).toMatch(/SECTION_RULE\s*=\s*"="\.repeat\(50\)/);
 		const hero = read("src/components/marketing/hero.tsx");
-		expect(hero).toMatch(/import \{ SECTION_RULE \} from "@\/lib\/export\/rules"/);
+		expect(hero).toMatch(
+			/import \{ SECTION_RULE \} from "@\/lib\/export\/rules"/,
+		);
 		expect(html).toContain("=".repeat(50));
 	});
 

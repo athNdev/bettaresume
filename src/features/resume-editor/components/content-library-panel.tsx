@@ -10,7 +10,7 @@ import {
 	Undo2,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -24,7 +24,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import type { Resume } from "@/features/resume-editor/types";
 import { api } from "@/lib/trpc/react";
 
@@ -206,6 +214,32 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 	const placed = (resume.sections ?? []).filter((s) => s.contentItemId);
 	const unlinked = (resume.sections ?? []).filter((s) => !s.contentItemId);
 	const items = library.data ?? [];
+
+	/*
+	 * Search and type filter over the library.
+	 *
+	 * The library is the pool you reuse across resumes, so it grows faster than any
+	 * other list in the product — and it was unsearchable. Once it is past a dozen
+	 * items, "place this in my resume" becomes scrolling, which is the friction that
+	 * makes people re-type instead of reuse.
+	 */
+	const [query, setQuery] = useState("");
+	const [typeFilter, setTypeFilter] = useState("all");
+	const filteredItems = useMemo(() => {
+		const q = query.trim().toLowerCase();
+		return items.filter((item) => {
+			if (typeFilter !== "all" && item.type !== typeFilter) return false;
+			if (!q) return true;
+			return (
+				item.title.toLowerCase().includes(q) ||
+				String(item.type).toLowerCase().includes(q)
+			);
+		});
+	}, [items, query, typeFilter]);
+	const availableTypes = useMemo(
+		() => [...new Set(items.map((item) => String(item.type)))].sort(),
+		[items],
+	);
 	const pending =
 		backfill.isPending ||
 		attach.isPending ||
@@ -244,10 +278,14 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 				backfill.isError ||
 				markReviewed.isError) && (
 				<p className="text-destructive text-sm" role="alert">
-					{(attach.error ??
-						propagate.error ??
-						backfill.error ??
-						markReviewed.error)?.message}
+					{
+						(
+							attach.error ??
+							propagate.error ??
+							backfill.error ??
+							markReviewed.error
+						)?.message
+					}
 				</p>
 			)}
 
@@ -410,71 +448,106 @@ export function ContentLibraryPanel({ resume }: { resume: Resume }) {
 						across resumes.
 					</p>
 				) : (
-					<ScrollArea className="max-h-72 pr-3">
-						<ul className="space-y-2">
-							{items.map((item) => (
-								<ItemRow
-									actions={
-										<>
-											{/*
+					<>
+						<div className="mb-2 flex flex-wrap items-center gap-2">
+							<Input
+								aria-label="Search your library"
+								className="h-8 flex-1"
+								onChange={(e) => setQuery(e.target.value)}
+								placeholder="Search…"
+								value={query}
+							/>
+							{availableTypes.length > 1 ? (
+								<Select onValueChange={setTypeFilter} value={typeFilter}>
+									<SelectTrigger
+										aria-label="Filter by type"
+										className="h-8 w-36"
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">All types</SelectItem>
+										{availableTypes.map((t) => (
+											<SelectItem key={t} value={t}>
+												{t}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							) : null}
+						</div>
+						{filteredItems.length === 0 ? (
+							<p className="text-muted-foreground text-sm">
+								Nothing in your library matches that search.
+							</p>
+						) : (
+							<ScrollArea className="max-h-72 pr-3">
+								<ul className="space-y-2">
+									{filteredItems.map((item) => (
+										<ItemRow
+											actions={
+												<>
+													{/*
 											  "Add hidden" is offered on an unreviewed item too, and
 											  the placement still starts hidden. That is the point of
 											  hidden: adding to a library is a decision about
 											  availability, and visibility is the next, separate one.
 											*/}
-											<Button
-												disabled={pending}
-												onClick={() =>
-													attach.mutate({
-														contentItemId: item.id,
-														resumeId: resume.id,
-													})
-												}
-												size="sm"
-												variant="outline"
-											>
-												{attach.isPending ? (
-													<Loader2 aria-hidden className="animate-spin" />
-												) : (
-													<ArrowDownToLine aria-hidden />
-												)}
-												Add hidden
-											</Button>
-											{item.unreviewed ? (
-												<Button
-													disabled={pending}
-													onClick={() =>
-														markReviewed.mutate({
-															contentItemId: item.id,
-														})
-													}
-													size="sm"
-													variant="outline"
-												>
-													<CheckCheck aria-hidden />
-													Mark reviewed
-												</Button>
-											) : null}
-										</>
-									}
-									badge={
-										item.unreviewed ? (
-											<Badge data-library-unreviewed="" variant="secondary">
-												Unreviewed
-											</Badge>
-										) : null
-									}
-									key={item.id}
-									subtitle={
-										item.unreviewed
-											? `imported from ${item.importSource ?? "a file"} — not checked yet`
-											: item.type
-									}
-									title={labelFor(item)}
-								/>
-							))}
-						</ul>
-					</ScrollArea>
+													<Button
+														disabled={pending}
+														onClick={() =>
+															attach.mutate({
+																contentItemId: item.id,
+																resumeId: resume.id,
+															})
+														}
+														size="sm"
+														variant="outline"
+													>
+														{attach.isPending ? (
+															<Loader2 aria-hidden className="animate-spin" />
+														) : (
+															<ArrowDownToLine aria-hidden />
+														)}
+														Add hidden
+													</Button>
+													{item.unreviewed ? (
+														<Button
+															disabled={pending}
+															onClick={() =>
+																markReviewed.mutate({
+																	contentItemId: item.id,
+																})
+															}
+															size="sm"
+															variant="outline"
+														>
+															<CheckCheck aria-hidden />
+															Mark reviewed
+														</Button>
+													) : null}
+												</>
+											}
+											badge={
+												item.unreviewed ? (
+													<Badge data-library-unreviewed="" variant="secondary">
+														Unreviewed
+													</Badge>
+												) : null
+											}
+											key={item.id}
+											subtitle={
+												item.unreviewed
+													? `imported from ${item.importSource ?? "a file"} — not checked yet`
+													: item.type
+											}
+											title={labelFor(item)}
+										/>
+									))}
+								</ul>
+							</ScrollArea>
+						)}
+					</>
 				)}
 			</section>
 

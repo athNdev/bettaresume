@@ -32,7 +32,9 @@ import { createHarness, type TestHarness, USER_A } from "./helpers/harness";
  * Concentrated here rather than repeated in each test.
  */
 async function createResume(h: TestHarness, name: string): Promise<string> {
-	const created = await h.callerAs(USER_A).resume.create({ name, template: "minimal" });
+	const created = await h
+		.callerAs(USER_A)
+		.resume.create({ name, template: "minimal" });
 	expect(created, "resume.create returned nothing").not.toBeNull();
 	if (!created) throw new Error("unreachable: asserted above");
 	return created.id;

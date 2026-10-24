@@ -273,16 +273,21 @@ export const resumeSettingsSchema = z.object({
 	accentStyle: z.enum(["underline", "background", "border", "none"]),
 });
 
-export const partialResumeSettingsSchema = resumeSettingsSchema.partial().extend({
-	margins: z.object({
-		top: z.number(),
-		right: z.number(),
-		bottom: z.number(),
-		left: z.number(),
-	}).partial().optional(),
-	typography: typographyScaleSchema.partial().optional(),
-	colors: resumeColorsSchema.partial().optional(),
-});
+export const partialResumeSettingsSchema = resumeSettingsSchema
+	.partial()
+	.extend({
+		margins: z
+			.object({
+				top: z.number(),
+				right: z.number(),
+				bottom: z.number(),
+				left: z.number(),
+			})
+			.partial()
+			.optional(),
+		typography: typographyScaleSchema.partial().optional(),
+		colors: resumeColorsSchema.partial().optional(),
+	});
 
 // ============================================
 // Resume Metadata Schema

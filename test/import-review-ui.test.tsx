@@ -59,7 +59,10 @@ Senior Engineer, Acme
 
 const result = sectionResumeText(RESUME);
 
-function render(overrides: Record<string, string> = {}, removed: Record<string, true> = {}) {
+function render(
+	overrides: Record<string, string> = {},
+	removed: Record<string, true> = {},
+) {
 	return renderToStaticMarkup(
 		<ImportReviewView
 			added={{}}
@@ -83,7 +86,8 @@ function rowForField(html: string, name: string): string {
 	if (at === -1) throw new Error(`no row for field ${name}`);
 	const open = html.lastIndexOf("<li", at);
 	const close = html.indexOf("</li>", at);
-	if (open === -1 || close === -1) throw new Error(`unterminated row for ${name}`);
+	if (open === -1 || close === -1)
+		throw new Error(`unterminated row for ${name}`);
 	return html.slice(open, close);
 }
 
@@ -183,7 +187,9 @@ Engineer, Acme
 		);
 		expect(guessed).toBeDefined();
 		expect(guessed?.confidence).toBeLessThan(REVIEW_THRESHOLD);
-		expect(structural.warnings.join(" ")).toMatch(/not on the parser-safe list/);
+		expect(structural.warnings.join(" ")).toMatch(
+			/not on the parser-safe list/,
+		);
 
 		const html = renderToStaticMarkup(
 			<ImportReviewView
@@ -260,15 +266,17 @@ describe("an import writes to the content library and nowhere else", () => {
 
 		expect(payload.importMeta?.source).toBe("pdf");
 		expect(payload.importMeta?.sourceName).toBe("jane-doe.pdf");
-		expect(payload.importMeta?.raw).toContain("Rebuilt the settlement pipeline");
+		expect(payload.importMeta?.raw).toContain(
+			"Rebuilt the settlement pipeline",
+		);
 		// A confidence note for every field the sectioner emitted, so the library can say
 		// how much of an item was a guess without re-running the extractor.
 		const notes = payload.importMeta?.fields ?? [];
 		expect(notes.length).toBeGreaterThan(0);
 		expect(notes.some((n) => n.confidence < REVIEW_THRESHOLD)).toBe(true);
-		expect(notes.every((n) => typeof n.reason === "string" && n.reason.length > 0)).toBe(
-			true,
-		);
+		expect(
+			notes.every((n) => typeof n.reason === "string" && n.reason.length > 0),
+		).toBe(true);
 	});
 
 	it("cannot be made to land already reviewed", () => {
@@ -292,7 +300,9 @@ describe("an import writes to the content library and nowhere else", () => {
 		const section = result.sections[0];
 		if (!section) return;
 		const payload = buildImportPayload({
-			overrides: { [fieldKeyOf(0, "entry.0.organization")]: "Acme Corporation Ltd" },
+			overrides: {
+				[fieldKeyOf(0, "entry.0.organization")]: "Acme Corporation Ltd",
+			},
 			removed: {},
 			section,
 			sectionIndex: 0,
@@ -321,7 +331,9 @@ describe("an import writes to the content library and nowhere else", () => {
 		const section = result.sections[0];
 		if (!section) return;
 		const payload = buildImportPayload({
-			overrides: { [fieldKeyOf(0, "entry.0.organization")]: "Acme Corporation Ltd" },
+			overrides: {
+				[fieldKeyOf(0, "entry.0.organization")]: "Acme Corporation Ltd",
+			},
 			removed: {},
 			section,
 			sectionIndex: 0,
@@ -465,7 +477,8 @@ function rowContaining(html: string, marker: string): string {
 	if (at === -1) throw new Error(`no row with ${marker}`);
 	const open = html.lastIndexOf("<li", at);
 	const close = html.indexOf("</li>", at);
-	if (open === -1 || close === -1) throw new Error(`unterminated row for ${marker}`);
+	if (open === -1 || close === -1)
+		throw new Error(`unterminated row for ${marker}`);
 	return html.slice(open, close);
 }
 
