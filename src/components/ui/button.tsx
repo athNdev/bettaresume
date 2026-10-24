@@ -5,7 +5,19 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+	/*
+	 * Motion and feedback are part of the control, not decoration:
+	 *
+	 * - `active:scale-[0.96]` is press feedback. 0.96 is the value that reads as
+	 *   tactile without looking like the button flinched; anything below 0.95 is
+	 *   exaggerated.
+	 * - The transition names its properties. `transition-colors` covered only
+	 *   colour, so the press scale jumped instead of animating, and `transition-all`
+	 *   would animate layout properties the browser should not be touching.
+	 * - `static` switches the press motion off where it would distract (the
+	 *   theme toggle, toolbar icon buttons).
+	 */
+	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm ring-offset-background transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 ease-enter focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:[stroke-width:1.5]",
 	{
 		variants: {
 			variant: {
@@ -25,10 +37,16 @@ const buttonVariants = cva(
 				lg: "h-11 rounded-md px-8",
 				icon: "h-10 w-10",
 			},
+			/** No press scale: for icon toggles and controls inside dense toolbars. */
+			static: {
+				true: "active:scale-100",
+				false: "",
+			},
 		},
 		defaultVariants: {
 			variant: "default",
 			size: "default",
+			static: false,
 		},
 	},
 );
@@ -40,11 +58,16 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-	({ className, variant, size, asChild = false, ...props }, ref) => {
+	(
+		{ className, variant, size, asChild = false, static: isStatic, ...props },
+		ref,
+	) => {
 		const Comp = asChild ? Slot : "button";
 		return (
 			<Comp
-				className={cn(buttonVariants({ variant, size, className }))}
+				className={cn(
+					buttonVariants({ variant, size, static: isStatic, className }),
+				)}
 				ref={ref}
 				{...props}
 			/>

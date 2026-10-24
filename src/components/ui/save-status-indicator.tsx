@@ -107,7 +107,7 @@ export function SaveStatusIndicator({
 			<div
 				aria-hidden={!isVisible}
 				className={cn(
-					"absolute right-0 flex items-center gap-2 text-sm transition-all duration-300",
+					"absolute right-0 flex items-center gap-2 text-sm transition-[opacity,transform] duration-300 ease-enter",
 					isVisible && !isAnimatingOut ? "opacity-100" : "opacity-0",
 					"pointer-events-auto transform-gpu",
 				)}

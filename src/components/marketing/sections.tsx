@@ -81,7 +81,9 @@ export function Features() {
 		<section className="rule-soft" id="features">
 			<div className="marketing-shell py-18 lg:py-24">
 				<div className="max-w-2xl">
-					<h2 className="text-title">Everything between the blank page and the file</h2>
+					<h2 className="text-title">
+						Everything between the blank page and the file
+					</h2>
 					<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
 						A resume builder that keeps your history as a record, not a single
 						document you are afraid to edit.
@@ -177,7 +179,7 @@ const CHECKS = [
 	},
 	{
 		title: "Dates in a parseable format",
-		body: 'A slash-separated date is safe for a human and ambiguous for a parser. Findings quote the value and the accepted form, so the fix is a single edit rather than a research project.',
+		body: "A slash-separated date is safe for a human and ambiguous for a parser. Findings quote the value and the accepted form, so the fix is a single edit rather than a research project.",
 	},
 	{
 		title: "Bullets that assert without evidence",
@@ -193,15 +195,15 @@ export function Inspect() {
 					<div>
 						<h2 className="text-title">Read the file before they do</h2>
 						<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
-							Most builders render your resume in a browser and then guess what a
-							parser will extract. We typeset with Typst, which emits a single
-							column in a fixed order — so the text layer is knowable, and you can
-							read it yourself.
+							Most builders render your resume in a browser and then guess what
+							a parser will extract. We typeset with Typst, which emits a single
+							column in a fixed order — so the text layer is knowable, and you
+							can read it yourself.
 						</p>
 						<p className="mt-5 max-w-prose text-[0.95rem] text-[var(--brand-text-muted)] leading-relaxed">
-							That is also why the review is a list of named checks rather than a
-							percentage. A number would be a verdict on software neither of us
-							ran; a check is something you can act on and verify.
+							That is also why the review is a list of named checks rather than
+							a percentage. A number would be a verdict on software neither of
+							us ran; a check is something you can act on and verify.
 						</p>
 					</div>
 
@@ -267,8 +269,8 @@ export function Templates() {
 				<div className="max-w-2xl">
 					<h2 className="text-title">Three templates, all single-column</h2>
 					<p className="mt-5 text-[var(--brand-text-muted)] text-lede">
-						Typography, spacing and colours are yours to tune. The layout stays one
-						column, because that is the part the text layer depends on.
+						Typography, spacing and colours are yours to tune. The layout stays
+						one column, because that is the part the text layer depends on.
 					</p>
 				</div>
 
@@ -324,8 +326,8 @@ export function Principles() {
 							Where the line is
 						</h2>
 						<p className="mt-5 text-[var(--brand-text-on-ink-muted)] text-lede">
-							Three things this product deliberately does not do, in one short list
-							rather than scattered through the page.
+							Three things this product deliberately does not do, in one short
+							list rather than scattered through the page.
 						</p>
 					</div>
 
@@ -429,12 +431,12 @@ export function ClosingCta() {
 					Start with the history you already have.
 				</h2>
 				<p className="mx-auto mt-6 text-[var(--brand-text-on-ink-muted)] text-lede">
-					Import a document, or start from an empty one. Your first variant is two
-					clicks after that.
+					Import a document, or start from an empty one. Your first variant is
+					two clicks after that.
 				</p>
 				<div className="mt-10">
 					<a
-						className="group inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3.5 font-medium text-[var(--brand-ink)] transition-all hover:-translate-y-0.5 hover:shadow-xl"
+						className="group inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3.5 font-medium text-[var(--brand-ink)] transition-[box-shadow,transform] duration-200 ease-enter hover:-translate-y-0.5 hover:shadow-xl"
 						href="/app"
 					>
 						Open the editor

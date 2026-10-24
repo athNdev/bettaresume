@@ -25,7 +25,7 @@ export function TemplateSelector({
 			{templates.map((template) => (
 				<button
 					className={cn(
-						"w-full cursor-pointer rounded-md border px-3 py-2 text-left text-sm transition-all hover:bg-accent/50",
+						"w-full cursor-pointer rounded-md border px-3 py-2 text-left text-sm transition-[background-color,border-color] ease-enter hover:bg-accent/50",
 						currentTemplate === template.id && "border-primary bg-accent",
 					)}
 					key={template.id}

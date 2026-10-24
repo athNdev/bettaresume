@@ -53,6 +53,12 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	/* Elevation. Shadows create depth; borders create structure. See `:root` below. */
+	--shadow-elev-1: var(--elev-1);
+	--shadow-elev-2: var(--elev-2);
+	--shadow-elev-3: var(--elev-3);
+	--ease-enter: cubic-bezier(0.2, 0, 0, 1);
+	--ease-exit: cubic-bezier(0.2, 0, 0, 1);
 	--color-chart-1: var(--chart-1);
 	--color-chart-2: var(--chart-2);
 	--color-chart-3: var(--chart-3);
@@ -87,8 +93,24 @@
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
+	/*
+	 * Focus indicator colour. This used to be `oklch(0.708 0 0)`, a grey that measures
+	 * 2.3:1 against white — below the 3:1 that a non-text indicator needs (WCAG 1.4.11),
+	 * so keyboard users were getting a ring that was technically present and practically
+	 * invisible. Now a saturated blue that clears 3:1 on both paper and card.
+	 */
+	--ring: oklch(0.532 0.232 255.07);
 	--radius: 0.625rem;
+	/*
+	 * Elevation: layered transparent shadows, never borders, for depth. A border is
+	 * structure — dividers, separators, selected and focus states — and using it for
+	 * depth is what makes nested cards look stacked out of paper.
+	 */
+	--elev-1: 0 1px 2px oklch(0 0 0 / 0.06), 0 1px 1px oklch(0 0 0 / 0.04);
+	--elev-2: 0 2px 4px oklch(0 0 0 / 0.06), 0 4px 8px oklch(0 0 0 / 0.06);
+	--elev-3:
+		0 2px 4px oklch(0 0 0 / 0.05), 0 8px 16px oklch(0 0 0 / 0.08),
+		0 16px 32px oklch(0 0 0 / 0.1);
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
@@ -123,12 +145,19 @@
 	--destructive-foreground: oklch(0.985 0 0);
 	--border: oklch(0.269 0 0);
 	--input: oklch(0.269 0 0);
-	--ring: oklch(0.439 0 0);
+	/* Lighter than the light-mode ring: dark surfaces swallow a mid-tone blue. */
+	--ring: oklch(0.72 0.17 255);
 	--chart-1: oklch(0.488 0.243 264.376);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.769 0.188 70.08);
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
+	/* Shadows need more alpha to read at all on a dark surface. */
+	--elev-1: 0 1px 2px oklch(0 0 0 / 0.35), 0 1px 1px oklch(0 0 0 / 0.25);
+	--elev-2: 0 2px 4px oklch(0 0 0 / 0.35), 0 4px 8px oklch(0 0 0 / 0.3);
+	--elev-3:
+		0 2px 4px oklch(0 0 0 / 0.3), 0 8px 16px oklch(0 0 0 / 0.4),
+		0 16px 32px oklch(0 0 0 / 0.45);
 	--sidebar: oklch(0.205 0 0);
 	--sidebar-foreground: oklch(0.985 0 0);
 	--sidebar-primary: oklch(0.488 0.243 264.376);
@@ -434,4 +463,77 @@ body {
 [data-marketing] :is(a, button, summary, [tabindex]):focus-visible {
 	scroll-margin-top: 6rem;
 	scroll-margin-bottom: 2rem;
+}
+
+/* ──────────────────────────────────────────────
+   Motion (app)
+   ────────────────────────────────────────────── */
+
+/*
+ * Contextual icon cross-fade.
+ *
+ * A state icon that hard-toggles (eye / eye-off, link / unlink) reads as a jump
+ * rather than a change. Both icons stay mounted and one is absolutely positioned,
+ * so this costs no dependency and no layout: opacity 0→1, scale 0.25→1 and blur
+ * 4px→0, on cubic-bezier(0.2, 0, 0, 1).
+ */
+.icon-swap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.icon-swap > * {
+	transition:
+		opacity 0.2s var(--ease-enter),
+		transform 0.2s var(--ease-enter),
+		filter 0.2s var(--ease-enter);
+}
+.icon-swap .icon-swap-b {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	transform: scale(0.25);
+	filter: blur(4px);
+}
+.icon-swap[data-state="b"] .icon-swap-a {
+	opacity: 0;
+	transform: scale(0.25);
+	filter: blur(4px);
+}
+.icon-swap[data-state="b"] .icon-swap-b {
+	opacity: 1;
+	transform: scale(1);
+	filter: blur(0);
+}
+
+/*
+ * Theme switch: suppress every transition for the duration of the swap.
+ *
+ * A theme flip changes colour, background, border and shadow on nearly every
+ * element at once, so every transition on those properties fires together and the
+ * switch smears. `theme-swap.ts` injects this class, forces a reflow, and removes
+ * it on the next frame.
+ */
+.theme-swapping *,
+.theme-swapping *::before,
+.theme-swapping *::after {
+	/* biome-ignore lint/complexity/noImportantStyles: the whole point is to beat every component's own transition during a theme swap; a lower-specificity rule cannot, because the components use utilities. */
+	transition: none !important;
+}
+
+/* Motion restraint: a user who asked for less motion gets feedback without it. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: user preference outranks author styling; without !important a component's own animation wins and the setting is decorative. */
+		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: same reason — see above. */
+		animation-iteration-count: 1 !important;
+		/* biome-ignore lint/complexity/noImportantStyles: same reason — see above. */
+		transition-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: same reason — see above. */
+		scroll-behavior: auto !important;
+	}
 }

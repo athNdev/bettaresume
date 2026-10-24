@@ -89,7 +89,7 @@ export function Hero() {
 					>
 						<div className="flex flex-wrap items-center gap-3">
 							<a
-								className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-ink)] px-6 py-3.5 font-medium text-[var(--brand-text-on-ink)] transition-all hover:-translate-y-0.5 hover:bg-[var(--brand-ink-soft)] hover:shadow-[var(--brand-ink)]/20 hover:shadow-lg"
+								className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-ink)] px-6 py-3.5 font-medium text-[var(--brand-text-on-ink)] transition-[color,background-color,box-shadow,transform] duration-200 ease-enter hover:-translate-y-0.5 hover:bg-[var(--brand-ink-soft)] hover:shadow-[var(--brand-ink)]/20 hover:shadow-lg"
 								href="/app"
 							>
 								Open the editor
