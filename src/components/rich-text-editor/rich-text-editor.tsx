@@ -30,7 +30,11 @@ import {
 	Undo,
 	Unlink,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	editorContentOf,
+	storedRichText,
+} from "@/components/rich-text-editor/stored-content";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,9 +56,19 @@ import { useAutoSave, useBeforeUnload } from "@/hooks";
 import { cn } from "@/lib/utils";
 
 interface RichTextEditorProps {
+	/** The HTML form. Used as-is when `json` is absent (imported or legacy content). */
 	content: string;
-	onChange: (content: string) => void;
-	onLocalUpdate?: (content: string) => void;
+	/** The ProseMirror document, when one exists. Takes precedence over `content`. */
+	json?: unknown;
+	/**
+	 * Called on save with both forms.
+	 *
+	 * The JSON is the document; the HTML is derived from the same transaction, so the two
+	 * cannot describe different content. Callers store both — see
+	 * `stored-content.ts` for why.
+	 */
+	onChange: (content: string, json: unknown) => void;
+	onLocalUpdate?: (content: string, json: unknown) => void;
 	placeholder?: string;
 	className?: string;
 	minHeight?: string;
@@ -368,6 +382,7 @@ function MenuBar({ editor }: { editor: Editor | null }) {
 
 export function RichTextEditor({
 	content,
+	json,
 	onChange,
 	onLocalUpdate,
 	placeholder = "Start typing...",
@@ -376,6 +391,16 @@ export function RichTextEditor({
 	showToolbar = true,
 	toolbarPosition = "top",
 }: RichTextEditorProps) {
+	/*
+	 * Memoised so `useAutoSave` sees a stable `data` for unchanged props. It keys its
+	 * dirty check on `JSON.stringify(data)`, but the effect that syncs server data runs
+	 * on identity — a fresh object every render would make it fight the editor.
+	 */
+	const serverValue = useMemo(
+		() => storedRichText(content, json),
+		[content, json],
+	);
+
 	// `status`, `error` and `retrySave` used to be destructured and ignored, which made
 	// this the only section form in the app that autosaved with no visible state: every
 	// sibling (languages, awards, experience, ...) renders `SaveStatusIndicator` in its
@@ -383,9 +408,11 @@ export function RichTextEditor({
 	// failed to save, nothing at all — while the sections above and below reported both.
 	const { localData, setLocalData, status, error, isDirty, retrySave } =
 		useAutoSave({
-			data: content,
-			onSave: async (val) => onChange(val),
-			onLocalUpdate,
+			data: serverValue,
+			onSave: async (val) => onChange(val.html, val.json),
+			onLocalUpdate: onLocalUpdate
+				? (val) => onLocalUpdate(val.html, val.json)
+				: undefined,
 		});
 
 	useBeforeUnload(isDirty);
@@ -408,10 +435,15 @@ export function RichTextEditor({
 				HTMLAttributes: { class: "text-primary underline" },
 			}),
 		],
-		content: localData,
+		content: editorContentOf(localData),
 		onUpdate: ({ editor }) => {
-			const html = editor.getHTML();
-			setLocalData(html);
+			// Both, from the same transaction. `getJSON()` is the document; `getHTML()` is
+			// derived from it here rather than later, so the two cannot describe different
+			// content. See `stored-content.ts`.
+			setLocalData({
+				html: editor.getHTML(),
+				json: editor.getJSON(),
+			});
 		},
 		editorProps: {
 			attributes: {
@@ -428,8 +460,8 @@ export function RichTextEditor({
 
 	// Update editor content when localData changes (e.g. from autosave sync or external content)
 	useEffect(() => {
-		if (editor && localData !== editor.getHTML()) {
-			editor.commands.setContent(localData);
+		if (editor && localData.html !== editor.getHTML()) {
+			editor.commands.setContent(editorContentOf(localData));
 		}
 	}, [localData, editor]);
 

@@ -146,8 +146,29 @@ export type SectionType =
 export interface SectionContent {
 	title?: string;
 	data?: Record<string, unknown> | unknown[];
+	/**
+	 * Rendered HTML for this section's rich text.
+	 *
+	 * Written by the editor as a *derived* value, next to `json`, and read by every
+	 * exporter — Typst, DOCX, plain text. Content imported from PDF/DOCX has only this,
+	 * which is why it is not optional in practice.
+	 */
 	html?: string;
+	/**
+	 * The ProseMirror document, when the content was authored in the editor.
+	 *
+	 * This is the lossless form: it is what round-trips back into TipTap, and what a
+	 * structure-aware exporter would walk. Absent for imported content and for rows
+	 * written before the editor started storing it; both fall back to `html`.
+	 */
+	json?: RichTextValue["json"];
 	[key: string]: unknown;
+}
+
+/** The pair a rich-text section stores: the document, and the markup derived from it. */
+export interface RichTextValue {
+	html: string;
+	json: unknown;
 }
 
 export interface SectionLayout {

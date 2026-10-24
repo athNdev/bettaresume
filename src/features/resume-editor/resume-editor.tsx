@@ -251,11 +251,18 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 
 	const handleDraftSummaryUpdate = useCallback(
-		(sectionId: string, html: string) => {
+		(sectionId: string, html: string, json?: unknown) => {
 			setDraftResume((prev) => {
 				if (!prev) return prev;
 				const section = prev.sections.find((s) => s.id === sectionId);
-				if (section && section.content.html === html) {
+				// `json` is part of the comparison, not just `html`: the editor can
+				// produce the same markup from a different document, and treating that
+				// as "no change" would drop the structural edit.
+				if (
+					section &&
+					section.content.html === html &&
+					section.content.json === json
+				) {
 					return prev;
 				}
 
@@ -263,7 +270,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					...prev,
 					sections: prev.sections.map((s) =>
 						s.id === sectionId
-							? { ...s, content: { ...s.content, html }, updatedAt: new Date() }
+							? {
+									...s,
+									content: { ...s.content, html, json },
+									updatedAt: new Date(),
+								}
 							: s,
 					),
 				};
@@ -311,9 +322,9 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 
 	const stableDraftSummaryUpdate = useCallback(
-		(html: string) => {
+		(html: string, json?: unknown) => {
 			if (selectedSectionIdRef.current) {
-				handleDraftSummaryUpdate(selectedSectionIdRef.current, html);
+				handleDraftSummaryUpdate(selectedSectionIdRef.current, html, json);
 			}
 		},
 		[handleDraftSummaryUpdate],
@@ -553,10 +564,13 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 
 	const handleSummaryChange = useCallback(
-		(html: string) => {
+		(html: string, json?: unknown) => {
 			if (selectedSection?.type !== "summary") return;
 			handleSectionChange(selectedSection.id, {
-				content: { ...selectedSection.content, html },
+				// Both forms, from the editor's own transaction. `json` is the
+				// document; `html` is what the exporters read. See
+				// `components/rich-text-editor/stored-content.ts`.
+				content: { ...selectedSection.content, html, json },
 			});
 		},
 		[selectedSection, handleSectionChange],
@@ -569,10 +583,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	 * is a summary, which would silently do nothing here.
 	 */
 	const handleCustomChange = useCallback(
-		(html: string) => {
+		(html: string, json?: unknown) => {
 			if (selectedSection?.type !== "custom") return;
 			handleSectionChange(selectedSection.id, {
-				content: { ...selectedSection?.content, html },
+				content: { ...selectedSection?.content, html, json },
 			});
 		},
 		[selectedSection, handleSectionChange],
@@ -879,6 +893,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						</div>
 						<RichTextEditor
 							content={content.html || ""}
+							json={content.json}
 							key={selectedSection.id}
 							minHeight="200px"
 							onChange={handleSummaryChange}
@@ -909,6 +924,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						</div>
 						<RichTextEditor
 							content={content.html || ""}
+							json={content.json}
 							key={selectedSection.id}
 							minHeight="200px"
 							onChange={handleCustomChange}
