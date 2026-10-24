@@ -1,10 +1,8 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site";
 
 // `output: "export"` requires an explicit static directive on metadata routes.
 export const dynamic = "force-static";
-
-const SITE_URL =
-	process.env.NEXT_PUBLIC_SITE_URL ?? "https://athndev.github.io/bettaresume";
 
 /**
  * Allow the marketing page, keep the app out of the index. `/app` is behind

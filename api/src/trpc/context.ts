@@ -66,13 +66,24 @@ function hasCredentials(request: Request): boolean {
 interface CreateContextOptions {
 	request: Request;
 	env: Env;
+	/**
+	 * Correlation id for this request, as emitted on the response header.
+	 *
+	 * Optional so the direct-call tests can keep constructing a context from just a
+	 * request and an env; when absent the log line simply carries no id.
+	 */
+	requestId?: string;
 }
 
 /**
  * createContext() runs on every procedure call
  * Generates a context, which is passed down to procedures
  */
-export async function createContext({ request, env }: CreateContextOptions) {
+export async function createContext({
+	request,
+	env,
+	requestId,
+}: CreateContextOptions) {
 	// Initialize database
 	const db = createDb(env.bettaresume_d1);
 
@@ -200,7 +211,13 @@ export async function createContext({ request, env }: CreateContextOptions) {
 		// Credentials were supplied but verification threw (Clerk outage, network
 		// failure, malformed token, ...). Do NOT silently degrade to "logged out":
 		// that hides a real outage behind a benign-looking anonymous response.
-		console.error("Error creating context:", error);
+		//
+		// The id leads the line so a user who quotes the `x-request-id` from their
+		// response can find this entry with one grep.
+		console.error(
+			`[${requestId ?? "no-request-id"}] Error creating context:`,
+			error,
+		);
 
 		if (hasCredentials(request)) {
 			throw new TRPCError({

@@ -1,0 +1,186 @@
+name: D1 backup
+
+# Nightly logical export of the production database.
+#
+# This is the only stateful thing in the product. The Worker and the static site
+# can both be rebuilt from the repository in minutes; the users' resumes cannot be
+# rebuilt from anything. Before this workflow there was no copy of them anywhere
+# except Cloudflare's own storage, and `docs/BACKUP.md` records that a restore had
+# never been rehearsed.
+#
+# It talks to the D1 export API directly rather than through `wrangler d1 export`
+# because the repository's `api/wrangler.jsonc` carries `$D1_DATABASE_ID`-style
+# placeholders that CI substitutes at deploy time. A backup job that needed that
+# substitution would need a copy of it, and a second copy of logic that has already
+# shipped a broken config twice is exactly the thing to avoid. The API needs two
+# ids and a token, so there is nothing to substitute.
+#
+# Scheduled at 03:17 UTC: the export makes the database briefly unavailable to
+# serve queries while it runs, and that hour is the quietest this product has.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "d1-backup"
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Export the database
+        id: export
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+          D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${D1_DATABASE_ID:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID or D1_DATABASE_ID repository variable is unset."
+            exit 1
+          fi
+
+          endpoint="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/export"
+          bookmark=""
+
+          # Poll to completion. The API documents that an in-progress export which
+          # stops being polled is cancelled, so this loop is not optional.
+          for attempt in $(seq 1 60); do
+            if [ -z "$bookmark" ]; then
+              body='{"output_format":"polling"}'
+            else
+              body=$(jq -nc --arg b "$bookmark" '{output_format:"polling", current_bookmark:$b}')
+            fi
+
+            response=$(curl -sS --fail-with-body -X POST "$endpoint" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$body") || {
+                echo "::error::The D1 export request failed (attempt ${attempt})."
+                echo "$response" | head -40 >&2 || true
+                exit 1
+              }
+
+            if [ "$(echo "$response" | jq -r '.success')" != "true" ]; then
+              echo "::error::Cloudflare rejected the export request."
+              echo "$response" | jq -r '.errors[]? | "\(.code): \(.message)"' >&2 || true
+              # 7403 is the scope failure that also blocks deploys; name it so the
+              # fix is obvious rather than being read as a transient error.
+              if echo "$response" | grep -q '7403'; then
+                echo "::error::CLOUDFLARE_API_TOKEN lacks D1 permission (7403)."
+              fi
+              exit 1
+            fi
+
+            status=$(echo "$response" | jq -r '.result.status')
+            bookmark=$(echo "$response" | jq -r '.result.at_bookmark // ""')
+            echo "attempt ${attempt}: ${status}"
+
+            if [ "$status" = "complete" ]; then
+              echo "$response" | jq -r '.result.result.signed_url' > /tmp/signed_url
+              echo "$response" | jq -r '.result.result.filename' > /tmp/filename
+              break
+            fi
+            if [ "$status" = "error" ]; then
+              echo "::error::The export reported an error."
+              echo "$response" | jq -r '.result.error // "unknown"' >&2
+              exit 1
+            fi
+            sleep 3
+          done
+
+          if [ ! -s /tmp/signed_url ]; then
+            echo "::error::The export did not complete within 60 polls."
+            exit 1
+          fi
+
+          # The signed URL is valid for one hour; download immediately.
+          curl -sS --fail-with-body -o backup.sql "$(cat /tmp/signed_url)"
+          gzip -9 backup.sql
+
+          echo "backup=$(pwd)/backup.sql.gz" >> "$GITHUB_OUTPUT"
+          echo "filename=$(cat /tmp/filename)" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Rehearse the restore
+        # Not a grep. This loads the export into a real SQLite database, which is
+        # the only check that proves the backup *restores* rather than merely
+        # existing. A 200 response with an empty body would otherwise be archived
+        # as a valid backup of nothing -- worse than none, because it looks like
+        # one. Running the rehearsal nightly here is also the documented
+        # procedure in docs/BACKUP.md executed on a schedule, instead of a
+        # paragraph someone is meant to follow during an outage.
+        #
+        # `sqlite3` ships on GitHub's Ubuntu images. Table names in the export
+        # are mixed: Drizzle emits `Section` and `content_items`, Cloudflare emits
+        # d1_migrations and resume_revisions, some with IF NOT EXISTS. So this
+        # asks SQLite for the schema rather than pattern-matching the SQL text.
+        run: |
+          set -euo pipefail
+
+          gunzip -kf backup.sql.gz
+          rm -f restore.db
+
+          # `foreign_keys=OFF` is required, not stylistic. D1 writes the tables in
+          # an order that does not respect their foreign keys -- `Section` is
+          # emitted before `Resume`, and its INSERTs reference a parent that does
+          # not exist yet. SQLite refuses to prepare such a statement with
+          # enforcement on (`no such table: main.Resume`), even though the export
+          # starts with `PRAGMA defer_foreign_keys=TRUE`. Turning enforcement off
+          # for the load and checking integrity afterwards is the standard restore
+          # sequence; docs/BACKUP.md records it for the manual path too.
+          {
+            echo "PRAGMA foreign_keys=OFF;"
+            cat backup.sql
+          } | sqlite3 restore.db
+
+          echo "--- restored tables ---"
+          sqlite3 restore.db "select name from sqlite_master where type='table' order by name;"
+
+          # Off during load means the load cannot tell us the data is coherent, so
+          # ask SQLite afterwards. A non-empty result is a corrupt backup.
+          violations=$(sqlite3 restore.db "PRAGMA foreign_key_check;")
+          if [ -n "$violations" ]; then
+            echo "::error::The restored database violates its own foreign keys:"
+            echo "$violations" >&2
+            exit 1
+          fi
+          echo "foreign keys: consistent"
+
+          for table in User Resume Section content_items resume_revisions; do
+            if ! sqlite3 restore.db "select name from sqlite_master where type='table' and name='${table}';" | grep -q .; then
+              echo "::error::The restored database has no ${table} table."
+              exit 1
+            fi
+            echo "  ${table}: $(sqlite3 restore.db "select count(*) from \"${table}\";") rows"
+          done
+
+          # Users, resumes and sections are the product. An empty one of those
+          # means the export captured a schema and nothing else.
+          for table in User Resume Section; do
+            rows=$(sqlite3 restore.db "select count(*) from \"${table}\";")
+            if [ "$rows" -lt 1 ]; then
+              echo "::error::${table} restored with 0 rows. Refusing to archive an empty backup."
+              exit 1
+            fi
+          done
+
+          rm -f restore.db backup.sql
+
+      - name: Upload the backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-${{ steps.export.outputs.date }}
+          path: backup.sql.gz
+          retention-days: 90
+          if-no-files-found: error
+          compression-level: 0 # already gzipped; re-compressing wastes time
