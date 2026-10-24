@@ -1,8 +1,5 @@
-﻿import type {
-	CreateResumeInput,
-	Resume,
-	UpdateResumeInput,
-} from "@bettaresume/types";
+﻿import type { CreateResumeInput, UpdateResumeInput } from "@bettaresume/types";
+import { mergeMetadata } from "@bettaresume/types";
 import { api } from "@/lib/trpc/react";
 
 /**
@@ -29,11 +26,27 @@ export function useResumeMutations() {
 
 			// Optimistically update single resume
 			if (previousResume) {
-				utils.resume.getById.setData({ id }, {
-					...previousResume,
-					...data,
-					updatedAt: new Date(),
-				} as any);
+				utils.resume.getById.setData(
+					{ id },
+					{
+						...previousResume,
+						...data,
+						/*
+						 * Metadata is merged with the same function the API uses.
+						 *
+						 * `data` carries a *partial* metadata patch — a font change sends
+						 * `{ settings: { fontFamily } }` and nothing else. A shallow spread
+						 * replaced the whole blob, so `personalInfo` and the rest of `settings`
+						 * disappeared from the cache until the refetch landed. The `as any` that
+						 * used to be here is what let that through the typechecker.
+						 */
+						metadata: mergeMetadata(
+							previousResume.metadata,
+							data.metadata as unknown as Record<string, unknown> | undefined,
+						),
+						updatedAt: new Date(),
+					},
+				);
 			}
 
 			return { previousResume };
@@ -92,13 +105,9 @@ export function useResumeMutations() {
 					undefined,
 					previousList.map((r) =>
 						r.id === id
-							? ({
-									...r,
-									isArchived: archived,
-									updatedAt: new Date(),
-								} as Resume)
+							? { ...r, isArchived: archived, updatedAt: new Date() }
 							: r,
-					) as any,
+					),
 				);
 			}
 

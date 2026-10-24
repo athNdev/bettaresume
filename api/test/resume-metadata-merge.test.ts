@@ -78,6 +78,25 @@ const FULL_METADATA = {
 	],
 } as unknown as ResumeMetadata;
 
+/**
+ * The stored metadata, or a failure that says which assumption broke.
+ *
+ * Every test here read this as `await storedMetadata(h, ID)` — two non-null
+ * assertions. If the row were missing, the test would fail with "Cannot read
+ * properties of null" on the next line rather than with the reason, and if the
+ * column were NULL it would fail inside a JSON parse. Naming the assumption makes
+ * a failure in a shared harness readable.
+ */
+async function storedMetadata(
+	h: ReturnType<typeof createHarness>,
+	id: string,
+): Promise<ResumeMetadata> {
+	const row = await h.resume(id);
+	if (!row) throw new Error(`resume ${id} is missing`);
+	if (!row.metadata) throw new Error(`resume ${id} has no metadata`);
+	return JSON.parse(row.metadata) as ResumeMetadata;
+}
+
 async function seedFullMetadata() {
 	const h = createHarness();
 	await h.raw.update(resumes).set({
@@ -102,9 +121,7 @@ describe("resume.update metadata", () => {
 				},
 			});
 
-			const after = JSON.parse(
-				(await h.resume(RESUME_A))!.metadata!,
-			) as ResumeMetadata;
+			const after = await storedMetadata(h, RESUME_A);
 
 			// The patch landed.
 			expect(after.settings.fontFamily).toBe("Georgia");
@@ -133,9 +150,7 @@ describe("resume.update metadata", () => {
 				},
 			});
 
-			const after = JSON.parse(
-				(await h.resume(RESUME_A))!.metadata!,
-			) as ResumeMetadata;
+			const after = await storedMetadata(h, RESUME_A);
 
 			// The one key changed...
 			expect(after.settings.margins.top).toBe(72);
@@ -167,9 +182,7 @@ describe("resume.update metadata", () => {
 				data: { metadata: { settings: { lineHeight: 1.8 } } as never },
 			});
 
-			const after = JSON.parse(
-				(await h.resume(RESUME_A))!.metadata!,
-			) as ResumeMetadata;
+			const after = await storedMetadata(h, RESUME_A);
 			expect(after.settings.lineHeight).toBe(1.8);
 			expect(after.personalInfo).toEqual(FULL_METADATA.personalInfo);
 		} finally {
@@ -198,9 +211,7 @@ describe("resume.update metadata", () => {
 				},
 			});
 
-			const after = JSON.parse(
-				(await h.resume(RESUME_A))!.metadata!,
-			) as ResumeMetadata;
+			const after = await storedMetadata(h, RESUME_A);
 			// The caller sent the array it wants stored. Concatenating would make an
 			// explicit shrink impossible and would duplicate history on every save.
 			expect(after.exportHistory).toEqual([
@@ -228,7 +239,9 @@ describe("resume.update metadata", () => {
 				data: { metadata: null },
 			});
 
-			expect((await h.resume(RESUME_A))?.metadata).toBeNull();
+			const cleared = await h.resume(RESUME_A);
+			expect(cleared, "the row survives a null metadata write").toBeTruthy();
+			expect(cleared?.metadata).toBeNull();
 		} finally {
 			h.close();
 		}
@@ -243,9 +256,7 @@ describe("resume.update metadata", () => {
 
 			const row = await h.resume(RESUME_A);
 			expect(row?.name).toBe("Renamed");
-			expect(JSON.parse(row!.metadata!)).toEqual(
-				JSON.parse(JSON.stringify(FULL_METADATA)),
-			);
+			expect(await storedMetadata(h, RESUME_A)).toEqual(FULL_METADATA);
 		} finally {
 			h.close();
 		}
@@ -262,9 +273,7 @@ describe("resume.update metadata", () => {
 				data: { metadata: { settings: { fontSize: 14 } } as never },
 			});
 
-			const after = JSON.parse(
-				(await h.resume(RESUME_A))!.metadata!,
-			) as ResumeMetadata;
+			const after = await storedMetadata(h, RESUME_A);
 			expect(after.settings.fontSize).toBe(14);
 		} finally {
 			h.close();

@@ -9,6 +9,7 @@ import type {
 import {
 	createResumeInputSchema,
 	createVariationInputSchema,
+	deepMergeMetadata,
 	updateResumeInputSchema,
 } from "@bettaresume/types";
 import { and, desc, eq } from "drizzle-orm";
@@ -18,192 +19,131 @@ import { protectedProcedure, router } from "../index";
 import { resumeWriteScope } from "../middleware/ownership";
 import { maybeSnapshot } from "./revision";
 
+/**
+ * Read an untrusted value as a plain record.
+ *
+ * Stored metadata is JSON of unknown shape: it can predate the current schema, be
+ * hand-edited through the API, or have been written by a client that sent a string where
+ * an object belongs. Every reader below starts here, so "it is not an object" has exactly
+ * one answer — an empty record, whose fields all fall back to their defaults.
+ */
+function record(value: unknown): Record<string, unknown> {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {};
+}
+
+/** A finite number, or the fallback. */
+function num(value: unknown, fallback: number): number {
+	return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+/** A string, or the fallback. */
+function str(value: unknown, fallback = ""): string {
+	return typeof value === "string" ? value : fallback;
+}
+
+/** One of the allowed values, or the fallback. */
+function oneOf<T extends string>(
+	value: unknown,
+	allowed: readonly T[],
+	fallback: T,
+): T {
+	return typeof value === "string" &&
+		(allowed as readonly string[]).includes(value)
+		? (value as T)
+		: fallback;
+}
+
+const FONT_FAMILIES: readonly FontFamily[] = [
+	"Inter",
+	"Roboto",
+	"Open Sans",
+	"Lato",
+	"Montserrat",
+	"Playfair Display",
+	"Georgia",
+	"Times New Roman",
+	"Arial",
+	"Calibri",
+	"Garamond",
+	"Helvetica",
+	"Computer Modern",
+];
+
+const PAGE_SIZES = ["A4", "Letter"] as const;
+const SECTION_SPACINGS = ["compact", "normal", "spacious"] as const;
+const DATE_FORMATS = ["MM/YYYY", "MMM YYYY", "MMMM YYYY", "YYYY"] as const;
+const ACCENT_STYLES = ["underline", "background", "border", "none"] as const;
+
 function normalizePersonalInfo(value: unknown): PersonalInfo {
-	const info =
-		value && typeof value === "object"
-			? (value as Record<string, unknown>)
-			: {};
+	const info = record(value);
 	return {
-		fullName: typeof info.fullName === "string" ? info.fullName : "",
-		email: typeof info.email === "string" ? info.email : "",
-		phone: typeof info.phone === "string" ? info.phone : "",
-		location: typeof info.location === "string" ? info.location : "",
-		linkedin: typeof info.linkedin === "string" ? info.linkedin : "",
-		github: typeof info.github === "string" ? info.github : "",
-		website: typeof info.website === "string" ? info.website : "",
-		portfolio: typeof info.portfolio === "string" ? info.portfolio : "",
-		professionalTitle:
-			typeof info.professionalTitle === "string" ? info.professionalTitle : "",
-		photoUrl: typeof info.photoUrl === "string" ? info.photoUrl : "",
+		fullName: str(info.fullName),
+		email: str(info.email),
+		phone: str(info.phone),
+		location: str(info.location),
+		linkedin: str(info.linkedin),
+		github: str(info.github),
+		website: str(info.website),
+		portfolio: str(info.portfolio),
+		professionalTitle: str(info.professionalTitle),
+		photoUrl: str(info.photoUrl),
 	};
 }
 
+/**
+ * Coerce stored settings to a complete, valid object.
+ *
+ * This used to be forty repetitions of
+ *
+ *     typeof settings.margins === "object" && settings.margins &&
+ *     typeof (settings.margins as any).top === "number"
+ *         ? (settings.margins as any).top
+ *         : 20,
+ *
+ * — 34 `as any` casts, each one a place the compiler was told not to check. The four
+ * helpers above say the same thing once. The cast is now inside `record`, where it is
+ * checked, instead of at every field.
+ */
 function normalizeSettings(value: unknown): ResumeSettings {
-	// This is a simplified normalization - in a real app you'd want more comprehensive defaults
-	const settings =
-		value && typeof value === "object"
-			? (value as Record<string, unknown>)
-			: {};
+	const settings = record(value);
+	const margins = record(settings.margins);
+	const typography = record(settings.typography);
+	const colors = record(settings.colors);
+
 	return {
-		pageSize:
-			typeof settings.pageSize === "string" &&
-			(settings.pageSize === "A4" || settings.pageSize === "Letter")
-				? settings.pageSize
-				: "A4",
+		pageSize: oneOf(settings.pageSize, PAGE_SIZES, "A4"),
 		margins: {
-			top:
-				typeof settings.margins === "object" &&
-				settings.margins &&
-				typeof (settings.margins as any).top === "number"
-					? (settings.margins as any).top
-					: 20,
-			right:
-				typeof settings.margins === "object" &&
-				settings.margins &&
-				typeof (settings.margins as any).right === "number"
-					? (settings.margins as any).right
-					: 20,
-			bottom:
-				typeof settings.margins === "object" &&
-				settings.margins &&
-				typeof (settings.margins as any).bottom === "number"
-					? (settings.margins as any).bottom
-					: 20,
-			left:
-				typeof settings.margins === "object" &&
-				settings.margins &&
-				typeof (settings.margins as any).left === "number"
-					? (settings.margins as any).left
-					: 20,
+			top: num(margins.top, 20),
+			right: num(margins.right, 20),
+			bottom: num(margins.bottom, 20),
+			left: num(margins.left, 20),
 		},
-		fontSize: typeof settings.fontSize === "number" ? settings.fontSize : 12,
-		fontScale: typeof settings.fontScale === "number" ? settings.fontScale : 1,
+		fontSize: num(settings.fontSize, 12),
+		fontScale: num(settings.fontScale, 1),
 		typography: {
-			name:
-				typeof settings.typography === "object" &&
-				settings.typography &&
-				typeof (settings.typography as any).name === "number"
-					? (settings.typography as any).name
-					: 24,
-			title:
-				typeof settings.typography === "object" &&
-				settings.typography &&
-				typeof (settings.typography as any).title === "number"
-					? (settings.typography as any).title
-					: 18,
-			sectionHeading:
-				typeof settings.typography === "object" &&
-				settings.typography &&
-				typeof (settings.typography as any).sectionHeading === "number"
-					? (settings.typography as any).sectionHeading
-					: 14,
-			itemTitle:
-				typeof settings.typography === "object" &&
-				settings.typography &&
-				typeof (settings.typography as any).itemTitle === "number"
-					? (settings.typography as any).itemTitle
-					: 12,
-			body:
-				typeof settings.typography === "object" &&
-				settings.typography &&
-				typeof (settings.typography as any).body === "number"
-					? (settings.typography as any).body
-					: 10,
-			small:
-				typeof settings.typography === "object" &&
-				settings.typography &&
-				typeof (settings.typography as any).small === "number"
-					? (settings.typography as any).small
-					: 8,
+			name: num(typography.name, 24),
+			title: num(typography.title, 18),
+			sectionHeading: num(typography.sectionHeading, 14),
+			itemTitle: num(typography.itemTitle, 12),
+			body: num(typography.body, 10),
+			small: num(typography.small, 8),
 		},
-		lineHeight:
-			typeof settings.lineHeight === "number" ? settings.lineHeight : 1.4,
-		fontFamily:
-			typeof settings.fontFamily === "string" &&
-			[
-				"Inter",
-				"Roboto",
-				"Open Sans",
-				"Lato",
-				"Montserrat",
-				"Playfair Display",
-				"Georgia",
-				"Times New Roman",
-				"Arial",
-				"Calibri",
-				"Garamond",
-				"Helvetica",
-				"Computer Modern",
-			].includes(settings.fontFamily)
-				? (settings.fontFamily as FontFamily)
-				: "Inter",
+		lineHeight: num(settings.lineHeight, 1.4),
+		fontFamily: oneOf(settings.fontFamily, FONT_FAMILIES, "Inter"),
 		colors: {
-			primary:
-				typeof settings.colors === "object" &&
-				settings.colors &&
-				typeof (settings.colors as any).primary === "string"
-					? (settings.colors as any).primary
-					: "#000000",
-			secondary:
-				typeof settings.colors === "object" &&
-				settings.colors &&
-				typeof (settings.colors as any).secondary === "string"
-					? (settings.colors as any).secondary
-					: "#666666",
-			text:
-				typeof settings.colors === "object" &&
-				settings.colors &&
-				typeof (settings.colors as any).text === "string"
-					? (settings.colors as any).text
-					: "#000000",
-			heading:
-				typeof settings.colors === "object" &&
-				settings.colors &&
-				typeof (settings.colors as any).heading === "string"
-					? (settings.colors as any).heading
-					: "#000000",
-			accent:
-				typeof settings.colors === "object" &&
-				settings.colors &&
-				typeof (settings.colors as any).accent === "string"
-					? (settings.colors as any).accent
-					: "#007acc",
-			background:
-				typeof settings.colors === "object" &&
-				settings.colors &&
-				typeof (settings.colors as any).background === "string"
-					? (settings.colors as any).background
-					: "#ffffff",
-			divider:
-				typeof settings.colors === "object" &&
-				settings.colors &&
-				typeof (settings.colors as any).divider === "string"
-					? (settings.colors as any).divider
-					: "#cccccc",
+			primary: str(colors.primary, "#000000"),
+			secondary: str(colors.secondary, "#666666"),
+			text: str(colors.text, "#000000"),
+			heading: str(colors.heading, "#000000"),
+			accent: str(colors.accent, "#007acc"),
+			background: str(colors.background, "#ffffff"),
+			divider: str(colors.divider, "#cccccc"),
 		},
-		sectionSpacing:
-			typeof settings.sectionSpacing === "string" &&
-			(settings.sectionSpacing === "compact" ||
-				settings.sectionSpacing === "normal" ||
-				settings.sectionSpacing === "spacious")
-				? settings.sectionSpacing
-				: "normal",
-		dateFormat:
-			typeof settings.dateFormat === "string" &&
-			(settings.dateFormat === "MM/YYYY" ||
-				settings.dateFormat === "MMM YYYY" ||
-				settings.dateFormat === "MMMM YYYY" ||
-				settings.dateFormat === "YYYY")
-				? settings.dateFormat
-				: "MM/YYYY",
-		accentStyle:
-			typeof settings.accentStyle === "string" &&
-			(settings.accentStyle === "underline" ||
-				settings.accentStyle === "background" ||
-				settings.accentStyle === "border" ||
-				settings.accentStyle === "none")
-				? settings.accentStyle
-				: "underline",
+		sectionSpacing: oneOf(settings.sectionSpacing, SECTION_SPACINGS, "normal"),
+		dateFormat: oneOf(settings.dateFormat, DATE_FORMATS, "MM/YYYY"),
+		accentStyle: oneOf(settings.accentStyle, ACCENT_STYLES, "underline"),
 	};
 }
 
@@ -233,51 +173,6 @@ function normalizeMetadata(value: unknown): ResumeMetadata | null {
 		metadata.atsScore = obj.atsScore as NonNullable<ResumeMetadata["atsScore"]>;
 	}
 	return metadata;
-}
-
-/**
- * Recursively merge `patch` into `base`, returning a new object.
- *
- * Plain objects merge key-by-key at every depth, because the metadata schema is
- * nested and partial at several levels: `settings.margins`, `settings.typography`
- * and `settings.colors` are all `.partial()`. A shallow merge would replace
- * `margins` wholesale when a caller meant to change only `margins.top`.
- *
- * Arrays replace rather than concatenate. `exportHistory` is append-only by
- * intent, but the caller sends the array it wants stored, and silently
- * concatenating would make an explicit shrink impossible.
- *
- * `undefined` in the patch is ignored, so a spread of an object with absent
- * optional keys cannot erase stored data. An explicit `null` is kept, so a
- * caller can still clear a single branch.
- */
-function deepMergeMetadata(
-	base: Record<string, unknown>,
-	patch: Record<string, unknown>,
-): Record<string, unknown> {
-	const out: Record<string, unknown> = { ...base };
-
-	for (const [key, value] of Object.entries(patch)) {
-		if (value === undefined) continue;
-
-		const existing = out[key];
-		const bothPlainObjects =
-			value !== null &&
-			typeof value === "object" &&
-			!Array.isArray(value) &&
-			existing !== null &&
-			typeof existing === "object" &&
-			!Array.isArray(existing);
-
-		out[key] = bothPlainObjects
-			? deepMergeMetadata(
-					existing as Record<string, unknown>,
-					value as Record<string, unknown>,
-				)
-			: value;
-	}
-
-	return out;
 }
 
 function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {

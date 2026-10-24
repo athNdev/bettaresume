@@ -26,6 +26,7 @@ import type { Education } from "@/features/resume-editor/types";
 import { createDefaultEducation } from "@/features/resume-editor/types";
 import { useAutoSave, useBeforeUnload } from "@/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
+import { moveItem } from "@/lib/collections";
 
 interface EducationFormProps {
 	data: Education[];
@@ -89,13 +90,7 @@ export function EducationForm({
 		(index: number, direction: "up" | "down") => {
 			const newIndex = direction === "up" ? index - 1 : index + 1;
 			if (newIndex < 0 || newIndex >= localData.length) return;
-			setLocalData((prev) => {
-				const newData = [...prev];
-				const temp = newData[index]!;
-				newData[index] = newData[newIndex]!;
-				newData[newIndex] = temp;
-				return newData;
-			});
+			setLocalData((prev) => moveItem(prev, index, newIndex));
 		},
 		[localData.length, setLocalData],
 	);
@@ -344,6 +339,7 @@ export function EducationForm({
 										<Label>Achievements</Label>
 										<div className="mt-2 space-y-2">
 											{edu.achievements?.map((item, i) => (
+												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
 													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
 														{item}
@@ -402,6 +398,7 @@ export function EducationForm({
 										<Label>Relevant Coursework</Label>
 										<div className="mt-2 space-y-2">
 											{edu.coursework?.map((item, i) => (
+												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
 													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
 														{item}
@@ -458,6 +455,7 @@ export function EducationForm({
 										<Label>Honors & Awards</Label>
 										<div className="mt-2 space-y-2">
 											{edu.honors?.map((item, i) => (
+												// biome-ignore lint/suspicious/noArrayIndexKey: a plain string in a display-only list, and remove(i) addresses it by index
 												<div className="flex items-center gap-2" key={i}>
 													<span className="flex-1 rounded bg-muted px-3 py-1.5 text-sm">
 														{item}

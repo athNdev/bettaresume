@@ -137,6 +137,13 @@ export function useAutoSave<T>({
 	// Read by the unmount flush, which must not re-subscribe to every keystroke.
 	const localDataRef = useRef<T>(data);
 	const onSaveRef = useRef<((data: T) => Promise<void>) | undefined>(onSave);
+	//
+	// `enabled` is read by the unmount flush too, and listing it as a dependency would
+	// tear the effect down and rebuild it every time it changed — the opposite of what
+	// "run this on unmount" means. Reading a ref that is current at unmount time is the
+	// behaviour the flush actually wants: was auto-save enabled when the user left?
+	const enabledRef = useRef(enabled);
+	enabledRef.current = enabled;
 
 	useEffect(() => {
 		localDataRef.current = localData;
@@ -163,7 +170,7 @@ export function useAutoSave<T>({
 		return () => {
 			isMountedRef.current = false;
 			const flush = shouldFlushOnUnmount({
-				enabled,
+				enabled: enabledRef.current,
 				hasPendingTimer: debounceTimerRef.current !== null,
 				localJson: JSON.stringify(localDataRef.current),
 				savedJson: savedDataRef.current,
@@ -171,8 +178,6 @@ export function useAutoSave<T>({
 			debounceTimerRef.current = null;
 			if (flush) void onSaveRef.current?.(localDataRef.current);
 		};
-		// biome-ignore lint/correctness/useExhaustiveDependencies: the flush reads
-		// refs, so re-subscribing on every keystroke would defeat the purpose.
 	}, []);
 
 	// Sync local data when server data changes (only if not dirty)

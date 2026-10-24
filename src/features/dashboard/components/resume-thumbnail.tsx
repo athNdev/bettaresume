@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Preview } from "@/features/resume-editor/components/preview";
 import type { Resume } from "@/features/resume-editor/types";
 import { cn } from "@/lib/utils";
@@ -81,10 +81,11 @@ export function ResumeThumbnail({
 		return () => obs.disconnect();
 	}, []);
 
-	const pageWidthPx = useMemo(
-		() => getPageWidthPx(resume),
-		[resume.metadata?.settings?.pageSize],
-	);
+	// A `useMemo` keyed on the page-size string, reading the whole `resume` — which is
+	// what the dependency rule is complaining about, correctly: the memo captured a
+	// `resume` that its key did not describe. The function is a two-branch switch, so
+	// the memo was buying nothing anyway.
+	const pageWidthPx = getPageWidthPx(resume);
 
 	useEffect(() => {
 		if (!mounted) return;

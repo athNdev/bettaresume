@@ -125,6 +125,7 @@ function DashboardSkeleton() {
 				 */}
 				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					{Array.from({ length: 8 }).map((_, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length row of placeholders
 						<ResumeCardSkeleton key={i} />
 					))}
 				</div>
@@ -232,6 +233,13 @@ function DashboardContent() {
 		[filteredResumes.length],
 	);
 
+	/*
+	 * The dependencies are the trigger, not inputs: this is "when the filters change, go back
+	 * to page one". The effect body does not read them, so the rule is right that they are
+	 * unused — and removing them would delete the behaviour, because the list would then
+	 * stay on a page that the new filter may not have.
+	 */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: filters are the trigger
 	useEffect(() => {
 		setPage(1);
 	}, [searchQuery, showArchived, selectedTemplate]);
@@ -592,7 +600,11 @@ function DashboardContent() {
 				 */}
 				<div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					<div className="flex items-center gap-4">
-						<button className="font-bold text-xl" onClick={() => navigate("/")}>
+						<button
+							className="font-bold text-xl"
+							onClick={() => navigate("/")}
+							type="button"
+						>
 							Betta Resume
 						</button>
 					</div>

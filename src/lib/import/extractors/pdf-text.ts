@@ -467,7 +467,7 @@ export function joinLines(lines: TextLine[]): string {
 		const text = line.text.trim();
 		if (!text) continue;
 		const previous = out.at(-1);
-		if (previous && previous.endsWith("-") && /^[a-z]/.test(text)) {
+		if (previous?.endsWith("-") && /^[a-z]/.test(text)) {
 			out[out.length - 1] = `${previous.slice(0, -1)}${text}`;
 			continue;
 		}

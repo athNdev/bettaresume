@@ -18,6 +18,7 @@ import type {
 	Volunteer,
 } from "@/features/resume-editor/types";
 
+import { keyedByContent } from "@/lib/collections";
 import { formatDateRange, formatResumeDate } from "@/lib/format-date";
 import { resolveTypstFont } from "@/lib/typst/fonts";
 import { cn } from "@/lib/utils";
@@ -359,17 +360,19 @@ export function Preview({
 						)}
 						{exp.highlights && exp.highlights.length > 0 && (
 							<ul style={{ paddingLeft: 16 * scale, marginTop: 4 * scale }}>
-								{exp.highlights.map((h, i) => (
-									<li
-										key={`${exp.id}-${h}-${i}`}
-										style={{
-											fontSize: typography.body * scale,
-											marginBottom: 2 * scale,
-										}}
-									>
-										{h}
-									</li>
-								))}
+								{keyedByContent(exp.highlights, (h) => h).map(
+									({ key, item: h }) => (
+										<li
+											key={`${exp.id}-${key}`}
+											style={{
+												fontSize: typography.body * scale,
+												marginBottom: 2 * scale,
+											}}
+										>
+											{h}
+										</li>
+									),
+								)}
 							</ul>
 						)}
 					</div>
@@ -517,20 +520,22 @@ export function Preview({
 									marginTop: 4 * scale,
 								}}
 							>
-								{proj.technologies.map((tech, i) => (
-									<span
-										key={`${proj.id}-${tech}-${i}`}
-										style={{
-											fontSize: typography.small * scale,
-											backgroundColor: `${colors.accent}20`,
-											color: colors.accent,
-											padding: `${2 * scale}px ${6 * scale}px`,
-											borderRadius: 4 * scale,
-										}}
-									>
-										{tech}
-									</span>
-								))}
+								{keyedByContent(proj.technologies, (tech) => tech).map(
+									({ key, item: tech }) => (
+										<span
+											key={`${proj.id}-${key}`}
+											style={{
+												fontSize: typography.small * scale,
+												backgroundColor: `${colors.accent}20`,
+												color: colors.accent,
+												padding: `${2 * scale}px ${6 * scale}px`,
+												borderRadius: 4 * scale,
+											}}
+										>
+											{tech}
+										</span>
+									),
+								)}
 							</div>
 						)}
 					</div>
@@ -734,17 +739,19 @@ export function Preview({
 									marginTop: 4 * scale,
 								}}
 							>
-								{vol.highlights.map((h, i) => (
-									<li
-										key={`${vol.id}-${i}`}
-										style={{
-											fontSize: typography.body * scale,
-											marginBottom: 2 * scale,
-										}}
-									>
-										{h}
-									</li>
-								))}
+								{keyedByContent(vol.highlights, (h) => h).map(
+									({ key, item: h }) => (
+										<li
+											key={`${vol.id}-${key}`}
+											style={{
+												fontSize: typography.body * scale,
+												marginBottom: 2 * scale,
+											}}
+										>
+											{h}
+										</li>
+									),
+								)}
 							</ul>
 						)}
 					</div>

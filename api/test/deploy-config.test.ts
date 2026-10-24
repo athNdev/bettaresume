@@ -224,9 +224,14 @@ describe("the CORS allow-list is configured, not assumed", () => {
 		expect(ci).toMatch(/--max-diagnostics=/);
 		const cap = Number(ci.match(/--max-diagnostics=(\d+)/)?.[1] ?? 0);
 		expect(cap).toBeGreaterThan(0);
-		// And the baseline must sit above the cap, or it saturates again.
+
+		// The baseline is zero now, and it must stay a readable number rather than
+		// anything that parses as NaN: `NaN > baseline` is false, so a malformed
+		// baseline silently disables the gate instead of failing it.
 		const baseline = Number(read("../../.github/biome-baseline.txt").trim());
-		expect(baseline).toBeGreaterThan(0);
+		expect(Number.isFinite(baseline)).toBe(true);
+		expect(baseline).toBeGreaterThanOrEqual(0);
+		// Any nonzero baseline must sit below the cap, or it saturates again.
 		expect(baseline).toBeLessThan(cap);
 	});
 

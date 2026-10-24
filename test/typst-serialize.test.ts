@@ -247,6 +247,10 @@ describe("serializeSection — coverage across every SectionType", () => {
 			(s) => s.type === type,
 		);
 
+		// `expect(fixture).toBeDefined()` above does not narrow the type, so this used to
+		// be `fixture!.marker`. Throwing names the same failure the assertion does.
+		if (!fixture) throw new Error(`No fixture for ${type}`);
+
 		// Assert on the SECTION ENTRY, not on the whole document. Asserting
 		// `expect(json).toContain(marker)` is too weak: the top-level
 		// `personalInfo` payload can satisfy it even when the section itself
@@ -255,7 +259,7 @@ describe("serializeSection — coverage across every SectionType", () => {
 			JSON.stringify(entry),
 			`Section type "${type}" serialised without its content. The serialiser ` +
 				`fell through to its default branch.`,
-		).toContain(fixture!.marker);
+		).toContain(fixture.marker);
 	});
 
 	it("has a fixture for every type and no fixture for a type that does not exist", () => {
