@@ -272,13 +272,22 @@ changes line wrapping, which changes the **page count**, silently.
 
 Metric-compatible substitutes (Tinos↔Times, Arimo↔Arial/Helvetica,
 Carlito↔Calibri) would preserve page count far better than the current
-substitutions. They are not wired because their `fonts.gstatic.com` paths are
-content-hashed and a guessed URL silently degrades back to substitution. **Do not
-add one without verifying the URL resolves.**
+substitutions. They are not wired because there is no vendored file for them yet.
+**To add one, run `node scripts/vendor-fonts.mjs` after adding the family to both
+`FONT_FILES` and that script — and verify the file on disk.** `test/typst-assets.test.ts`
+asserts every declared path exists and starts with a font signature, because the old
+approach (pinned `fonts.gstatic.com` URLs) had rotted to 404 on three of nine families
+without anything failing.
 
-**Rendering is unverified in CI.** No browser, and the WASM is fetched from a CDN
-at runtime, so no test here can prove a PDF's page count. Anything claiming to
-have verified PDF output from a headless node has not.
+**Nothing is fetched from a CDN at runtime any more.** The Typst WASM modules are copied
+out of `node_modules` into `public/wasm/` by `scripts/copy-typst-assets.mjs`, which runs
+from `prebuild` and `predev`; that directory is gitignored, because the source of truth is
+the lockfile. The typefaces are vendored in `public/fonts/` (committed — they are the
+thing that rotted) and refreshed by `scripts/vendor-fonts.mjs`, which is deliberately
+**not** a build step so a build cannot fail because GitHub or Google is unreachable.
+
+**Rendering is unverified in CI.** No browser, so no test here can prove a PDF's page
+count. Anything claiming to have verified PDF output from a headless node has not.
 
 ### 2.14 Raw SQL seed data bypasses every schema — validate it in a test
 

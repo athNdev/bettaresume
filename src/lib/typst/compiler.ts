@@ -8,12 +8,13 @@
  * downloaded and instantiated on the first compile call, then cached for
  * the lifetime of the page.
  *
- * Fonts are loaded from Google Fonts CDN on demand and cached per family.
+ * Fonts are vendored under `public/fonts/` and loaded from this origin on demand, then
+ * cached per family. Nothing here touches a CDN.
  */
 import {
+	FONT_FILES,
 	type FontResolution,
 	fontSubstitutionWarning,
-	GOOGLE_FONT_URLS,
 	isEmbeddableFont,
 	resolveTypstFont,
 } from "./fonts";
@@ -42,16 +43,37 @@ let $typst: TypstSnippet | null = null;
 // -------------------------------------------------------
 // Initialization
 // -------------------------------------------------------
+
+/**
+ * Prefix for the WASM paths.
+ *
+ * Empty for a root deploy (which is what `app.bettaresume.com` is) and settable for a
+ * project-pages style deploy under a subpath. Kept as a function rather than a constant
+ * so the value is read when the module loads, after env inlining, and so a test can
+ * assert the CDN is gone without a DOM.
+ */
+function assetBase(): string {
+	return process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+}
+
+/**
+ * Load a family's vendored files and hand them to the compiler.
+ *
+ * The bytes come from `public/fonts/` on this origin. They used to come from
+ * `fonts.gstatic.com`, and three of the nine pinned URLs had rotted to 404 — including
+ * both Inter files, so the default export had been quietly substituting a face.
+ */
 async function loadFontFamily(fontFamily: string): Promise<void> {
 	if (loadedFonts.has(fontFamily)) return;
 	loadedFonts.add(fontFamily); // mark early to prevent duplicate loads
 
-	const urls = GOOGLE_FONT_URLS[fontFamily];
-	if (!urls || urls.length === 0) return;
+	const paths = FONT_FILES[fontFamily];
+	if (!paths || paths.length === 0) return;
 
 	try {
 		const buffers = await Promise.all(
-			urls.map(async (url) => {
+			paths.map(async (path: string) => {
+				const url = `${assetBase()}${path}`;
 				const res = await fetch(url);
 				if (!res.ok) throw new Error(`Failed to fetch font: ${url}`);
 				return new Uint8Array(await res.arrayBuffer());
@@ -83,14 +105,17 @@ async function initCompiler(): Promise<void> {
 			.$typst as TypstSnippet;
 		$typst = inst;
 
-		// Point to the CDN-hosted WASM modules — they will be cached by the browser
+		// Point at the modules this build ships, not at a CDN. `prebuild`/`predev` copy
+		// them out of node_modules into `public/wasm/`; see scripts/copy-typst-assets.mjs.
+		// Loading them from our own origin removes a third-party request from the export
+		// path, a runtime dependency on jsDelivr keeping a pre-release tag alive, and the
+		// only place in the product where a personal document's export leaked the
+		// visitor's IP to somebody else's server.
 		inst.setCompilerInitOptions({
-			getModule: () =>
-				"https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler@0.7.0-rc2/pkg/typst_ts_web_compiler_bg.wasm",
+			getModule: () => `${assetBase()}/wasm/typst_ts_web_compiler_bg.wasm`,
 		});
 		inst.setRendererInitOptions({
-			getModule: () =>
-				"https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer@0.7.0-rc2/pkg/typst_ts_renderer_bg.wasm",
+			getModule: () => `${assetBase()}/wasm/typst_ts_renderer_bg.wasm`,
 		});
 
 		// Trigger a minimal compile to warm up the WASM modules

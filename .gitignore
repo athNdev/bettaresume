@@ -61,3 +61,6 @@ proxmox-jobs.sqlite3-wal
 
 # Local opencode plugin runtime artifacts
 .opencode/
+
+# Typst WASM modules copied out of node_modules by scripts/copy-typst-assets.mjs
+/public/wasm/

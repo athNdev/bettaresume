@@ -201,14 +201,22 @@ describe("webfonts are self-hosted exactly once", () => {
 		expect(layout).toMatch(/<body className=\{`\$\{fontVariables\}/);
 	});
 
-	it("keeps the export pipeline's own font fetch separate", () => {
-		// src/lib/typst/fonts.ts fetches woff2 files from fonts.gstatic.com at export time,
-		// to embed the real typeface in a PDF. That is a deliberate, different thing from a
-		// stylesheet @import, and this assertion exists so removing the @import does not
-		// become a reason to break PDF export later.
+	it("keeps the export pipeline's own font source separate, and local", () => {
+		// src/lib/typst/fonts.ts supplies the bytes the Typst compiler embeds in a PDF.
+		// That is a deliberately different thing from a stylesheet @import, and this
+		// assertion exists so removing the @import does not become a reason to break PDF
+		// export later.
+		//
+		// It used to assert `fonts.gstatic.com` was present, because the export fetched
+		// from that CDN at runtime. Three of the nine pinned URLs had rotted to 404 —
+		// including both Inter files — so the default export had been substituting a face.
+		// The files are vendored under public/fonts/ now, and the assertion is inverted:
+		// the point was always "PDF export has real font bytes", not "PDF export has a CDN".
 		const typstFonts = codeOf("src/lib/typst/fonts.ts");
 
-		expect(typstFonts).toContain("fonts.gstatic.com");
+		expect(typstFonts).toContain("FONT_FILES");
+		expect(typstFonts).toMatch(/"\/fonts\//);
+		expect(typstFonts).not.toContain("fonts.gstatic.com");
 	});
 });
 

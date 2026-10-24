@@ -147,43 +147,43 @@ export function resolveTypstFont(requested: string): FontResolution {
 /**
  * True when the family has a real font file behind it.
  *
- * Drives whether `loadFontFamily` should attempt a download at all.
+ * Drives whether `loadFontFamily` should fetch anything at all.
  */
 export function isEmbeddableFont(family: string): boolean {
 	return FONT_SPECS[family]?.embeddable ?? false;
 }
 
 /**
- * The declared font files, keyed by family.
+ * The vendored font files, keyed by family.
  *
- * These are content-hashed `fonts.gstatic.com` paths. They are pinned here rather
- * than resolved at runtime because the Typst compiler needs bytes, not CSS, and
- * the Google Fonts CSS API only serves TTF to legacy user agents — a fragile
- * thing to depend on. A stale URL degrades to a substitution rather than a
- * failure, because `loadFontFamily` catches and retries.
+ * Paths are site-relative: the files live in `public/fonts/`, are copied into the export
+ * by Next, and are fetched from this origin. Nothing here touches a CDN at runtime.
+ *
+ * ## Why they are vendored
+ *
+ * This used to be nine pinned `fonts.gstatic.com` URLs. Three of the nine returned 404
+ * — including both Inter files. Inter is the default family, so every default export had
+ * been silently substituting a different face, which is the exact defect "font
+ * substitution silently changing the rendered page" was meant to close. A URL into
+ * somebody else's versioned CDN is a promise that rots quietly; a file in this
+ * repository cannot.
+ *
+ * These are whole families from google/fonts (OFL / Apache-2.0), not the CSS API's
+ * per-subset slivers, because a resume can carry an accented name and a missing glyph is
+ * a worse failure than a larger download. Most are variable fonts — the bundled Typst is
+ * 0.14.2, whose docs state that a variable font is preferred over a static one when both
+ * support a configuration — so the `wght` axis supplies bold. Lato has no variable build
+ * and gets its static Regular and Bold.
+ *
+ * `scripts/vendor-fonts.mjs` refreshes them; it is deliberately not part of the build.
  */
-export const GOOGLE_FONT_URLS: Partial<Record<string, string[]>> = {
-	Inter: [
-		"https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-2.ttf",
-		"https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiJ-2.ttf",
-	],
-	Roboto: [
-		"https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2",
-		"https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4AMP6lQ.woff2",
-	],
-	"Open Sans": [
-		"https://fonts.gstatic.com/s/opensans/v34/memvYaGs126MiZpBA-UvWbX2vVnXBbObj2OVTSCmu1aB.woff2",
-	],
-	Lato: [
-		"https://fonts.gstatic.com/s/lato/v24/S6uyw4BMUTPHjx4wXiWtFCc.woff2",
-		"https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh6UVSwiPGQ3q5d0N7w.woff2",
-	],
-	Montserrat: [
-		"https://fonts.gstatic.com/s/montserrat/v25/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Hw5aXo.woff2",
-	],
-	"Playfair Display": [
-		"https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDQ.woff2",
-	],
+export const FONT_FILES: Partial<Record<string, string[]>> = {
+	Inter: ["/fonts/inter.ttf"],
+	Roboto: ["/fonts/roboto.ttf"],
+	"Open Sans": ["/fonts/open-sans.ttf"],
+	Lato: ["/fonts/lato.ttf", "/fonts/lato-bold.ttf"],
+	Montserrat: ["/fonts/montserrat.ttf"],
+	"Playfair Display": ["/fonts/playfair-display.ttf"],
 };
 
 /**
