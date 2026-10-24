@@ -29,6 +29,8 @@
  * types, 4 export formats, 3 templates — are each checkable in the app in under a minute.
  */
 
+import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
+
 /* --------------------------------------------------------------------------
  * 2. Features
  * -------------------------------------------------------------------------- */
@@ -246,21 +248,33 @@ export function Inspect() {
 
 const TEMPLATES = [
 	{
+		id: "minimal",
 		name: "Minimal",
 		note: "The default. One column, generous leading, nothing between the reader and the content.",
 		best: "Most applications",
+		alt: "The Minimal template: right-aligned dates, small caps section headings, and a single column of experience, education and skills for Avery Chen.",
 	},
 	{
+		id: "postgrad",
 		name: "Postgrad",
 		note: "Centred header, justified body, looser leading — the shape an academic CV is read in.",
 		best: "Research and academic roles",
+		alt: "The Postgrad template: a centred name and contact block above a justified academic CV for Avery Chen.",
 	},
 	{
+		id: "undergrad",
 		name: "Undergrad",
 		note: "Compact, with a tinted header band and tighter spacing, for a document aiming at one page.",
 		best: "First roles and internships",
+		alt: "The Undergrad template: a tinted header band above a compact one-page resume for Avery Chen.",
 	},
-] as const;
+] as const satisfies ReadonlyArray<{
+	id: keyof typeof TEMPLATE_CONFIGS;
+	name: string;
+	note: string;
+	best: string;
+	alt: string;
+}>;
 
 export function Templates() {
 	return (
@@ -274,21 +288,48 @@ export function Templates() {
 					</p>
 				</div>
 
+				{/*
+				 * Real pages, not mock-ups. Each file is compiled from `sections.typ` plus that
+				 * template's own `.typ` by the same function the export button calls, and
+				 * `test/template-gallery.test.ts` fails if they are stale. Typst outlines its
+				 * glyphs, so these are self-contained and need no web font.
+				 */}
 				<div className="mt-12 grid gap-6 md:grid-cols-3">
 					{TEMPLATES.map((template) => (
 						<article
-							className="flex flex-col rounded-xl border border-[var(--brand-rule)] bg-white p-6"
-							key={template.name}
+							className="flex flex-col overflow-hidden rounded-xl border border-[var(--brand-rule)] bg-white"
+							key={template.id}
 						>
-							<h3 className="font-semibold text-[1.1rem] text-[var(--brand-text)] tracking-tight">
-								{template.name}
-							</h3>
-							<p className="mt-2.5 flex-1 text-[0.92rem] text-[var(--brand-text-muted)] leading-relaxed">
-								{template.note}
-							</p>
-							<p className="mt-4 border-[var(--brand-rule)] border-t pt-3 text-[0.78rem] text-[var(--brand-text-faint)] uppercase tracking-wide">
-								{template.best}
-							</p>
+							<div className="border-[var(--brand-rule)] border-b bg-[var(--brand-paper)] p-3">
+								{/*
+								 * A plain `<img>`, deliberately. `next/image` cannot optimise in a static
+								 * export (`images.unoptimized` is on), and these are already-small SVG
+								 * files with outlined glyphs — there is nothing left to compress. It also
+								 * keeps the marketing page free of any client component.
+								 */}
+								{/* biome-ignore lint/performance/noImgElement: static SVG, nothing to optimise */}
+								<img
+									alt={template.alt}
+									className="mx-auto block h-auto w-full rounded-sm border border-[var(--brand-rule)] bg-white shadow-sm"
+									height={842}
+									loading="lazy"
+									// From the registry, so a renamed or removed template breaks the build
+									// here rather than silently leaving a broken image.
+									src={TEMPLATE_CONFIGS[template.id].thumbnail}
+									width={595}
+								/>
+							</div>
+							<div className="flex flex-1 flex-col p-6">
+								<h3 className="font-semibold text-[1.1rem] text-[var(--brand-text)] tracking-tight">
+									{template.name}
+								</h3>
+								<p className="mt-2.5 flex-1 text-[0.92rem] text-[var(--brand-text-muted)] leading-relaxed">
+									{template.note}
+								</p>
+								<p className="mt-4 border-[var(--brand-rule)] border-t pt-3 text-[0.78rem] text-[var(--brand-text-faint)] uppercase tracking-wide">
+									{template.best}
+								</p>
+							</div>
 						</article>
 					))}
 				</div>
