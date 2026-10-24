@@ -108,7 +108,6 @@ export function buildParseAuditInput(resume: Resume): AuditInput {
 		})),
 		dates: collectDates(sections),
 		dateFormat: resume.metadata?.settings?.dateFormat,
-		layout: resume.metadata?.settings?.layout,
 	};
 }
 

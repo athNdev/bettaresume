@@ -197,12 +197,11 @@ describe("buildParseAuditInput", () => {
 				sections: [section({ type: "summary" })],
 				metadata: {
 					personalInfo: { fullName: "A", email: "a@b.c" },
-					settings: { dateFormat: "MM/YYYY", layout: "sidebar" },
+					settings: { dateFormat: "MM/YYYY" },
 				} as never,
 			}),
 		);
 		expect(input.dateFormat).toBe("MM/YYYY");
-		expect(input.layout).toBe("sidebar");
 		expect(input.sections[0]?.title).toBe("Professional Summary");
 	});
 

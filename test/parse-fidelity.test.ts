@@ -4,7 +4,6 @@ import {
 	checkDateConsistency,
 	checkDateFormat,
 	checkHeading,
-	checkLayout,
 	DATE_FORMATS,
 	PARSER_SAFE_HEADINGS,
 } from "../src/lib/analysis/parse-fidelity";
@@ -161,20 +160,6 @@ describe("date consistency", () => {
 	});
 });
 
-describe("layout check", () => {
-	it("accepts single-column and an unset layout", () => {
-		expect(checkLayout("single-column")).toBeNull();
-		expect(checkLayout(undefined)).toBeNull();
-	});
-
-	it("explains that a stored non-single-column value is inert", () => {
-		const d = checkLayout("sidebar");
-		expect(d?.severity).toBe("error");
-		expect(d?.detail).toMatch(/no Typst template reads/i);
-		expect(d?.detail).toMatch(/inert and misleading/i);
-	});
-});
-
 describe("auditParseFidelity", () => {
 	it("returns findings most-severe first", () => {
 		const results = auditParseFidelity({
@@ -187,7 +172,6 @@ describe("auditParseFidelity", () => {
 				{ startDate: "Jan 2023", endDate: "2024" },
 			],
 			dateFormat: "MM/YYYY",
-			layout: "sidebar",
 		});
 
 		const severities = results.map((r) => r.severity);
@@ -198,8 +182,9 @@ describe("auditParseFidelity", () => {
 					{ error: 0, warning: 1, info: 2 }[b],
 			),
 		);
-		// Both errors present.
-		expect(results.filter((r) => r.severity === "error")).toHaveLength(2);
+		// The mixed date shapes are the error; everything after it must be non-error.
+		expect(results[0]?.id).toBe("date-mixed-formats");
+		expect(results[0]?.severity).toBe("error");
 	});
 
 	it("returns nothing for a clean resume", () => {
@@ -216,7 +201,6 @@ describe("auditParseFidelity", () => {
 					{ startDate: "September 2024", current: true },
 				],
 				dateFormat: "MMMM YYYY",
-				layout: "single-column",
 			}),
 		).toEqual([]);
 	});
@@ -282,7 +266,6 @@ describe("auditParseFidelity", () => {
 			],
 			dates: [{ startDate: "sometime" }],
 			dateFormat: "MM/YYYY",
-			layout: "two-column",
 		});
 
 		for (const d of results) {
@@ -295,7 +278,6 @@ describe("auditParseFidelity", () => {
 		const results = auditParseFidelity({
 			sections: [{ type: "summary", title: "Professional Summary" }],
 			dates: [],
-			layout: "sidebar",
 		});
 		const ids = results.map((r) => r.id);
 		expect(new Set(ids).size).toBe(ids.length);

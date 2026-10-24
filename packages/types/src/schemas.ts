@@ -266,9 +266,7 @@ export const resumeSettingsSchema = z.object({
 		"Computer Modern",
 	]),
 	colors: resumeColorsSchema,
-	layout: z.enum(["single-column", "two-column", "sidebar"]).optional(),
 	sectionSpacing: z.enum(["compact", "normal", "spacious"]),
-	showIcons: z.boolean(),
 	dateFormat: z.enum(["MM/YYYY", "MMM YYYY", "MMMM YYYY", "YYYY"]),
 	accentStyle: z.enum(["underline", "background", "border", "none"]),
 });

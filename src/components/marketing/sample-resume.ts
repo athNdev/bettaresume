@@ -66,7 +66,6 @@ export const SAMPLE_RESUME: Resume = {
 				divider: "#e2e8f0",
 			},
 			sectionSpacing: "normal",
-			showIcons: true,
 			dateFormat: "MMM YYYY",
 			accentStyle: "underline",
 		},

@@ -66,7 +66,6 @@ const defaultSettings: ResumeSettings = {
 		small: 9,
 	},
 	sectionSpacing: "normal",
-	showIcons: true,
 	dateFormat: "MMM YYYY",
 	accentStyle: "underline",
 };
@@ -257,9 +256,7 @@ function serializeSettings(settings: ResumeSettings) {
 			background: merged.colors.background,
 			divider: merged.colors.divider,
 		},
-		layout: merged.layout ?? "single-column",
 		sectionSpacing: merged.sectionSpacing,
-		showIcons: safeBool(merged.showIcons, true),
 		dateFormat: merged.dateFormat,
 		accentStyle: merged.accentStyle,
 	};

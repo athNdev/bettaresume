@@ -1,93 +1,102 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
- * The preview must never show a layout the exporter cannot produce.
+ * One layout, everywhere.
  *
- * `resumeSettingsSchema.layout` accepted `"single-column" | "two-column" | "sidebar"`,
- * the formatting toolbar offered all three, and `preview.tsx` faithfully drew
- * two-column and sidebar layouts. But **no Typst template ever read `layout`** -- it
- * was serialised into the Typst payload and ignored. So a user could select "Sidebar",
- * watch the preview reflow, and export a single-column PDF that looked nothing like what
- * they approved.
+ * This file used to describe a compromise: `resumeSettingsSchema.layout` accepted
+ * `"single-column" | "two-column" | "sidebar"`, the toolbar offered all three, and
+ * `preview.tsx` faithfully drew two-column and sidebar. But **no Typst template ever read
+ * `layout`**, so a user could pick "Sidebar", watch the preview reflow, and export a
+ * single-column PDF that looked nothing like what they approved.
  *
- * That is worse than the option not existing, because it teaches the user to distrust
- * the one surface that is supposed to be WYSIWYG.
+ * The compromise that followed was to keep the field, keep the dropdown, and offer one
+ * option — "Single column" — with the preview ignoring the value. That is the same broken
+ * promise with less code: a control you can click that cannot change anything.
  *
- * Single-column is also the only defensible choice: multi-column layouts are the
- * largest single cause of ATS parse failure, and Typst's guaranteed single-column text
- * layer is this product's structural advantage over browser-rendered competitors.
+ * The field, the dropdown, the diagnostics check and both dead render branches are now
+ * gone. Single-column is not a preference this product takes; it is what the product is.
+ * It is also the only defensible choice — multi-column layouts are the largest single
+ * cause of ATS parse failure, and Typst's guaranteed single-column text layer is this
+ * product's structural advantage over browser-rendered competitors.
  *
- * These tests assert on source because there is no DOM in CI (the Typst WASM is
- * CDN-loaded), so a render test would be theatre. The assertions are pinned tightly and
- * the reasoning is inline.
+ * These assert on source because there is no DOM in CI (the Typst WASM is loaded at
+ * runtime), so a render test would be theatre. The assertions are pinned tightly and the
+ * reasoning lives here.
  */
 
 const read = (p: string) => readFileSync(p, "utf8");
 
-describe("the preview cannot diverge from the exporter", () => {
-	const preview = read("src/features/resume-editor/components/preview.tsx");
+const TEMPLATES = "src/features/resume-editor/typst_templates";
 
-	it("renders single-column unconditionally", () => {
-		expect(preview).toMatch(/const layout = "single-column"/);
-		// Not derived from settings at all -- otherwise the divergence returns.
-		expect(preview).not.toMatch(/const layout = settings\.layout/);
+describe("there is no layout setting to diverge", () => {
+	it("the settings schema has no layout field", () => {
+		// Backward compatibility is not at risk: the object is non-strict, so a stored
+		// resume that still carries `layout` parses and the key is dropped.
+		const schemas = read("packages/types/src/schemas.ts");
+		expect(schemas).not.toMatch(/\blayout: z\.enum/);
 	});
 
-	it("does not branch on a layout the exporter ignores", () => {
-		expect(preview).toMatch(/const isTwoColumn = false/);
-		expect(preview).toMatch(/const isSidebar = false/);
+	it("the settings type has no layout field", () => {
+		const types = read("packages/types/src/types.ts");
+		const settings = types.slice(
+			types.indexOf("export interface ResumeSettings"),
+			types.indexOf("export interface PartialResumeSettings"),
+		);
+		expect(settings).not.toMatch(/\blayout\??:/);
+		expect(settings).not.toMatch(/\bshowIcons\??:/);
 	});
 
-	it("explains why, so the constants are not 'simplified' back into a bug", () => {
-		// A future reader seeing `isTwoColumn = false` will reasonably try to delete
-		// it. The comment is the guard against that.
-		expect(preview).toMatch(/no Typst template ever read `layout`/);
-		expect(preview).toMatch(/preview itself/);
+	it("the toolbar offers no layout control", () => {
+		const toolbar = read(
+			"src/features/resume-editor/components/formatting-toolbar.tsx",
+		);
+		expect(toolbar).not.toMatch(/SelectItem value="single-column"/);
+		expect(toolbar).not.toMatch(/onSettingsChange\(\{ layout/);
+	});
+
+	it("the Typst serialiser does not pass a layout or icon flag", () => {
+		const serialize = read("src/lib/typst/serialize.ts");
+		expect(serialize).not.toMatch(/\blayout:/);
+		expect(serialize).not.toMatch(/\bshowIcons\b/);
 	});
 });
 
-describe("the toolbar only offers layouts that exist in the output", () => {
-	const toolbar = read(
-		"src/features/resume-editor/components/formatting-toolbar.tsx",
-	);
+describe("the preview cannot diverge from the exporter", () => {
+	const preview = read("src/features/resume-editor/components/preview.tsx");
 
-	it("offers single-column only", () => {
-		expect(toolbar).toMatch(/<SelectItem value="single-column">/);
-		expect(toolbar).not.toMatch(/<SelectItem value="two-column">/);
-		expect(toolbar).not.toMatch(/<SelectItem value="sidebar">/);
+	it("has no two-column or sidebar rendering path", () => {
+		expect(preview).not.toMatch(/isTwoColumn/);
+		expect(preview).not.toMatch(/isSidebar/);
+		expect(preview).not.toMatch(/renderColumnPages/);
+	});
+
+	it("explains why, so the single-column path is not 'generalised' back into a bug", () => {
+		// A future reader seeing one hard-coded path will reasonably try to parameterise
+		// it. The comment is the guard against that.
+		expect(preview).toMatch(/single-column is what this\s+\* product is/);
+		expect(preview).toMatch(/largest\s+\* cause of ATS parse failure/);
 	});
 });
 
 describe("no Typst template claims to support a layout it does not render", () => {
-	it("the Typst sources contain no layout branch", async () => {
-		const { readdirSync } = await import("node:fs");
-		// Note: CLAUDE.md points at src/lib/typst/typst_templates/, which does not
-		// exist. The templates are under the feature directory.
-		const dir = "src/features/resume-editor/typst_templates";
-		const offenders = readdirSync(dir)
+	it("the Typst sources contain no layout branch", () => {
+		const offenders = readdirSync(TEMPLATES)
 			.filter((f) => f.endsWith(".typ"))
 			.filter((f) =>
-				/two-column|sidebar|columns\s*\(/.test(read(`${dir}/${f}`)),
-			)
-			// `columns: (1fr, auto)` per-entry grids are legitimate: those align a
-			// right-hand date, which is standard and parse-safe. Only a whole-page
-			// column split would be a problem, and none of the templates do that.
-			.filter((f) =>
-				/layout\s*==|two-column|sidebar/.test(read(`${dir}/${f}`)),
+				/layout\s*==|two-column|sidebar/.test(read(`${TEMPLATES}/${f}`)),
 			);
 
 		expect(offenders).toEqual([]);
 	});
 });
 
-describe("the schema stays backward compatible", () => {
-	it("still accepts the legacy values so existing resumes keep loading", () => {
-		const schemas = read("packages/types/src/schemas.ts");
-		// Removing these from the enum would break every stored resume that carries
-		// one, on read. They are ignored instead.
-		expect(schemas).toMatch(
-			/layout: z\.enum\(\["single-column", "two-column", "sidebar"\]\)/,
-		);
+describe("the document's own section headings do not depend on an icon flag", () => {
+	it("no template reads showIcons", () => {
+		const offenders = readdirSync(TEMPLATES)
+			.filter((f) => f.endsWith(".typ"))
+			.filter((f) => /showIcons|show_icons/.test(read(`${TEMPLATES}/${f}`)));
+
+		expect(offenders).toEqual([]);
 	});
 });

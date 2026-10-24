@@ -153,8 +153,6 @@ export interface AuditInput {
 	dates: readonly DateLike[];
 	/** The resume's date-format setting. */
 	dateFormat?: string;
-	/** The layout setting, for the record. Ignored by the renderer (always single-column). */
-	layout?: string;
 }
 
 function normaliseHeading(value: string): string {
@@ -276,23 +274,6 @@ export function checkDateConsistency(
 	};
 }
 
-/** The renderer is unconditionally single-column; this asserts that invariant. */
-export function checkLayout(
-	layout: string | undefined,
-): ParseDiagnostic | null {
-	if (!layout || layout === "single-column") return null;
-	return {
-		id: "layout-not-single-column",
-		severity: "error",
-		title: `Layout "${layout}" is not rendered`,
-		detail:
-			'No Typst template reads the layout setting, so the export is single-column regardless. A stored value of "' +
-			layout +
-			'" is inert and misleading.',
-		fix: 'Set the layout to "Single column".',
-	};
-}
-
 /**
  * Run every check. Findings are sorted most-severe first so a UI can render them in
  * priority order without re-sorting.
@@ -323,7 +304,6 @@ export function auditParseFidelity(input: AuditInput): ParseDiagnostic[] {
 
 	push(checkDateFormat(input.dateFormat));
 	push(checkDateConsistency(input.dates));
-	push(checkLayout(input.layout));
 
 	const rank: Record<DiagnosticSeverity, number> = {
 		error: 0,
