@@ -49,6 +49,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { StateIcon } from "@/components/ui/state-icon";
 import { isSectionEmpty } from "@/features/resume-editor/section-state";
 import type {
 	ResumePage,
@@ -225,18 +226,29 @@ export function SortableSectionItem({
 				 * showing both would be noise, so the dot is suppressed there.
 				 */}
 				{baseLinked ? (
-					<span className="shrink-0" title={isLinked ? "Linked to the base resume" : "Detached from the base resume"}>
-						{isLinked ? (
-							<Link2
-								aria-label="Linked to the base resume"
-								className="h-3 w-3 text-primary"
-							/>
-						) : (
-							<Unlink2
-								aria-label="Detached from the base resume"
-								className="h-3 w-3 text-muted-foreground"
-							/>
-						)}
+					<span
+						className="shrink-0"
+						title={
+							isLinked
+								? "Linked to the base resume"
+								: "Detached from the base resume"
+						}
+					>
+						<StateIcon
+							active={isLinked}
+							off={
+								<Unlink2
+									aria-label="Detached from the base resume"
+									className="h-3 w-3 text-muted-foreground"
+								/>
+							}
+							on={
+								<Link2
+									aria-label="Linked to the base resume"
+									className="h-3 w-3 text-primary"
+								/>
+							}
+						/>
 					</span>
 				) : null}
 				{!section.visible ? (
@@ -259,13 +271,14 @@ export function SortableSectionItem({
 					className="h-6 w-6"
 					onClick={() => onToggleVisibility(section.id)}
 					size="icon"
+					static
 					variant="ghost"
 				>
-					{section.visible ? (
-						<Eye aria-hidden className="h-3 w-3" />
-					) : (
-						<EyeOff aria-hidden className="h-3 w-3" />
-					)}
+					<StateIcon
+						active={!section.visible}
+						off={<Eye aria-hidden className="h-3 w-3" />}
+						on={<EyeOff aria-hidden className="h-3 w-3" />}
+					/>
 				</Button>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>

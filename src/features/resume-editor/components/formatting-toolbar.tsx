@@ -332,7 +332,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 							<div className="flex flex-wrap gap-1.5">
 								{COLOR_PRESETS.primary.map((color) => (
 									<button
-										className={`h-6 w-6 rounded border-2 transition-all ${
+										className={`h-6 w-6 rounded border-2 transition-[transform,border-color] duration-150 ease-enter ${
 											settings.colors.primary === color
 												? "scale-110 border-primary"
 												: "border-transparent"
@@ -360,7 +360,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 							<div className="flex flex-wrap gap-1.5">
 								{COLOR_PRESETS.accent.map((color) => (
 									<button
-										className={`h-6 w-6 rounded border-2 transition-all ${
+										className={`h-6 w-6 rounded border-2 transition-[transform,border-color] duration-150 ease-enter ${
 											settings.colors.accent === color
 												? "scale-110 border-primary"
 												: "border-transparent"
@@ -384,7 +384,7 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 							<div className="flex flex-wrap gap-1.5">
 								{COLOR_PRESETS.text.map((color) => (
 									<button
-										className={`h-6 w-6 rounded border-2 transition-all ${
+										className={`h-6 w-6 rounded border-2 transition-[transform,border-color] duration-150 ease-enter ${
 											settings.colors.text === color
 												? "scale-110 border-primary"
 												: "border-transparent"
