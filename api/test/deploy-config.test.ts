@@ -58,6 +58,27 @@ describe("deploy configuration", () => {
  * Both are invisible at build time, so they are asserted here rather than trusted.
  */
 describe("migrations are applied by the deploy pipeline", () => {
+	it("CI fails when the schema and the migrations diverge", () => {
+		// `schema.ts` is the source of truth; `api/drizzle/*.sql` is generated. Nothing
+		// checked that the two agreed, so `Resume.template`'s default could differ between
+		// the first migration and the schema without any signal. `generate` needs no
+		// database, so the check is free.
+		expect(ci).toMatch(/name: Migration drift/);
+		expect(ci).toMatch(/drizzle-kit generate/);
+		// It must compare the file count, not merely run generate: generate prints
+		// "No schema changes" to stdout and exits 0 either way.
+		expect(ci).toMatch(/before=\$\(ls api\/drizzle\/\*\.sql/);
+		expect(ci).toMatch(/after=\$\(ls api\/drizzle\/\*\.sql/);
+	});
+
+	it("db:generate works with no credentials in the environment", () => {
+		// The config used to throw from `required()` while building `dbCredentials`,
+		// which `generate` never uses. That made the drift check above require D1
+		// secrets it has no business holding.
+		const config = read("../drizzle.config.ts");
+		expect(config).not.toMatch(/function required\(/);
+		expect(config).not.toMatch(/!,\n/);
+	});
 	it("cd.yml applies D1 migrations", () => {
 		expect(cd).toMatch(/d1 migrations apply/);
 		// Must target the remote database, never a local one.
