@@ -55,7 +55,6 @@ const FULL_METADATA = {
 			divider: "#e2e8f0",
 		},
 		sectionSpacing: "compact",
-		showIcons: true,
 		dateFormat: "MMM YYYY",
 		accentStyle: "underline",
 	},

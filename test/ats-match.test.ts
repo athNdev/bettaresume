@@ -317,10 +317,38 @@ describe("suggestions", () => {
 	});
 
 	it("surfaces parse errors as suggestions", () => {
+		// Two entries whose dates disagree on shape: `checkDateConsistency` reports that as
+		// an error, which is the same diagnostic the Review sheet shows.
+		const mixed = {
+			id: "s2",
+			type: "experience",
+			order: 1,
+			visible: true,
+			content: {
+				title: "Work Experience",
+				data: [
+					{ company: "Globex", startDate: "03/2022", highlights: ["Did work"] },
+				],
+			},
+		};
+		const first = {
+			id: "s1",
+			type: "experience",
+			order: 0,
+			visible: true,
+			content: {
+				title: "Work Experience",
+				data: [
+					{
+						company: "Acme",
+						startDate: "March 2020",
+						highlights: ["Did work"],
+					},
+				],
+			},
+		};
 		const r = analyzeJobMatch({
-			resume: resume([exp(["Did work"], "Professional Summary")], {
-				layout: "sidebar",
-			}),
+			resume: resume([first, mixed]),
 			jobTarget: { description: "Required: TypeScript" },
 		});
 		expect(r.style.errors).toBeGreaterThan(0);

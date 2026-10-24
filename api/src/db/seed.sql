@@ -39,7 +39,7 @@ VALUES (
     0,
     CAST(strftime('%s', 'now') AS INTEGER),
     CAST(strftime('%s', 'now') AS INTEGER),
-    '{"personalInfo":{"fullName":"James Smith","email":"james.smith@harvard.edu","phone":"+1 (617) 555-0142","location":"Cambridge, MA","linkedin":"linkedin.com/in/jamessmith","github":"github.com/jamessmith","professionalTitle":"MPhil Candidate, Applied Mathematics","photoUrl":""},"settings":{"fontFamily":"Times New Roman","fontSize":11,"lineHeight":1.15,"margins":{"top":36,"right":36,"bottom":36,"left":36},"sectionSpacing":"compact","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#1e293b","heading":"#0f172a","background":"#ffffff","accent":"#334155","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"showIcons":true,"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
+    '{"personalInfo":{"fullName":"James Smith","email":"james.smith@harvard.edu","phone":"+1 (617) 555-0142","location":"Cambridge, MA","linkedin":"linkedin.com/in/jamessmith","github":"github.com/jamessmith","professionalTitle":"MPhil Candidate, Applied Mathematics","photoUrl":""},"settings":{"fontFamily":"Times New Roman","fontSize":11,"lineHeight":1.15,"margins":{"top":36,"right":36,"bottom":36,"left":36},"sectionSpacing":"compact","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#1e293b","heading":"#0f172a","background":"#ffffff","accent":"#334155","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
 );
 
 -- 1. Personal Info Section
@@ -207,7 +207,7 @@ VALUES (
     0,
     CAST(strftime('%s', 'now') AS INTEGER),
     CAST(strftime('%s', 'now') AS INTEGER),
-    '{"personalInfo":{"fullName":"Avery Chen","email":"avery.chen@example.com","phone":"+61 400 000 001","location":"Melbourne, VIC","linkedin":"linkedin.com/in/averychen","github":"github.com/averychen","website":"averychen.dev","portfolio":"","professionalTitle":"Senior Software Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"showIcons":true,"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
+    '{"personalInfo":{"fullName":"Avery Chen","email":"avery.chen@example.com","phone":"+61 400 000 001","location":"Melbourne, VIC","linkedin":"linkedin.com/in/averychen","github":"github.com/averychen","website":"averychen.dev","portfolio":"","professionalTitle":"Senior Software Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -292,7 +292,7 @@ VALUES (
     0,
     CAST(strftime('%s', 'now') AS INTEGER),
     CAST(strftime('%s', 'now') AS INTEGER),
-    '{"personalInfo":{"fullName":"Sam Rivera","email":"sam.rivera@example.com","phone":"+61 400 000 002","location":"Sydney, NSW","linkedin":"linkedin.com/in/samrivera","github":"github.com/samrivera","website":"","portfolio":"","professionalTitle":"Product Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"showIcons":true,"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
+    '{"personalInfo":{"fullName":"Sam Rivera","email":"sam.rivera@example.com","phone":"+61 400 000 002","location":"Sydney, NSW","linkedin":"linkedin.com/in/samrivera","github":"github.com/samrivera","website":"","portfolio":"","professionalTitle":"Product Engineer","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)
@@ -377,7 +377,7 @@ VALUES (
     0,
     CAST(strftime('%s', 'now') AS INTEGER),
     CAST(strftime('%s', 'now') AS INTEGER),
-    '{"personalInfo":{"fullName":"Jordan Patel","email":"jordan.patel@example.com","phone":"+61 400 000 003","location":"Brisbane, QLD","linkedin":"linkedin.com/in/jordanpatel","github":"","website":"","portfolio":"","professionalTitle":"Consultant","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"showIcons":true,"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
+    '{"personalInfo":{"fullName":"Jordan Patel","email":"jordan.patel@example.com","phone":"+61 400 000 003","location":"Brisbane, QLD","linkedin":"linkedin.com/in/jordanpatel","github":"","website":"","portfolio":"","professionalTitle":"Consultant","photoUrl":""},"settings":{"fontFamily":"Inter","fontSize":11,"lineHeight":1.4,"margins":{"top":40,"right":40,"bottom":40,"left":40},"sectionSpacing":"normal","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"pageSize":"Letter","fontScale":1,"typography":{"name":24,"title":14,"sectionHeading":14,"itemTitle":12,"body":11,"small":9},"dateFormat":"MMM YYYY","accentStyle":"underline"}}'
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, createdAt, updatedAt)

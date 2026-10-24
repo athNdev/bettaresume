@@ -55,7 +55,6 @@ const defaultSettings: ResumeSettings = {
 		small: 9,
 	},
 	sectionSpacing: "normal",
-	showIcons: true,
 	dateFormat: "MMM YYYY",
 	accentStyle: "underline",
 };
@@ -106,19 +105,6 @@ const CSS_FAMILY_BY_REQUESTED: Record<string, string> = {
 	Calibri: "Calibri",
 };
 
-const PRIMARY_SECTION_TYPES = new Set([
-	"summary",
-	"experience",
-	"projects",
-	"education",
-]);
-const SECONDARY_SECTION_TYPES = new Set([
-	"skills",
-	"certifications",
-	"languages",
-	"awards",
-]);
-
 function sameStringArray(a: string[], b: string[]) {
 	if (a.length !== b.length) return false;
 	for (let i = 0; i < a.length; i += 1) {
@@ -138,21 +124,6 @@ function sameSinglePagination(a: string[][], b: string[][]) {
 	return true;
 }
 
-function sameColumnPagination(
-	a: Array<{ main: string[]; side: string[] }>,
-	b: Array<{ main: string[]; side: string[] }>,
-) {
-	if (a.length !== b.length) return false;
-	for (let i = 0; i < a.length; i += 1) {
-		const ap = a[i];
-		const bp = b[i];
-		if (!ap || !bp) return false;
-		if (!sameStringArray(ap.main, bp.main)) return false;
-		if (!sameStringArray(ap.side, bp.side)) return false;
-	}
-	return true;
-}
-
 export function Preview({
 	resume,
 	scale = 1,
@@ -161,14 +132,9 @@ export function Preview({
 }: PreviewProps) {
 	const { metadata, sections } = resume;
 	const [paginatedSingle, setPaginatedSingle] = useState<string[][]>([]);
-	const [paginatedColumns, setPaginatedColumns] = useState<
-		Array<{ main: string[]; side: string[] }>
-	>([]);
 
 	const headerMeasureRef = useRef<HTMLDivElement | null>(null);
 	const singleMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
-	const mainMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
-	const sideMeasureRefs = useRef<Record<string, HTMLDivElement | null>>({});
 	// Deep merge settings with defaults to ensure all properties exist
 	const settings: ResumeSettings = {
 		...defaultSettings,
@@ -913,41 +879,24 @@ export function Preview({
 	};
 
 	/**
-	 * The preview renders SINGLE-COLUMN, unconditionally.
+	 * The preview renders SINGLE-COLUMN, unconditionally — and there is no setting for it.
 	 *
-	 * `settings.layout` used to accept "two-column" and "sidebar", and this
-	 * component faithfully drew both -- but no Typst template ever read `layout`,
-	 * so the exported PDF was single-column no matter what. A user could pick
-	 * "Sidebar", watch the preview reflow into one, and export a document that
-	 * looked nothing like what they approved. That is worse than not offering the
-	 * option, because it destroys trust in the preview itself.
+	 * `settings.layout` used to accept "two-column" and "sidebar", and this component
+	 * faithfully drew both — but no Typst template ever read `layout`, so the exported
+	 * PDF was single-column no matter what. A user could pick "Sidebar", watch the
+	 * preview reflow into one, and export a document that looked nothing like what they
+	 * approved.
 	 *
-	 * Single-column is also the only correct choice here: multi-column layouts are
-	 * the single largest cause of ATS parse failure (text layers scramble by
-	 * coordinate), and the Typst pipeline's guaranteed single-column text layer is
-	 * this product's structural advantage over every browser-rendered competitor.
+	 * The formatting toolbar then offered the choice as a dropdown whose only option was
+	 * "Single column", which is the same broken promise with less code. The field, the
+	 * dropdown and the two rendering branches are gone: single-column is what this
+	 * product is, not a preference it takes.
 	 *
-	 * The `layout` field is kept in the schema so existing stored resumes that
-	 * carry it still load; it is simply ignored here, which is what the exporter
-	 * already did.
+	 * It is also the only correct choice: multi-column layouts are the single largest
+	 * cause of ATS parse failure (text layers scramble by coordinate), and the Typst
+	 * pipeline's guaranteed single-column text layer is this product's structural
+	 * advantage over every browser-rendered competitor.
 	 */
-	const layout = "single-column";
-	const isTwoColumn = false;
-	const isSidebar = false;
-
-	const mainSections = useMemo(
-		() =>
-			visibleSections.filter(
-				(s) =>
-					PRIMARY_SECTION_TYPES.has(s.type) ||
-					(!SECONDARY_SECTION_TYPES.has(s.type) && !isTwoColumn),
-			),
-		[visibleSections],
-	);
-	const sideSections = useMemo(
-		() => visibleSections.filter((s) => SECONDARY_SECTION_TYPES.has(s.type)),
-		[visibleSections],
-	);
 
 	useLayoutEffect(() => {
 		if (!paginate) return;
@@ -955,96 +904,35 @@ export function Preview({
 		const firstPageAvailable = pageInnerHeight * scale - headerHeight;
 		const laterPageAvailable = pageInnerHeight * scale;
 
-		if (layout === "single-column") {
-			const pages: string[][] = [];
-			let remaining = Math.max(0, firstPageAvailable);
-			let current: string[] = [];
+		const pages: string[][] = [];
+		let remaining = Math.max(0, firstPageAvailable);
+		let current: string[] = [];
 
-			for (const section of visibleSections) {
-				const h = singleMeasureRefs.current[section.id]?.offsetHeight ?? 0;
-				if (current.length === 0) {
-					remaining =
-						pages.length === 0
-							? Math.max(0, firstPageAvailable)
-							: laterPageAvailable;
-				}
-
-				if (h <= remaining || current.length === 0) {
-					current.push(section.id);
-					remaining -= h;
-					continue;
-				}
-
-				pages.push(current);
-				current = [section.id];
-				remaining = laterPageAvailable - h;
+		for (const section of visibleSections) {
+			const h = singleMeasureRefs.current[section.id]?.offsetHeight ?? 0;
+			if (current.length === 0) {
+				remaining =
+					pages.length === 0
+						? Math.max(0, firstPageAvailable)
+						: laterPageAvailable;
 			}
 
-			if (current.length > 0) pages.push(current);
-			setPaginatedSingle((prev) =>
-				sameSinglePagination(prev, pages) ? prev : pages,
-			);
-			setPaginatedColumns((prev) => (prev.length === 0 ? prev : []));
-			return;
+			if (h <= remaining || current.length === 0) {
+				current.push(section.id);
+				remaining -= h;
+				continue;
+			}
+
+			pages.push(current);
+			current = [section.id];
+			remaining = laterPageAvailable - h;
 		}
 
-		const pages: Array<{ main: string[]; side: string[] }> = [];
-		let mainIndex = 0;
-		let sideIndex = 0;
-
-		while (mainIndex < mainSections.length || sideIndex < sideSections.length) {
-			const isFirstPage = pages.length === 0;
-			let remainingMain = Math.max(
-				0,
-				isFirstPage ? firstPageAvailable : laterPageAvailable,
-			);
-			let remainingSide = Math.max(
-				0,
-				isFirstPage ? firstPageAvailable : laterPageAvailable,
-			);
-			const page = { main: [] as string[], side: [] as string[] };
-
-			while (mainIndex < mainSections.length) {
-				const s = mainSections[mainIndex];
-				if (!s) break;
-				const h = mainMeasureRefs.current[s.id]?.offsetHeight ?? 0;
-				if (h <= remainingMain || page.main.length === 0) {
-					page.main.push(s.id);
-					remainingMain -= h;
-					mainIndex += 1;
-					continue;
-				}
-				break;
-			}
-
-			while (sideIndex < sideSections.length) {
-				const s = sideSections[sideIndex];
-				if (!s) break;
-				const h = sideMeasureRefs.current[s.id]?.offsetHeight ?? 0;
-				if (h <= remainingSide || page.side.length === 0) {
-					page.side.push(s.id);
-					remainingSide -= h;
-					sideIndex += 1;
-					continue;
-				}
-				break;
-			}
-
-			pages.push(page);
-		}
-
-		setPaginatedColumns((prev) =>
-			sameColumnPagination(prev, pages) ? prev : pages,
+		if (current.length > 0) pages.push(current);
+		setPaginatedSingle((prev) =>
+			sameSinglePagination(prev, pages) ? prev : pages,
 		);
-		setPaginatedSingle((prev) => (prev.length === 0 ? prev : []));
-	}, [
-		paginate,
-		mainSections,
-		pageInnerHeight,
-		scale,
-		sideSections,
-		visibleSections,
-	]);
+	}, [paginate, pageInnerHeight, scale, visibleSections]);
 
 	const sectionsById = useMemo(() => {
 		const map = new Map<string, ResumeSection>();
@@ -1083,67 +971,12 @@ export function Preview({
 		);
 	};
 
-	const renderColumnPages = () => {
-		const pages =
-			paginate && paginatedColumns.length > 0
-				? paginatedColumns
-				: [
-						{
-							main: mainSections.map((s) => s.id),
-							side: sideSections.map((s) => s.id),
-						},
-					];
-		const sideWidth = isTwoColumn ? 220 * scale : 240 * scale;
-		const gap = 20 * scale;
-		const mainStyle: React.CSSProperties = isTwoColumn
-			? { flex: 1 }
-			: { flex: 1 };
-		const sideStyle: React.CSSProperties = isTwoColumn
-			? { width: sideWidth }
-			: { width: sideWidth };
-
-		return pages.map((p, i) =>
-			renderPage(
-				<div style={{ display: "flex", gap }}>
-					{isSidebar && (
-						<div style={sideStyle}>
-							{p.side.map((id) => {
-								const section = sectionsById.get(id);
-								if (!section) return null;
-								return <div key={id}>{renderSection(section)}</div>;
-							})}
-						</div>
-					)}
-					<div style={mainStyle}>
-						{p.main.map((id) => {
-							const section = sectionsById.get(id);
-							if (!section) return null;
-							return <div key={id}>{renderSection(section)}</div>;
-						})}
-					</div>
-					{isTwoColumn && (
-						<div style={sideStyle}>
-							{p.side.map((id) => {
-								const section = sectionsById.get(id);
-								if (!section) return null;
-								return <div key={id}>{renderSection(section)}</div>;
-							})}
-						</div>
-					)}
-				</div>,
-				`page-${i}`,
-				i === 0,
-			),
-		);
-	};
-
 	return (
 		<div
 			className={cn("bg-white", className)}
 			style={{ width: pageWidth * scale }}
 		>
-			{layout === "single-column" && renderSingleColumnPages()}
-			{(isTwoColumn || isSidebar) && renderColumnPages()}
+			{renderSingleColumnPages()}
 			{paginate && (
 				<div
 					aria-hidden="true"
@@ -1164,61 +997,16 @@ export function Preview({
 						}}
 					>
 						<div ref={headerMeasureRef}>{renderPersonalInfo()}</div>
-						{layout === "single-column" &&
-							visibleSections.map((section) => (
-								<div
-									key={section.id}
-									ref={(el) => {
-										singleMeasureRefs.current[section.id] = el;
-									}}
-								>
-									{renderSection(section)}
-								</div>
-							))}
-						{(isTwoColumn || isSidebar) && (
-							<div style={{ display: "flex", gap: 20 * scale }}>
-								{isSidebar && (
-									<div style={{ width: 240 * scale }}>
-										{sideSections.map((section) => (
-											<div
-												key={section.id}
-												ref={(el) => {
-													sideMeasureRefs.current[section.id] = el;
-												}}
-											>
-												{renderSection(section)}
-											</div>
-										))}
-									</div>
-								)}
-								<div style={{ flex: 1 }}>
-									{mainSections.map((section) => (
-										<div
-											key={section.id}
-											ref={(el) => {
-												mainMeasureRefs.current[section.id] = el;
-											}}
-										>
-											{renderSection(section)}
-										</div>
-									))}
-								</div>
-								{isTwoColumn && (
-									<div style={{ width: 220 * scale }}>
-										{sideSections.map((section) => (
-											<div
-												key={section.id}
-												ref={(el) => {
-													sideMeasureRefs.current[section.id] = el;
-												}}
-											>
-												{renderSection(section)}
-											</div>
-										))}
-									</div>
-								)}
+						{visibleSections.map((section) => (
+							<div
+								key={section.id}
+								ref={(el) => {
+									singleMeasureRefs.current[section.id] = el;
+								}}
+							>
+								{renderSection(section)}
 							</div>
-						)}
+						))}
 					</div>
 				</div>
 			)}

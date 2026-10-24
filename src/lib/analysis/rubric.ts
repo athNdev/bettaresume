@@ -1,7 +1,7 @@
 import { buildParseAuditInput } from "@/features/resume-editor/lib/review-input";
 import type { Resume, ResumeSection } from "@/features/resume-editor/types";
 import { findDutyPhrase, hasQuantification } from "@/lib/analysis/metrics";
-import { auditParseFidelity, checkLayout } from "@/lib/analysis/parse-fidelity";
+import { auditParseFidelity } from "@/lib/analysis/parse-fidelity";
 import { buildPlainText, visibleSections } from "@/lib/export/text";
 
 /**
@@ -199,7 +199,6 @@ export function buildRubric(
 		d.id.startsWith("heading"),
 	);
 	const dateProblems = parseDiagnostics.filter((d) => d.id.startsWith("date"));
-	const layoutProblem = checkLayout(resume.metadata?.settings?.layout);
 
 	checks.push(
 		check({
@@ -227,16 +226,6 @@ export function buildRubric(
 					? "Every date uses the same written-month form."
 					: dateProblems.map((d) => d.detail).join(" "),
 			anchor: dateProblems[0]?.title,
-		}),
-		check({
-			id: "layout-single-column",
-			group: "parse-fit",
-			title: "Single-column layout",
-			ok: layoutProblem === null,
-			effort: "quick",
-			detail: layoutProblem
-				? `${layoutProblem.detail} ${layoutProblem.fix ?? ""}`
-				: "Single column, so reading order cannot be scrambled by a layout engine.",
 		}),
 	);
 

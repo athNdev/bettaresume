@@ -51,7 +51,7 @@ const FEATURES = [
 	},
 	{
 		title: "History recorded as you work",
-		body: "Snapshots are captured automatically, at most once every five minutes, and you can save a named version whenever you want. Diff any two and restore any one.",
+		body: "Snapshots are captured automatically, at most once every five minutes, and you can save a named version whenever you want. Compare any version with what you have now, and restore it in one click.",
 		detail: "Automatic + named versions · word-level diff",
 	},
 	{

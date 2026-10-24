@@ -38,7 +38,6 @@ export type {
 	ReferencesContent,
 	Resume,
 	ResumeColors,
-	ResumeLayout,
 	ResumeMetadata,
 	ResumePage,
 	ResumeSection,

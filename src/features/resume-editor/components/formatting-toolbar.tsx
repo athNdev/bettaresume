@@ -32,7 +32,6 @@ import {
 import type {
 	FontFamily,
 	PartialResumeSettings,
-	ResumeLayout,
 	ResumeSettings,
 	TypographyScale,
 } from "@/features/resume-editor/types";
@@ -455,27 +454,6 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 								<SelectContent>
 									<SelectItem value="A4">A4</SelectItem>
 									<SelectItem value="Letter">Letter</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div>
-							<Label className="text-xs">Layout</Label>
-							<Select
-								onValueChange={(v) =>
-									onSettingsChange({ layout: v as ResumeLayout })
-								}
-								value={settings.layout || "single-column"}
-							>
-								<SelectTrigger className="mt-1 h-8">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{/* Only single-column is offered because it is the only
-									    layout the Typst exporter can actually produce. Offering
-									    "Two column"/"Sidebar" here meant the preview showed a
-									    layout the exported PDF would never match. */}
-									<SelectItem value="single-column">Single column</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

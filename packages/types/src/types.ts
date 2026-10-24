@@ -197,9 +197,7 @@ export interface ResumeSettings {
 	lineHeight: number;
 	fontFamily: FontFamily;
 	colors: ResumeColors;
-	layout?: ResumeLayout;
 	sectionSpacing: "compact" | "normal" | "spacious";
-	showIcons: boolean;
 	dateFormat: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
 	accentStyle: "underline" | "background" | "border" | "none";
 }
@@ -218,9 +216,7 @@ export interface PartialResumeSettings {
 	lineHeight?: number;
 	fontFamily?: FontFamily;
 	colors?: Partial<ResumeColors>;
-	layout?: ResumeLayout;
 	sectionSpacing?: "compact" | "normal" | "spacious";
-	showIcons?: boolean;
 	dateFormat?: "MM/YYYY" | "MMM YYYY" | "MMMM YYYY" | "YYYY";
 	accentStyle?: "underline" | "background" | "border" | "none";
 }

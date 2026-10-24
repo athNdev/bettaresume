@@ -188,8 +188,6 @@ function normalizeSettings(value: unknown): ResumeSettings {
 				settings.sectionSpacing === "spacious")
 				? settings.sectionSpacing
 				: "normal",
-		showIcons:
-			typeof settings.showIcons === "boolean" ? settings.showIcons : true,
 		dateFormat:
 			typeof settings.dateFormat === "string" &&
 			(settings.dateFormat === "MM/YYYY" ||
@@ -470,9 +468,7 @@ export const resumeRouter = router({
 						background: "#ffffff",
 						divider: "#e2e8f0",
 					},
-					layout: "single-column" as const,
 					sectionSpacing: "normal" as const,
-					showIcons: true,
 					dateFormat: "MMM YYYY" as const,
 					accentStyle: "underline" as const,
 				},
