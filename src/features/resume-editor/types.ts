@@ -116,16 +116,11 @@ import type {
 	TypographyScale,
 	Volunteer,
 } from "@bettaresume/types";
+import { TYPE_SCALE_DEFAULTS } from "@bettaresume/types";
 
-// Default typography scale
-export const DEFAULT_TYPOGRAPHY: TypographyScale = {
-	name: 28,
-	title: 14,
-	sectionHeading: 13,
-	itemTitle: 12,
-	body: 11,
-	small: 10,
-};
+// Default typography scale — the canonical point scale from `@bettaresume/types`,
+// one source of truth for the toolbar's reset and the serialiser's defaults.
+export const DEFAULT_TYPOGRAPHY: TypographyScale = TYPE_SCALE_DEFAULTS;
 
 const ALL_SECTIONS: SectionType[] = [
 	"personal-info",

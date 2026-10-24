@@ -1,3 +1,4 @@
+import { MARGIN_DEFAULTS, TYPE_SCALE_DEFAULTS } from "@bettaresume/types";
 import type { Resume } from "@/features/resume-editor/types";
 
 /**
@@ -43,18 +44,10 @@ export const SAMPLE_RESUME: Resume = {
 		},
 		settings: {
 			pageSize: "A4",
-			margins: { top: 40, right: 40, bottom: 40, left: 40 },
-			fontSize: 11,
+			margins: { ...MARGIN_DEFAULTS },
 			fontScale: 1,
-			typography: {
-				name: 24,
-				title: 14,
-				sectionHeading: 14,
-				itemTitle: 12,
-				body: 11,
-				small: 9,
-			},
-			lineHeight: 1.5,
+			typography: { ...TYPE_SCALE_DEFAULTS },
+			lineHeight: 1.35,
 			fontFamily: "Inter",
 			colors: {
 				primary: "#2563eb",

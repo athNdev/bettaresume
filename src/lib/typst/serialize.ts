@@ -8,6 +8,11 @@
  * - Ensuring all values are Typst-compatible (no undefined)
  */
 
+import {
+	MARGIN_DEFAULTS,
+	normalizeTypeSettings,
+	TYPE_SCALE_DEFAULTS,
+} from "@bettaresume/types";
 import type {
 	Award,
 	Certification,
@@ -41,13 +46,14 @@ function normalizeFont(name: string): string {
 	return CANONICAL_FONT_NAMES[name.toLowerCase()] ?? name;
 }
 
-// Default settings mirroring preview.tsx defaults
+// Default settings mirroring preview.tsx defaults. Typography and margins are true
+// points (see `TYPE_SCALE_DEFAULTS`); body renders at 10.5pt and the old px-era 8.25pt
+// body is gone with `px-to-pt`.
 const defaultSettings: ResumeSettings = {
 	fontFamily: "Inter",
-	fontSize: 11,
 	fontScale: 1,
-	lineHeight: 1.5,
-	margins: { top: 40, right: 40, bottom: 40, left: 40 },
+	lineHeight: 1.35,
+	margins: { ...MARGIN_DEFAULTS },
 	pageSize: "Letter",
 	colors: {
 		primary: "#2563eb",
@@ -58,14 +64,7 @@ const defaultSettings: ResumeSettings = {
 		accent: "#f59e0b",
 		divider: "#e2e8f0",
 	},
-	typography: {
-		name: 24,
-		title: 14,
-		sectionHeading: 14,
-		itemTitle: 12,
-		body: 11,
-		small: 9,
-	},
+	typography: { ...TYPE_SCALE_DEFAULTS },
 	sectionSpacing: "normal",
 	dateFormat: "MMM YYYY",
 	accentStyle: "underline",
@@ -197,12 +196,17 @@ function serializeSettings(settings: ResumeSettings) {
 	};
 	return {
 		pageSize: merged.pageSize ?? defaultSettings.pageSize,
-		margins: {
-			top: merged.margins.top,
-			right: merged.margins.right,
-			bottom: merged.margins.bottom,
-			left: merged.margins.left,
-		},
+		/*
+		 * The type scale and the margins, in points, through the one migration point:
+		 * `normalizeTypeSettings` converts px-era stored values to points and clamps into
+		 * the researched bands (body floor 10pt, small floor 9pt, margins floor 36pt).
+		 * This is the serialiser half of the clamp the formatting toolbar mirrors on its
+		 * sliders; a document never exports below the floors.
+		 */
+		...normalizeTypeSettings({
+			typography: merged.typography,
+			margins: merged.margins,
+		}),
 		/*
 		 * The **resolved** family, not the requested one.
 		 *
@@ -220,17 +224,8 @@ function serializeSettings(settings: ResumeSettings) {
 		fontFamily: resolveTypstFont(
 			normalizeFont(merged.fontFamily ?? defaultSettings.fontFamily),
 		).typstFamily,
-		fontSize: merged.fontSize ?? defaultSettings.fontSize,
 		fontScale: merged.fontScale ?? defaultSettings.fontScale,
 		lineHeight: merged.lineHeight ?? defaultSettings.lineHeight,
-		typography: {
-			name: merged.typography.name,
-			title: merged.typography.title,
-			sectionHeading: merged.typography.sectionHeading,
-			itemTitle: merged.typography.itemTitle,
-			body: merged.typography.body,
-			small: merged.typography.small,
-		},
 		colors: {
 			primary: merged.colors.primary,
 			secondary: merged.colors.secondary,
