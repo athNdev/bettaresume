@@ -200,15 +200,20 @@ src/
 ```tsx
 function ExperienceForm({ data, onChange }) {
   const [localData, setLocalData] = useState(data);
-  const hasChanges = JSON.stringify(localData) !== JSON.stringify(data);
+  const { status } = useAutoSave({ data: localData, onSave: onChange });
+  useBeforeUnload(status === "saving" || status === "dirty");
   return (
     <>
-      <FormSaveBar hasChanges={hasChanges} onSave={() => onChange(localData)} />
+      <SaveStatusIndicator status={status} />
       {/* form fields */}
     </>
   );
 }
 ```
+
+The forms auto-save through `useAutoSave` and report through `SaveStatusIndicator`.
+There is no `FormSaveBar` — it was documented here and in `docs/FRONTEND.md` while
+nothing imported it, and both docs now describe this pattern instead.
 
 **No nested buttons in Accordion** (causes React hydration error):
 ```tsx
