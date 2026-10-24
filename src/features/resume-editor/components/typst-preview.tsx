@@ -145,6 +145,7 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 				 * The size comes from CSS now instead of string-replacing `width`/`height`
 				 * attributes, so the compiler's own output is passed through untouched.
 				 */
+				// biome-ignore lint/performance/noImgElement: the image is a blob URL the browser just created; `next/image` cannot optimise a compiled page
 				<img
 					alt=""
 					aria-hidden="true"
