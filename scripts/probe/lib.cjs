@@ -111,13 +111,18 @@ async function openResume(page, index = 0) {
 	await titles.nth(target).click();
 }
 
-/** Wait until the editor's own chrome is on screen. */
+/**
+ * Wait until the editor's own chrome is on screen.
+ *
+ * Was `/SECTIONS/` in body text, which broke below `lg`: the outline lives in the
+ * "Sections" mode, that mode starts hidden (the form is the default), and hidden
+ * subtrees are not in `innerText`. The shell attribute is true in every mode.
+ */
 async function waitForEditor(page, timeout = 30000) {
-	await page.waitForFunction(
-		() => /SECTIONS/.test(document.body.innerText),
-		undefined,
-		{ timeout },
-	);
+	await page.waitForSelector("[data-editor-shell]", {
+		state: "attached",
+		timeout,
+	});
 }
 
 /** Every interactive control's accessible name, so a pass can name what it is missing. */

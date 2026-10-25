@@ -14,7 +14,18 @@ const ScrollArea = React.forwardRef<
 		ref={ref}
 		{...props}
 	>
-		<ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+		{/*
+		 * `[&>div]:block!` overrides the `display: table` wrapper Radix injects inside the
+		 * viewport (inline style, so only `!important` wins).
+		 *
+		 * That wrapper sizes its content to max-content, which is right for a horizontally
+		 * scrollable canvas and wrong for every use in this app: it meant a pane narrower
+		 * than its list clipped the list instead of letting it shrink. Measured by the
+		 * viewport matrix — at 1024px the sections rail overflowed its own panel by 113px
+		 * and amputated the label and both row actions, with the document itself still
+		 * "fitting" so a viewport-width check could not see it.
+		 */}
+		<ScrollAreaPrimitive.Viewport className="[&>div]:block! h-full w-full rounded-[inherit]">
 			{children}
 		</ScrollAreaPrimitive.Viewport>
 		<ScrollBar />

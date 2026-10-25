@@ -256,7 +256,9 @@ export function ImportTrigger() {
 				variant="outline"
 			>
 				<Upload aria-hidden />
-				Import
+				<span className="hidden sm:inline" data-collapse-label="">
+					Import
+				</span>
 			</Button>
 			<ImportPanel onOpenChange={setOpen} open={open} />
 		</>

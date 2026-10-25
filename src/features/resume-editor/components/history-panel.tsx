@@ -211,7 +211,7 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 		diff?.sections.filter((s) => s.kind !== "unchanged").length ?? 0;
 
 	return (
-		<div className="flex h-full min-h-0 flex-col gap-3">
+		<div className="@container flex h-full min-h-0 flex-col gap-3">
 			<div className="flex flex-wrap items-end gap-2">
 				<Button
 					disabled={createRevision.isPending}
@@ -254,8 +254,14 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 				</p>
 			) : null}
 
-			<div className="flex min-h-0 flex-1 gap-4">
-				<div className="w-56 shrink-0 overflow-y-auto">
+			{/*
+			 * A container query, not a media query: the review sheet is viewport-width on
+			 * a phone and `sm:max-w-xl` on a tablet, and this panel would also be wrong
+			 * if someone later put it in a narrow pane. Below 28rem the 224px version
+			 * column leaves ~150px for the diff, so the list stacks above it instead.
+			 */}
+			<div className="flex min-h-0 flex-1 @md:flex-row flex-col gap-4">
+				<div className="@md:max-h-none max-h-48 @md:w-56 w-full shrink-0 overflow-y-auto">
 					{/*
 					 * Order matters here, and getting it wrong is a lie rather than a
 					 * cosmetic bug. `list.data` is undefined both when there is genuinely
@@ -308,7 +314,7 @@ export function HistoryPanel({ resume }: { resume: Resume }) {
 					)}
 				</div>
 
-				<div className="min-w-0 flex-1">
+				<div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
 					{!selectedId ? (
 						<p className="text-muted-foreground text-sm">
 							Select a version to see what changed since then.

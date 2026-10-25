@@ -84,12 +84,15 @@ export default function Dashboard() {
 
 function DashboardSkeleton() {
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="min-h-dvh bg-background">
 			<header className="border-b bg-card">
 				<div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					<div className="flex items-center gap-4">
 						<Skeleton className="h-7 w-32" />
-						<Skeleton className="hidden h-6 w-20 sm:block" />
+						<Skeleton
+							className="hidden h-6 w-20 sm:block"
+							data-responsive-duplicate="loading placeholder"
+						/>
 					</div>
 					<div className="flex flex-wrap items-center justify-end gap-2">
 						<Skeleton className="h-9 w-24" />
@@ -99,7 +102,10 @@ function DashboardSkeleton() {
 						 * a 390px viewport too -- and the loading state is exactly what a phone
 						 * user sees first.
 						 */}
-						<Skeleton className="hidden h-9 w-32 sm:block" />
+						<Skeleton
+							className="hidden h-9 w-32 sm:block"
+							data-responsive-duplicate="loading placeholder"
+						/>
 					</div>
 				</div>
 			</header>
@@ -322,7 +328,7 @@ function DashboardContent() {
 	 */
 	if (isError) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-background p-4">
+			<div className="flex min-h-dvh items-center justify-center bg-background p-4">
 				<PanelError
 					className="max-w-md border-solid"
 					message={
@@ -608,7 +614,7 @@ function DashboardContent() {
 	};
 
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="min-h-dvh bg-background">
 			{/* Header */}
 			<header className="border-b bg-card">
 				{/*
@@ -640,7 +646,9 @@ function DashboardContent() {
 							variant="outline"
 						>
 							<Upload className="h-4 w-4 sm:mr-2" />
-							<span className="hidden sm:inline">Import</span>
+							<span className="hidden sm:inline" data-collapse-label="">
+								Import
+							</span>
 						</Button>
 						<Button
 							aria-label="New resume"
@@ -654,7 +662,9 @@ function DashboardContent() {
 							) : (
 								<Plus className="h-4 w-4 sm:mr-2" />
 							)}
-							<span className="hidden sm:inline">New Resume</span>
+							<span className="hidden sm:inline" data-collapse-label="">
+								New Resume
+							</span>
 						</Button>
 						<ThemeToggle />
 						<UserMenu />
@@ -678,7 +688,7 @@ function DashboardContent() {
 				 * screen shows filters before the list they filter — which is the order
 				 * that makes sense when they cannot sit side by side.
 				 */}
-				<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">
+				<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,17rem)]">
 					<aside className="lg:order-2">
 						<div className="space-y-4 lg:sticky lg:top-8">
 							<Card>

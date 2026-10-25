@@ -87,7 +87,7 @@ export function AppRouter() {
 
 	// 404 - Not found
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-background">
+		<div className="flex min-h-dvh items-center justify-center bg-background">
 			<div className="space-y-4 text-center">
 				<h1 className="font-bold text-2xl">404</h1>
 				<p className="text-muted-foreground">Page not found</p>

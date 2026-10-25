@@ -27,48 +27,73 @@ import { cn } from "@/lib/utils";
  *
  * It is a `role="status"` region so the change is announced rather than only painted.
  */
-export function SaveState({
-	isDirty,
-	isSaving,
-	changeCount = 0,
-	className,
-}: {
+
+interface SaveStateProps {
 	isDirty: boolean;
 	isSaving: boolean;
 	/** How many groups of fields differ. Never a score. */
 	changeCount?: number;
 	className?: string;
-}) {
+	/**
+	 * Icon-only, for widths where the full sentence does not fit.
+	 *
+	 * Below `lg` this used to be `hidden`, which meant the answer to "have I lost work?"
+	 * did not exist on a tablet or a phone — the one surface that exists to be honest
+	 * about saving was the one that disappeared. The compact form keeps the icon, the
+	 * `role="status"` announcement and the same words in an `sr-only` span; only the
+	 * pixels are smaller.
+	 */
+	compact?: boolean;
+}
+
+export function SaveState({
+	isDirty,
+	isSaving,
+	changeCount = 0,
+	className,
+	compact = false,
+}: SaveStateProps) {
 	// A write in flight outranks "unsaved": if something is already heading to the
 	// server, saying "unsaved changes" is accurate but not the most useful thing to say.
-	if (isSaving) {
-		return (
-			<p
-				className={cn(
-					"flex items-center gap-2 text-muted-foreground text-xs",
-					className,
-				)}
-				role="status"
-			>
-				<CloudUpload aria-hidden className="h-3.5 w-3.5 animate-pulse" />
-				Saving…
-			</p>
-		);
-	}
+	const state = isSaving
+		? {
+				Icon: CloudUpload,
+				iconClass: "animate-pulse",
+				textClass: "text-muted-foreground",
+				title: "Saving…",
+				label: "Saving…" as string,
+			}
+		: isDirty
+			? {
+					Icon: PencilLine,
+					iconClass: "",
+					textClass: "font-medium text-warning",
+					title: "Unsaved changes",
+					label:
+						changeCount > 0
+							? `Unsaved changes (${changeCount} ${changeCount === 1 ? "area" : "areas"})`
+							: "Unsaved changes",
+				}
+			: {
+					Icon: Check,
+					iconClass: "text-success",
+					textClass: "text-muted-foreground",
+					title: "All changes saved",
+					label: "All changes saved",
+				};
 
-	if (isDirty) {
+	if (compact) {
 		return (
 			<p
-				className={cn(
-					"flex items-center gap-2 font-medium text-warning text-xs",
-					className,
-				)}
+				className={cn("flex items-center text-xs", className)}
 				role="status"
+				title={state.title}
 			>
-				<PencilLine aria-hidden className="h-3.5 w-3.5" />
-				{changeCount > 0
-					? `Unsaved changes (${changeCount} ${changeCount === 1 ? "area" : "areas"})`
-					: "Unsaved changes"}
+				<state.Icon
+					aria-hidden
+					className={cn("h-3.5 w-3.5", state.iconClass)}
+				/>
+				<span className="sr-only">{state.label}</span>
 			</p>
 		);
 	}
@@ -76,13 +101,14 @@ export function SaveState({
 	return (
 		<p
 			className={cn(
-				"flex items-center gap-2 text-muted-foreground text-xs",
+				"flex items-center gap-2 text-xs",
+				state.textClass,
 				className,
 			)}
 			role="status"
 		>
-			<Check aria-hidden className="h-3.5 w-3.5 text-success" />
-			All changes saved
+			<state.Icon aria-hidden className={cn("h-3.5 w-3.5", state.iconClass)} />
+			{state.label}
 		</p>
 	);
 }

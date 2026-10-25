@@ -189,7 +189,7 @@ export function ReferencesForm({
 							</div>
 							<AccordionContent className="px-4 pt-2 pb-4">
 								<div className="space-y-4">
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Full Name *</Label>
 											<Input
@@ -226,7 +226,7 @@ export function ReferencesForm({
 										/>
 									</div>
 
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Email</Label>
 											<div className="relative mt-1">

@@ -64,7 +64,7 @@ export function PersonalInfoForm({
 					<h3 className="mb-4 flex items-center gap-2 font-medium text-muted-foreground text-sm">
 						<User className="h-4 w-4" /> Basic Information
 					</h3>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="fields-grid">
 						<div className="col-span-2">
 							<Label htmlFor="fullName">Full Name *</Label>
 							<Input
@@ -96,7 +96,7 @@ export function PersonalInfoForm({
 					<h3 className="mb-4 flex items-center gap-2 font-medium text-muted-foreground text-sm">
 						<Mail className="h-4 w-4" /> Contact Information
 					</h3>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="fields-grid">
 						<div>
 							<Label htmlFor="email">Email</Label>
 							<div className="relative mt-1">
@@ -146,7 +146,7 @@ export function PersonalInfoForm({
 					<h3 className="mb-4 flex items-center gap-2 font-medium text-muted-foreground text-sm">
 						<Globe className="h-4 w-4" /> Online Presence
 					</h3>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="fields-grid">
 						<div>
 							<Label htmlFor="linkedin">LinkedIn</Label>
 							<div className="relative mt-1">

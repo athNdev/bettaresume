@@ -10,11 +10,13 @@ import {
 	AlertTriangle,
 	ArrowLeft,
 	ChevronDown,
+	Eye,
 	Layers,
 	Layout,
 	Library,
 	Link2,
 	Loader2,
+	PencilLine,
 	Unlink2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -95,6 +97,7 @@ import {
 	useSectionMutations,
 } from "@/hooks";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useHashRouter } from "@/lib/hash-router";
 import { resolvePersonalInfo } from "@/lib/typst/serialize";
 import { flushPendingSaves } from "@/lib/ui/save-registry";
@@ -113,6 +116,22 @@ import { FitMeter } from "./components/fit-meter";
 import { ImportTrigger } from "./components/import-review-panel";
 import { ReviewTrigger } from "./components/review-panel";
 import { SectionBreakControls } from "./components/section-break-controls";
+
+/*
+ * The three destinations of the small-screen view.
+ *
+ * Order is left to right in the bottom bar and matches how often each is used while
+ * authoring: the outline to pick what to edit, the form to edit it, the document to
+ * check the result. Every pane of the three-zone layout has a mode here, which is the
+ * property that matters: no feature exists only at a width the user is not at.
+ */
+const SMALL_SCREEN_MODES = [
+	{ id: "sections", label: "Sections", Icon: Layers },
+	{ id: "form", label: "Form", Icon: PencilLine },
+	{ id: "preview", label: "Preview", Icon: Eye },
+] as const;
+
+type SmallScreenMode = (typeof SMALL_SCREEN_MODES)[number]["id"];
 
 interface ResumeEditorPageProps {
 	id: string;
@@ -343,6 +362,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		},
 		[handleDraftSummaryUpdate],
 	);
+	/*
+	 * The layout axis: three zones at `lg`+, one column below it.
+	 *
+	 * Declared up here because the preview's fit effect reads it (the gutter is smaller
+	 * on the one-column view), and a value read by an effect should not be declared
+	 * after the effect that closes over it.
+	 */
+	const isWideEditor = useMediaQuery("(min-width: 1024px)");
 	const [previewScale, setPreviewScale] = useState(1);
 	/*
 	 * Zoom the document to the panel on first paint.
@@ -357,6 +384,12 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	 */
 	const [previewPane, setPreviewPane] = useState<HTMLDivElement | null>(null);
 	const userZoomedRef = useRef(false);
+	/*
+	 * The last computed fit, so double-click can toggle 100% <-> fit without measuring
+	 * again. Measuring on every toggle would be wrong anyway: the "fit until the user
+	 * says otherwise" rule means the fit value is the one from before they zoomed.
+	 */
+	const fitScaleRef = useRef(1);
 	/*
 	 * Page width in **points**, which is what the Typst page is measured in: Letter is
 	 * 8.5in = 612pt and A4 is 210mm ≈ 595pt. (`getPageWidthPx` in resume-thumbnail.tsx
@@ -381,11 +414,16 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		const fitToPane = () => {
 			if (userZoomedRef.current) return;
 			const pageWidthPx = pageWidthPt * (96 / 72);
-			// `p-6` on both sides, plus room for the page shadow.
-			const available = previewPane.clientWidth - 48 - 8;
+			/*
+			 * The gutter is `p-6` at `md`+ and `p-3` below it (the phone needs the page
+			 * width more than it needs the margin), plus room for the page shadow.
+			 */
+			const gutter = isWideEditor ? 48 : 24;
+			const available = previewPane.clientWidth - gutter - 8;
 			if (available <= 0) return;
 			const next = Math.min(1, Math.max(0.25, available / pageWidthPx));
-			setPreviewScale(Number(next.toFixed(2)));
+			fitScaleRef.current = Number(next.toFixed(2));
+			setPreviewScale(fitScaleRef.current);
 		};
 
 		fitToPane();
@@ -393,7 +431,20 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		const ro = new ResizeObserver(fitToPane);
 		ro.observe(previewPane);
 		return () => ro.disconnect();
-	}, [previewPane, pageWidthPt]);
+	}, [previewPane, pageWidthPt, isWideEditor]);
+
+	/**
+	 * Double-click toggles between fit-width and 100%.
+	 *
+	 * Fit-width is the right default on a phone (a Letter page at fit-page in 360px is
+	 * ~4pt type, which is not reading, it is squinting) and 100% is the right thing to
+	 * jump to when checking a detail. Pinch is left to the browser: `touch-action` on
+	 * the page keeps `pinch-zoom`, so this never fights the system gesture.
+	 */
+	const togglePreviewZoom = useCallback(() => {
+		userZoomedRef.current = true;
+		setPreviewScale((current) => (current < 0.99 ? 1 : fitScaleRef.current));
+	}, []);
 	/* Page count and measured fit are published by the preview; the meter reads them directly. */
 	const pageCount = usePreviewPages((s) => s.pageCount);
 	const [contentOpen, setContentOpen] = useState(true);
@@ -418,6 +469,19 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	 * the thing you reach for constantly. Opening it is a deliberate act.
 	 */
 	const [libraryOpen, setLibraryOpen] = useState(false);
+	/*
+	 * Small-screen presentation.
+	 *
+	 * Below `lg` the three-zone layout is replaced by one column and a three-way
+	 * switcher. `lg`, not `md`: the pane floors alone (200 + 280 + 300 + handles) are
+	 * ~796px, so at 768px three panes cannot all be usable — the switcher would have to
+	 * start somewhere, and 1024 is the first width that fits the design.
+	 *
+	 * The default is `form` because that is what the editor is for; a section is
+	 * auto-selected on load, so the mode is never empty.
+	 */
+	const [smallScreenMode, setSmallScreenMode] =
+		useState<SmallScreenMode>("form");
 
 	// Set active resume ID when component mounts
 	useEffect(() => {
@@ -1067,7 +1131,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="flex h-screen items-center justify-center bg-background">
+			<div className="flex h-dvh items-center justify-center bg-background">
 				<PanelLoading label="Loading resume..." />
 			</div>
 		);
@@ -1077,7 +1141,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	// the escape hatch back to the dashboard.
 	if (isError) {
 		return (
-			<div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+			<div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background">
 				<PanelError
 					className="max-w-sm"
 					message="Failed to load resume. Please try again."
@@ -1094,7 +1158,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	// Resume not found — never a dead end: say what happened and offer the way out.
 	if (!activeResume) {
 		return (
-			<div className="flex h-screen items-center justify-center bg-background">
+			<div className="flex h-dvh items-center justify-center bg-background">
 				<PanelEmpty
 					action={
 						<Button onClick={() => navigate("/dashboard")} variant="outline">
@@ -1110,8 +1174,344 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		);
 	}
 
+	/*
+	 * Each pane's contents, defined once and mounted in exactly one of two places.
+	 *
+	 * The three-zone layout is the product's primary design and stays at `lg`+. Below
+	 * it there is no width at which three panes are usable — the pixel floors alone
+	 * (rail 200 + form 280 + preview 300 + two handles) are 796px — so the same three
+	 * subtrees become the three modes of a one-column view. Defining them once is the
+	 * reason the small-screen mode cannot drift from the desktop one: there is no
+	 * second copy of the form, the outline or the preview to forget to update.
+	 */
+	const sectionsPane = (
+		<ScrollArea className="h-full border-r">
+			<div className="flex flex-col">
+				{/* CONTENT Section */}
+				<Collapsible onOpenChange={setContentOpen} open={contentOpen}>
+					<CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
+						<div className="flex items-center gap-2">
+							<ChevronDown
+								className={`h-4 w-4 transition-transform ${contentOpen ? "" : "-rotate-90"}`}
+							/>
+							<Layers className="h-4 w-4" />
+							<span>Sections</span>
+							{isAnyPending && <Loader2 className="h-3 w-3 animate-spin" />}
+						</div>
+						<span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
+							{activeResume.sections.length}
+						</span>
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<div className="px-2 pb-2">
+							<SectionsManager
+								isLoading={isAnyPending}
+								onAddSection={handleAddSection}
+								onDeleteSection={handleDeleteSection}
+								onSectionsChange={handleSectionsReorder}
+								onSelectSection={setSelectedSectionId}
+								onSetLink={
+									baseResume && activeResume.baseResumeId
+										? handleSetSectionLink
+										: undefined
+								}
+								personalInfo={activeResume.metadata?.personalInfo}
+								sections={activeResume.sections}
+								selectedSectionId={selectedSectionId || undefined}
+							/>
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+
+				{/*
+				 * Templates. Collapsed by default: it is a one-click choice
+				 * made occasionally, and the Sections list above it is what you
+				 * reach for constantly. It was previously open by default and
+				 * shared its open flag with the preview's toolbar.
+				 */}
+				<Collapsible onOpenChange={setTypeOpen} open={typeOpen}>
+					<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
+						<div className="flex items-center gap-2">
+							<ChevronDown
+								className={`h-4 w-4 transition-transform ${typeOpen ? "" : "-rotate-90"}`}
+							/>
+							<Layout className="h-4 w-4" />
+							<span>Templates</span>
+						</div>
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<div className="px-2 pb-2">
+							<TemplateSelector
+								currentTemplate={normalizeTemplateId(
+									draftResume?.template ?? activeResume.template,
+								)}
+								onSelect={handleTemplateSelect}
+							/>
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+
+				{/*
+				 * Library lives here, not in the Review sheet.
+				 *
+				 * It used to be the fifth tab in a sheet next to Parser fit, Job target,
+				 * History and Bullets. Those four are checks *on the document you are
+				 * looking at*; the library is the pool of content the document is
+				 * assembled from. Putting them in one flat list of five gave the
+				 * sheet no structure, and `research`/`thrust` — the thing you reach
+				 * for when writing — was as far from the Sections list as the
+				 * keyboard could put it. It is content, so it sits with content.
+				 */}
+				<Collapsible onOpenChange={setLibraryOpen} open={libraryOpen}>
+					<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
+						<div className="flex items-center gap-2">
+							<ChevronDown
+								className={`h-4 w-4 transition-transform ${libraryOpen ? "" : "-rotate-90"}`}
+							/>
+							<Library className="h-4 w-4" />
+							<span>Library</span>
+						</div>
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<div className="px-2 pb-2">
+							<ContentLibraryPanel resume={draftResume ?? activeResume} />
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+			</div>
+		</ScrollArea>
+	);
+
+	const formPane = (
+		/*
+		 * `@container`: the pane is the width that matters. The section forms' shared
+		 * `fields-grid` collapses on *container* width, so a form column dragged to
+		 * 280px stacks its field pairs instead of clipping the date inputs, while the
+		 * same viewport at 576px keeps them side by side.
+		 */
+		<div className="@container flex h-full min-h-0 flex-col border-r">
+			<ScrollArea className="flex-1">
+				<div className="p-4">
+					{selectedSection ? (
+						<>
+							{/*
+							 * The form's own header: what you are editing, and whether
+							 * it still follows the base resume.
+							 *
+							 * The link state used to live only in the outline's overflow
+							 * menu, which meant the answer to "is this section still
+							 * shared with my other resumes?" was two clicks away from
+							 * the field you were about to edit. It sits here now,
+							 * because editing is what changes the answer.
+							 */}
+							<div className="mb-4 flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<h2 className="truncate font-semibold text-base">
+										{String(selectedSection.content.title ?? "") ||
+											SECTION_CONFIGS[selectedSection.type].defaultTitle}
+									</h2>
+									<p className="text-muted-foreground text-xs">
+										{SECTION_CONFIGS[selectedSection.type].label}
+									</p>
+								</div>
+
+								{selectedSection.baseSectionId && handleSetSectionLink ? (
+									<Button
+										onClick={() =>
+											handleSetSectionLink(
+												selectedSection.id,
+												!selectedSection.linkedToBase,
+											)
+										}
+										size="sm"
+										static
+										variant="outline"
+									>
+										{selectedSection.linkedToBase ? (
+											<>
+												<Unlink2 className="mr-2 h-3.5 w-3.5" />
+												Linked — click to take over
+											</>
+										) : (
+											<>
+												<Link2 className="mr-2 h-3.5 w-3.5" />
+												Detached — click to re-link
+											</>
+										)}
+									</Button>
+								) : null}
+							</div>
+
+							{/*
+							 * Break semantics per section. Layout, not content: everything here is
+							 * stored on `section.layout` and survives a variant copy.
+							 */}
+							{selectedSection.type !== "personal-info" ? (
+								<SectionBreakControls
+									onChange={(layout) =>
+										handleSectionChange(selectedSection.id, { layout })
+									}
+									section={selectedSection}
+								/>
+							) : null}
+
+							{renderSectionForm()}
+						</>
+					) : (
+						<PanelEmpty
+							action={
+								activeResume.sections.length > 0 ? (
+									<p className="text-xs">
+										Or pick one from the list on the left.
+									</p>
+								) : (
+									/*
+									 * The one action that fixes the emptiness. A state that
+									 * only describes itself is a dead end.
+									 */
+									<AddSectionMenu
+										onAddSection={handleAddSection}
+										sections={activeResume.sections}
+									/>
+								)
+							}
+							hint="Your form appears here, beside a live preview of the document."
+							icon={<Layout aria-hidden className="h-8 w-8 opacity-40" />}
+							title={
+								activeResume.sections.length > 0
+									? "Nothing selected"
+									: "This resume has no sections yet"
+							}
+						/>
+					)}
+				</div>
+			</ScrollArea>
+		</div>
+	);
+
+	const previewView = (
+		<div className="flex h-full flex-col overflow-hidden bg-muted/30">
+			{/*
+			 * Formatting controls, collapsed by default.
+			 *
+			 * `FormattingToolbar` is a 692-line control surface -- typography,
+			 * margins, colours, scale -- and it used to sit permanently above
+			 * the document, inside the same column. So on a laptop the thing
+			 * you open the editor to look at was permanently smaller than the
+			 * controls that shape it, and both had to be scrolled past
+			 * each other. Typography is something you set once and then look
+			 * at the result of; it does not need permanent screen space.
+			 *
+			 * The header stays put and names what the controls currently are, so
+			 * the collapsed state is still informative and reopening is one
+			 * click rather than a hunt.
+			 */}
+			{activeResume.metadata ? (
+				<Collapsible onOpenChange={setTypeControlsOpen} open={typeControlsOpen}>
+					<div className="flex items-center gap-2 border-b bg-background px-3 py-1">
+						<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent/50">
+							<ChevronDown
+								aria-hidden
+								className={cn(
+									"h-3.5 w-3.5 shrink-0 transition-transform",
+									!typeControlsOpen && "-rotate-90",
+								)}
+							/>
+							<span className="font-medium">Typography &amp; layout</span>
+							<span className="truncate text-muted-foreground">
+								{TEMPLATE_CONFIGS[
+									normalizeTemplateId(
+										draftResume?.template ?? activeResume.template,
+									)
+								]?.name ?? TEMPLATE_CONFIGS.standard.name}
+								{" · "}
+								{Math.round(previewScale * 100)}%
+								{pageCount !== null ? (
+									<span>
+										{" · "}
+										{pageCount} {pageCount === 1 ? "page" : "pages"}
+									</span>
+								) : null}
+							</span>
+						</CollapsibleTrigger>
+						{/*
+						 * The fit meter sits outside the trigger, not inside it: a button inside a
+						 * button is the hydration error this file has already been bitten by, and the
+						 * meter is the one interactive thing in the header.
+						 */}
+						<FitMeter
+							onSelectSection={(id) => setSelectedSectionId(id)}
+							onSettingsChange={handleSettingsChange}
+							resume={draftResume ?? activeResume}
+							settings={
+								(draftResume?.metadata?.settings ??
+									activeResume.metadata.settings) as ResumeSettings
+							}
+						/>
+					</div>
+					<CollapsibleContent>
+						<FormattingToolbar
+							onScaleChange={(next) => {
+								userZoomedRef.current = true;
+								setPreviewScale(next);
+							}}
+							onSettingsChange={handleSettingsChange}
+							scale={previewScale}
+							settings={
+								(draftResume?.metadata?.settings as
+									| ResumeSettings
+									| undefined) ?? activeResume.metadata.settings
+							}
+						/>
+					</CollapsibleContent>
+				</Collapsible>
+			) : null}
+
+			{/* Preview Area */}
+			{/*
+			 * `min-w-max` on the inner wrapper, not just `justify-center`.
+			 *
+			 * A centred flex child that is wider than its scroll container overflows
+			 * equally in both directions, and the left half cannot be scrolled to —
+			 * the classic "my document is cut off" bug. Letting the wrapper size to
+			 * its content keeps the whole page reachable at any zoom.
+			 *
+			 * Page snapping is small-screen only (`max-lg`): on a phone the document is
+			 * the whole view, pages are already discrete fixed-size boxes, and stopping
+			 * at a page boundary is the difference between "reading a document" and
+			 * "scrolling a canvas". On a desktop the pane can be 400px tall and snapping
+			 * would fight the scrollbar someone is dragging.
+			 *
+			 * Double-click toggles fit-width and 100%. Pinch is the browser's gesture and
+			 * is left alone (`touch-action` on the page keeps `pinch-zoom`), so the app
+			 * never fights the system zoom.
+			 */}
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: double-click is a pointer-only shortcut; the same zoom is a labelled control in the toolbar, and the page must not become a tab stop. */}
+			<div
+				className="flex-1 overflow-auto max-lg:snap-y max-lg:snap-proximity"
+				onDoubleClick={togglePreviewZoom}
+				ref={setPreviewPane}
+			>
+				<div className="flex min-h-full min-w-max items-start justify-center p-3 lg:p-6">
+					<TypstPreview
+						resume={draftResume ?? activeResume}
+						scale={previewScale}
+					/>
+				</div>
+			</div>
+		</div>
+	);
+
 	return (
-		<div className="flex h-screen flex-col bg-background">
+		/*
+		 * `data-editor-shell` is the readiness marker the browser harness waits for.
+		 *
+		 * It used to wait for the word "SECTIONS" in body text, which stopped existing
+		 * below `lg` when the outline moved into a mode that starts hidden — a probe
+		 * failure that looked like a mount failure. The shell is the honest signal: the
+		 * editor is on screen, whichever mode is showing.
+		 */
+		<div className="flex h-dvh flex-col bg-background" data-editor-shell="">
 			{/* Header */}
 			<header className="z-(--br-z-sticky) border-b bg-background/95 backdrop-blur">
 				{/*
@@ -1122,9 +1522,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				 * without scrolling the whole document.
 				 *
 				 * Wrapping is containment, not design: the row now stays inside the viewport
-				 * at any width. Collapsing these three actions to icons on small screens is
-				 * still worth doing, and is deliberately left as a separate change rather than
-				 * folded in here.
+				 * at any width. Below `sm` the three actions collapse to icons (each keeps
+				 * an `aria-label` and a `title`), and the variations control becomes an
+				 * icon-only trigger below `md` rather than disappearing: variants are a
+				 * load-bearing feature and `hidden md:flex` made them unreachable on a
+				 * phone.
 				 */}
 				<div className="flex min-h-14 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					{/* Left: Back + Resume Info */}
@@ -1158,11 +1560,36 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 								]?.name ?? TEMPLATE_CONFIGS.standard.name}
 							</p>
 						</div>
+
+						{/*
+						 * Save state, compact below `lg`.
+						 *
+						 * It used to be `hidden lg:block`, so on a tablet or a phone the
+						 * question "have I lost work?" had no answer anywhere on screen —
+						 * the surface that exists to be honest about saving was the one
+						 * that disappeared. The dot carries the icon and the same words
+						 * for assistive tech; the sentence returns at `lg`.
+						 */}
+						<div className="lg:hidden">
+							<SaveState
+								changeCount={changeCount}
+								compact
+								isDirty={isDirty}
+								isSaving={isAnyPending}
+							/>
+						</div>
 					</div>
 
-					{/* Center: Variation Manager */}
+					{/*
+					 * Variation Manager.
+					 *
+					 * Was `hidden md:flex`, which made variants completely unreachable
+					 * below 768px. Its trigger is now icon-only below `md` (the label is
+					 * `data-collapse-label`), so the feature is one tap away at any width
+					 * instead of absent.
+					 */}
 					{baseResume && (
-						<div className="hidden items-center md:flex">
+						<div className="flex items-center">
 							<VariationManager
 								baseResume={baseResume}
 								currentResumeId={activeResume.id}
@@ -1185,7 +1612,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					 * collapsible header. This says which of the three true things is
 					 * happening: in flight, unsaved, or saved.
 					 */}
-					<div aria-live="polite" className="mr-2 ml-auto hidden lg:block">
+					<div
+						aria-live="polite"
+						className="mr-2 ml-auto hidden lg:block"
+						data-responsive-duplicate="compact save state above lg"
+					>
 						<SaveState
 							changeCount={changeCount}
 							isDirty={isDirty}
@@ -1274,328 +1705,118 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 			{/* Main Content */}
 			<div className="min-h-0 flex-1 overflow-hidden">
-				<PanelGroup
-					id="resume-editor-panels"
-					orientation="horizontal"
-					style={{ height: "100%" }}
-				>
-					{/* Left Panel - VS Code style collapsible sections */}
-					<Panel defaultSize="16%" id="left-panel" maxSize="28%" minSize="12%">
-						<ScrollArea className="h-full border-r">
-							<div className="flex flex-col">
-								{/* CONTENT Section */}
-								<Collapsible onOpenChange={setContentOpen} open={contentOpen}>
-									<CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
-										<div className="flex items-center gap-2">
-											<ChevronDown
-												className={`h-4 w-4 transition-transform ${contentOpen ? "" : "-rotate-90"}`}
-											/>
-											<Layers className="h-4 w-4" />
-											<span>Sections</span>
-											{isAnyPending && (
-												<Loader2 className="h-3 w-3 animate-spin" />
+				{isWideEditor ? (
+					<PanelGroup
+						id="resume-editor-panels"
+						orientation="horizontal"
+						style={{ height: "100%" }}
+					>
+						{/*
+						 * Pixel floors, not percentages.
+						 *
+						 * `minSize="12%"` was 92px at 768px and ~123px at 1024px: drag the
+						 * rail that narrow and the outline is a column of clipped words.
+						 * `react-resizable-panels` reads a number as pixels, so these are
+						 * the smallest sizes at which each pane still does its job.
+						 */}
+						<Panel
+							defaultSize="22%"
+							id="left-panel"
+							maxSize="28%"
+							minSize={200}
+						>
+							{sectionsPane}
+						</Panel>
+
+						<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
+
+						{/* Middle Panel - Form Editor */}
+						<Panel
+							defaultSize="40%"
+							id="form-panel"
+							maxSize="58%"
+							minSize={280}
+						>
+							{formPane}
+						</Panel>
+
+						<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
+
+						{/* Right Panel - Preview */}
+						<Panel defaultSize="38%" id="right-panel" minSize={300}>
+							{previewView}
+						</Panel>
+					</PanelGroup>
+				) : (
+					/*
+					 * One column, three modes.
+					 *
+					 * The panes stay mounted and swap visibility rather than unmounting, so
+					 * each mode keeps its own scroll position — switching to the preview and
+					 * back does not throw away where you were in a long form. The preview's
+					 * `ResizeObserver` correctly reports 0 while it is `display: none` and
+					 * re-fits the moment it becomes visible, which is why fit-to-pane still
+					 * works the first time Preview is opened.
+					 */
+					<div className="small-screen-editor flex h-full min-h-0 flex-col">
+						<div
+							className={cn(
+								"min-h-0 flex-1 overflow-hidden",
+								smallScreenMode !== "sections" && "hidden",
+							)}
+						>
+							{sectionsPane}
+						</div>
+						<div
+							className={cn(
+								"min-h-0 flex-1 overflow-hidden",
+								smallScreenMode !== "form" && "hidden",
+							)}
+						>
+							{formPane}
+						</div>
+						<div
+							className={cn(
+								"min-h-0 flex-1 overflow-hidden",
+								smallScreenMode !== "preview" && "hidden",
+							)}
+						>
+							{previewView}
+						</div>
+
+						<nav
+							aria-label="Editor view"
+							className="small-screen-nav shrink-0 border-t bg-background"
+							style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+						>
+							<div className="small-screen-nav-list grid grid-cols-3 gap-1 p-1">
+								{SMALL_SCREEN_MODES.map((mode) => {
+									const active = smallScreenMode === mode.id;
+									return (
+										<button
+											aria-current={active ? "true" : undefined}
+											className={cn(
+												"flex min-h-14 flex-col items-center justify-center gap-1 rounded-md text-xs transition-colors",
+												active
+													? "bg-accent font-medium text-foreground"
+													: "text-muted-foreground hover:bg-accent/50",
 											)}
-										</div>
-										<span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
-											{activeResume.sections.length}
-										</span>
-									</CollapsibleTrigger>
-									<CollapsibleContent>
-										<div className="px-2 pb-2">
-											<SectionsManager
-												isLoading={isAnyPending}
-												onAddSection={handleAddSection}
-												onDeleteSection={handleDeleteSection}
-												onSectionsChange={handleSectionsReorder}
-												onSelectSection={setSelectedSectionId}
-												onSetLink={
-													baseResume && activeResume.baseResumeId
-														? handleSetSectionLink
-														: undefined
-												}
-												personalInfo={activeResume.metadata?.personalInfo}
-												sections={activeResume.sections}
-												selectedSectionId={selectedSectionId || undefined}
-											/>
-										</div>
-									</CollapsibleContent>
-								</Collapsible>
-
-								{/*
-								 * Templates. Collapsed by default: it is a one-click choice
-								 * made occasionally, and the Sections list above it is what you
-								 * reach for constantly. It was previously open by default and
-								 * shared its open flag with the preview's toolbar.
-								 */}
-								<Collapsible onOpenChange={setTypeOpen} open={typeOpen}>
-									<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
-										<div className="flex items-center gap-2">
-											<ChevronDown
-												className={`h-4 w-4 transition-transform ${typeOpen ? "" : "-rotate-90"}`}
-											/>
-											<Layout className="h-4 w-4" />
-											<span>Templates</span>
-										</div>
-									</CollapsibleTrigger>
-									<CollapsibleContent>
-										<div className="px-2 pb-2">
-											<TemplateSelector
-												currentTemplate={normalizeTemplateId(
-													draftResume?.template ?? activeResume.template,
-												)}
-												onSelect={handleTemplateSelect}
-											/>
-										</div>
-									</CollapsibleContent>
-								</Collapsible>
-
-								{/*
-								 * Library lives here, not in the Review sheet.
-								 *
-								 * It used to be the fifth tab in a sheet next to Parser fit, Job target,
-								 * History and Bullets. Those four are checks *on the document you are
-								 * looking at*; the library is the pool of content the document is
-								 * assembled from. Putting them in one flat list of five gave the
-								 * sheet no structure, and `research`/`thrust` — the thing you reach
-								 * for when writing — was as far from the Sections list as the
-								 * keyboard could put it. It is content, so it sits with content.
-								 */}
-								<Collapsible onOpenChange={setLibraryOpen} open={libraryOpen}>
-									<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
-										<div className="flex items-center gap-2">
-											<ChevronDown
-												className={`h-4 w-4 transition-transform ${libraryOpen ? "" : "-rotate-90"}`}
-											/>
-											<Library className="h-4 w-4" />
-											<span>Library</span>
-										</div>
-									</CollapsibleTrigger>
-									<CollapsibleContent>
-										<div className="px-2 pb-2">
-											<ContentLibraryPanel
-												resume={draftResume ?? activeResume}
-											/>
-										</div>
-									</CollapsibleContent>
-								</Collapsible>
-							</div>
-						</ScrollArea>
-					</Panel>
-
-					<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
-
-					{/* Middle Panel - Form Editor */}
-					<Panel defaultSize="42%" id="form-panel" maxSize="58%" minSize="26%">
-						<div className="flex h-full flex-col border-r">
-							<ScrollArea className="flex-1">
-								<div className="p-4">
-									{selectedSection ? (
-										<>
-											{/*
-											 * The form's own header: what you are editing, and whether
-											 * it still follows the base resume.
-											 *
-											 * The link state used to live only in the outline's overflow
-											 * menu, which meant the answer to "is this section still
-											 * shared with my other resumes?" was two clicks away from
-											 * the field you were about to edit. It sits here now,
-											 * because editing is what changes the answer.
-											 */}
-											<div className="mb-4 flex items-start justify-between gap-3">
-												<div className="min-w-0">
-													<h2 className="truncate font-semibold text-base">
-														{String(selectedSection.content.title ?? "") ||
-															SECTION_CONFIGS[selectedSection.type]
-																.defaultTitle}
-													</h2>
-													<p className="text-muted-foreground text-xs">
-														{SECTION_CONFIGS[selectedSection.type].label}
-													</p>
-												</div>
-
-												{selectedSection.baseSectionId &&
-												handleSetSectionLink ? (
-													<Button
-														onClick={() =>
-															handleSetSectionLink(
-																selectedSection.id,
-																!selectedSection.linkedToBase,
-															)
-														}
-														size="sm"
-														static
-														variant="outline"
-													>
-														{selectedSection.linkedToBase ? (
-															<>
-																<Unlink2 className="mr-2 h-3.5 w-3.5" />
-																Linked — click to take over
-															</>
-														) : (
-															<>
-																<Link2 className="mr-2 h-3.5 w-3.5" />
-																Detached — click to re-link
-															</>
-														)}
-													</Button>
-												) : null}
-											</div>
-
-											{/*
-											 * Break semantics per section. Layout, not content: everything here is
-											 * stored on `section.layout` and survives a variant copy.
-											 */}
-											{selectedSection.type !== "personal-info" ? (
-												<SectionBreakControls
-													onChange={(layout) =>
-														handleSectionChange(selectedSection.id, { layout })
-													}
-													section={selectedSection}
-												/>
-											) : null}
-
-											{renderSectionForm()}
-										</>
-									) : (
-										<PanelEmpty
-											action={
-												activeResume.sections.length > 0 ? (
-													<p className="text-xs">
-														Or pick one from the list on the left.
-													</p>
-												) : (
-													/*
-													 * The one action that fixes the emptiness. A state that
-													 * only describes itself is a dead end.
-													 */
-													<AddSectionMenu
-														onAddSection={handleAddSection}
-														sections={activeResume.sections}
-													/>
-												)
-											}
-											hint="Your form appears here, beside a live preview of the document."
-											icon={
-												<Layout aria-hidden className="h-8 w-8 opacity-40" />
-											}
-											title={
-												activeResume.sections.length > 0
-													? "Nothing selected"
-													: "This resume has no sections yet"
-											}
-										/>
-									)}
-								</div>
-							</ScrollArea>
-						</div>
-					</Panel>
-
-					<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
-
-					{/* Right Panel - Preview */}
-					<Panel defaultSize="42%" id="right-panel" minSize="22%">
-						<div className="flex h-full flex-col overflow-hidden bg-muted/30">
-							{/*
-							 * Formatting controls, collapsed by default.
-							 *
-							 * `FormattingToolbar` is a 692-line control surface -- typography,
-							 * margins, colours, scale -- and it used to sit permanently above
-							 * the document, inside the same column. So on a laptop the thing
-							 * you open the editor to look at was permanently smaller than the
-							 * controls that shape it, and both had to be scrolled past
-							 * each other. Typography is something you set once and then look
-							 * at the result of; it does not need permanent screen space.
-							 *
-							 * The header stays put and names what the controls currently are, so
-							 * the collapsed state is still informative and reopening is one
-							 * click rather than a hunt.
-							 */}
-							{activeResume.metadata ? (
-								<Collapsible
-									onOpenChange={setTypeControlsOpen}
-									open={typeControlsOpen}
-								>
-									<div className="flex items-center gap-2 border-b bg-background px-3 py-1">
-										<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent/50">
-											<ChevronDown
-												aria-hidden
-												className={cn(
-													"h-3.5 w-3.5 shrink-0 transition-transform",
-													!typeControlsOpen && "-rotate-90",
-												)}
-											/>
-											<span className="font-medium">
-												Typography &amp; layout
+											data-touch-primary=""
+											key={mode.id}
+											onClick={() => setSmallScreenMode(mode.id)}
+											type="button"
+										>
+											<mode.Icon aria-hidden className="h-4 w-4" />
+											<span className="small-screen-nav-label">
+												{mode.label}
 											</span>
-											<span className="truncate text-muted-foreground">
-												{TEMPLATE_CONFIGS[
-													normalizeTemplateId(
-														draftResume?.template ?? activeResume.template,
-													)
-												]?.name ?? TEMPLATE_CONFIGS.standard.name}
-												{" · "}
-												{Math.round(previewScale * 100)}%
-												{pageCount !== null ? (
-													<span>
-														{" · "}
-														{pageCount} {pageCount === 1 ? "page" : "pages"}
-													</span>
-												) : null}
-											</span>
-										</CollapsibleTrigger>
-										{/*
-										 * The fit meter sits outside the trigger, not inside it: a button inside a
-										 * button is the hydration error this file has already been bitten by, and the
-										 * meter is the one interactive thing in the header.
-										 */}
-										<FitMeter
-											onSelectSection={(id) => setSelectedSectionId(id)}
-											onSettingsChange={handleSettingsChange}
-											resume={draftResume ?? activeResume}
-											settings={
-												(draftResume?.metadata?.settings ??
-													activeResume.metadata.settings) as ResumeSettings
-											}
-										/>
-									</div>
-									<CollapsibleContent>
-										<FormattingToolbar
-											onScaleChange={(next) => {
-												userZoomedRef.current = true;
-												setPreviewScale(next);
-											}}
-											onSettingsChange={handleSettingsChange}
-											scale={previewScale}
-											settings={
-												(draftResume?.metadata?.settings as
-													| ResumeSettings
-													| undefined) ?? activeResume.metadata.settings
-											}
-										/>
-									</CollapsibleContent>
-								</Collapsible>
-							) : null}
-
-							{/* Preview Area */}
-							{/*
-							 * `min-w-max` on the inner wrapper, not just `justify-center`.
-							 *
-							 * A centred flex child that is wider than its scroll container overflows
-							 * equally in both directions, and the left half cannot be scrolled to —
-							 * the classic "my document is cut off" bug. Letting the wrapper size to
-							 * its content keeps the whole page reachable at any zoom.
-							 */}
-							<div className="flex-1 overflow-auto" ref={setPreviewPane}>
-								<div className="flex min-h-full min-w-max items-start justify-center p-6">
-									<TypstPreview
-										resume={draftResume ?? activeResume}
-										scale={previewScale}
-									/>
-								</div>
+										</button>
+									);
+								})}
 							</div>
-						</div>
-					</Panel>
-				</PanelGroup>
+						</nav>
+					</div>
+				)}
 			</div>
 		</div>
 	);

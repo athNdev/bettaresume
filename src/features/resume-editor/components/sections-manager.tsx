@@ -265,10 +265,10 @@ export function SortableSectionItem({
 				) : null}
 			</button>
 
-			<div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+			<div className="hover-reveal flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
 				<Button
 					aria-label={`${section.visible ? "Hide" : "Show"} ${title}`}
-					className="h-8 w-8"
+					className="@max-[15rem]:hidden h-8 w-8"
 					onClick={() => onToggleVisibility(section.id)}
 					size="icon"
 					static
@@ -292,6 +292,24 @@ export function SortableSectionItem({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
+						{/*
+						 * The same action as the row button, always present. Below a 240px
+						 * pane the button is hidden and this is the only route to it, so
+						 * "make the row fit" never means "remove a feature".
+						 */}
+						<DropdownMenuItem onSelect={() => onToggleVisibility(section.id)}>
+							{section.visible ? (
+								<>
+									<EyeOff aria-hidden className="mr-2 h-4 w-4" />
+									Hide {SECTION_CONFIGS[section.type].label}
+								</>
+							) : (
+								<>
+									<Eye aria-hidden className="mr-2 h-4 w-4" />
+									Show {SECTION_CONFIGS[section.type].label}
+								</>
+							)}
+						</DropdownMenuItem>
 						{baseLinked && onSetLink ? (
 							<DropdownMenuItem
 								onSelect={() => onSetLink(section.id, !isLinked)}
@@ -436,7 +454,14 @@ export function SectionsManager({
 	};
 
 	return (
-		<div className="space-y-2">
+		/*
+		 * `@container`: the outline is sized by the user's pane, not the viewport, so
+		 * whether the row actions fit is a question about *this* box. Below 240px the
+		 * standalone hide/show button moves into the row's overflow menu, which is what
+		 * gives the section name enough width to be recognisable at the 1024px
+		 * three-pane floor ("Professional Experience" should not read "Prof…").
+		 */
+		<div className="@container space-y-2">
 			<p className="sr-only" id={instructionsId}>
 				Press Space or Enter to pick up, the arrow keys to move, then Space or
 				Enter to drop. Escape cancels.

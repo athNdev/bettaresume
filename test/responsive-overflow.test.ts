@@ -23,7 +23,7 @@
  *   that asserts class names cannot tell you a row is 390px wide, and this file does not
  *   pretend otherwise.
  */
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { codeOf } from "./helpers/code-source";
 
@@ -82,9 +82,11 @@ describe("the dashboard header", () => {
 	it("collapses action labels on narrow screens", () => {
 		const row = headerRow(dashboard);
 
-		expect(row).toMatch(/<span className="hidden sm:inline">Import<\/span>/);
 		expect(row).toMatch(
-			/<span className="hidden sm:inline">New Resume<\/span>/,
+			/<span className="hidden sm:inline" data-collapse-label="">[\s\S]*?Import[\s\S]*?<\/span>/,
+		);
+		expect(row).toMatch(
+			/<span className="hidden sm:inline" data-collapse-label="">[\s\S]*?New Resume[\s\S]*?<\/span>/,
 		);
 	});
 
@@ -276,5 +278,249 @@ describe("the resume card grid declares its own track", () => {
 		// allows shrinking below content. Asserting the utility name rather than the emitted CSS
 		// is the tractable half of this; the measured numbers are the other half.
 		expect(dashboard).not.toMatch(/grid gap-6 sm:grid-cols-2/);
+	});
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Wave 4A — the small-screen mechanisms.
+ *
+ * These are gates on *mechanisms*, in the same spirit as the header tests above: the
+ * measured proof lives in `test/responsive-matrix.test.ts`, which drives a real browser
+ * over seven viewports. What follows pins the things a future edit would quietly undo —
+ * a `h-screen` typed back in, a `hidden md:flex` wrapped around a feature, the body
+ * overflow mask restored because something was overflowing.
+ *
+ * Every absence check reads code with `codeOf()`, because a comment explaining a trap
+ * necessarily names it, and a test that a comment can satisfy is not a test.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+const globalsCss = readFileSync(
+	new URL("../src/styles/globals.css", import.meta.url),
+	"utf8",
+).replace(/\/\*[\s\S]*?\*\//g, "");
+
+const reviewPanel = codeOf(
+	"src/features/resume-editor/components/review-panel.tsx",
+);
+const historyPanel = codeOf(
+	"src/features/resume-editor/components/history-panel.tsx",
+);
+const typstPreview = codeOf(
+	"src/features/resume-editor/components/typst-preview.tsx",
+);
+const popover = codeOf("src/components/ui/popover.tsx");
+
+/** Every TS/TSX file in `src/`, so a rule cannot be evaded by adding a file. */
+function srcFiles(): string[] {
+	const out: string[] = [];
+	const walk = (dir: string) => {
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			const path = `${dir}/${entry.name}`;
+			if (entry.isDirectory()) walk(path);
+			else if (/\.tsx?$/.test(entry.name)) out.push(path);
+		}
+	};
+	walk("src");
+	return out;
+}
+
+describe("the overflow mask is gone, not ignored", () => {
+	it("does not hide horizontal overflow on the body", () => {
+		// `overflow-x: hidden` + `max-width: 100vw` was the reason two header overflows
+		// looked fine in review. If a layout overflows now, it must be visible and caught
+		// by the matrix, not clipped into silence.
+		const bodyRule = globalsCss.match(/\nbody\s*\{[^}]*\}/)?.[0] ?? "";
+		expect(bodyRule).not.toBe("");
+		expect(bodyRule).not.toMatch(/overflow-x\s*:\s*hidden/);
+		expect(bodyRule).not.toMatch(/max-width\s*:\s*100vw/);
+		expect(bodyRule).toContain("100dvh");
+	});
+});
+
+describe("no fixed viewport height in src/", () => {
+	it("has no `h-screen` or `min-h-screen` anywhere", () => {
+		// 100vh includes mobile browser chrome, so the bottom of a full-height app sits
+		// under it. `dvh` is the unit that describes the space actually available.
+		const offenders = srcFiles().filter((file) =>
+			/(?<![\w-])(?:min-)?h-screen(?![\w-])/.test(codeOf(file)),
+		);
+		expect(offenders, `still using 100vh: ${offenders.join(", ")}`).toEqual([]);
+	});
+
+	it("the editor root sizes itself to the dynamic viewport", () => {
+		expect(editor).toMatch(/h-dvh/);
+		expect(editor).not.toMatch(/flex h-screen flex-col/);
+	});
+});
+
+describe("no feature is hidden behind a breakpoint", () => {
+	/**
+	 * `hidden` plus a display utility at `sm`/`md`/`lg` removes content below that width.
+	 * That is right for a *duplicate* — a label that an `aria-label` replaces, a nav that
+	 * the footer also carries — and wrong for a feature, which is why every legitimate
+	 * use carries a marker: `data-collapse-label` (the control keeps its accessible
+	 * name) or `data-responsive-duplicate` (the same thing is reachable elsewhere).
+	 */
+	const BREAKPOINT_DISPLAY =
+		/^(sm|md|lg):(?:flex|block|inline|inline-flex|grid|table)$/;
+
+	function hiddenAtBreakpoint(file: string): string[] {
+		const code = codeOf(file);
+		const found: string[] = [];
+		for (const tag of code.match(/<[A-Za-z][\s\S]*?>/g) ?? []) {
+			const classMatch = tag.match(
+				/className=(?:"([^"]*)"|\{`([^`]*)`\}|\{"([^"]*)"\})/,
+			);
+			const classes = (
+				classMatch?.[1] ??
+				classMatch?.[2] ??
+				classMatch?.[3] ??
+				""
+			)
+				.split(/\s+/)
+				.filter(Boolean);
+			if (!classes.includes("hidden")) continue;
+			if (!classes.some((token) => BREAKPOINT_DISPLAY.test(token))) continue;
+			if (
+				tag.includes("data-collapse-label") ||
+				tag.includes("data-responsive-duplicate")
+			) {
+				continue;
+			}
+			found.push(`${file}: ${tag.replace(/\s+/g, " ").slice(0, 100)}`);
+		}
+		return found;
+	}
+
+	it("every breakpoint-hidden element is a labelled collapse or a duplicate", () => {
+		const offenders = srcFiles().flatMap(hiddenAtBreakpoint);
+		expect(
+			offenders,
+			`hidden feature(s) — move it, do not remove it:\n${offenders.join("\n")}`,
+		).toEqual([]);
+	});
+
+	it("keeps the variations control mounted at every width", () => {
+		// The defect: `hidden md:flex` around `VariationManager` made variants — a
+		// load-bearing feature per CLAUDE.md — completely unreachable on a phone.
+		expect(editor).toMatch(/<VariationManager/);
+		expect(
+			codeOf("src/features/resume-editor/components/variation-manager.tsx"),
+		).toMatch(/data-collapse-label/);
+	});
+
+	it("keeps save status on screen below lg", () => {
+		// `hidden lg:block` meant "have I lost work?" had no answer on a tablet.
+		expect(editor).toMatch(/<SaveState[\s\S]{0,200}?compact/);
+	});
+});
+
+describe("the editor has a small-screen model", () => {
+	it("switches between three modes below lg", () => {
+		expect(editor).toMatch(/SMALL_SCREEN_MODES/);
+		expect(editor).toMatch(/aria-label="Editor view"/);
+		// Sections, form, preview — one per three-zone pane.
+		for (const label of ['"sections"', '"form"', '"preview"']) {
+			expect(editor).toContain(label);
+		}
+	});
+
+	it("gates mounting rather than hiding the panes", () => {
+		// A hidden pane reports width 0 to the preview's ResizeObserver, so fit-to-pane
+		// would freeze at the wrong scale. The layout is chosen before render.
+		expect(editor).toMatch(/isWideEditor \? \(/);
+		expect(editor).toMatch(/useMediaQuery\("\(min-width: 1024px\)"\)/);
+	});
+
+	it("gives each pane a pixel floor, not a percentage one", () => {
+		// `minSize="12%"` was 92px at 768px: a rail of clipped words.
+		expect(editor).toMatch(/minSize=\{200\}/);
+		expect(editor).toMatch(/minSize=\{280\}/);
+		expect(editor).toMatch(/minSize=\{300\}/);
+	});
+
+	it("has a short-height variant for landscape phones", () => {
+		expect(globalsCss).toMatch(/@media \(max-height:\s*520px\)/);
+		expect(editor).toMatch(/small-screen-editor/);
+		expect(editor).toMatch(/small-screen-nav-label/);
+	});
+});
+
+describe("form rows collapse instead of clipping", () => {
+	const formDir = "src/components/sections-forms";
+	const forms = readdirSync(formDir)
+		.filter((name) => name.endsWith(".tsx"))
+		.map((name) => `${formDir}/${name}`);
+
+	it("leaves no unfixed two- or three-column grid", () => {
+		const offenders = forms.filter((file) =>
+			/(?<![\w-])grid-cols-[23](?![\w-])/.test(codeOf(file)),
+		);
+		expect(
+			offenders,
+			`uncollapsed form grids: ${offenders.join(", ")}`,
+		).toEqual([]);
+	});
+
+	it("uses the one shared definition", () => {
+		// One shared definition, not eleven edits: if the breakpoint moves, it moves once.
+		expect(globalsCss).toMatch(/\.fields-grid\s*\{/);
+		expect(globalsCss).toMatch(/\.fields-grid-3\s*\{/);
+		// A container query, because the form column is sized by the user's drag.
+		expect(globalsCss).toMatch(/@container \(width >= 30rem\)/);
+		// `col-span-2` must mean "the whole row" in both layouts, or it creates a
+		// phantom second column when the grid is stacked.
+		expect(globalsCss).toMatch(
+			/\.fields-grid > \.col-span-2\s*\{[^}]*grid-column: 1 \/ -1/,
+		);
+		const uses = forms.filter((file) => /fields-grid/.test(codeOf(file)));
+		expect(uses.length).toBeGreaterThanOrEqual(forms.length - 1);
+	});
+});
+
+describe("the review sheet survives a 360px viewport", () => {
+	it("gives its six tabs a wrapping strategy", () => {
+		// Six `whitespace-nowrap` triggers in a 390px sheet with no wrap or scroll is the
+		// highest-severity dense-toolbar trap in the research.
+		expect(reviewPanel).toMatch(/<TabsList[^>]*flex-wrap/);
+	});
+
+	it("stacks the history diff under the version list by container width", () => {
+		// Container queries, not media queries: the sheet is 360px on a phone and 576px
+		// on a tablet, and the column is the *panel's* problem.
+		expect(historyPanel).toMatch(/@container/);
+		expect(historyPanel).toMatch(/@md:flex-row/);
+		expect(historyPanel).toMatch(/max-h-48/);
+	});
+
+	it("caps every popover to the viewport", () => {
+		expect(popover).toMatch(/max-w-\[calc\(100vw-2rem\)\]/);
+	});
+});
+
+describe("touch and the document preview", () => {
+	it("floors primary targets at 44px and dense ones at 40px", () => {
+		const coarse =
+			globalsCss.match(/@media \(pointer: coarse\)[\s\S]*?\n\}/)?.[0] ?? "";
+		expect(coarse).toMatch(/min-block-size:\s*44px/);
+		expect(coarse).toMatch(/min-block-size:\s*40px/);
+	});
+
+	it("makes hover-only row actions visible on a coarse pointer", () => {
+		expect(globalsCss).toMatch(/\.hover-reveal/);
+		expect(
+			codeOf("src/features/resume-editor/components/sections-manager.tsx"),
+		).toMatch(/hover-reveal/);
+	});
+
+	it("leaves pinch-zoom to the browser", () => {
+		expect(typstPreview).toContain("pinch-zoom");
+		expect(typstPreview).not.toContain("user-scalable=no");
+		expect(typstPreview).toMatch(/data-typst-page/);
+	});
+
+	it("keeps the document page paper-white", () => {
+		// The preview is the artefact. A themed page would misrepresent the export.
+		expect(typstPreview).toMatch(/backgroundColor: "#ffffff"/);
 	});
 });

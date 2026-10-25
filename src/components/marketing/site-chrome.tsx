@@ -42,7 +42,16 @@ export function SiteHeader() {
 			 * before it is a taste problem.
 			 */}
 			<header className="sticky top-0 z-(--br-z-sticky) border-[var(--brand-rule)] border-b bg-[var(--brand-paper)]">
-				<div className="marketing-shell flex h-16 items-center justify-between gap-3 sm:gap-6">
+				{/*
+				 * `min-h-16` + wrap, not `h-16`.
+				 *
+				 * Measured in the viewport matrix: at 768px the nav appears and the row
+				 * needs 857px, so the CTA sat 89px past the right edge. A fixed height
+				 * leaves wrapping nowhere to go — the same defect the dashboard and
+				 * editor headers had. With the body mask gone, the matrix reports it
+				 * instead of clipping it.
+				 */}
+				<div className="marketing-shell flex min-h-16 flex-wrap items-center justify-between gap-3 py-2 sm:gap-6">
 					<Link
 						className="flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold text-[var(--brand-text)] text-base"
 						href="/"
@@ -59,6 +68,7 @@ export function SiteHeader() {
 					<nav
 						aria-label="Primary"
 						className="hidden items-center gap-6 text-[var(--brand-text-muted)] text-base md:flex"
+						data-responsive-duplicate="footer nav"
 					>
 						{NAV.map((item) => (
 							<Link
@@ -80,6 +90,7 @@ export function SiteHeader() {
 					<div className="flex shrink-0 items-center gap-2">
 						<Link
 							className="hidden whitespace-nowrap rounded-lg px-3 py-2 font-medium text-[var(--brand-text-muted)] text-base transition-colors hover:bg-[var(--brand-ink)]/5 hover:text-[var(--brand-text)] sm:block sm:px-4"
+							data-responsive-duplicate="footer sign-in"
 							href="/app"
 						>
 							Sign in

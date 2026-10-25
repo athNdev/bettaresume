@@ -112,7 +112,8 @@ function DiagnosticRow({ diagnostic }: { diagnostic: ParseDiagnostic }) {
  * giving up the mounting. Both halves are load-bearing: drop `forceMount` and panel
  * state dies on every switch, drop the class and every panel is visible at once.
  */
-const TAB_PANEL = "min-h-0 flex-1 px-6 pb-6 data-[state=inactive]:hidden";
+const TAB_PANEL =
+	"min-h-0 flex-1 px-4 pb-4 data-[state=inactive]:hidden sm:px-6 sm:pb-6";
 
 function ClearState({ children }: { children: React.ReactNode }) {
 	return (
@@ -194,7 +195,7 @@ export function ReviewPanel({
 					 * clipped "Bullets 10" at the sheet edge even at 1440px. The counts now
 					 * lead their own panels instead.
 					 */}
-					<TabsList className="mx-6 mt-4 h-auto flex-wrap">
+					<TabsList className="mx-4 mt-4 h-auto flex-wrap justify-start sm:mx-6">
 						{/*
 						 * The checklist is first and default: it is the one surface that
 						 * answers "what should I do next", which is the question a user opens
@@ -392,7 +393,9 @@ export function ReviewTrigger({
 				size="sm"
 				variant="outline"
 			>
-				Review
+				<span className="hidden sm:inline" data-collapse-label="">
+					Review
+				</span>
 				{count > 0 ? (
 					<Badge className="ml-2" variant={count > 0 ? "secondary" : "outline"}>
 						{count}

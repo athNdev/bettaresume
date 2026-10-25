@@ -221,7 +221,7 @@ export function VolunteerForm({
 							</div>
 							<AccordionContent className="px-4 pt-2 pb-4">
 								<div className="space-y-4">
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Role *</Label>
 											<Input
@@ -248,7 +248,7 @@ export function VolunteerForm({
 										</div>
 									</div>
 
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Location</Label>
 											<Input
@@ -273,7 +273,7 @@ export function VolunteerForm({
 										</div>
 									</div>
 
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Start Date</Label>
 											<Input
