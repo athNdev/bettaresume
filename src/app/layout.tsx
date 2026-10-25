@@ -23,7 +23,10 @@ export const metadata: Metadata = {
 	applicationName: "Betta Resume",
 	authors: [{ name: "Betta Resume" }],
 	icons: {
-		icon: "/logo.svg",
+		icon: [
+			{ url: "/icon.svg", type: "image/svg+xml" },
+			{ url: "/favicon.ico", sizes: "any" },
+		],
 	},
 	openGraph: {
 		type: "website",

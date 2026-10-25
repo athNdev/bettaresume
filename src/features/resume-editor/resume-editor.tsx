@@ -1391,7 +1391,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	);
 
 	const previewView = (
-		<div className="flex h-full flex-col overflow-hidden bg-muted/30">
+		<div className="br-stage flex h-full flex-col overflow-hidden">
 			{/*
 			 * Formatting controls, collapsed by default.
 			 *

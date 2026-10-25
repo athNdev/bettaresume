@@ -1,6 +1,8 @@
 "use client";
 
 import { normalizeTemplateId } from "@bettaresume/types";
+import { Check } from "lucide-react";
+import { SelectionRule } from "@/components/ui/selection-rule";
 import type {
 	ResumeColors,
 	TemplateConfig,
@@ -199,8 +201,10 @@ export function TemplateSelector({
 					<button
 						aria-pressed={isCurrent}
 						className={cn(
-							"flex w-full cursor-pointer gap-3 rounded-md border px-2 py-2 text-left transition-[background-color,border-color] ease-enter hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-							isCurrent && "border-primary bg-accent",
+							"relative flex w-full cursor-pointer gap-3 rounded-md border px-2 py-2 text-left transition-[background-color,border-color] ease-enter hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+							isCurrent
+								? "border-border-selected bg-selected"
+								: "border-transparent",
 						)}
 						key={template.id}
 						onClick={() => {
@@ -209,6 +213,7 @@ export function TemplateSelector({
 						}}
 						type="button"
 					>
+						<SelectionRule selected={isCurrent} />
 						<div className="w-[68px] shrink-0">
 							<TemplateSpecimen template={template} />
 						</div>
@@ -216,10 +221,16 @@ export function TemplateSelector({
 							<span className="block font-medium text-sm leading-tight">
 								{template.name}
 							</span>
-							<span className="mt-0.5 block text-muted-foreground text-xs leading-snug">
+							<span className="mt-0.5 block text-fg-muted text-xs leading-snug">
 								{template.description}
 							</span>
 						</div>
+						{isCurrent ? (
+							<Check
+								aria-hidden
+								className="mt-1 size-4 shrink-0 text-border-selected"
+							/>
+						) : null}
 					</button>
 				);
 			})}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Betta Resume">
+	<title>Betta Resume mark</title>
+	<path d="M21.2 12H24.5A3.5 3.5 0 0 1 28 15.5V24.5A3.5 3.5 0 0 1 24.5 28H15.5A3.5 3.5 0 0 1 12 24.5V21.2" fill="none" stroke="var(--primary, #0063ed)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+	<path d="M7.5 4H16.5A3.5 3.5 0 0 1 20 7.5V16.5A3.5 3.5 0 0 1 16.5 20H7.5A3.5 3.5 0 0 1 4 16.5V7.5A3.5 3.5 0 0 1 7.5 4ZM8 9H16V10.75H8ZM8 12.5H16V14.25H8ZM8 16H13.5V17.75H8Z" fill="currentColor" fill-rule="evenodd"/>
+</svg>

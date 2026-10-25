@@ -71,7 +71,7 @@ const SheetContent = React.forwardRef<
 			<SheetOverlay />
 			<DialogPrimitive.Content
 				className={cn(
-					"fixed z-(--br-z-dialog) flex flex-col gap-4 bg-background p-6 shadow-elev-3 transition ease-enter data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:duration-(--br-duration-slow) data-[state=open]:duration-(--br-duration-slow)",
+					"fixed z-(--br-z-dialog) flex flex-col gap-4 bg-popover p-6 text-popover-foreground shadow-elev-3 transition ease-enter data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:duration-(--br-duration-slow) data-[state=open]:duration-(--br-duration-slow)",
 					SIDE_CLASSES[side],
 					className,
 				)}

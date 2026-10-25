@@ -154,13 +154,16 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 			style={{
 				width: cssWidth,
 				height: cssHeight,
+				/* The sheet. Surface B owns its paper colour: the document is an
+				   export preview, and it must not read a chrome token (R15). The
+				   *shadow* is chrome finish around the sheet, so it comes from the
+				   elevation scale. */
 				backgroundColor: "#ffffff",
-				boxShadow:
-					"0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+				boxShadow: "var(--elev-page)",
 				marginBottom: 16 * scale,
 				// Dim slightly while a new compile is in progress
 				opacity: isLoading ? 0.7 : 1,
-				transition: "opacity 150ms ease",
+				transition: "opacity var(--br-duration-fast) var(--br-ease-standard)",
 			}}
 		>
 			{src ? (
