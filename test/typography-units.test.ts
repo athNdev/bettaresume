@@ -51,10 +51,10 @@ describe("the scale the research specifies is the scale in the code", () => {
 			small: 9.5,
 		});
 		expect(MARGIN_DEFAULTS).toEqual({
-			top: 43,
-			right: 50,
-			bottom: 43,
-			left: 50,
+			top: 36,
+			right: 36,
+			bottom: 36,
+			left: 36,
 		});
 	});
 

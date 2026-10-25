@@ -335,14 +335,16 @@ export const TYPE_SCALE_BANDS = {
 } as const;
 
 /**
- * Page margins, in points. Defaults are 0.7in sides / 0.6in top and bottom; the hard
- * floor is 0.5in (36pt) and 1in (72pt) is the top of the supported range.
+ * Page margins, in points. The default is the 0.5in (36pt) print floor on every side —
+ * the Balanced density profile (`docs/research/space-efficiency.md` §2, §5). The 43/50pt
+ * comfort margins are the Relaxed preset now. The band's floor is 0.5in and 1in (72pt) is
+ * the top of the supported range.
  */
 export const MARGIN_DEFAULTS = {
-	top: 43,
-	right: 50,
-	bottom: 43,
-	left: 50,
+	top: 36,
+	right: 36,
+	bottom: 36,
+	left: 36,
 } as const;
 export const MARGIN_BAND = { min: 36, max: 72 } as const;
 

@@ -1,4 +1,3 @@
-#let data = json("sample.json")
 // ──────────────────────────────────────────────
 // Variables (must be defined before helpers)
 // ──────────────────────────────────────────────

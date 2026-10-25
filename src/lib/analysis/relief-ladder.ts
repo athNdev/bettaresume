@@ -33,6 +33,7 @@ export type ReliefLeverId =
 	| "density"
 	| "type-scale"
 	| "date-format"
+	| "fill-hole"
 	| "hide-section"
 	| "trim-bullets"
 	| "shorten-bullets";
@@ -103,6 +104,55 @@ function visibleSections(resume: Resume): ResumeSection[] {
 	return [...(resume.sections ?? [])]
 		.filter((s) => s.visible)
 		.sort((a, b) => a.order - b.order);
+}
+
+/**
+ * Entries the document has *pinned* together, which can cost page space.
+ *
+ * A whole-entry keep moves the entry to the next page when it does not fit, so the space
+ * it would have used is left empty — the "page looks half empty at the same time as
+ * content overflows" paradox (`docs/research/space-efficiency.md` §3.3, waste #9). Auto
+ * mode never produces this: it keeps only small entries whole and protects just the
+ * heading of a long one. An explicit `always` (on the section or on one entry) is the
+ * user's decision, so the ladder names it and never changes it.
+ */
+function pinnedEntries(resume: Resume): Array<{
+	sectionId: string;
+	label: string;
+	scope: "section" | "entry";
+}> {
+	const out: Array<{
+		sectionId: string;
+		label: string;
+		scope: "section" | "entry";
+	}> = [];
+	for (const section of visibleSections(resume)) {
+		const layout = section.layout;
+		if (!layout) continue;
+		const items = Array.isArray(section.content.data)
+			? (section.content.data as Array<Record<string, unknown>>)
+			: [];
+		if (layout.keepTogether === "always") {
+			out.push({
+				sectionId: section.id,
+				label: section.content.title || section.type,
+				scope: "section",
+			});
+		}
+		for (const [id, mode] of Object.entries(layout.entries ?? {})) {
+			if (mode !== "always") continue;
+			const item = items.find((candidate) => candidate.id === id);
+			const label = [item?.position, item?.company, item?.name, item?.title]
+				.filter((v): v is string => typeof v === "string" && v !== "")
+				.join(" at ");
+			out.push({
+				sectionId: section.id,
+				label: label || "One entry",
+				scope: "entry",
+			});
+		}
+	}
+	return out;
 }
 
 function bulletsOf(sections: readonly ResumeSection[]): Array<{
@@ -200,6 +250,31 @@ export function buildReliefLadder(input: ReliefInput): ReliefRow[] {
 	}
 
 	// ── Content rows: no patch, no Apply. Ever. ──────────────────────────────
+	//
+	// A keep-together pin is the first of these because it is pure layout *space*: it costs
+	// up to the height of the entry and spends no content. Changing it is still the user's
+	// call — splitting an entry is a layout flaw they have to accept — so it is a hint with
+	// an anchor, not a button.
+	if (fit !== null && fit.overMm >= 0.5) {
+		const pinned = pinnedEntries(resume);
+		if (pinned.length > 0) {
+			const first = pinned[0] as (typeof pinned)[number];
+			rows.push({
+				id: `fill-hole-${first.sectionId}`,
+				lever: "fill-hole",
+				kind: "content",
+				title:
+					pinned.length === 1
+						? `“${first.label}” is pinned together — that can leave a hole`
+						: `${pinned.length} entries are pinned together — that can leave a hole`,
+				detail:
+					"A kept entry that does not fit jumps to the next page whole, so the space it would have used stays empty. Setting it to Auto keeps the heading with its first bullet and lets the rest flow.",
+				gainMm: null,
+				anchor: first.sectionId,
+			});
+		}
+	}
+
 	const sections = visibleSections(resume);
 	const optional = sections.filter((s) => OPTIONAL_SECTIONS.has(s.type));
 	for (const section of [...optional].reverse()) {

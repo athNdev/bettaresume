@@ -176,7 +176,7 @@ describe("density presets", () => {
 	it("describes the diff before applying it", () => {
 		const diff = describeDensityPatch(DENSITY_PRESETS.normal, "compact");
 		expect(diff).toContain("Density: Normal → Compact");
-		expect(diff).toContain("Line spacing 1.35 → 1.25");
+		expect(diff).toContain("Line spacing 1.25 → 1.22");
 		expect(diff).toMatch(/Margins .*mm → .*mm/);
 	});
 });
@@ -349,6 +349,10 @@ describe("the probe reader", () => {
 describe("the relief ladder", () => {
 	const layers = {
 		...SETTINGS,
+		// The Relaxed density (43/50pt margins, 1.35 leading, spacious sections). The
+		// ladder's job is to offer the next step *tighter*, so a document sitting on
+		// Relaxed must offer Normal first and Compact after it — never jump two steps.
+		sectionSpacing: "spacious" as const,
 		margins: { ...SETTINGS.margins },
 	};
 
@@ -386,8 +390,9 @@ describe("the relief ladder", () => {
 		});
 		const first = rows.find((r) => r.kind === "layout");
 		expect(first?.lever).toBe("density");
-		expect(first?.diff).toContain("Normal → Compact");
-		expect(first?.patch).toEqual(densityPatch("compact"));
+		// `layers` is the Relaxed profile, so the next step tighter is Normal.
+		expect(first?.diff).toContain("Relaxed → Normal");
+		expect(first?.patch).toEqual(densityPatch("normal"));
 	});
 
 	it("offers a smaller type scale only above the body floor", () => {
@@ -430,20 +435,69 @@ describe("the relief ladder", () => {
 	});
 });
 
+describe("the fill-the-hole hint", () => {
+	const overflowing = deriveFit(
+		{ pages: 2, end: { page: 2, y: 143 }, entries: [] },
+		SETTINGS,
+		1,
+	);
+
+	it("names a pinned entry when the document overflows", () => {
+		// A whole-entry keep that does not fit moves the entry to the next page and leaves
+		// the space it would have used empty — the "half empty at the same time as it
+		// overflows" paradox. The row is a hint with an anchor, never a button: splitting
+		// an entry is the user's call.
+		const rows = buildReliefLadder({
+			resume: resume({
+				sections: [section({ layout: { keepTogether: "always" } })],
+			}),
+			settings: SETTINGS,
+			fit: overflowing,
+		});
+		const row = rows.find((r) => r.lever === "fill-hole");
+		expect(row).toBeDefined();
+		expect(row?.kind).toBe("content");
+		expect(row?.patch).toBeUndefined();
+		expect(row?.anchor).toBe("s1");
+	});
+
+	it("stays quiet when nothing is pinned or nothing overflows", () => {
+		const auto = buildReliefLadder({
+			resume: resume(),
+			settings: SETTINGS,
+			fit: overflowing,
+		});
+		expect(auto.some((r) => r.lever === "fill-hole")).toBe(false);
+
+		const fits = buildReliefLadder({
+			resume: resume({
+				sections: [section({ layout: { keepTogether: "always" } })],
+			}),
+			settings: SETTINGS,
+			fit: deriveFit({ pages: 1, end: { page: 1, y: 300 } }, SETTINGS, 1),
+		});
+		expect(fits.some((r) => r.lever === "fill-hole")).toBe(false);
+	});
+});
+
 describe("auto keep-together", () => {
-	it("keeps a small entry whole and lets a long one split", () => {
+	it("keeps a small entry whole and protects only the heading of a long one", () => {
+		// Small = a title block and a few lines: moving it whole costs a small hole.
 		expect(
 			resolveKeepTogether(undefined, { highlights: ["a", "b", "c"] }),
 		).toBe("always");
+		// Longer entries used to be "never" entirely, which orphaned the heading at the
+		// bottom of a page. "head" keeps the heading with its first bullet and lets the
+		// rest flow — the hole is capped at one heading block instead of the whole entry.
 		expect(
 			resolveKeepTogether(undefined, { highlights: ["a", "b", "c", "d"] }),
-		).toBe("never");
+		).toBe("head");
 		expect(
 			resolveKeepTogether(undefined, {
 				description: "A paragraph",
 				highlights: ["a"],
 			}),
-		).toBe("never");
+		).toBe("head");
 	});
 
 	it("honours the section default and the per-entry override", () => {
@@ -466,13 +520,14 @@ describe("auto keep-together", () => {
 
 	it("refuses to keep an entry taller than a page, because Typst would clip it", () => {
 		// A `breakable: false` block that cannot fit on a page is cut off at the bottom
-		// margin rather than moved, so honouring "always" here would delete bullets.
+		// margin rather than moved, so honouring "always" here would delete bullets. The
+		// entry still gets its heading protected, which cannot be clipped.
 		const tall = {
 			highlights: Array.from({ length: 80 }, (_, i) => `Bullet ${i}`),
 		};
 		expect(
 			resolveKeepTogether({ keepTogether: "always" }, tall, SETTINGS),
-		).toBe("never");
+		).toBe("head");
 		expect(entryFitsOnOnePage(tall, SETTINGS)).toBe(false);
 		expect(entryFitsOnOnePage({ highlights: ["a", "b", "c"] }, SETTINGS)).toBe(
 			true,
