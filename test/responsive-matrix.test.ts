@@ -467,7 +467,17 @@ describe.skipIf(!ENABLED)("the responsive viewport matrix", () => {
 	let browser: MatrixBrowser;
 
 	beforeAll(async () => {
-		const { chromium } = (await import("playwright")) as unknown as {
+		/*
+		 * A variable specifier, deliberately.
+		 *
+		 * `import("playwright")` with a string literal is still resolved by TypeScript,
+		 * so `tsc --noEmit` fails on a clean `npm ci` (where Playwright is not
+		 * installed). A non-literal is not resolved at build time and Node resolves it at
+		 * run time, which is exactly the contract: only the job that installs Playwright
+		 * can import it.
+		 */
+		const playwrightModule = "playwright";
+		const { chromium } = (await import(playwrightModule)) as unknown as {
 			chromium: MatrixChromium;
 		};
 		try {
