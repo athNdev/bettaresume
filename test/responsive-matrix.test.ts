@@ -24,8 +24,78 @@
  *   `launch()` falls back to the bundled build if the channel is unavailable.
  */
 
-import type { Browser, BrowserContextOptions, Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+/*
+ * The slice of Playwright this file drives, declared locally.
+ *
+ * Playwright is deliberately NOT a dependency: the repo installs it ad hoc in the
+ * workflows that need a browser (visual.yml says 'never added to package.json'),
+ * because a browser is not needed to build or ship. A type-only import from it would
+ * still make `tsc --noEmit` — which includes `test/**` — fail on a clean `npm ci`.
+ *
+ * These interfaces are what the file actually calls. The module is cast to them at
+ * the one dynamic import, so the runtime contract is explicit instead of `any`.
+ */
+interface MatrixLocator {
+	first(): MatrixLocator;
+	nth(index: number): MatrixLocator;
+	count(): Promise<number>;
+	click(): Promise<void>;
+	isVisible(): Promise<boolean>;
+	getAttribute(name: string): Promise<string | null>;
+	boundingBox(): Promise<{
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	} | null>;
+	waitFor(options: {
+		state: "visible" | "attached";
+		timeout?: number;
+	}): Promise<void>;
+	locator(selector: string): MatrixLocator;
+}
+
+interface MatrixPage {
+	goto(
+		url: string,
+		options?: { waitUntil?: string; timeout?: number },
+	): Promise<unknown>;
+	waitForSelector(
+		selector: string,
+		options?: { state?: "visible" | "attached"; timeout?: number },
+	): Promise<unknown>;
+	waitForTimeout(ms: number): Promise<void>;
+	locator(selector: string): MatrixLocator;
+	getByRole(role: string, options?: { name?: string | RegExp }): MatrixLocator;
+	evaluate<R>(pageFunction: () => R): Promise<R>;
+	evaluate<R, A>(pageFunction: (arg: A) => R, arg: A): Promise<R>;
+	keyboard: { press(key: string): Promise<void> };
+}
+
+interface MatrixContext {
+	newPage(): Promise<MatrixPage>;
+	close(): Promise<void>;
+}
+
+interface MatrixBrowser {
+	newContext(options: MatrixContextOptions): Promise<MatrixContext>;
+	close(): Promise<void>;
+}
+
+interface MatrixContextOptions {
+	viewport: { width: number; height: number };
+	deviceScaleFactor?: number;
+	hasTouch?: boolean;
+}
+
+interface MatrixChromium {
+	launch(options: {
+		channel?: string;
+		headless?: boolean;
+	}): Promise<MatrixBrowser>;
+}
 
 const ENABLED = process.env.RESPONSIVE_MATRIX === "1";
 const BASE = process.env.PROBE_BASE ?? "http://localhost:3000";
@@ -83,7 +153,7 @@ interface GeometryReport {
  * closing over it.
  */
 async function geometry(
-	page: Page,
+	page: MatrixPage,
 	options: { minTarget: number; checkAllTargets: boolean },
 ): Promise<GeometryReport> {
 	return page.evaluate(({ minTarget, checkAllTargets }) => {
@@ -365,7 +435,7 @@ function expectClean(report: GeometryReport, surface: string): void {
 	expect(problems, `${surface}:\n${problems}`).toBe("");
 }
 
-async function openEditor(page: Page, width: number): Promise<void> {
+async function openEditor(page: MatrixPage, width: number): Promise<void> {
 	await page.goto(`${BASE}/app#/resume-editor/${RESUME_ID}`, {
 		waitUntil: "load",
 		timeout: 60_000,
@@ -394,10 +464,12 @@ async function openEditor(page: Page, width: number): Promise<void> {
 }
 
 describe.skipIf(!ENABLED)("the responsive viewport matrix", () => {
-	let browser: Browser;
+	let browser: MatrixBrowser;
 
 	beforeAll(async () => {
-		const { chromium } = await import("playwright");
+		const { chromium } = (await import("playwright")) as unknown as {
+			chromium: MatrixChromium;
+		};
 		try {
 			browser = await chromium.launch({ channel: "chrome", headless: true });
 		} catch {
@@ -412,8 +484,8 @@ describe.skipIf(!ENABLED)("the responsive viewport matrix", () => {
 	});
 
 	async function pageAt(
-		options: BrowserContextOptions,
-	): Promise<{ page: Page; close: () => Promise<void> }> {
+		options: MatrixContextOptions,
+	): Promise<{ page: MatrixPage; close: () => Promise<void> }> {
 		const context = await browser.newContext(options);
 		const page = await context.newPage();
 		return { page, close: () => context.close() };
