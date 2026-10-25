@@ -35,19 +35,25 @@ const check = async (name, fn) => {
 		return `${text.length} chars`;
 	});
 
-	await check("the template gallery shows three real pages", async () => {
+	await check("the template gallery shows one real page per archetype", async () => {
 		await page.evaluate(() =>
 			document.querySelector("#templates")?.scrollIntoView({ block: "start" }),
 		);
 		await page.waitForTimeout(2500);
-		const pages = await page.evaluate(() =>
-			[...document.querySelectorAll("#templates img")].map((i) => ({
+		const { cards, pages } = await page.evaluate(() => ({
+			cards: document.querySelectorAll("#templates article").length,
+			pages: [...document.querySelectorAll("#templates img")].map((i) => ({
 				src: i.getAttribute("src"),
 				w: i.naturalWidth,
 				h: i.naturalHeight,
 			})),
-		);
-		if (pages.length !== 3) throw new Error(`${pages.length} images, expected 3`);
+		}));
+		// Derived from the page, not from a typed-in count: a new archetype adds a card
+		// and a specimen together, and a card without one fails here. The literal count
+		// was left at three when the sixth archetype shipped.
+		if (cards < 6) throw new Error(`${cards} archetypes, expected at least 6`);
+		if (pages.length !== cards)
+			throw new Error(`${pages.length} images for ${cards} archetypes`);
 		const broken = pages.filter((p) => p.w < 500);
 		if (broken.length) throw new Error(`${broken.length} images did not render`);
 		return pages.map((p) => `${p.w}x${p.h}`).join(" ");

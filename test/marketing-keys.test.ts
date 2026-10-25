@@ -48,7 +48,12 @@ import { describe, expect, it } from "vitest";
 const marketingDir = fileURLToPath(
 	new URL("../src/components/marketing", import.meta.url),
 );
-const files = ["sections.tsx", "site-chrome.tsx", "hero.tsx"];
+const files = [
+	"sections.tsx",
+	"site-chrome.tsx",
+	"hero.tsx",
+	"capabilities.tsx",
+];
 
 /** `[1, 1, 1]` / `['a', 'a']` — a literal array whose values are not all distinct. */
 const REPEATED_LITERAL_ARRAY =

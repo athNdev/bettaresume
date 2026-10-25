@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-
+import {
+	Example,
+	PageFit,
+	Readability,
+} from "@/components/marketing/capabilities";
 import { Hero } from "@/components/marketing/hero";
 import {
 	ClosingCta,
 	Faq,
 	Features,
-	Inspect,
 	Principles,
 	Templates,
-	Workflow,
 } from "@/components/marketing/sections";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { OG_IMAGE } from "@/lib/site";
 
 const TITLE = "Betta Resume — one master resume, tailored per role";
 const DESCRIPTION =
-	"Keep one master record of your career, fork a variant for each application, and export a PDF whose text layer you can read before you send it.";
+	"Keep one master record of your career, fork a variant for each application, and export a PDF whose text layer you can read before you send it. Six templates, a page-fit meter and named readability checks — never a score.";
 
 export const metadata: Metadata = {
 	title: TITLE,
@@ -45,15 +47,16 @@ export const metadata: Metadata = {
  * Public marketing home page.
  *
  * Server component on purpose. It prerenders to real HTML at `/index.html`, so
- * crawlers and link previews can see it — which the hash-routed app never
- * could, since `#/…` is invisible to both. It also ships no client JS: the
- * hero preview is CSS, deliberately avoiding the Typst WASM compiler that
- * `src/lib/typst/` would otherwise pull in.
+ * crawlers and link previews can see it — which the hash-routed app never could,
+ * since `#/…` is invisible to both. It also ships no client JS: the hero preview is
+ * CSS, deliberately avoiding the Typst WASM compiler that `src/lib/typst/` would
+ * otherwise pull in, and every section is a server component.
  *
  * Section order is the order a visitor's questions arrive in: what is it (hero),
- * what does it do (features), what does using it look like (workflow), why is this
- * one different (inspect), what will my document look like (templates), what are the
- * boundaries (principles), details (FAQ), close.
+ * what does it do (features), what will my document look like (templates), will it
+ * fit (page fit), can I trust the review (readability), what does a finished
+ * document look like (example), what are the boundaries (principles), details (FAQ),
+ * close.
  *
  * The app itself lives at `/app`.
  */
@@ -64,9 +67,10 @@ export default function MarketingHome() {
 			<main id="main">
 				<Hero />
 				<Features />
-				<Workflow />
-				<Inspect />
 				<Templates />
+				<PageFit />
+				<Readability />
+				<Example />
 				<Principles />
 				<Faq />
 				<ClosingCta />

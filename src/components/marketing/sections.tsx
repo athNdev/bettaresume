@@ -1,32 +1,30 @@
 /**
- * Marketing sections below the hero.
+ * Marketing sections below the hero: what the product does, the archetypes, the
+ * boundary, the FAQ, and the close.
  *
  * ## What changed, and why
  *
- * The previous version was an argument about the category rather than a description of
- * this product: a full-width "No score / No invented numbers / No application tracker /
- * No auto-apply / No hidden keywords" section, a three-card essay on parser constraints,
- * a coverage essay, and an FAQ whose first three answers were also refusals. A visitor
- * could finish the page without learning that the app has a content library, variants or
- * version history.
- *
- * The order here answers the questions a visitor actually has, in the order they have
- * them: what does it do (Features), what does using it look like (Workflow), why is this
- * one different (Inspect), what will my document look like (Templates), what are the
- * boundaries (Principles), and the details (FAQ).
+ * This page used to describe a product with three templates, no page-fit suite and no
+ * readability review. Those shipped, so the copy is now a description of the app as it
+ * exists. The order still answers the questions a visitor actually has, in the order they
+ * have them: what does it do (Features), what will my document look like (Templates), how
+ * does it fit (Page fit, in `capabilities.tsx`), is the review trustworthy (Readability,
+ * there too), what does a finished document look like (Example), what are the boundaries
+ * (Principles), and the details (FAQ).
  *
  * ## Copy rules
  *
  * **Every claim must be a shipped code path.** Feature names map to modules:
  * `resume-editor.tsx`, `content.ts`, `resume.createVariation`, `maybeSnapshot`,
- * `lib/import/`, `lib/export/docx.ts`, `lib/analysis/parse-fidelity.ts`,
- * `lib/analysis/ats-match.ts`. `test/marketing-claims.test.ts` pins the specifics.
+ * `lib/import/`, `lib/rich-text.ts`, `lib/export/docx.ts`, `lib/export/text.ts`,
+ * `lib/analysis/parse-fidelity.ts` and `lib/analysis/ats-match.ts`.
+ * `test/marketing-claims.test.ts` pins the specifics.
  *
  * **No outcome numbers.** Not an ATS score, not "3x more interviews". There is no
  * measurement behind either, and this category's credibility problem is exactly that.
  *
- * **No count that the product does not have.** The hero's three figures — 13 section
- * types, 4 export formats, 3 templates — are each checkable in the app in under a minute.
+ * **No count the product does not have.** Thirteen section types, four export formats and
+ * the template count (derived from the registry) are each checkable in the app.
  *
  * ## Rhythm
  *
@@ -45,13 +43,13 @@ import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
 const FEATURES = [
 	{
 		title: "One editor, thirteen section types",
-		body: "Summary, experience, education, skills, projects, certifications, awards, languages, publications, volunteer work, references, personal details, and a free-form section for anything else. Typed fields where the export has to stay clean; rich text where you actually need it.",
+		body: "Personal details, summary, experience, education, skills, projects, certifications, awards, languages, publications, volunteer work, references, and a free-form section for anything else. Typed fields where the export has to stay clean; rich text where you actually need it.",
 		detail: "Drag to reorder · hide without deleting",
 	},
 	{
 		title: "A library you type once",
-		body: "Save a section to your library and place it in as many resumes as you like. Change the master and every placement can follow; freeze one and it keeps what you wrote.",
-		detail: "One master record · per-placement divergence",
+		body: "Save a section to your library and place it in as many resumes as you like. Change the master and every placement can follow; edit a placement and it keeps what you wrote. The panel reports where a placement has diverged.",
+		detail: "One master · per-placement divergence",
 	},
 	{
 		title: "Variants that follow the master",
@@ -60,8 +58,13 @@ const FEATURES = [
 	},
 	{
 		title: "History recorded as you work",
-		body: "Snapshots are captured automatically, at most once every five minutes, and you can save a named version whenever you want. Compare any version with what you have now, and restore it in one click.",
-		detail: "Automatic + named versions · word-level diff",
+		body: "Snapshots are captured automatically, at most once every five minutes, and you can name a version whenever you want. Compare a version with what you have now, and restore it in one click.",
+		detail: "Automatic + named versions · field-level diff",
+	},
+	{
+		title: "Rich text that reaches the file",
+		body: "Bold, italic, underline, strikethrough and links are stored as structure, not flattened to plain text. The PDF and the DOCX carry the formatting; the plain-text export carries the words and spells a link's target out as text [url].",
+		detail: "Bold · italic · underline · strike · links",
 	},
 	{
 		title: "Import what you already have",
@@ -70,17 +73,17 @@ const FEATURES = [
 	},
 	{
 		title: "Four ways out",
-		body: "A PDF typeset with Typst, a DOCX written straight to WordprocessingML, a plain-text file of the exact layer a parser reads, and JSON of the whole document. They paginate differently, so they are labelled by what they are for.",
+		body: "A PDF typeset with Typst, a DOCX written straight to WordprocessingML, a plain-text file of the exact layer a parser reads, and JSON of the whole document. Each is labelled by what it is for, because they do different jobs.",
 		detail: "PDF · DOCX · TXT · JSON",
 	},
 	{
 		title: "A parser-fit review",
-		body: "Checks your document against documented parser constraints: section headings against a parser dictionary, date formats, single-column reading order, and bullets that make a claim without evidence. Each finding names the setting to change.",
+		body: "Checks the document against documented parser constraints: section headings against a parser dictionary, date formats, single-column reading order, and bullets that make a claim without evidence. Each finding names the setting to change. It does not choose a number for you.",
 		detail: "Line-anchored findings, not a score",
 	},
 	{
 		title: "Job-target matching",
-		body: "Paste the description you are applying to. Required terms are weighted over preferred ones, both forms of an acronym are written, and an ambiguous mention is reported as uncertain instead of counted as covered.",
+		body: "Paste the description you are applying to. Required terms are weighted over preferred ones, both forms of an acronym are called out, and an ambiguous mention is reported as uncertain instead of counted as covered.",
 		detail: "Required vs preferred · acronyms · ambiguity",
 	},
 ] as const;
@@ -100,9 +103,9 @@ export function Features() {
 				</div>
 
 				{/*
-				 * Each item leads with a `text-lg` title, so the grid reads as eight
-				 * anchored items rather than eight dense paragraphs — the audit's
-				 * finding at 1440 was that nothing in this grid had visual priority.
+				 * Each item leads with a `text-lg` title, so the grid reads as anchored
+				 * items rather than dense paragraphs — the audit's finding at 1440 was
+				 * that nothing in this grid had visual priority.
 				 */}
 				<div className="mt-12 grid gap-x-8 gap-y-8 md:grid-cols-2">
 					{FEATURES.map((feature) => (
@@ -125,158 +128,28 @@ export function Features() {
 }
 
 /* --------------------------------------------------------------------------
- * 3. Workflow
- * -------------------------------------------------------------------------- */
-
-const STEPS = [
-	{
-		title: "Build the master",
-		body: "Put everything in: every role, every bullet, every qualification. The master is the record you keep, not the one-pager you send, so there is no pressure to cut it down.",
-	},
-	{
-		title: "Fork it for the role",
-		body: "Create a variant, choose which sections stay linked, and tailor the rest. Change a job title in the master later and the linked sections in every variant follow it.",
-	},
-	{
-		title: "Check it, then send it",
-		body: "Run the parser-fit review and the job-target match. Export a PDF, read its text layer, and know what arrives on the other side before you attach it.",
-	},
-] as const;
-
-export function Workflow() {
-	return (
-		<section className="bg-[var(--brand-paper)]" id="workflow">
-			<div className="marketing-shell py-16 lg:py-24">
-				<div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-					<div>
-						<h2 className="text-title">One record, many applications</h2>
-						<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
-							The alternative is the thing everyone actually does: duplicate a
-							file, rename it, and lose track of which version went where.
-						</p>
-					</div>
-
-					<ol className="grid gap-8">
-						{STEPS.map((step, index) => (
-							<li className="flex gap-4" key={step.title}>
-								<span
-									aria-hidden="true"
-									className="tnum mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-accent)]/10 font-mono font-semibold text-[var(--brand-accent)] text-xs"
-								>
-									{index + 1}
-								</span>
-								<div className="min-w-0">
-									<h3 className="font-semibold text-[var(--brand-text)] text-lg">
-										{step.title}
-									</h3>
-									<p className="mt-2 text-[var(--brand-text-muted)] text-base">
-										{step.body}
-									</p>
-								</div>
-							</li>
-						))}
-					</ol>
-				</div>
-			</div>
-		</section>
-	);
-}
-
-/* --------------------------------------------------------------------------
- * 4. Inspect — the differentiator, in one place
- * -------------------------------------------------------------------------- */
-
-const CHECKS = [
-	{
-		title: "Headings a parser will recognise",
-		body: 'Renaming "Work Experience" to "Where I have worked" reads better to a person and may lose the section to a parser. The review names the heading it actually renders and the dictionary entry it should match.',
-	},
-	{
-		title: "Dates in a parseable format",
-		body: "A slash-separated date is safe for a human and ambiguous for a parser. Findings quote the value and the accepted form, so the fix is a single edit rather than a research project.",
-	},
-	{
-		title: "Bullets that assert without evidence",
-		body: 'Every bullet is checked for a number and for duty language — "responsible for", "assisted with", "worked on". The finding points at the gap. It does not choose a number for you.',
-	},
-] as const;
-
-export function Inspect() {
-	return (
-		<section className="rule-soft" id="inspect">
-			<div className="marketing-shell py-16 lg:py-24">
-				<div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-					<div>
-						<h2 className="text-title">Read the file before they do</h2>
-						<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
-							Most builders render your resume in a browser and then guess what
-							a parser will extract. We typeset with Typst, which emits a single
-							column in a fixed order — so the text layer is knowable, and you
-							can read it yourself.
-						</p>
-						<p className="mt-4 max-w-(--marketing-measure) text-[var(--brand-text-muted)] text-base">
-							That is also why the review is a list of named checks rather than
-							a percentage. A number would be a verdict on software neither of
-							us ran; a check is something you can act on and verify.
-						</p>
-					</div>
-
-					<ul className="grid gap-4">
-						{CHECKS.map((check) => (
-							<li
-								className="rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)] p-6"
-								key={check.title}
-							>
-								<h3 className="flex items-start gap-2 font-semibold text-[var(--brand-text)] text-lg">
-									<svg
-										aria-hidden="true"
-										className="mt-1 h-4 w-4 shrink-0 text-[var(--brand-verified)]"
-										fill="none"
-										stroke="currentColor"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth="2.4"
-										viewBox="0 0 24 24"
-									>
-										<path d="M4 12.5 9.5 18 20 6.5" />
-									</svg>
-									{check.title}
-								</h3>
-								<p className="mt-2 pl-6 text-[var(--brand-text-muted)] text-base">
-									{check.body}
-								</p>
-							</li>
-						))}
-					</ul>
-				</div>
-			</div>
-		</section>
-	);
-}
-
-/* --------------------------------------------------------------------------
- * 5. Templates
+ * 3. Templates
  * -------------------------------------------------------------------------- */
 
 const TEMPLATES = [
 	{
 		id: "standard",
 		name: "Standard",
-		note: "Left-aligned header, dates in their own column, sections in the order you set. The reference layout.",
+		note: "Left-aligned header, dates in their own column, sections in the order you set. The reference layout, at the default density.",
 		best: "Most applications",
 		alt: "The Standard template: a left-aligned name and contact block above dated experience, education and skills for Avery Chen.",
 	},
 	{
 		id: "compact",
 		name: "Compact",
-		note: "The Standard layout at the tight end of the spacing scale: 0.5 in margins, 1.25 leading, 8 pt between sections.",
+		note: "The Standard layout at the tight end of the spacing scale: 0.5 in margins, 1.25 leading, compact section gaps.",
 		best: "One page with a lot to say",
 		alt: "The Compact template: the standard layout with tighter section gaps and narrower margins for Avery Chen.",
 	},
 	{
 		id: "technical",
 		name: "Technical",
-		note: "Skills become category lines such as \u201cLanguages: Go, TypeScript\u201d; projects show their stack and bullets.",
+		note: "Skills become scannable category lines such as \u201cLanguages: Go, TypeScript\u201d; projects show their stack and bullets.",
 		best: "Software, data and engineering roles",
 		alt: "The Technical template: a name and role on one line, skills as category-to-items lines, and project entries for Avery Chen.",
 	},
@@ -312,8 +185,8 @@ const TEMPLATES = [
 /**
  * The heading's count is derived, not typed.
  *
- * "Three templates" was the kind of sentence that stays true until somebody adds a
- * template, and then quietly stops being true. `test/marketing-claims.test.ts` checks the
+ * "Six templates" is the kind of sentence that stays true until somebody adds an
+ * archetype, and then quietly stops being true. `test/marketing-claims.test.ts` checks the
  * heading against the registry, so the only way to change the count is to change it in
  * both places.
  */
@@ -342,8 +215,17 @@ export function Templates() {
 						single-column
 					</h2>
 					<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
-						Typography, spacing and colours are yours to tune. The layout stays
-						one column, because that is the part the text layer depends on.
+						{COUNT_WORDS[TEMPLATE_COUNT] ?? TEMPLATE_COUNT} archetypes,
+						differentiated by structure and density: where the header sits, what
+						an entry renders, how much air the body gets. No archetype carries
+						its own colour — headings are text ink, and emphasis is weight, case
+						and one rule.
+					</p>
+					<p className="mt-4 max-w-(--marketing-measure) text-[var(--brand-text-muted)] text-base">
+						The layout stays one column in every archetype, because that is the
+						part the text layer depends on. Each specimen below is a real first
+						page compiled by the same pipeline the export button runs — not a
+						drawing.
 					</p>
 				</div>
 
@@ -354,12 +236,9 @@ export function Templates() {
 				 * glyphs, so these are self-contained and need no web font.
 				 *
 				 * The frame crops the specimen at 600 of the page's 842pt. The six committed
-				 * renders put their last ink at 450–556pt (measured on the real SVGs by
-				 * `scripts/probe/svg-ink-bounds.cjs`), so everything each archetype draws is
-				 * visible with room to spare, and the ~300pt of blank paper that made these
-				 * cards read as half-empty is gone — what is left below the content is a page
-				 * that visibly continues, not a void. If `npm run templates:render` ever moves
-				 * the ink past 600, the crop moves with it.
+				 * renders put their last ink at 450–556pt, so everything each archetype draws
+				 * is visible with room to spare, and the ~300pt of blank paper that made these
+				 * cards read as half-empty is gone.
 				 */}
 				<div className="mt-12 grid gap-6 md:grid-cols-3">
 					{TEMPLATES.map((template) => (
@@ -408,21 +287,21 @@ export function Templates() {
 }
 
 /* --------------------------------------------------------------------------
- * 6. Principles — one band, not a section per refusal
+ * 4. Principles — one band, not a section per refusal
  * -------------------------------------------------------------------------- */
 
 const PRINCIPLES = [
 	{
 		title: "No invented content",
-		body: "Nothing here writes a claim you did not make: no generated bullets, no fabricated metric, no keyword stuffed into white text.",
+		body: "Nothing here writes a claim you did not make: no generated bullets, no fabricated metric, no keyword stuffed into white text. The review detects a gap and points at it.",
 	},
 	{
 		title: "No score",
-		body: "Named checks instead of a number. A score would be a prediction about software that was never run.",
+		body: "Named checks instead of a number, in the review and the fit meter. A score would be a prediction about software that was never run.",
 	},
 	{
 		title: "No tracker, no auto-apply",
-		body: "This is a writing and management tool. It does not log into job boards or apply on your behalf.",
+		body: "This is a writing and management tool. It does not log into job boards, follow your applications or apply on your behalf.",
 	},
 ] as const;
 
@@ -463,7 +342,7 @@ export function Principles() {
 }
 
 /* --------------------------------------------------------------------------
- * 7. FAQ
+ * 5. FAQ
  * -------------------------------------------------------------------------- */
 
 const FAQ = [
@@ -474,6 +353,10 @@ const FAQ = [
 	{
 		q: "Will the PDF pass an ATS?",
 		a: "Nobody can promise that, and a product that does is guessing. What this gives you is the text the PDF actually contains, in the order it appears, plus a list of documented parser constraints you can check against it.",
+	},
+	{
+		q: "Why is there no score?",
+		a: "Because a score would be a verdict on software neither of us ran. Checkers read the same document differently, and a number hides that difference behind a decimal. The review reports named rows with a verdict and a fix instead.",
 	},
 	{
 		q: "Where does my data go?",
@@ -526,7 +409,7 @@ export function Faq() {
 }
 
 /* --------------------------------------------------------------------------
- * 8. Close
+ * 6. Close
  * -------------------------------------------------------------------------- */
 
 export function ClosingCta() {
@@ -541,8 +424,8 @@ export function ClosingCta() {
 					Start with the history you already have.
 				</h2>
 				<p className="mx-auto mt-6 text-[var(--brand-text-on-ink-muted)] text-lede">
-					Import a document, or start from an empty one. Your first variant is
-					two clicks after that.
+					Import a document, or start from an empty one. Set a page target, pick
+					a density, and inspect the text layer before you send it.
 				</p>
 				<div className="mt-8">
 					<a

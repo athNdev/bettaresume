@@ -7,12 +7,17 @@ import { cn } from "@/lib/utils";
  *
  * The CTA points at `/app`, which is where the hash-routed SPA now lives.
  * Hash fragments are invisible to crawlers, so the app cannot own `/`.
+ *
+ * The nav carries the five sections a visitor will want to jump to; the two
+ * remaining anchors (`#example`, `#principles`) live in the footer so the header row
+ * still fits at 768px. Every section on the page is linked from one of the two, and
+ * `test/marketing-claims.test.ts` fails if a section id has no anchor.
  */
 const NAV = [
 	{ href: "/#features", label: "Features" },
-	{ href: "/#workflow", label: "How it works" },
-	{ href: "/#inspect", label: "Parser fit" },
 	{ href: "/#templates", label: "Templates" },
+	{ href: "/#page-fit", label: "Page fit" },
+	{ href: "/#readability", label: "Readability" },
 	{ href: "/#faq", label: "FAQ" },
 ];
 
@@ -46,10 +51,10 @@ export function SiteHeader() {
 				 * `min-h-16` + wrap, not `h-16`.
 				 *
 				 * Measured in the viewport matrix: at 768px the nav appears and the row
-				 * needs 857px, so the CTA sat 89px past the right edge. A fixed height
-				 * leaves wrapping nowhere to go — the same defect the dashboard and
-				 * editor headers had. With the body mask gone, the matrix reports it
-				 * instead of clipping it.
+				 * needs more than the viewport, so the CTA sat past the right edge. A fixed
+				 * height leaves wrapping nowhere to go — the same defect the dashboard and
+				 * editor headers had. With the body mask gone, the matrix reports it instead
+				 * of clipping it.
 				 */}
 				<div className="marketing-shell flex min-h-16 flex-wrap items-center justify-between gap-3 py-2 sm:gap-6">
 					<Link
@@ -81,13 +86,13 @@ export function SiteHeader() {
 						))}
 					</nav>
 
-					{/*
-					 * "Sign in" is hidden below sm: the header row is one flex line,
-					 * and at 390px the wordmark plus both labels overflow the viewport.
-					 * It points at the same place as the CTA beside it and is still
-					 * in the footer, so nothing is lost.
-					 */}
 					<div className="flex shrink-0 items-center gap-2">
+						{/*
+						 * "Sign in" is hidden below sm: the header row is one flex line,
+						 * and at 390px the wordmark plus both labels overflow the viewport.
+						 * It points at the same place as the CTA beside it and is still
+						 * in the footer, so nothing is lost.
+						 */}
 						<Link
 							className="hidden whitespace-nowrap rounded-lg px-3 py-2 font-medium text-[var(--brand-text-muted)] text-base transition-colors hover:bg-[var(--brand-ink)]/5 hover:text-[var(--brand-text)] sm:block sm:px-4"
 							data-responsive-duplicate="footer sign-in"
@@ -99,7 +104,7 @@ export function SiteHeader() {
 							className="whitespace-nowrap rounded-lg bg-[var(--brand-ink)] px-3 py-2 font-medium text-[var(--brand-text-on-ink)] text-base transition-transform hover:-translate-y-px hover:bg-[var(--brand-ink-soft)] sm:px-4"
 							href="/app"
 						>
-							Check your resume
+							Open the editor
 						</Link>
 					</div>
 				</div>
@@ -129,14 +134,15 @@ export function SiteFooter() {
 							heading="Product"
 							links={[
 								["Features", "/#features"],
-								["How it works", "/#workflow"],
 								["Templates", "/#templates"],
+								["Page fit", "/#page-fit"],
 							]}
 						/>
 						<FooterCol
 							heading="Resources"
 							links={[
-								["Parser fit", "/#inspect"],
+								["Readability", "/#readability"],
+								["Example resume", "/#example"],
 								["What we won't build", "/#principles"],
 								["FAQ", "/#faq"],
 							]}
@@ -145,7 +151,7 @@ export function SiteFooter() {
 							heading="Account"
 							links={[
 								["Sign in", "/app"],
-								["Get started", "/app"],
+								["Open the editor", "/app"],
 							]}
 						/>
 					</div>

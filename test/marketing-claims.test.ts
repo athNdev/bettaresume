@@ -5,12 +5,22 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import MarketingHome from "../src/app/page";
+import {
+	FIT_EXAMPLE,
+	FIT_EXAMPLE_CHIP,
+} from "../src/components/marketing/capabilities";
 import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import {
 	PREFERRED_WEIGHT,
 	REQUIRED_WEIGHT,
 } from "../src/lib/analysis/ats-match";
 import { findDutyPhrase } from "../src/lib/analysis/metrics";
+import { READABILITY_RULES } from "../src/lib/analysis/rubric";
+import {
+	DENSITY_LABELS,
+	DENSITY_PRESETS_ORDER,
+} from "../src/lib/layout/density";
+import { formatFitChip, ptToMm } from "../src/lib/layout/page-fit";
 
 /**
  * The landing page makes checkable promises. This file holds it to them.
@@ -69,6 +79,7 @@ describe("the page renders", () => {
 			"src/app/page.tsx",
 			"src/components/marketing/hero.tsx",
 			"src/components/marketing/sections.tsx",
+			"src/components/marketing/capabilities.tsx",
 			"src/components/marketing/site-chrome.tsx",
 		]) {
 			expect(read(file), `${file} opts into the client`).not.toMatch(
@@ -374,5 +385,159 @@ describe("positioning", () => {
 	it("makes the primary CTA an action, not a slogan", () => {
 		expect(visible).toContain("Open the editor");
 		expect(html).toContain('href="/app"');
+	});
+});
+
+/* ------------------------------------------------------------------------
+ * What shipped after the page was last written.
+ * ---------------------------------------------------------------------- */
+
+describe("the page-fit suite is the shipped one", () => {
+	it("renders the chip through the editor's own formatter", () => {
+		// The sentence on the page is not transcribed: it is `formatFitChip`'s output.
+		// A copy edit cannot change the format, and a change to the formatter cannot
+		// leave the page advertising an old one.
+		const pageFit = read("src/lib/layout/page-fit.ts");
+		expect(pageFit).toMatch(/export function formatFitChip/);
+		expect(pageFit).toMatch(/export function deriveFit/);
+
+		expect(FIT_EXAMPLE_CHIP).toBe(formatFitChip(FIT_EXAMPLE));
+		expect(FIT_EXAMPLE_CHIP).toBe("1.2 pages · 22 mm over target");
+		expect(visible).toContain(FIT_EXAMPLE_CHIP);
+	});
+
+	it("names the three density presets the module ships", () => {
+		const density = read("src/lib/layout/density.ts");
+		expect(density).toMatch(/DENSITY_PRESETS/);
+		expect(DENSITY_PRESETS_ORDER).toHaveLength(3);
+		for (const preset of DENSITY_PRESETS_ORDER) {
+			expect(visible, `${preset} is not on the page`).toContain(
+				DENSITY_LABELS[preset],
+			);
+		}
+	});
+
+	it("names the three semantic page-break controls the schema stores", () => {
+		const schemas = read("packages/types/src/schemas.ts");
+		for (const flag of [
+			"keepTogether",
+			"keepSectionTogether",
+			"pageBreakBefore",
+		]) {
+			expect(schemas).toContain(flag);
+		}
+		expect(visible).toContain("Keep entries together");
+		expect(visible).toContain("Keep the whole section on one page");
+		expect(visible).toContain("Start this section on a new page");
+	});
+});
+
+describe("the readability rows are the rubric's rows", () => {
+	const rubric = read("src/lib/analysis/rubric.ts");
+
+	it("names each check by its id and title", () => {
+		const rows: Array<[string, string]> = [
+			["line-spacing", "Line spacing is in the readable range"],
+			["line-length", "Lines are a readable length"],
+			["margins-printable", "Margins keep text printable"],
+			["font-embedded", "The export uses the font you picked"],
+			["last-page-fill", "The last page is substantial"],
+		];
+		for (const [id, title] of rows) {
+			expect(rubric, `${id} is not a rubric check`).toContain(`id: "${id}"`);
+			expect(rubric, `${title} is not a rubric title`).toContain(title);
+			expect(visible, `${title} is not on the page`).toContain(title);
+		}
+	});
+
+	it("renders the bands from READABILITY_RULES, not from typed-in numbers", () => {
+		expect(visible).toContain(
+			`${READABILITY_RULES.lineHeight.min}–${READABILITY_RULES.lineHeight.max}`,
+		);
+		expect(visible).toContain(
+			`${READABILITY_RULES.lineChars.min}–${READABILITY_RULES.lineChars.max} characters`,
+		);
+		expect(visible).toContain(
+			`${ptToMm(READABILITY_RULES.marginMinPt).toFixed(1)} mm or wider`,
+		);
+		expect(visible).toContain(
+			`${READABILITY_RULES.lastPageFillMin} of a page or more`,
+		);
+	});
+
+	it("says no score without naming a competitor", () => {
+		expect(visible).toContain("No 0–100 score");
+		expect(visible).toContain("No score");
+	});
+});
+
+describe("the marks claim is pinned to the exporter", () => {
+	it("the run walker maps every mark to Typst and WordprocessingML", () => {
+		const richText = read("src/lib/rich-text.ts");
+		for (const mark of ["bold", "italic", "underline", "strike", "link"]) {
+			expect(richText, `${mark} is not a stored mark`).toContain(mark);
+		}
+		for (const markup of [
+			"#strong",
+			"#emph",
+			"#underline",
+			"#strike",
+			"#link",
+		]) {
+			expect(richText, `${markup} is never emitted`).toContain(markup);
+		}
+		expect(read("src/lib/export/docx.ts")).toContain("<w:hyperlink");
+	});
+
+	it("says exactly what survives in plain text", () => {
+		// A text layer carries words, not styling. The page says so rather than
+		// repeating the tempting (and false) "every format keeps every mark".
+		expect(visible).toContain(
+			"Bold, italic, underline, strikethrough and links",
+		);
+		expect(visible).toContain("text [url]");
+	});
+});
+
+describe("the example resume is the seeded one", () => {
+	it("the seed carries the persona and both documents", () => {
+		const seed = read("api/src/db/seed.sql");
+		expect(seed).toContain("Priya Raman");
+		expect(seed).toContain("showcase-base");
+		expect(seed).toContain("showcase-variant");
+	});
+
+	it("the page names the persona, and the UI finds it by tag", () => {
+		const showcase = read("src/lib/showcase.ts");
+		expect(showcase).toMatch(/SHOWCASE_TAG = "showcase"/);
+		expect(showcase).toMatch(/export function findShowcase/);
+		expect(visible).toContain("Priya Raman");
+		expect(visible).toContain("Showcase");
+	});
+});
+
+describe("every archetype gets a specimen from the real gallery", () => {
+	it("renders the registry's thumbnail for each one", () => {
+		for (const config of Object.values(TEMPLATE_CONFIGS)) {
+			expect(html, `${config.name} has no specimen`).toContain(
+				config.thumbnail,
+			);
+		}
+	});
+});
+
+describe("the counts are derived where they can be", () => {
+	it("the hero reads the template registry instead of typing a number", () => {
+		const hero = read("src/components/marketing/hero.tsx");
+		expect(hero).toMatch(/Object\.keys\(TEMPLATE_CONFIGS\)\.length/);
+		expect(hero).not.toMatch(/label="Templates" value="3"/);
+	});
+
+	it("the templates heading derives its word from the same registry", () => {
+		const sections = read("src/components/marketing/sections.tsx");
+		expect(sections).toMatch(/COUNT_WORDS\[TEMPLATE_COUNT\]/);
+		expect(sections).toMatch(
+			/TEMPLATE_COUNT = Object\.keys\(TEMPLATE_CONFIGS\)/,
+		);
 	});
 });
