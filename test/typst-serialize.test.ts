@@ -364,6 +364,26 @@ describe("unhandled section types", () => {
 	});
 });
 
+describe("per-section spacing overrides", () => {
+	it("emits the override so sections.typ can move this section's gap", () => {
+		// The control and the Typst reader both existed; the serializer in between did not
+		// pass the value, so changing it moved nothing in the PDF.
+		const spaced: ResumeSection = {
+			...section("summary"),
+			layout: { spacing: "spacious" },
+		};
+		const parsed = JSON.parse(resumeToTypstJson(makeResume([spaced])));
+		expect(parsed.sections[0].layout.spacing).toBe("spacious");
+	});
+
+	it("omits it when unset, so the document's density still wins", () => {
+		const parsed = JSON.parse(
+			resumeToTypstJson(makeResume([section("summary")])),
+		);
+		expect(parsed.sections[0].layout).not.toHaveProperty("spacing");
+	});
+});
+
 describe("invisible and unordered sections", () => {
 	it("omits sections marked not visible", () => {
 		const hidden = section("experience");

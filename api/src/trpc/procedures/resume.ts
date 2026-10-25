@@ -138,6 +138,17 @@ function normalizeSettings(value: unknown): ResumeSettings {
 		sectionSpacing: oneOf(settings.sectionSpacing, SECTION_SPACINGS, "normal"),
 		dateFormat: oneOf(settings.dateFormat, DATE_FORMATS, "MM/YYYY"),
 		accentStyle: oneOf(settings.accentStyle, ACCENT_STYLES, "underline"),
+		/*
+		 * The page target from the fit meter. This normaliser is the one place every read
+		 * goes through, and it was written before `pageTarget` existed. Omitting it did not
+		 * look like a bug -- the field is optional -- but it meant every reload silently
+		 * discarded the user's target and fell back to the template default, so the meter
+		 * forgot what it was measuring against.
+		 */
+		pageTarget:
+			settings.pageTarget === 1 || settings.pageTarget === 2
+				? settings.pageTarget
+				: null,
 	};
 }
 

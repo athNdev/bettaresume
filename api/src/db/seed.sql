@@ -1,8 +1,11 @@
 -- Seed data for local development
 
--- Clean up existing data
+-- Clean up existing data. Order matters: revisions and placements reference the
+-- resumes and library items below, and SQLite enforces those foreign keys.
+DELETE FROM "resume_revisions";
 DELETE FROM "Section";
 DELETE FROM "Resume";
+DELETE FROM "content_items";
 DELETE FROM "User";
 
 -- Create a test user
@@ -426,5 +429,591 @@ VALUES (
     '{"title":"Skills","data":[{"id":"sc4-1","name":"Strategy & Ops","skills":[{"id":"sk4-1","name":"Operating Model","level":"advanced"},{"id":"sk4-2","name":"Cost Transformation","level":"advanced"},{"id":"sk4-3","name":"Stakeholder Management","level":"expert"}]},{"id":"sc4-2","name":"Analytics","skills":[{"id":"sk4-4","name":"SQL","level":"advanced"},{"id":"sk4-5","name":"Financial Modeling","level":"advanced"},{"id":"sk4-6","name":"Dashboarding","level":"advanced"}]}]}',
     CAST(strftime('%s', 'now') AS INTEGER),
     CAST(strftime('%s', 'now') AS INTEGER)
+);
+
+-- ============================================
+-- SHOWCASE — a complete, fictional example resume
+-- ============================================
+--
+-- Priya Raman is a FICTIONAL persona. Nothing here describes a real
+-- person, employer or publication. The record exists so the app has one
+-- document that exercises every feature, and so a reviewer can see what
+-- "done" looks like. `docs/SHOWCASE.md` explains how to keep it current.
+--
+-- The `showcase` tag is the UI contract: the dashboard badge and the
+-- "View the example" entry point both key off it.
+
+-- Content library: one item placed (and diverged in the variant), one unplaced
+-- so the library's "additions" offer has something to show.
+INSERT INTO "content_items" (id, userId, type, title, payload, archivedAt, createdAt, updatedAt)
+VALUES (
+    'showcase-item-projects',
+    'user-1',
+    'projects',
+    'Ledger replay toolkit',
+    '{"title":"Projects","data":[{"id":"showcase-proj-ledger-replay","name":"Ledger replay toolkit","description":"Open-source CLI that replays ledger events into a scratch database.","role":"Maintainer","technologies":["Go","SQLite"],"url":"https://github.com/priyaraman/ledger-replay","github":"https://github.com/priyaraman/ledger-replay","startDate":"2023-02","endDate":"","current":true,"highlights":["Replays 30 days of ledger events in under four minutes."]}]}',
+    NULL,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - 172800
+);
+
+INSERT INTO "content_items" (id, userId, type, title, payload, archivedAt, createdAt, updatedAt)
+VALUES (
+    'showcase-item-skills',
+    'user-1',
+    'skills',
+    'Reliability & operations skills',
+    '{"title":"Reliability & operations","data":[{"id":"showcase-lib-skill-reliability","name":"Reliability","order":0,"skills":[{"id":"showcase-lib-skill-slo","name":"SLO design","level":"expert"},{"id":"showcase-lib-skill-oncall","name":"On-call leadership","level":"advanced"},{"id":"showcase-lib-skill-postmortem","name":"Postmortem facilitation","level":"advanced"}]}]}',
+    NULL,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - 172800
+);
+
+-- The one-pager (compact template, page target 1).
+INSERT INTO "Resume" (
+    id, userId, name, variationType, baseResumeId, domain, template, tags,
+    isArchived, metadata, createdAt, updatedAt
+)
+VALUES (
+    'showcase-base',
+    'user-1',
+    'Showcase — One-pager (Priya Raman)',
+    'base',
+    NULL,
+    'Payments platform',
+    'compact',
+    '["showcase","platform","payments"]',
+    0,
+    '{"personalInfo":{"fullName":"Priya Raman","email":"priya.raman@example.com","phone":"+61 400 000 018","location":"Melbourne, VIC","linkedin":"linkedin.com/in/priyaraman","github":"github.com/priyaraman","website":"priyaraman.dev","portfolio":"","professionalTitle":"Staff Software Engineer, Payments Platform","photoUrl":""},"settings":{"pageSize":"A4","margins":{"top":36,"right":36,"bottom":36,"left":36},"fontScale":1,"typography":{"name":18,"title":11,"sectionHeading":11,"itemTitle":10.5,"body":10.5,"small":9.5},"lineHeight":1.2,"fontFamily":"Inter","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"sectionSpacing":"compact","dateFormat":"MMM YYYY","accentStyle":"underline","pageTarget":1},"exportHistory":[{"id":"showcase-export-1","format":"pdf","timestamp":"2026-08-20T04:12:00.000Z","fileName":"Priya-Raman-Staff-Platform-Engineer.pdf","fileSize":84211}],"jobTarget":{"title":"Staff Platform Engineer","company":"Northwind Payments","description":"Own the payments platform''s reliability and developer experience. You will lead cross-team design, set SLOs, and build the tooling that lets product teams ship safely. Experience with Go, Kubernetes and PostgreSQL required.","keywords":["Go","Kubernetes","PostgreSQL","payments","distributed systems","SLO","Terraform","incident response","mentoring"],"url":"https://northwind-payments.example/jobs/staff-platform-engineer","addedAt":"2026-09-14T09:00:00.000Z"}}',
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-personal',
+    'showcase-base',
+    'personal-info',
+    0,
+    1,
+    '{"title":"Contact","data":{"fullName":"Priya Raman","email":"priya.raman@example.com","phone":"+61 400 000 018","location":"Melbourne, VIC","linkedin":"linkedin.com/in/priyaraman","github":"github.com/priyaraman","website":"priyaraman.dev","portfolio":"","professionalTitle":"Staff Software Engineer, Payments Platform","photoUrl":""}}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-summary',
+    'showcase-base',
+    'summary',
+    1,
+    1,
+    '{"title":"Summary","html":"<p>Staff software engineer who builds <strong>payment infrastructure</strong> that other teams rely on. I led a ledger rewrite that settles <em>AUD 4.2 billion</em> a year, cut p99 latency by <strong>38%</strong>, and write at <a href=\"https://priyaraman.dev/writing\">priyaraman.dev</a>.</p>","json":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Staff software engineer who builds "},{"type":"text","text":"payment infrastructure","marks":[{"type":"bold"}]},{"type":"text","text":" that other teams rely on. I led a ledger rewrite that settles "},{"type":"text","text":"AUD 4.2 billion","marks":[{"type":"italic"}]},{"type":"text","text":" a year, cut p99 latency by "},{"type":"text","text":"38%","marks":[{"type":"bold"}]},{"type":"text","text":", and write at "},{"type":"text","text":"priyaraman.dev","marks":[{"type":"link","attrs":{"href":"https://priyaraman.dev/writing"}}]},{"type":"text","text":"."}]}]}}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-experience',
+    'showcase-base',
+    'experience',
+    2,
+    1,
+    '{"title":"Experience","data":[{"id":"showcase-exp-meridian","company":"Meridian Pay","position":"Staff Software Engineer","startDate":"2022-02","endDate":"","current":true,"location":"Melbourne, VIC","locationType":"hybrid","employmentType":"full-time","description":"","highlights":["Rewrote the ledger posting path in Go, cutting p99 latency from 240 ms to 149 ms.","Migrated settlement to events; reconciled all AUD 4.2B of annual volume.","Cut settlement compute spend 22% (AUD 310k/year) with queue-depth autoscaling."],"technologies":["Go","TypeScript","PostgreSQL","Kafka","Kubernetes"]},{"id":"showcase-exp-ardent","company":"Ardent Cloud","position":"Senior Software Engineer","startDate":"2019-01","endDate":"2022-01","current":false,"location":"Sydney, NSW","locationType":"onsite","employmentType":"full-time","description":"","highlights":["Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.","Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks."],"technologies":["Kotlin","AWS","Terraform","PostgreSQL"]}]}',
+    '{"keepTogether":"always","entries":{"showcase-exp-ardent":"never"}}',
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-education',
+    'showcase-base',
+    'education',
+    3,
+    1,
+    '{"title":"Education","data":[{"id":"showcase-edu-unimelb","institution":"University of Melbourne","degree":"Bachelor of Science (Honours)","field":"Computer Science","startDate":"2013-02","graduationDate":"2016-11","endDate":"2016-11","current":false,"gpa":"3.8","maxGpa":"4.0","location":"Melbourne, VIC","achievements":["First Class Honours"],"coursework":[],"honors":[]}]}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-skills',
+    'showcase-base',
+    'skills',
+    4,
+    1,
+    '{"title":"Skills","data":[{"id":"showcase-skill-languages","name":"Languages","order":0,"skills":[{"id":"showcase-skill-go","name":"Go","level":"expert"},{"id":"showcase-skill-ts","name":"TypeScript","level":"expert"},{"id":"showcase-skill-python","name":"Python","level":"advanced"},{"id":"showcase-skill-sql","name":"SQL","level":"advanced"}]},{"id":"showcase-skill-platform","name":"Platform","order":1,"skills":[{"id":"showcase-skill-postgres","name":"PostgreSQL","level":"expert"},{"id":"showcase-skill-kafka","name":"Kafka","level":"advanced"},{"id":"showcase-skill-k8s","name":"Kubernetes","level":"advanced"},{"id":"showcase-skill-terraform","name":"Terraform","level":"advanced"}]}]}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-projects',
+    'showcase-base',
+    'projects',
+    5,
+    1,
+    '{"title":"Projects","data":[{"id":"showcase-proj-ledger-replay","name":"Ledger replay toolkit","description":"Open-source CLI that replays ledger events into a scratch database.","role":"Maintainer","technologies":["Go","SQLite"],"url":"https://github.com/priyaraman/ledger-replay","github":"https://github.com/priyaraman/ledger-replay","startDate":"2023-02","endDate":"","current":true,"highlights":["Replays 30 days of ledger events in under four minutes."]}]}',
+    NULL,
+    'showcase-item-projects',
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-certifications',
+    'showcase-base',
+    'certifications',
+    6,
+    0,
+    '{"title":"Certifications","data":[{"id":"showcase-cert-aws","name":"AWS Certified Solutions Architect – Professional","issuer":"Amazon Web Services","date":"2024-03","expirationDate":"2027-03","noExpiration":false,"credentialId":"AWS-PSA-2024-0118","url":"https://www.credly.com/badges/example","description":""},{"id":"showcase-cert-cka","name":"Certified Kubernetes Administrator","issuer":"Cloud Native Computing Foundation","date":"2024-07","expirationDate":"2027-07","noExpiration":false,"credentialId":"CKA-2024-7741","url":"https://www.credly.com/badges/example-cka","description":""}]}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-awards',
+    'showcase-base',
+    'awards',
+    7,
+    0,
+    '{"title":"Awards","data":[{"id":"showcase-award-excellence","title":"Engineering Excellence Award","issuer":"Meridian Pay","date":"2024-11","description":""}]}',
+    '{"spacing":"compact"}',
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-languages',
+    'showcase-base',
+    'languages',
+    8,
+    1,
+    '{"title":"Languages","data":[{"id":"showcase-lang-english","name":"English","proficiency":"native","certification":"Native speaker"},{"id":"showcase-lang-tamil","name":"Tamil","proficiency":"fluent","certification":"Native speaker"}]}',
+    '{"keepSectionTogether":true}',
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-publications',
+    'showcase-base',
+    'publications',
+    9,
+    0,
+    '{"title":"Publications & talks","data":[{"id":"showcase-pub-reconciliation","title":"Reconciling money at scale","publisher":"priyaraman.dev","date":"2024-09","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/ledger-reconciliation"},{"id":"showcase-pub-contract-tests","title":"Contract tests for payment APIs","publisher":"priyaraman.dev","date":"2023-04","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/contract-tests"}]}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-volunteer',
+    'showcase-base',
+    'volunteer',
+    10,
+    0,
+    '{"title":"Volunteer","data":[{"id":"showcase-vol-codefuture","organization":"Code the Future","role":"Mentor","startDate":"2020-03","endDate":"","current":true,"location":"Melbourne, VIC","cause":"STEM education","description":"","highlights":["Mentored 18 students across four cohorts."]}]}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-references',
+    'showcase-base',
+    'references',
+    11,
+    0,
+    '{"title":"References","data":[{"id":"showcase-ref-shah","name":"Dr. Anika Shah","position":"Engineering Director","company":"Meridian Pay","relationship":"Manager","email":"anika.shah@example.com","phone":"+61 400 000 019","linkedin":"https://www.linkedin.com/in/anikashah","isHidden":false},{"id":"showcase-ref-lee","name":"Marcus Lee","position":"Chief Technology Officer","company":"Ardent Cloud","relationship":"Former manager","email":"marcus.lee@example.com","phone":"+61 400 000 020","linkedin":"https://www.linkedin.com/in/marcuslee","isHidden":true}]}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-base-custom',
+    'showcase-base',
+    'custom',
+    12,
+    0,
+    '{"title":"Writing & Speaking","html":"<p>Talks and writing about payment systems, reliability and on-call.</p><ul><li><strong>Reconciling money at scale</strong> — meetup talk, 2024</li><li><em>Contract tests for payment APIs</em> — meetup talk, 2023</li><li>Maintainer of <a href=\"https://github.com/priyaraman/ledger-replay\">ledger-replay</a></li></ul>","json":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Talks and writing about payment systems, reliability and on-call."}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Reconciling money at scale","marks":[{"type":"bold"}]},{"type":"text","text":" — meetup talk, 2024"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Contract tests for payment APIs","marks":[{"type":"italic"}]},{"type":"text","text":" — meetup talk, 2023"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Maintainer of "},{"type":"text","text":"ledger-replay","marks":[{"type":"link","attrs":{"href":"https://github.com/priyaraman/ledger-replay"}}]}]}]}]}]}}',
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+-- The two-page full CV (academic template, page target 2). Seven sections
+-- have been taken over; the rest still follow the one-pager.
+INSERT INTO "Resume" (
+    id, userId, name, variationType, baseResumeId, domain, template, tags,
+    isArchived, metadata, createdAt, updatedAt
+)
+VALUES (
+    'showcase-variant',
+    'user-1',
+    'Showcase — Full CV (Priya Raman)',
+    'variation',
+    'showcase-base',
+    'Payments platform',
+    'academic',
+    '["showcase","academic","payments"]',
+    0,
+    '{"personalInfo":{"fullName":"Priya Raman","email":"priya.raman@example.com","phone":"+61 400 000 018","location":"Melbourne, VIC","linkedin":"linkedin.com/in/priyaraman","github":"github.com/priyaraman","website":"priyaraman.dev","portfolio":"","professionalTitle":"Staff Software Engineer, Payments Platform","photoUrl":""},"settings":{"pageSize":"A4","margins":{"top":54,"right":54,"bottom":54,"left":54},"fontScale":1,"typography":{"name":18,"title":11,"sectionHeading":11,"itemTitle":10.5,"body":10.5,"small":9.5},"lineHeight":1.2,"fontFamily":"Times New Roman","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"sectionSpacing":"normal","dateFormat":"MMMM YYYY","accentStyle":"none","pageTarget":2},"exportHistory":[{"id":"showcase-export-2","format":"pdf","timestamp":"2026-09-30T02:40:00.000Z","fileName":"Priya-Raman-Full-CV.pdf","fileSize":96104}],"jobTarget":{"title":"Principal Engineer, Payments","company":"Southern Cross Bank","description":"Set the technical direction for a core payments estate. You will own ledger and settlement architecture, regulatory reporting trade-offs, and the engineering standards across four teams.","keywords":["payments","ledger","distributed systems","event sourcing","Go","regulatory reporting","technical strategy"],"url":"https://southern-cross.example/jobs/principal-payments","addedAt":"2026-09-28T09:00:00.000Z"}}',
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-personal',
+    'showcase-variant',
+    'personal-info',
+    0,
+    1,
+    '{"title":"Contact","data":{"fullName":"Priya Raman","email":"priya.raman@example.com","phone":"+61 400 000 018","location":"Melbourne, VIC","linkedin":"linkedin.com/in/priyaraman","github":"github.com/priyaraman","website":"priyaraman.dev","portfolio":"","professionalTitle":"Staff Software Engineer, Payments Platform","photoUrl":""}}',
+    NULL,
+    NULL,
+    'showcase-base-personal',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-summary',
+    'showcase-variant',
+    'summary',
+    1,
+    1,
+    '{"title":"Profile","html":"<p>Engineer and maintainer working on <strong>payment infrastructure</strong> and <em>reliability practice</em>. Eight years across ledger systems, settlement and on-call, with open-source tools used outside the companies that funded them. I write and speak about <a href=\"https://priyaraman.dev/writing\">reconciliation</a> and incident response.</p>","json":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Engineer and maintainer working on "},{"type":"text","text":"payment infrastructure","marks":[{"type":"bold"}]},{"type":"text","text":" and "},{"type":"text","text":"reliability practice","marks":[{"type":"italic"}]},{"type":"text","text":". Eight years across ledger systems, settlement and on-call, with open-source tools used outside the companies that funded them. I write and speak about "},{"type":"text","text":"reconciliation","marks":[{"type":"link","attrs":{"href":"https://priyaraman.dev/writing"}}]},{"type":"text","text":" and incident response."}]}]}}',
+    NULL,
+    NULL,
+    'showcase-base-summary',
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-experience',
+    'showcase-variant',
+    'experience',
+    2,
+    1,
+    '{"title":"Experience","data":[{"id":"showcase-exp-meridian","company":"Meridian Pay","position":"Staff Software Engineer","startDate":"2022-02","endDate":"","current":true,"location":"Melbourne, VIC","locationType":"hybrid","employmentType":"full-time","description":"Payments platform serving 1,400 merchants across Australia and New Zealand.","highlights":["Rewrote the double-entry ledger''s posting path in Go, cutting p99 authorisation latency from 240 ms to 149 ms.","Led a six-engineer migration to event-sourced settlement; reconciled all AUD 4.2 billion of annual volume with no customer-visible incidents.","Cut settlement compute spend by 22% (AUD 310k a year) by right-sizing workers and autoscaling on queue depth.","Built a dispute-reconciliation service that flags merchant issues in under five minutes."],"technologies":["Go","TypeScript","PostgreSQL","Kafka","Kubernetes"]},{"id":"showcase-exp-ardent","company":"Ardent Cloud","position":"Senior Software Engineer","startDate":"2019-01","endDate":"2022-01","current":false,"location":"Sydney, NSW","locationType":"onsite","employmentType":"full-time","description":"Multi-tenant billing and invoicing for mid-market SaaS companies.","highlights":["Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.","Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.","Mentored four engineers; two were promoted within 18 months."],"technologies":["Kotlin","AWS","Terraform","PostgreSQL"]}]}',
+    '{"keepTogether":"always"}',
+    NULL,
+    'showcase-base-experience',
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-education',
+    'showcase-variant',
+    'education',
+    3,
+    1,
+    '{"title":"Education","data":[{"id":"showcase-edu-unimelb","institution":"University of Melbourne","degree":"Bachelor of Science (Honours)","field":"Computer Science","startDate":"2013-02","graduationDate":"2016-11","endDate":"2016-11","current":false,"gpa":"3.8","maxGpa":"4.0","location":"Melbourne, VIC","achievements":["First Class Honours"],"coursework":[],"honors":[]}]}',
+    '{"spacing":"spacious"}',
+    NULL,
+    'showcase-base-education',
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-skills',
+    'showcase-variant',
+    'skills',
+    4,
+    1,
+    '{"title":"Technical skills","data":[{"id":"showcase-vskill-systems","name":"Distributed systems","order":0,"skills":[{"id":"showcase-vskill-eventsourcing","name":"Event sourcing","level":"expert"},{"id":"showcase-vskill-reconciliation","name":"Reconciliation","level":"expert"},{"id":"showcase-vskill-slo","name":"SLO design","level":"advanced"}]},{"id":"showcase-vskill-tools","name":"Tools","order":1,"skills":[{"id":"showcase-vskill-go","name":"Go","level":"expert"},{"id":"showcase-vskill-postgres","name":"PostgreSQL","level":"expert"},{"id":"showcase-vskill-kafka","name":"Kafka","level":"advanced"},{"id":"showcase-vskill-k8s","name":"Kubernetes","level":"advanced"}]}]}',
+    NULL,
+    NULL,
+    'showcase-base-skills',
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-projects',
+    'showcase-variant',
+    'projects',
+    6,
+    1,
+    '{"title":"Projects","data":[{"id":"showcase-proj-ledger-replay","name":"Ledger replay toolkit","description":"Open-source CLI that replays ledger events into a scratch database.","role":"Maintainer","technologies":["Go","SQLite"],"url":"https://github.com/priyaraman/ledger-replay","github":"https://github.com/priyaraman/ledger-replay","startDate":"2023-02","endDate":"","current":true,"highlights":["Replays 30 days of ledger events in under four minutes."]},{"id":"showcase-proj-runbook","name":"Runbook generator","description":"Generates on-call runbooks from service manifests and SLO definitions.","role":"Creator","technologies":["TypeScript","Kubernetes"],"url":"https://github.com/priyaraman/runbook-gen","github":"https://github.com/priyaraman/runbook-gen","startDate":"2021-06","endDate":"2022-01","current":false,"highlights":["Cut new-service onboarding from two weeks to three days."]}]}',
+    NULL,
+    'showcase-item-projects',
+    'showcase-base-projects',
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-certifications',
+    'showcase-variant',
+    'certifications',
+    7,
+    1,
+    '{"title":"Certifications","data":[{"id":"showcase-cert-aws","name":"AWS Certified Solutions Architect – Professional","issuer":"Amazon Web Services","date":"2024-03","expirationDate":"2027-03","noExpiration":false,"credentialId":"AWS-PSA-2024-0118","url":"https://www.credly.com/badges/example","description":""},{"id":"showcase-cert-cka","name":"Certified Kubernetes Administrator","issuer":"Cloud Native Computing Foundation","date":"2024-07","expirationDate":"2027-07","noExpiration":false,"credentialId":"CKA-2024-7741","url":"https://www.credly.com/badges/example-cka","description":""}]}',
+    NULL,
+    NULL,
+    'showcase-base-certifications',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-awards',
+    'showcase-variant',
+    'awards',
+    8,
+    1,
+    '{"title":"Awards","data":[{"id":"showcase-award-excellence","title":"Engineering Excellence Award","issuer":"Meridian Pay","date":"2024-11","description":""}]}',
+    '{"spacing":"compact"}',
+    NULL,
+    'showcase-base-awards',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-languages',
+    'showcase-variant',
+    'languages',
+    9,
+    1,
+    '{"title":"Languages","data":[{"id":"showcase-lang-english","name":"English","proficiency":"native","certification":"Native speaker"},{"id":"showcase-lang-tamil","name":"Tamil","proficiency":"fluent","certification":"Native speaker"}]}',
+    '{"keepSectionTogether":true}',
+    NULL,
+    'showcase-base-languages',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-publications',
+    'showcase-variant',
+    'publications',
+    5,
+    1,
+    '{"title":"Publications & talks","data":[{"id":"showcase-pub-reconciliation","title":"Reconciling money at scale","publisher":"priyaraman.dev","date":"2024-09","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/ledger-reconciliation"},{"id":"showcase-pub-contract-tests","title":"Contract tests for payment APIs","publisher":"priyaraman.dev","date":"2023-04","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/contract-tests"}]}',
+    '{"pageBreakBefore":true}',
+    NULL,
+    'showcase-base-publications',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-volunteer',
+    'showcase-variant',
+    'volunteer',
+    10,
+    0,
+    '{"title":"Volunteer","data":[{"id":"showcase-vol-codefuture","organization":"Code the Future","role":"Mentor","startDate":"2020-03","endDate":"","current":true,"location":"Melbourne, VIC","cause":"STEM education","description":"","highlights":["Mentored 18 students across four cohorts."]}]}',
+    NULL,
+    NULL,
+    'showcase-base-volunteer',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-references',
+    'showcase-variant',
+    'references',
+    11,
+    0,
+    '{"title":"References","data":[{"id":"showcase-ref-shah","name":"Dr. Anika Shah","position":"Engineering Director","company":"Meridian Pay","relationship":"Manager","email":"anika.shah@example.com","phone":"+61 400 000 019","linkedin":"https://www.linkedin.com/in/anikashah","isHidden":false},{"id":"showcase-ref-lee","name":"Marcus Lee","position":"Chief Technology Officer","company":"Ardent Cloud","relationship":"Former manager","email":"marcus.lee@example.com","phone":"+61 400 000 020","linkedin":"https://www.linkedin.com/in/marcuslee","isHidden":true}]}',
+    NULL,
+    NULL,
+    'showcase-base-references',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
+    'showcase-var-custom',
+    'showcase-variant',
+    'custom',
+    12,
+    1,
+    '{"title":"Teaching & Talks","html":"<p>Teaching and talks on distributed systems and payment reliability.</p><ul><li><strong>Guest lecture: Distributed Systems</strong> — University of Melbourne, 2024</li><li><em>Workshop: Contract tests in practice</em> — Melbourne meetup, 2023</li><li>Writing index at <a href=\"https://priyaraman.dev/writing\">priyaraman.dev</a></li></ul>","json":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Teaching and talks on distributed systems and payment reliability."}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Guest lecture: Distributed Systems","marks":[{"type":"bold"}]},{"type":"text","text":" — University of Melbourne, 2024"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Workshop: Contract tests in practice","marks":[{"type":"italic"}]},{"type":"text","text":" — Melbourne meetup, 2023"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Writing index at "},{"type":"text","text":"priyaraman.dev","marks":[{"type":"link","attrs":{"href":"https://priyaraman.dev/writing"}}]}]}]}]}]}}',
+    NULL,
+    NULL,
+    'showcase-base-custom',
+    0,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+-- Revision history: three automatic snapshots and three named versions.
+-- The newest snapshot is byte-identical to the live document, so its diff reads
+-- "No differences" and Restore is correctly disabled.
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-base-rev-1',
+    'showcase-base',
+    1,
+    '{"name":"Showcase — One-pager (Priya Raman)","template":"compact","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":36,\"right\":36,\"bottom\":36,\"left\":36},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Inter\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"compact\",\"dateFormat\":\"MMM YYYY\",\"accentStyle\":\"underline\",\"pageTarget\":1}}","sections":[{"id":"showcase-base-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-base-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Summary\",\"html\":\"<p>Backend engineer with payments and platform experience. Comfortable owning services end to end.</p>\"}","contentItemId":null},{"id":"showcase-base-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Rewrote the ledger posting path in Go, cutting p99 latency from 240 ms to 168 ms.\",\"Led a six-engineer migration to event-sourced settlement.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-base-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null}]}',
+    'seed-showcase-base-1',
+    'First draft',
+    CAST(strftime('%s', 'now') AS INTEGER) - 7689600
+);
+
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-base-rev-2',
+    'showcase-base',
+    2,
+    '{"name":"Showcase — One-pager (Priya Raman)","template":"compact","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":36,\"right\":36,\"bottom\":36,\"left\":36},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Inter\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"compact\",\"dateFormat\":\"MMM YYYY\",\"accentStyle\":\"underline\",\"pageTarget\":1}}","sections":[{"id":"showcase-base-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-base-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Summary\",\"html\":\"<p>Backend engineer with payments and platform experience. Comfortable owning services end to end.</p>\"}","contentItemId":null},{"id":"showcase-base-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Rewrote the ledger posting path in Go, cutting p99 latency from 240 ms to 168 ms.\",\"Led a six-engineer migration to event-sourced settlement.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-base-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null},{"id":"showcase-base-skills","type":"skills","order":4,"visible":true,"content":"{\"title\":\"Skills\",\"data\":[{\"id\":\"showcase-skill-languages\",\"name\":\"Languages\",\"order\":0,\"skills\":[{\"id\":\"showcase-skill-go\",\"name\":\"Go\",\"level\":\"expert\"},{\"id\":\"showcase-skill-ts\",\"name\":\"TypeScript\",\"level\":\"expert\"},{\"id\":\"showcase-skill-python\",\"name\":\"Python\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-sql\",\"name\":\"SQL\",\"level\":\"advanced\"}]},{\"id\":\"showcase-skill-platform\",\"name\":\"Platform\",\"order\":1,\"skills\":[{\"id\":\"showcase-skill-postgres\",\"name\":\"PostgreSQL\",\"level\":\"expert\"},{\"id\":\"showcase-skill-kafka\",\"name\":\"Kafka\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-k8s\",\"name\":\"Kubernetes\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-terraform\",\"name\":\"Terraform\",\"level\":\"advanced\"}]}]}","contentItemId":null}]}',
+    'seed-showcase-base-2',
+    NULL,
+    CAST(strftime('%s', 'now') AS INTEGER) - 5270400
+);
+
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-base-rev-3',
+    'showcase-base',
+    3,
+    '{"name":"Showcase — One-pager (Priya Raman)","template":"compact","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":36,\"right\":36,\"bottom\":36,\"left\":36},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Inter\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"compact\",\"dateFormat\":\"MMM YYYY\",\"accentStyle\":\"underline\",\"pageTarget\":1},\"exportHistory\":[{\"id\":\"showcase-export-1\",\"format\":\"pdf\",\"timestamp\":\"2026-08-20T04:12:00.000Z\",\"fileName\":\"Priya-Raman-Staff-Platform-Engineer.pdf\",\"fileSize\":84211}],\"jobTarget\":{\"title\":\"Staff Platform Engineer\",\"company\":\"Northwind Payments\",\"description\":\"Own the payments platform''s reliability and developer experience. You will lead cross-team design, set SLOs, and build the tooling that lets product teams ship safely. Experience with Go, Kubernetes and PostgreSQL required.\",\"keywords\":[\"Go\",\"Kubernetes\",\"PostgreSQL\",\"payments\",\"distributed systems\",\"SLO\",\"Terraform\",\"incident response\",\"mentoring\"],\"url\":\"https://northwind-payments.example/jobs/staff-platform-engineer\",\"addedAt\":\"2026-09-14T09:00:00.000Z\"}}","sections":[{"id":"showcase-base-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-base-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Summary\",\"html\":\"<p>Staff software engineer who builds <strong>payment infrastructure</strong> that other teams rely on. I led a ledger rewrite that settles <em>AUD 4.2 billion</em> a year, cut p99 latency by <strong>38%</strong>, and write at <a href=\\\"https://priyaraman.dev/writing\\\">priyaraman.dev</a>.</p>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Staff software engineer who builds \"},{\"type\":\"text\",\"text\":\"payment infrastructure\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" that other teams rely on. I led a ledger rewrite that settles \"},{\"type\":\"text\",\"text\":\"AUD 4.2 billion\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" a year, cut p99 latency by \"},{\"type\":\"text\",\"text\":\"38%\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\", and write at \"},{\"type\":\"text\",\"text\":\"priyaraman.dev\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]},{\"type\":\"text\",\"text\":\".\"}]}]}}","contentItemId":null},{"id":"showcase-base-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Rewrote the ledger posting path in Go, cutting p99 latency from 240 ms to 168 ms.\",\"Led a six-engineer migration to event-sourced settlement.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-base-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null},{"id":"showcase-base-skills","type":"skills","order":4,"visible":true,"content":"{\"title\":\"Skills\",\"data\":[{\"id\":\"showcase-skill-languages\",\"name\":\"Languages\",\"order\":0,\"skills\":[{\"id\":\"showcase-skill-go\",\"name\":\"Go\",\"level\":\"expert\"},{\"id\":\"showcase-skill-ts\",\"name\":\"TypeScript\",\"level\":\"expert\"},{\"id\":\"showcase-skill-python\",\"name\":\"Python\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-sql\",\"name\":\"SQL\",\"level\":\"advanced\"}]},{\"id\":\"showcase-skill-platform\",\"name\":\"Platform\",\"order\":1,\"skills\":[{\"id\":\"showcase-skill-postgres\",\"name\":\"PostgreSQL\",\"level\":\"expert\"},{\"id\":\"showcase-skill-kafka\",\"name\":\"Kafka\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-k8s\",\"name\":\"Kubernetes\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-terraform\",\"name\":\"Terraform\",\"level\":\"advanced\"}]}]}","contentItemId":null},{"id":"showcase-base-projects","type":"projects","order":5,"visible":true,"content":"{\"title\":\"Projects\",\"data\":[{\"id\":\"showcase-proj-ledger-replay\",\"name\":\"Ledger replay toolkit\",\"description\":\"Open-source CLI that replays ledger events into a scratch database.\",\"role\":\"Maintainer\",\"technologies\":[\"Go\",\"SQLite\"],\"url\":\"https://github.com/priyaraman/ledger-replay\",\"github\":\"https://github.com/priyaraman/ledger-replay\",\"startDate\":\"2023-02\",\"endDate\":\"\",\"current\":true,\"highlights\":[\"Replays 30 days of ledger events in under four minutes.\"]}]}","contentItemId":"showcase-item-projects"},{"id":"showcase-base-certifications","type":"certifications","order":6,"visible":false,"content":"{\"title\":\"Certifications\",\"data\":[{\"id\":\"showcase-cert-aws\",\"name\":\"AWS Certified Solutions Architect – Professional\",\"issuer\":\"Amazon Web Services\",\"date\":\"2024-03\",\"expirationDate\":\"2027-03\",\"noExpiration\":false,\"credentialId\":\"AWS-PSA-2024-0118\",\"url\":\"https://www.credly.com/badges/example\",\"description\":\"\"},{\"id\":\"showcase-cert-cka\",\"name\":\"Certified Kubernetes Administrator\",\"issuer\":\"Cloud Native Computing Foundation\",\"date\":\"2024-07\",\"expirationDate\":\"2027-07\",\"noExpiration\":false,\"credentialId\":\"CKA-2024-7741\",\"url\":\"https://www.credly.com/badges/example-cka\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-awards","type":"awards","order":7,"visible":false,"content":"{\"title\":\"Awards\",\"data\":[{\"id\":\"showcase-award-excellence\",\"title\":\"Engineering Excellence Award\",\"issuer\":\"Meridian Pay\",\"date\":\"2024-11\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-languages","type":"languages","order":8,"visible":true,"content":"{\"title\":\"Languages\",\"data\":[{\"id\":\"showcase-lang-english\",\"name\":\"English\",\"proficiency\":\"native\",\"certification\":\"Native speaker\"},{\"id\":\"showcase-lang-tamil\",\"name\":\"Tamil\",\"proficiency\":\"fluent\",\"certification\":\"Native speaker\"}]}","contentItemId":null}]}',
+    'seed-showcase-base-3',
+    'Before the ledger rewrite',
+    CAST(strftime('%s', 'now') AS INTEGER) - 3801600
+);
+
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-base-rev-4',
+    'showcase-base',
+    4,
+    '{"name":"Showcase — One-pager (Priya Raman)","template":"compact","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":36,\"right\":36,\"bottom\":36,\"left\":36},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Inter\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"compact\",\"dateFormat\":\"MMM YYYY\",\"accentStyle\":\"underline\",\"pageTarget\":1},\"exportHistory\":[{\"id\":\"showcase-export-1\",\"format\":\"pdf\",\"timestamp\":\"2026-08-20T04:12:00.000Z\",\"fileName\":\"Priya-Raman-Staff-Platform-Engineer.pdf\",\"fileSize\":84211}],\"jobTarget\":{\"title\":\"Staff Platform Engineer\",\"company\":\"Northwind Payments\",\"description\":\"Own the payments platform''s reliability and developer experience. You will lead cross-team design, set SLOs, and build the tooling that lets product teams ship safely. Experience with Go, Kubernetes and PostgreSQL required.\",\"keywords\":[\"Go\",\"Kubernetes\",\"PostgreSQL\",\"payments\",\"distributed systems\",\"SLO\",\"Terraform\",\"incident response\",\"mentoring\"],\"url\":\"https://northwind-payments.example/jobs/staff-platform-engineer\",\"addedAt\":\"2026-09-14T09:00:00.000Z\"}}","sections":[{"id":"showcase-base-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-base-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Summary\",\"html\":\"<p>Staff software engineer who builds <strong>payment infrastructure</strong> that other teams rely on. I led a ledger rewrite that settles <em>AUD 4.2 billion</em> a year, cut p99 latency by <strong>38%</strong>, and write at <a href=\\\"https://priyaraman.dev/writing\\\">priyaraman.dev</a>.</p>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Staff software engineer who builds \"},{\"type\":\"text\",\"text\":\"payment infrastructure\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" that other teams rely on. I led a ledger rewrite that settles \"},{\"type\":\"text\",\"text\":\"AUD 4.2 billion\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" a year, cut p99 latency by \"},{\"type\":\"text\",\"text\":\"38%\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\", and write at \"},{\"type\":\"text\",\"text\":\"priyaraman.dev\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]},{\"type\":\"text\",\"text\":\".\"}]}]}}","contentItemId":null},{"id":"showcase-base-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Rewrote the double-entry ledger''s posting path in Go, cutting p99 latency from 240 ms to 149 ms.\",\"Migrated settlement to events; reconciled all AUD 4.2B of annual volume.\",\"Cut settlement compute spend 18% by right-sizing workers.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-base-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null},{"id":"showcase-base-skills","type":"skills","order":4,"visible":true,"content":"{\"title\":\"Skills\",\"data\":[{\"id\":\"showcase-skill-languages\",\"name\":\"Languages\",\"order\":0,\"skills\":[{\"id\":\"showcase-skill-go\",\"name\":\"Go\",\"level\":\"expert\"},{\"id\":\"showcase-skill-ts\",\"name\":\"TypeScript\",\"level\":\"expert\"},{\"id\":\"showcase-skill-python\",\"name\":\"Python\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-sql\",\"name\":\"SQL\",\"level\":\"advanced\"}]},{\"id\":\"showcase-skill-platform\",\"name\":\"Platform\",\"order\":1,\"skills\":[{\"id\":\"showcase-skill-postgres\",\"name\":\"PostgreSQL\",\"level\":\"expert\"},{\"id\":\"showcase-skill-kafka\",\"name\":\"Kafka\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-k8s\",\"name\":\"Kubernetes\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-terraform\",\"name\":\"Terraform\",\"level\":\"advanced\"}]}]}","contentItemId":null},{"id":"showcase-base-projects","type":"projects","order":5,"visible":true,"content":"{\"title\":\"Projects\",\"data\":[{\"id\":\"showcase-proj-ledger-replay\",\"name\":\"Ledger replay toolkit\",\"description\":\"Open-source CLI that replays ledger events into a scratch database.\",\"role\":\"Maintainer\",\"technologies\":[\"Go\",\"SQLite\"],\"url\":\"https://github.com/priyaraman/ledger-replay\",\"github\":\"https://github.com/priyaraman/ledger-replay\",\"startDate\":\"2023-02\",\"endDate\":\"\",\"current\":true,\"highlights\":[\"Replays 30 days of ledger events in under four minutes.\"]}]}","contentItemId":"showcase-item-projects"},{"id":"showcase-base-certifications","type":"certifications","order":6,"visible":false,"content":"{\"title\":\"Certifications\",\"data\":[{\"id\":\"showcase-cert-aws\",\"name\":\"AWS Certified Solutions Architect – Professional\",\"issuer\":\"Amazon Web Services\",\"date\":\"2024-03\",\"expirationDate\":\"2027-03\",\"noExpiration\":false,\"credentialId\":\"AWS-PSA-2024-0118\",\"url\":\"https://www.credly.com/badges/example\",\"description\":\"\"},{\"id\":\"showcase-cert-cka\",\"name\":\"Certified Kubernetes Administrator\",\"issuer\":\"Cloud Native Computing Foundation\",\"date\":\"2024-07\",\"expirationDate\":\"2027-07\",\"noExpiration\":false,\"credentialId\":\"CKA-2024-7741\",\"url\":\"https://www.credly.com/badges/example-cka\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-awards","type":"awards","order":7,"visible":false,"content":"{\"title\":\"Awards\",\"data\":[{\"id\":\"showcase-award-excellence\",\"title\":\"Engineering Excellence Award\",\"issuer\":\"Meridian Pay\",\"date\":\"2024-11\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-languages","type":"languages","order":8,"visible":true,"content":"{\"title\":\"Languages\",\"data\":[{\"id\":\"showcase-lang-english\",\"name\":\"English\",\"proficiency\":\"native\",\"certification\":\"Native speaker\"},{\"id\":\"showcase-lang-tamil\",\"name\":\"Tamil\",\"proficiency\":\"fluent\",\"certification\":\"Native speaker\"}]}","contentItemId":null},{"id":"showcase-base-publications","type":"publications","order":9,"visible":false,"content":"{\"title\":\"Publications & talks\",\"data\":[{\"id\":\"showcase-pub-reconciliation\",\"title\":\"Reconciling money at scale\",\"publisher\":\"priyaraman.dev\",\"date\":\"2024-09\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/ledger-reconciliation\"},{\"id\":\"showcase-pub-contract-tests\",\"title\":\"Contract tests for payment APIs\",\"publisher\":\"priyaraman.dev\",\"date\":\"2023-04\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/contract-tests\"}]}","contentItemId":null},{"id":"showcase-base-volunteer","type":"volunteer","order":10,"visible":false,"content":"{\"title\":\"Volunteer\",\"data\":[{\"id\":\"showcase-vol-codefuture\",\"organization\":\"Code the Future\",\"role\":\"Mentor\",\"startDate\":\"2020-03\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"cause\":\"STEM education\",\"description\":\"\",\"highlights\":[\"Mentored 18 students across four cohorts.\"]}]}","contentItemId":null},{"id":"showcase-base-references","type":"references","order":11,"visible":false,"content":"{\"title\":\"References\",\"data\":[{\"id\":\"showcase-ref-shah\",\"name\":\"Dr. Anika Shah\",\"position\":\"Engineering Director\",\"company\":\"Meridian Pay\",\"relationship\":\"Manager\",\"email\":\"anika.shah@example.com\",\"phone\":\"+61 400 000 019\",\"linkedin\":\"https://www.linkedin.com/in/anikashah\",\"isHidden\":false},{\"id\":\"showcase-ref-lee\",\"name\":\"Marcus Lee\",\"position\":\"Chief Technology Officer\",\"company\":\"Ardent Cloud\",\"relationship\":\"Former manager\",\"email\":\"marcus.lee@example.com\",\"phone\":\"+61 400 000 020\",\"linkedin\":\"https://www.linkedin.com/in/marcuslee\",\"isHidden\":true}]}","contentItemId":null},{"id":"showcase-base-custom","type":"custom","order":12,"visible":false,"content":"{\"title\":\"Writing & Speaking\",\"html\":\"<p>Talks and writing about payment systems, reliability and on-call.</p><ul><li><strong>Reconciling money at scale</strong> — meetup talk, 2024</li><li><em>Contract tests for payment APIs</em> — meetup talk, 2023</li><li>Maintainer of <a href=\\\"https://github.com/priyaraman/ledger-replay\\\">ledger-replay</a></li></ul>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Talks and writing about payment systems, reliability and on-call.\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Reconciling money at scale\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" — meetup talk, 2024\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Contract tests for payment APIs\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" — meetup talk, 2023\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Maintainer of \"},{\"type\":\"text\",\"text\":\"ledger-replay\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://github.com/priyaraman/ledger-replay\"}}]}]}]}]}]}}","contentItemId":null}]}',
+    'seed-showcase-base-4',
+    NULL,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2505600
+);
+
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-base-rev-5',
+    'showcase-base',
+    5,
+    '{"name":"Showcase — One-pager (Priya Raman)","template":"compact","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":36,\"right\":36,\"bottom\":36,\"left\":36},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Inter\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"compact\",\"dateFormat\":\"MMM YYYY\",\"accentStyle\":\"underline\",\"pageTarget\":1},\"exportHistory\":[{\"id\":\"showcase-export-1\",\"format\":\"pdf\",\"timestamp\":\"2026-08-20T04:12:00.000Z\",\"fileName\":\"Priya-Raman-Staff-Platform-Engineer.pdf\",\"fileSize\":84211}],\"jobTarget\":{\"title\":\"Staff Platform Engineer\",\"company\":\"Northwind Payments\",\"description\":\"Own the payments platform''s reliability and developer experience. You will lead cross-team design, set SLOs, and build the tooling that lets product teams ship safely. Experience with Go, Kubernetes and PostgreSQL required.\",\"keywords\":[\"Go\",\"Kubernetes\",\"PostgreSQL\",\"payments\",\"distributed systems\",\"SLO\",\"Terraform\",\"incident response\",\"mentoring\"],\"url\":\"https://northwind-payments.example/jobs/staff-platform-engineer\",\"addedAt\":\"2026-09-14T09:00:00.000Z\"}}","sections":[{"id":"showcase-base-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-base-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Summary\",\"html\":\"<p>Staff software engineer who builds <strong>payment infrastructure</strong> that other teams rely on. I led a ledger rewrite that settles <em>AUD 4.2 billion</em> a year, cut p99 latency by <strong>38%</strong>, and write at <a href=\\\"https://priyaraman.dev/writing\\\">priyaraman.dev</a>.</p>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Staff software engineer who builds \"},{\"type\":\"text\",\"text\":\"payment infrastructure\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" that other teams rely on. I led a ledger rewrite that settles \"},{\"type\":\"text\",\"text\":\"AUD 4.2 billion\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" a year, cut p99 latency by \"},{\"type\":\"text\",\"text\":\"38%\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\", and write at \"},{\"type\":\"text\",\"text\":\"priyaraman.dev\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]},{\"type\":\"text\",\"text\":\".\"}]}]}}","contentItemId":null},{"id":"showcase-base-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Rewrote the double-entry ledger''s posting path in Go, cutting p99 latency from 240 ms to 149 ms.\",\"Migrated settlement to events; reconciled all AUD 4.2B of annual volume.\",\"Cut settlement compute spend 18% by right-sizing workers.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-base-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null},{"id":"showcase-base-skills","type":"skills","order":4,"visible":true,"content":"{\"title\":\"Skills\",\"data\":[{\"id\":\"showcase-skill-languages\",\"name\":\"Languages\",\"order\":0,\"skills\":[{\"id\":\"showcase-skill-go\",\"name\":\"Go\",\"level\":\"expert\"},{\"id\":\"showcase-skill-ts\",\"name\":\"TypeScript\",\"level\":\"expert\"},{\"id\":\"showcase-skill-python\",\"name\":\"Python\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-sql\",\"name\":\"SQL\",\"level\":\"advanced\"}]},{\"id\":\"showcase-skill-platform\",\"name\":\"Platform\",\"order\":1,\"skills\":[{\"id\":\"showcase-skill-postgres\",\"name\":\"PostgreSQL\",\"level\":\"expert\"},{\"id\":\"showcase-skill-kafka\",\"name\":\"Kafka\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-k8s\",\"name\":\"Kubernetes\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-terraform\",\"name\":\"Terraform\",\"level\":\"advanced\"}]}]}","contentItemId":null},{"id":"showcase-base-projects","type":"projects","order":5,"visible":true,"content":"{\"title\":\"Projects\",\"data\":[{\"id\":\"showcase-proj-ledger-replay\",\"name\":\"Ledger replay toolkit\",\"description\":\"Open-source CLI that replays ledger events into a scratch database.\",\"role\":\"Maintainer\",\"technologies\":[\"Go\",\"SQLite\"],\"url\":\"https://github.com/priyaraman/ledger-replay\",\"github\":\"https://github.com/priyaraman/ledger-replay\",\"startDate\":\"2023-02\",\"endDate\":\"\",\"current\":true,\"highlights\":[\"Replays 30 days of ledger events in under four minutes.\"]}]}","contentItemId":"showcase-item-projects"},{"id":"showcase-base-certifications","type":"certifications","order":6,"visible":false,"content":"{\"title\":\"Certifications\",\"data\":[{\"id\":\"showcase-cert-aws\",\"name\":\"AWS Certified Solutions Architect – Professional\",\"issuer\":\"Amazon Web Services\",\"date\":\"2024-03\",\"expirationDate\":\"2027-03\",\"noExpiration\":false,\"credentialId\":\"AWS-PSA-2024-0118\",\"url\":\"https://www.credly.com/badges/example\",\"description\":\"\"},{\"id\":\"showcase-cert-cka\",\"name\":\"Certified Kubernetes Administrator\",\"issuer\":\"Cloud Native Computing Foundation\",\"date\":\"2024-07\",\"expirationDate\":\"2027-07\",\"noExpiration\":false,\"credentialId\":\"CKA-2024-7741\",\"url\":\"https://www.credly.com/badges/example-cka\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-awards","type":"awards","order":7,"visible":false,"content":"{\"title\":\"Awards\",\"data\":[{\"id\":\"showcase-award-excellence\",\"title\":\"Engineering Excellence Award\",\"issuer\":\"Meridian Pay\",\"date\":\"2024-11\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-languages","type":"languages","order":8,"visible":true,"content":"{\"title\":\"Languages\",\"data\":[{\"id\":\"showcase-lang-english\",\"name\":\"English\",\"proficiency\":\"native\",\"certification\":\"Native speaker\"},{\"id\":\"showcase-lang-tamil\",\"name\":\"Tamil\",\"proficiency\":\"fluent\",\"certification\":\"Native speaker\"}]}","contentItemId":null},{"id":"showcase-base-publications","type":"publications","order":9,"visible":false,"content":"{\"title\":\"Publications & talks\",\"data\":[{\"id\":\"showcase-pub-reconciliation\",\"title\":\"Reconciling money at scale\",\"publisher\":\"priyaraman.dev\",\"date\":\"2024-09\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/ledger-reconciliation\"},{\"id\":\"showcase-pub-contract-tests\",\"title\":\"Contract tests for payment APIs\",\"publisher\":\"priyaraman.dev\",\"date\":\"2023-04\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/contract-tests\"}]}","contentItemId":null},{"id":"showcase-base-volunteer","type":"volunteer","order":10,"visible":false,"content":"{\"title\":\"Volunteer\",\"data\":[{\"id\":\"showcase-vol-codefuture\",\"organization\":\"Code the Future\",\"role\":\"Mentor\",\"startDate\":\"2020-03\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"cause\":\"STEM education\",\"description\":\"\",\"highlights\":[\"Mentored 18 students across four cohorts.\"]}]}","contentItemId":null},{"id":"showcase-base-references","type":"references","order":11,"visible":false,"content":"{\"title\":\"References\",\"data\":[{\"id\":\"showcase-ref-shah\",\"name\":\"Dr. Anika Shah\",\"position\":\"Engineering Director\",\"company\":\"Meridian Pay\",\"relationship\":\"Manager\",\"email\":\"anika.shah@example.com\",\"phone\":\"+61 400 000 019\",\"linkedin\":\"https://www.linkedin.com/in/anikashah\",\"isHidden\":false},{\"id\":\"showcase-ref-lee\",\"name\":\"Marcus Lee\",\"position\":\"Chief Technology Officer\",\"company\":\"Ardent Cloud\",\"relationship\":\"Former manager\",\"email\":\"marcus.lee@example.com\",\"phone\":\"+61 400 000 020\",\"linkedin\":\"https://www.linkedin.com/in/marcuslee\",\"isHidden\":true}]}","contentItemId":null},{"id":"showcase-base-custom","type":"custom","order":12,"visible":false,"content":"{\"title\":\"Writing & Speaking\",\"html\":\"<p>Talks and writing about payment systems, reliability and on-call.</p><ul><li><strong>Reconciling money at scale</strong> — meetup talk, 2024</li><li><em>Contract tests for payment APIs</em> — meetup talk, 2023</li><li>Maintainer of <a href=\\\"https://github.com/priyaraman/ledger-replay\\\">ledger-replay</a></li></ul>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Talks and writing about payment systems, reliability and on-call.\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Reconciling money at scale\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" — meetup talk, 2024\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Contract tests for payment APIs\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" — meetup talk, 2023\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Maintainer of \"},{\"type\":\"text\",\"text\":\"ledger-replay\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://github.com/priyaraman/ledger-replay\"}}]}]}]}]}]}}","contentItemId":null}]}',
+    'seed-showcase-base-5',
+    'Ready to send — one page',
+    CAST(strftime('%s', 'now') AS INTEGER) - 604800
+);
+
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-base-rev-6',
+    'showcase-base',
+    6,
+    '{"name":"Showcase — One-pager (Priya Raman)","template":"compact","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":36,\"right\":36,\"bottom\":36,\"left\":36},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Inter\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"compact\",\"dateFormat\":\"MMM YYYY\",\"accentStyle\":\"underline\",\"pageTarget\":1},\"exportHistory\":[{\"id\":\"showcase-export-1\",\"format\":\"pdf\",\"timestamp\":\"2026-08-20T04:12:00.000Z\",\"fileName\":\"Priya-Raman-Staff-Platform-Engineer.pdf\",\"fileSize\":84211}],\"jobTarget\":{\"title\":\"Staff Platform Engineer\",\"company\":\"Northwind Payments\",\"description\":\"Own the payments platform''s reliability and developer experience. You will lead cross-team design, set SLOs, and build the tooling that lets product teams ship safely. Experience with Go, Kubernetes and PostgreSQL required.\",\"keywords\":[\"Go\",\"Kubernetes\",\"PostgreSQL\",\"payments\",\"distributed systems\",\"SLO\",\"Terraform\",\"incident response\",\"mentoring\"],\"url\":\"https://northwind-payments.example/jobs/staff-platform-engineer\",\"addedAt\":\"2026-09-14T09:00:00.000Z\"}}","sections":[{"id":"showcase-base-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-base-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Summary\",\"html\":\"<p>Staff software engineer who builds <strong>payment infrastructure</strong> that other teams rely on. I led a ledger rewrite that settles <em>AUD 4.2 billion</em> a year, cut p99 latency by <strong>38%</strong>, and write at <a href=\\\"https://priyaraman.dev/writing\\\">priyaraman.dev</a>.</p>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Staff software engineer who builds \"},{\"type\":\"text\",\"text\":\"payment infrastructure\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" that other teams rely on. I led a ledger rewrite that settles \"},{\"type\":\"text\",\"text\":\"AUD 4.2 billion\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" a year, cut p99 latency by \"},{\"type\":\"text\",\"text\":\"38%\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\", and write at \"},{\"type\":\"text\",\"text\":\"priyaraman.dev\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]},{\"type\":\"text\",\"text\":\".\"}]}]}}","contentItemId":null},{"id":"showcase-base-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Rewrote the ledger posting path in Go, cutting p99 latency from 240 ms to 149 ms.\",\"Migrated settlement to events; reconciled all AUD 4.2B of annual volume.\",\"Cut settlement compute spend 22% (AUD 310k/year) with queue-depth autoscaling.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-base-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null},{"id":"showcase-base-skills","type":"skills","order":4,"visible":true,"content":"{\"title\":\"Skills\",\"data\":[{\"id\":\"showcase-skill-languages\",\"name\":\"Languages\",\"order\":0,\"skills\":[{\"id\":\"showcase-skill-go\",\"name\":\"Go\",\"level\":\"expert\"},{\"id\":\"showcase-skill-ts\",\"name\":\"TypeScript\",\"level\":\"expert\"},{\"id\":\"showcase-skill-python\",\"name\":\"Python\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-sql\",\"name\":\"SQL\",\"level\":\"advanced\"}]},{\"id\":\"showcase-skill-platform\",\"name\":\"Platform\",\"order\":1,\"skills\":[{\"id\":\"showcase-skill-postgres\",\"name\":\"PostgreSQL\",\"level\":\"expert\"},{\"id\":\"showcase-skill-kafka\",\"name\":\"Kafka\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-k8s\",\"name\":\"Kubernetes\",\"level\":\"advanced\"},{\"id\":\"showcase-skill-terraform\",\"name\":\"Terraform\",\"level\":\"advanced\"}]}]}","contentItemId":null},{"id":"showcase-base-projects","type":"projects","order":5,"visible":true,"content":"{\"title\":\"Projects\",\"data\":[{\"id\":\"showcase-proj-ledger-replay\",\"name\":\"Ledger replay toolkit\",\"description\":\"Open-source CLI that replays ledger events into a scratch database.\",\"role\":\"Maintainer\",\"technologies\":[\"Go\",\"SQLite\"],\"url\":\"https://github.com/priyaraman/ledger-replay\",\"github\":\"https://github.com/priyaraman/ledger-replay\",\"startDate\":\"2023-02\",\"endDate\":\"\",\"current\":true,\"highlights\":[\"Replays 30 days of ledger events in under four minutes.\"]}]}","contentItemId":"showcase-item-projects"},{"id":"showcase-base-certifications","type":"certifications","order":6,"visible":false,"content":"{\"title\":\"Certifications\",\"data\":[{\"id\":\"showcase-cert-aws\",\"name\":\"AWS Certified Solutions Architect – Professional\",\"issuer\":\"Amazon Web Services\",\"date\":\"2024-03\",\"expirationDate\":\"2027-03\",\"noExpiration\":false,\"credentialId\":\"AWS-PSA-2024-0118\",\"url\":\"https://www.credly.com/badges/example\",\"description\":\"\"},{\"id\":\"showcase-cert-cka\",\"name\":\"Certified Kubernetes Administrator\",\"issuer\":\"Cloud Native Computing Foundation\",\"date\":\"2024-07\",\"expirationDate\":\"2027-07\",\"noExpiration\":false,\"credentialId\":\"CKA-2024-7741\",\"url\":\"https://www.credly.com/badges/example-cka\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-awards","type":"awards","order":7,"visible":false,"content":"{\"title\":\"Awards\",\"data\":[{\"id\":\"showcase-award-excellence\",\"title\":\"Engineering Excellence Award\",\"issuer\":\"Meridian Pay\",\"date\":\"2024-11\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-base-languages","type":"languages","order":8,"visible":true,"content":"{\"title\":\"Languages\",\"data\":[{\"id\":\"showcase-lang-english\",\"name\":\"English\",\"proficiency\":\"native\",\"certification\":\"Native speaker\"},{\"id\":\"showcase-lang-tamil\",\"name\":\"Tamil\",\"proficiency\":\"fluent\",\"certification\":\"Native speaker\"}]}","contentItemId":null},{"id":"showcase-base-publications","type":"publications","order":9,"visible":false,"content":"{\"title\":\"Publications & talks\",\"data\":[{\"id\":\"showcase-pub-reconciliation\",\"title\":\"Reconciling money at scale\",\"publisher\":\"priyaraman.dev\",\"date\":\"2024-09\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/ledger-reconciliation\"},{\"id\":\"showcase-pub-contract-tests\",\"title\":\"Contract tests for payment APIs\",\"publisher\":\"priyaraman.dev\",\"date\":\"2023-04\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/contract-tests\"}]}","contentItemId":null},{"id":"showcase-base-volunteer","type":"volunteer","order":10,"visible":false,"content":"{\"title\":\"Volunteer\",\"data\":[{\"id\":\"showcase-vol-codefuture\",\"organization\":\"Code the Future\",\"role\":\"Mentor\",\"startDate\":\"2020-03\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"cause\":\"STEM education\",\"description\":\"\",\"highlights\":[\"Mentored 18 students across four cohorts.\"]}]}","contentItemId":null},{"id":"showcase-base-references","type":"references","order":11,"visible":false,"content":"{\"title\":\"References\",\"data\":[{\"id\":\"showcase-ref-shah\",\"name\":\"Dr. Anika Shah\",\"position\":\"Engineering Director\",\"company\":\"Meridian Pay\",\"relationship\":\"Manager\",\"email\":\"anika.shah@example.com\",\"phone\":\"+61 400 000 019\",\"linkedin\":\"https://www.linkedin.com/in/anikashah\",\"isHidden\":false},{\"id\":\"showcase-ref-lee\",\"name\":\"Marcus Lee\",\"position\":\"Chief Technology Officer\",\"company\":\"Ardent Cloud\",\"relationship\":\"Former manager\",\"email\":\"marcus.lee@example.com\",\"phone\":\"+61 400 000 020\",\"linkedin\":\"https://www.linkedin.com/in/marcuslee\",\"isHidden\":true}]}","contentItemId":null},{"id":"showcase-base-custom","type":"custom","order":12,"visible":false,"content":"{\"title\":\"Writing & Speaking\",\"html\":\"<p>Talks and writing about payment systems, reliability and on-call.</p><ul><li><strong>Reconciling money at scale</strong> — meetup talk, 2024</li><li><em>Contract tests for payment APIs</em> — meetup talk, 2023</li><li>Maintainer of <a href=\\\"https://github.com/priyaraman/ledger-replay\\\">ledger-replay</a></li></ul>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Talks and writing about payment systems, reliability and on-call.\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Reconciling money at scale\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" — meetup talk, 2024\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Contract tests for payment APIs\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" — meetup talk, 2023\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Maintainer of \"},{\"type\":\"text\",\"text\":\"ledger-replay\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://github.com/priyaraman/ledger-replay\"}}]}]}]}]}]}}","contentItemId":null}]}',
+    'seed-showcase-base-6',
+    NULL,
+    CAST(strftime('%s', 'now') AS INTEGER) - 172800
+);
+
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-variant-rev-1',
+    'showcase-variant',
+    1,
+    '{"name":"Showcase — Full CV (Priya Raman)","template":"academic","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":54,\"right\":54,\"bottom\":54,\"left\":54},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Times New Roman\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"normal\",\"dateFormat\":\"MMMM YYYY\",\"accentStyle\":\"none\",\"pageTarget\":2},\"exportHistory\":[{\"id\":\"showcase-export-2\",\"format\":\"pdf\",\"timestamp\":\"2026-09-30T02:40:00.000Z\",\"fileName\":\"Priya-Raman-Full-CV.pdf\",\"fileSize\":96104}],\"jobTarget\":{\"title\":\"Principal Engineer, Payments\",\"company\":\"Southern Cross Bank\",\"description\":\"Set the technical direction for a core payments estate. You will own ledger and settlement architecture, regulatory reporting trade-offs, and the engineering standards across four teams.\",\"keywords\":[\"payments\",\"ledger\",\"distributed systems\",\"event sourcing\",\"Go\",\"regulatory reporting\",\"technical strategy\"],\"url\":\"https://southern-cross.example/jobs/principal-payments\",\"addedAt\":\"2026-09-28T09:00:00.000Z\"}}","sections":[{"id":"showcase-var-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-var-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Profile\",\"html\":\"<p>Engineer and maintainer working on <strong>payment infrastructure</strong> and <em>reliability practice</em>. Eight years across ledger systems, settlement and on-call, with open-source tools used outside the companies that funded them. I write and speak about <a href=\\\"https://priyaraman.dev/writing\\\">reconciliation</a> and incident response.</p>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Engineer and maintainer working on \"},{\"type\":\"text\",\"text\":\"payment infrastructure\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" and \"},{\"type\":\"text\",\"text\":\"reliability practice\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\". Eight years across ledger systems, settlement and on-call, with open-source tools used outside the companies that funded them. I write and speak about \"},{\"type\":\"text\",\"text\":\"reconciliation\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]},{\"type\":\"text\",\"text\":\" and incident response.\"}]}]}}","contentItemId":null},{"id":"showcase-var-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"Payments platform serving 1,400 merchants across Australia and New Zealand.\",\"highlights\":[\"Rewrote the double-entry ledger''s posting path in Go, cutting p99 authorisation latency from 240 ms to 149 ms.\",\"Led a six-engineer migration to event-sourced settlement; reconciled all AUD 4.2 billion of annual volume with no customer-visible incidents.\",\"Cut settlement compute spend by 22% (AUD 310k a year) by right-sizing workers and autoscaling on queue depth.\",\"Built a dispute-reconciliation service that flags merchant issues in under five minutes.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"Multi-tenant billing and invoicing for mid-market SaaS companies.\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\",\"Mentored four engineers; two were promoted within 18 months.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-var-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null},{"id":"showcase-var-skills","type":"skills","order":4,"visible":true,"content":"{\"title\":\"Technical skills\",\"data\":[{\"id\":\"showcase-vskill-systems\",\"name\":\"Distributed systems\",\"order\":0,\"skills\":[{\"id\":\"showcase-vskill-eventsourcing\",\"name\":\"Event sourcing\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-reconciliation\",\"name\":\"Reconciliation\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-slo\",\"name\":\"SLO design\",\"level\":\"advanced\"}]},{\"id\":\"showcase-vskill-tools\",\"name\":\"Tools\",\"order\":1,\"skills\":[{\"id\":\"showcase-vskill-go\",\"name\":\"Go\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-postgres\",\"name\":\"PostgreSQL\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-kafka\",\"name\":\"Kafka\",\"level\":\"advanced\"},{\"id\":\"showcase-vskill-k8s\",\"name\":\"Kubernetes\",\"level\":\"advanced\"}]}]}","contentItemId":null},{"id":"showcase-var-projects","type":"projects","order":6,"visible":true,"content":"{\"title\":\"Projects\",\"data\":[{\"id\":\"showcase-proj-ledger-replay\",\"name\":\"Ledger replay toolkit\",\"description\":\"Open-source CLI that replays ledger events into a scratch database.\",\"role\":\"Maintainer\",\"technologies\":[\"Go\",\"SQLite\"],\"url\":\"https://github.com/priyaraman/ledger-replay\",\"github\":\"https://github.com/priyaraman/ledger-replay\",\"startDate\":\"2023-02\",\"endDate\":\"\",\"current\":true,\"highlights\":[\"Replays 30 days of ledger events in under four minutes.\"]},{\"id\":\"showcase-proj-runbook\",\"name\":\"Runbook generator\",\"description\":\"Generates on-call runbooks from service manifests and SLO definitions.\",\"role\":\"Creator\",\"technologies\":[\"TypeScript\",\"Kubernetes\"],\"url\":\"https://github.com/priyaraman/runbook-gen\",\"github\":\"https://github.com/priyaraman/runbook-gen\",\"startDate\":\"2021-06\",\"endDate\":\"2022-01\",\"current\":false,\"highlights\":[\"Cut new-service onboarding from two weeks to three days.\"]}]}","contentItemId":"showcase-item-projects"},{"id":"showcase-var-certifications","type":"certifications","order":7,"visible":true,"content":"{\"title\":\"Certifications\",\"data\":[{\"id\":\"showcase-cert-aws\",\"name\":\"AWS Certified Solutions Architect – Professional\",\"issuer\":\"Amazon Web Services\",\"date\":\"2024-03\",\"expirationDate\":\"2027-03\",\"noExpiration\":false,\"credentialId\":\"AWS-PSA-2024-0118\",\"url\":\"https://www.credly.com/badges/example\",\"description\":\"\"},{\"id\":\"showcase-cert-cka\",\"name\":\"Certified Kubernetes Administrator\",\"issuer\":\"Cloud Native Computing Foundation\",\"date\":\"2024-07\",\"expirationDate\":\"2027-07\",\"noExpiration\":false,\"credentialId\":\"CKA-2024-7741\",\"url\":\"https://www.credly.com/badges/example-cka\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-var-awards","type":"awards","order":8,"visible":true,"content":"{\"title\":\"Awards\",\"data\":[{\"id\":\"showcase-award-excellence\",\"title\":\"Engineering Excellence Award\",\"issuer\":\"Meridian Pay\",\"date\":\"2024-11\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-var-languages","type":"languages","order":9,"visible":true,"content":"{\"title\":\"Languages\",\"data\":[{\"id\":\"showcase-lang-english\",\"name\":\"English\",\"proficiency\":\"native\",\"certification\":\"Native speaker\"},{\"id\":\"showcase-lang-tamil\",\"name\":\"Tamil\",\"proficiency\":\"fluent\",\"certification\":\"Native speaker\"}]}","contentItemId":null},{"id":"showcase-var-publications","type":"publications","order":5,"visible":true,"content":"{\"title\":\"Publications & talks\",\"data\":[{\"id\":\"showcase-pub-reconciliation\",\"title\":\"Reconciling money at scale\",\"publisher\":\"priyaraman.dev\",\"date\":\"2024-09\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/ledger-reconciliation\"},{\"id\":\"showcase-pub-contract-tests\",\"title\":\"Contract tests for payment APIs\",\"publisher\":\"priyaraman.dev\",\"date\":\"2023-04\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/contract-tests\"}]}","contentItemId":null},{"id":"showcase-var-volunteer","type":"volunteer","order":10,"visible":false,"content":"{\"title\":\"Volunteer\",\"data\":[{\"id\":\"showcase-vol-codefuture\",\"organization\":\"Code the Future\",\"role\":\"Mentor\",\"startDate\":\"2020-03\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"cause\":\"STEM education\",\"description\":\"\",\"highlights\":[\"Mentored 18 students across four cohorts.\"]}]}","contentItemId":null},{"id":"showcase-var-references","type":"references","order":11,"visible":false,"content":"{\"title\":\"References\",\"data\":[{\"id\":\"showcase-ref-shah\",\"name\":\"Dr. Anika Shah\",\"position\":\"Engineering Director\",\"company\":\"Meridian Pay\",\"relationship\":\"Manager\",\"email\":\"anika.shah@example.com\",\"phone\":\"+61 400 000 019\",\"linkedin\":\"https://www.linkedin.com/in/anikashah\",\"isHidden\":false},{\"id\":\"showcase-ref-lee\",\"name\":\"Marcus Lee\",\"position\":\"Chief Technology Officer\",\"company\":\"Ardent Cloud\",\"relationship\":\"Former manager\",\"email\":\"marcus.lee@example.com\",\"phone\":\"+61 400 000 020\",\"linkedin\":\"https://www.linkedin.com/in/marcuslee\",\"isHidden\":true}]}","contentItemId":null},{"id":"showcase-var-custom","type":"custom","order":12,"visible":true,"content":"{\"title\":\"Teaching & Talks\",\"html\":\"<p>Teaching and talks on distributed systems and payment reliability.</p><ul><li><strong>Guest lecture: Distributed Systems</strong> — University of Melbourne, 2024</li><li><em>Workshop: Contract tests in practice</em> — Melbourne meetup, 2023</li><li>Writing index at <a href=\\\"https://priyaraman.dev/writing\\\">priyaraman.dev</a></li></ul>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Teaching and talks on distributed systems and payment reliability.\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Guest lecture: Distributed Systems\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" — University of Melbourne, 2024\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Workshop: Contract tests in practice\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" — Melbourne meetup, 2023\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Writing index at \"},{\"type\":\"text\",\"text\":\"priyaraman.dev\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]}]}]}]}]}}","contentItemId":null}]}',
+    'seed-showcase-variant-1',
+    'Forked from the one-pager',
+    CAST(strftime('%s', 'now') AS INTEGER) - 1036800
+);
+
+INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
+VALUES (
+    'showcase-variant-rev-2',
+    'showcase-variant',
+    2,
+    '{"name":"Showcase — Full CV (Priya Raman)","template":"academic","domain":"Payments platform","metadata":"{\"personalInfo\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"},\"settings\":{\"pageSize\":\"A4\",\"margins\":{\"top\":54,\"right\":54,\"bottom\":54,\"left\":54},\"fontScale\":1,\"typography\":{\"name\":18,\"title\":11,\"sectionHeading\":11,\"itemTitle\":10.5,\"body\":10.5,\"small\":9.5},\"lineHeight\":1.2,\"fontFamily\":\"Times New Roman\",\"colors\":{\"primary\":\"#1e293b\",\"secondary\":\"#64748b\",\"text\":\"#0f172a\",\"heading\":\"#0f172a\",\"background\":\"#ffffff\",\"accent\":\"#2563eb\",\"divider\":\"#e2e8f0\"},\"sectionSpacing\":\"normal\",\"dateFormat\":\"MMMM YYYY\",\"accentStyle\":\"none\",\"pageTarget\":2},\"exportHistory\":[{\"id\":\"showcase-export-2\",\"format\":\"pdf\",\"timestamp\":\"2026-09-30T02:40:00.000Z\",\"fileName\":\"Priya-Raman-Full-CV.pdf\",\"fileSize\":96104}],\"jobTarget\":{\"title\":\"Principal Engineer, Payments\",\"company\":\"Southern Cross Bank\",\"description\":\"Set the technical direction for a core payments estate. You will own ledger and settlement architecture, regulatory reporting trade-offs, and the engineering standards across four teams.\",\"keywords\":[\"payments\",\"ledger\",\"distributed systems\",\"event sourcing\",\"Go\",\"regulatory reporting\",\"technical strategy\"],\"url\":\"https://southern-cross.example/jobs/principal-payments\",\"addedAt\":\"2026-09-28T09:00:00.000Z\"}}","sections":[{"id":"showcase-var-personal","type":"personal-info","order":0,"visible":true,"content":"{\"title\":\"Contact\",\"data\":{\"fullName\":\"Priya Raman\",\"email\":\"priya.raman@example.com\",\"phone\":\"+61 400 000 018\",\"location\":\"Melbourne, VIC\",\"linkedin\":\"linkedin.com/in/priyaraman\",\"github\":\"github.com/priyaraman\",\"website\":\"priyaraman.dev\",\"portfolio\":\"\",\"professionalTitle\":\"Staff Software Engineer, Payments Platform\",\"photoUrl\":\"\"}}","contentItemId":null},{"id":"showcase-var-summary","type":"summary","order":1,"visible":true,"content":"{\"title\":\"Profile\",\"html\":\"<p>Engineer and maintainer working on <strong>payment infrastructure</strong> and <em>reliability practice</em>. Eight years across ledger systems, settlement and on-call, with open-source tools used outside the companies that funded them. I write and speak about <a href=\\\"https://priyaraman.dev/writing\\\">reconciliation</a> and incident response.</p>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Engineer and maintainer working on \"},{\"type\":\"text\",\"text\":\"payment infrastructure\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" and \"},{\"type\":\"text\",\"text\":\"reliability practice\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\". Eight years across ledger systems, settlement and on-call, with open-source tools used outside the companies that funded them. I write and speak about \"},{\"type\":\"text\",\"text\":\"reconciliation\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]},{\"type\":\"text\",\"text\":\" and incident response.\"}]}]}}","contentItemId":null},{"id":"showcase-var-experience","type":"experience","order":2,"visible":true,"content":"{\"title\":\"Experience\",\"data\":[{\"id\":\"showcase-exp-meridian\",\"company\":\"Meridian Pay\",\"position\":\"Staff Software Engineer\",\"startDate\":\"2022-02\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"locationType\":\"hybrid\",\"employmentType\":\"full-time\",\"description\":\"Payments platform serving 1,400 merchants across Australia and New Zealand.\",\"highlights\":[\"Rewrote the double-entry ledger''s posting path in Go, cutting p99 authorisation latency from 240 ms to 149 ms.\",\"Led a six-engineer migration to event-sourced settlement; reconciled all AUD 4.2 billion of annual volume with no customer-visible incidents.\",\"Cut settlement compute spend by 22% (AUD 310k a year) by right-sizing workers and autoscaling on queue depth.\",\"Built a dispute-reconciliation service that flags merchant issues in under five minutes.\"],\"technologies\":[\"Go\",\"TypeScript\",\"PostgreSQL\",\"Kafka\",\"Kubernetes\"]},{\"id\":\"showcase-exp-ardent\",\"company\":\"Ardent Cloud\",\"position\":\"Senior Software Engineer\",\"startDate\":\"2019-01\",\"endDate\":\"2022-01\",\"current\":false,\"location\":\"Sydney, NSW\",\"locationType\":\"onsite\",\"employmentType\":\"full-time\",\"description\":\"Multi-tenant billing and invoicing for mid-market SaaS companies.\",\"highlights\":[\"Designed a billing pipeline issuing 2.3M invoices a month at a 0.02% error rate.\",\"Reduced incident MTTR from 54 to 18 minutes with SLOs and templated runbooks.\",\"Mentored four engineers; two were promoted within 18 months.\"],\"technologies\":[\"Kotlin\",\"AWS\",\"Terraform\",\"PostgreSQL\"]}]}","contentItemId":null},{"id":"showcase-var-education","type":"education","order":3,"visible":true,"content":"{\"title\":\"Education\",\"data\":[{\"id\":\"showcase-edu-unimelb\",\"institution\":\"University of Melbourne\",\"degree\":\"Bachelor of Science (Honours)\",\"field\":\"Computer Science\",\"startDate\":\"2013-02\",\"graduationDate\":\"2016-11\",\"endDate\":\"2016-11\",\"current\":false,\"gpa\":\"3.8\",\"maxGpa\":\"4.0\",\"location\":\"Melbourne, VIC\",\"achievements\":[\"First Class Honours\"],\"coursework\":[],\"honors\":[]}]}","contentItemId":null},{"id":"showcase-var-skills","type":"skills","order":4,"visible":true,"content":"{\"title\":\"Technical skills\",\"data\":[{\"id\":\"showcase-vskill-systems\",\"name\":\"Distributed systems\",\"order\":0,\"skills\":[{\"id\":\"showcase-vskill-eventsourcing\",\"name\":\"Event sourcing\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-reconciliation\",\"name\":\"Reconciliation\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-slo\",\"name\":\"SLO design\",\"level\":\"advanced\"}]},{\"id\":\"showcase-vskill-tools\",\"name\":\"Tools\",\"order\":1,\"skills\":[{\"id\":\"showcase-vskill-go\",\"name\":\"Go\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-postgres\",\"name\":\"PostgreSQL\",\"level\":\"expert\"},{\"id\":\"showcase-vskill-kafka\",\"name\":\"Kafka\",\"level\":\"advanced\"},{\"id\":\"showcase-vskill-k8s\",\"name\":\"Kubernetes\",\"level\":\"advanced\"}]}]}","contentItemId":null},{"id":"showcase-var-projects","type":"projects","order":6,"visible":true,"content":"{\"title\":\"Projects\",\"data\":[{\"id\":\"showcase-proj-ledger-replay\",\"name\":\"Ledger replay toolkit\",\"description\":\"Open-source CLI that replays ledger events into a scratch database.\",\"role\":\"Maintainer\",\"technologies\":[\"Go\",\"SQLite\"],\"url\":\"https://github.com/priyaraman/ledger-replay\",\"github\":\"https://github.com/priyaraman/ledger-replay\",\"startDate\":\"2023-02\",\"endDate\":\"\",\"current\":true,\"highlights\":[\"Replays 30 days of ledger events in under four minutes.\"]},{\"id\":\"showcase-proj-runbook\",\"name\":\"Runbook generator\",\"description\":\"Generates on-call runbooks from service manifests and SLO definitions.\",\"role\":\"Creator\",\"technologies\":[\"TypeScript\",\"Kubernetes\"],\"url\":\"https://github.com/priyaraman/runbook-gen\",\"github\":\"https://github.com/priyaraman/runbook-gen\",\"startDate\":\"2021-06\",\"endDate\":\"2022-01\",\"current\":false,\"highlights\":[\"Cut new-service onboarding from two weeks to three days.\"]}]}","contentItemId":"showcase-item-projects"},{"id":"showcase-var-certifications","type":"certifications","order":7,"visible":true,"content":"{\"title\":\"Certifications\",\"data\":[{\"id\":\"showcase-cert-aws\",\"name\":\"AWS Certified Solutions Architect – Professional\",\"issuer\":\"Amazon Web Services\",\"date\":\"2024-03\",\"expirationDate\":\"2027-03\",\"noExpiration\":false,\"credentialId\":\"AWS-PSA-2024-0118\",\"url\":\"https://www.credly.com/badges/example\",\"description\":\"\"},{\"id\":\"showcase-cert-cka\",\"name\":\"Certified Kubernetes Administrator\",\"issuer\":\"Cloud Native Computing Foundation\",\"date\":\"2024-07\",\"expirationDate\":\"2027-07\",\"noExpiration\":false,\"credentialId\":\"CKA-2024-7741\",\"url\":\"https://www.credly.com/badges/example-cka\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-var-awards","type":"awards","order":8,"visible":true,"content":"{\"title\":\"Awards\",\"data\":[{\"id\":\"showcase-award-excellence\",\"title\":\"Engineering Excellence Award\",\"issuer\":\"Meridian Pay\",\"date\":\"2024-11\",\"description\":\"\"}]}","contentItemId":null},{"id":"showcase-var-languages","type":"languages","order":9,"visible":true,"content":"{\"title\":\"Languages\",\"data\":[{\"id\":\"showcase-lang-english\",\"name\":\"English\",\"proficiency\":\"native\",\"certification\":\"Native speaker\"},{\"id\":\"showcase-lang-tamil\",\"name\":\"Tamil\",\"proficiency\":\"fluent\",\"certification\":\"Native speaker\"}]}","contentItemId":null},{"id":"showcase-var-publications","type":"publications","order":5,"visible":true,"content":"{\"title\":\"Publications & talks\",\"data\":[{\"id\":\"showcase-pub-reconciliation\",\"title\":\"Reconciling money at scale\",\"publisher\":\"priyaraman.dev\",\"date\":\"2024-09\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/ledger-reconciliation\"},{\"id\":\"showcase-pub-contract-tests\",\"title\":\"Contract tests for payment APIs\",\"publisher\":\"priyaraman.dev\",\"date\":\"2023-04\",\"authors\":[\"Priya Raman\"],\"url\":\"https://priyaraman.dev/writing/contract-tests\"}]}","contentItemId":null},{"id":"showcase-var-volunteer","type":"volunteer","order":10,"visible":false,"content":"{\"title\":\"Volunteer\",\"data\":[{\"id\":\"showcase-vol-codefuture\",\"organization\":\"Code the Future\",\"role\":\"Mentor\",\"startDate\":\"2020-03\",\"endDate\":\"\",\"current\":true,\"location\":\"Melbourne, VIC\",\"cause\":\"STEM education\",\"description\":\"\",\"highlights\":[\"Mentored 18 students across four cohorts.\"]}]}","contentItemId":null},{"id":"showcase-var-references","type":"references","order":11,"visible":false,"content":"{\"title\":\"References\",\"data\":[{\"id\":\"showcase-ref-shah\",\"name\":\"Dr. Anika Shah\",\"position\":\"Engineering Director\",\"company\":\"Meridian Pay\",\"relationship\":\"Manager\",\"email\":\"anika.shah@example.com\",\"phone\":\"+61 400 000 019\",\"linkedin\":\"https://www.linkedin.com/in/anikashah\",\"isHidden\":false},{\"id\":\"showcase-ref-lee\",\"name\":\"Marcus Lee\",\"position\":\"Chief Technology Officer\",\"company\":\"Ardent Cloud\",\"relationship\":\"Former manager\",\"email\":\"marcus.lee@example.com\",\"phone\":\"+61 400 000 020\",\"linkedin\":\"https://www.linkedin.com/in/marcuslee\",\"isHidden\":true}]}","contentItemId":null},{"id":"showcase-var-custom","type":"custom","order":12,"visible":true,"content":"{\"title\":\"Teaching & Talks\",\"html\":\"<p>Teaching and talks on distributed systems and payment reliability.</p><ul><li><strong>Guest lecture: Distributed Systems</strong> — University of Melbourne, 2024</li><li><em>Workshop: Contract tests in practice</em> — Melbourne meetup, 2023</li><li>Writing index at <a href=\\\"https://priyaraman.dev/writing\\\">priyaraman.dev</a></li></ul>\",\"json\":{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Teaching and talks on distributed systems and payment reliability.\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Guest lecture: Distributed Systems\",\"marks\":[{\"type\":\"bold\"}]},{\"type\":\"text\",\"text\":\" — University of Melbourne, 2024\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Workshop: Contract tests in practice\",\"marks\":[{\"type\":\"italic\"}]},{\"type\":\"text\",\"text\":\" — Melbourne meetup, 2023\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Writing index at \"},{\"type\":\"text\",\"text\":\"priyaraman.dev\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"https://priyaraman.dev/writing\"}}]}]}]}]}]}}","contentItemId":null}]}',
+    'seed-showcase-variant-2',
+    NULL,
+    CAST(strftime('%s', 'now') AS INTEGER) - 259200
 );
 

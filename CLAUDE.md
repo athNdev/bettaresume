@@ -303,7 +303,7 @@ still follows it.
 - **Schema** (`schema.ts`): `users`, `resumes`, `sections`, `contentItems`, `resumeRevisions`
 - **Migrations** (`api/drizzle/`): SQL files applied by Wrangler. `0006` adds the variant
   columns. Every migration is listed in `drizzle/meta/_journal.json`; a test enforces that.
-- **Seed** (`api/src/db/seed.sql`): Dummy data for local dev
+- **Seed** (`api/src/db/seed.sql`): Dummy data for local dev, including the fictional showcase resume (`showcase-base` + `showcase-variant`, tagged `showcase`). See `docs/SHOWCASE.md` — `api/test/showcase.test.ts` fails when a new section type, setting or layout flag is not exercised there.
 
 ### Wrangler Config: `api/wrangler.jsonc`
 - Worker name: `bettaresume-api-server`
@@ -511,3 +511,4 @@ All architecture docs are in `docs/`:
 - `docs/DATABASE.md` — schema + migration details
 - `docs/API.md` — tRPC procedure reference
 - `docs/TYPES.md` — shared types reference
+- `docs/SHOWCASE.md` — the seeded example resume, what it exercises, and the rule for keeping it current

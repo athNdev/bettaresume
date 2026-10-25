@@ -812,6 +812,13 @@ component, editor registration, and a branch in `render-section` in
 `sectionTypeSchema` has no dispatcher branch, which is the check that would have
 caught `custom` exporting as nothing.
 
+### Adding a feature
+
+Add it to the showcase. `api/src/db/seed.sql` contains a fictional but complete
+resume (and a two-page variation) that is meant to use every feature;
+`api/test/showcase.test.ts` fails naming any section type, `ResumeSettings` key or
+`section.layout` flag the showcase does not use. `docs/SHOWCASE.md` is the rule.
+
 ---
 
 ## 7. Where to look next

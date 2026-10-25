@@ -18,6 +18,7 @@ import { normalizeTemplateId } from "@bettaresume/types";
 import {
 	Archive,
 	ArchiveRestore,
+	BookOpen,
 	Copy,
 	Download,
 	GitBranch,
@@ -51,6 +52,7 @@ import {
 import { ResumeThumbnail } from "@/features/dashboard/components/resume-thumbnail";
 import type { Resume } from "@/features/resume-editor/types";
 import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
+import { isShowcase } from "@/lib/showcase";
 
 interface ResumeCardProps {
 	resume: Resume;
@@ -169,6 +171,20 @@ export function ResumeCard({
 					<Badge className="text-xs" variant="secondary">
 						{templateName ?? resume.template}
 					</Badge>
+					{isShowcase(resume) && (
+						<Tooltip>
+							<TooltipTrigger>
+								{/* The `showcase` tag is the UI contract; see `showcase.ts`. */}
+								<Badge className="text-xs" variant="default">
+									<BookOpen className="mr-1 h-3 w-3" />
+									Showcase
+								</Badge>
+							</TooltipTrigger>
+							<TooltipContent>
+								A complete example resume that exercises every feature
+							</TooltipContent>
+						</Tooltip>
+					)}
 					{resume.variationType === "variation" && (
 						<Tooltip>
 							<TooltipTrigger>

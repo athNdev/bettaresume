@@ -279,6 +279,26 @@ describe("resume.update metadata", () => {
 		}
 	});
 
+	it("keeps the page target through a read", async () => {
+		// `normalizeSettings` is on every read path. It predates `pageTarget`, so it
+		// dropped the field and the fit meter fell back to the template default after
+		// every reload -- a setting the user could change but not keep.
+		const h = createHarness();
+		try {
+			await h.raw.update(resumes).set({
+				metadata: JSON.stringify({
+					...FULL_METADATA,
+					settings: { ...FULL_METADATA.settings, pageTarget: 2 },
+				}),
+			});
+
+			const resume = await h.callerAs(USER_A).resume.getById({ id: RESUME_A });
+			expect(resume?.metadata?.settings.pageTarget).toBe(2);
+		} finally {
+			h.close();
+		}
+	});
+
 	it("does not let one tenant's patch touch another tenant's metadata", async () => {
 		const h = createHarness();
 		try {

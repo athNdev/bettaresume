@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
@@ -57,17 +57,14 @@ function seededDb(): Database.Database {
 }
 
 function readdirSorted(dir: string): string[] {
-	// Small fixed directory; a sorted read keeps migration order deterministic.
-	return ["0000_init-schema.sql", "0001_resume_base_resume_fk.sql"].filter(
-		(f) => {
-			try {
-				readFileSync(`${dir}/${f}`);
-				return true;
-			} catch {
-				return false;
-			}
-		},
-	);
+	// Every generated migration, in order. This used to list `0000_init-schema.sql` and
+	// `0001_resume_base_resume_fk.sql` by hand, which was survivable while the seed only
+	// touched `User`, `Resume` and `Section`. The seed now also writes the content
+	// library and the revision history, and those tables arrive in later migrations; a
+	// hand-written list would validate it against a schema production does not have.
+	return readdirSync(dir)
+		.filter((file) => file.endsWith(".sql"))
+		.sort();
 }
 
 describe("seed data satisfies the application schemas", () => {
