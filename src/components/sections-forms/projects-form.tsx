@@ -243,7 +243,7 @@ export function ProjectsForm({
 							</div>
 							<AccordionContent className="px-4 pt-2 pb-4">
 								<div className="space-y-4">
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Project Name *</Label>
 											<Input
@@ -280,7 +280,7 @@ export function ProjectsForm({
 										/>
 									</div>
 
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Start Date</Label>
 											<Input
@@ -321,7 +321,7 @@ export function ProjectsForm({
 										</div>
 									</div>
 
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Live URL</Label>
 											<div className="relative mt-1">

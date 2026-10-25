@@ -149,6 +149,8 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 
 	return (
 		<div
+			className="max-lg:snap-start"
+			data-typst-page=""
 			style={{
 				width: cssWidth,
 				height: cssHeight,
@@ -189,6 +191,12 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 						display: "block",
 						width: cssWidth,
 						height: cssHeight,
+						/*
+						 * Pinch is the browser's gesture, not the app's. Anything that sets
+						 * `touch-action: manipulation` or `user-scalable=no` would take it
+						 * away, and on a phone that is the only way to read a page at 100%.
+						 */
+						touchAction: "pan-x pan-y pinch-zoom",
 					}}
 				/>
 			) : null}

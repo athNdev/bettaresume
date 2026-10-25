@@ -457,12 +457,25 @@
 	border-color: var(--border);
 }
 
+/*
+ * No `overflow-x: hidden` and no `max-width: 100vw` here, and that is deliberate.
+ *
+ * Both were a mask, not a fix. Any element wider than the viewport was silently cut
+ * off instead of being reported, which is why two header overflows looked "fine" in
+ * review and were only found by measuring in a browser. `100vw` also overflows itself
+ * whenever a classic scrollbar exists.
+ *
+ * The replacement is `test/responsive-matrix.test.ts`, which measures every element's
+ * geometry at seven viewports. If a layout overflows now, the matrix says so; the
+ * page no longer hides it.
+ *
+ * `100dvh` rather than `100vh`: on mobile browsers 100vh includes the retractable
+ * browser chrome, so a full-height page sits under it.
+ */
 body {
 	background-color: var(--background);
 	color: var(--foreground);
-	min-height: 100vh;
-	max-width: 100vw;
-	overflow-x: hidden;
+	min-height: 100dvh;
 }
 
 /* Focus visible styles for accessibility */
@@ -818,9 +831,151 @@ body {
  */
 @media (pointer: coarse) {
 	button:not([data-touch-minimal]),
-	[role="button"]:not([data-touch-minimal]) {
+	[role="button"]:not([data-touch-minimal]),
+	a[href]:not([data-touch-minimal]) {
+		min-block-size: 44px;
+		min-inline-size: 44px;
+	}
+
+	/*
+	 * The dense-toolbar opt-out keeps the previous 40px floor rather than dropping the
+	 * floor entirely: 44px is the primary-action size, 40px is what WCAG 2.5.8 actually
+	 * asks for and what a 32px icon button can become without reflowing a toolbar.
+	 */
+	[data-touch-minimal] {
 		min-block-size: 40px;
 		min-inline-size: 40px;
+	}
+
+	/*
+	 * A 6px pane handle is a mouse target. The visual stays 6px; the hit area becomes
+	 * 6 + 9 + 9 = 24px, which is the smallest a thumb can hit reliably.
+	 */
+	[data-separator] {
+		position: relative;
+		touch-action: none;
+	}
+
+	[data-group][data-orientation="horizontal"] > [data-separator]::before {
+		content: "";
+		position: absolute;
+		inset-block: 0;
+		inset-inline: -9px;
+	}
+
+	/*
+	 * Hover-only affordances are unreachable on touch: there is no hover to trigger
+	 * them, and "the actions appeared when I tapped something else" is undiscoverable.
+	 * Any row that reveals actions on hover must show them always on a coarse pointer.
+	 */
+	.hover-reveal {
+		opacity: 1;
+	}
+}
+
+/*
+ * Multi-field form rows.
+ *
+ * The section forms had `grid grid-cols-2 gap-4` copy-pasted into 21 places with no
+ * responsive prefix, so a start/end date pair at 360px gave each input ~140px and the
+ * date control clipped its own value. The fix is one definition rather than eleven.
+ *
+ * Base is one column (the phone is the default), `sm` is two. Gaps tighten when the
+ * row is stacked, because a 16px gap between two full-width fields reads as noise.
+ */
+@layer utilities {
+	.fields-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: calc(var(--spacing) * 3);
+	}
+
+	/*
+	 * `col-span-2` means "the whole row", and a full row is one track when the grid is
+	 * stacked and two when it is paired. Tailwind's `col-span-2` is `span 2 / span 2`,
+	 * which creates a *second implicit column* even in the one-column layout — that
+	 * column is auto-sized, so Email got 123px and Phone 237px in a 405px pane and the
+	 * email field clipped its own value.
+	 *
+	 * `1 / -1` is the last line whichever layout is active, so one declaration is
+	 * correct in both. Higher specificity than the utility, so it wins without
+	 * `!important`.
+	 */
+	.fields-grid > .col-span-2 {
+		grid-column: 1 / -1;
+	}
+
+	/* The languages row is three fields; two-per-row is the best a 360px phone can do. */
+	.fields-grid-3 {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: calc(var(--spacing) * 3);
+	}
+
+	/*
+	 * A CONTAINER query, not a media query — and at the top level, not nested inside the
+	 * class rule.
+	 *
+	 * The form lives in a pane the user drags. At 1440px the form column is ~576px and
+	 * two fields per row is right; drag it to its 280px floor and the same viewport
+	 * hands each date input ~120px, which clips the date control's own value. Only the
+	 * pane knows how wide the pane is, so the query asks the pane.
+	 *
+	 * The nesting matters: written inside `.fields-grid { @container … }`, Tailwind's
+	 * dev pipeline passes the nested at-rule through unflattened, and Chrome evaluated
+	 * it unconditionally — the layout kept two columns at a 405px pane while the
+	 * production build (which flattens it) was correct. Two representations of one rule
+	 * that disagree is exactly how a "verified" change ships broken, so the rule is
+	 * written flat and both pipelines emit the same thing.
+	 *
+	 * 30rem is the width at which two fields still get ~200px each after the gutter.
+	 * With no container at all the base rule wins, which is the safe default.
+	 */
+	@container (width >= 30rem) {
+		.fields-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: calc(var(--spacing) * 4);
+		}
+
+		.fields-grid-3 {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+}
+
+/*
+ * Landscape phones and split screens.
+ *
+ * The editor is a full-height app, so "short" is its own layout: a bottom tab bar in
+ * 360px of height costs 15% of the document. Below 520px the bar moves to the left
+ * edge, icons only, and the content keeps the height.
+ */
+@media (max-height: 520px) {
+	.small-screen-editor {
+		flex-direction: row-reverse;
+	}
+
+	.small-screen-nav {
+		/*
+		 * A width, not a shrink-to-fit column: without it the rail collapsed to the
+		 * 16px icon and every mode button measured 16x56 — reachable in theory,
+		 * unhittable in practice. 56px is the same size as a bottom-bar target.
+		 */
+		inline-size: 56px;
+		border-top-width: 0;
+		border-inline-end-width: 1px;
+		border-inline-end-style: solid;
+		border-inline-end-color: var(--border);
+	}
+
+	.small-screen-nav-list {
+		display: flex;
+		flex-direction: column;
+		grid-template-columns: none;
+	}
+
+	.small-screen-nav-label {
+		display: none;
 	}
 }
 

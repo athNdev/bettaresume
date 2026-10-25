@@ -144,7 +144,7 @@ export function LanguagesForm({
 							className="flex items-center gap-3 rounded-lg border p-3"
 							key={lang.id}
 						>
-							<div className="grid flex-1 grid-cols-3 gap-3">
+							<div className="fields-grid-3 flex-1">
 								<div>
 									<Label className="text-muted-foreground text-xs">
 										Language

@@ -173,13 +173,21 @@ export function ExportButtons({
 					 * that says what is happening, so a slow compile cannot read as a dead
 					 * button.
 					 */}
-					<Button loading={isExporting}>
+					<Button aria-label="Export" loading={isExporting}>
 						{isExporting ? (
 							"Exporting…"
 						) : (
 							<>
 								<Download className="mr-2 h-4 w-4" />
-								Export
+								{/*
+								 * The label collapses below `sm`; the accessible name does not.
+								 * Export is the terminal action, so it keeps a 44px icon target
+								 * rather than being dropped from the phone header — the row used
+								 * to overflow at 390px because nothing in it could shrink.
+								 */}
+								<span className="hidden sm:inline" data-collapse-label="">
+									Export
+								</span>
 							</>
 						)}
 					</Button>

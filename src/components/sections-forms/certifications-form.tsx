@@ -190,7 +190,7 @@ export function CertificationsForm({
 							</div>
 							<AccordionContent className="px-4 pt-2 pb-4">
 								<div className="space-y-4">
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Certification Name *</Label>
 											<Input
@@ -217,7 +217,7 @@ export function CertificationsForm({
 										</div>
 									</div>
 
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Issue Date</Label>
 											<Input

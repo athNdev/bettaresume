@@ -13,7 +13,7 @@ interface SplashScreenProps {
 
 export function SplashScreen({ message = "Loading..." }: SplashScreenProps) {
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center bg-background">
+		<div className="flex min-h-dvh flex-col items-center justify-center bg-background">
 			{/* Logo */}
 			<div className="mb-8">
 				{/* biome-ignore lint/performance/noImgElement: a 4 kB static SVG, rendered before any JS runs */}

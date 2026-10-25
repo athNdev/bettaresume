@@ -227,7 +227,7 @@ export function PublicationsForm({
 										/>
 									</div>
 
-									<div className="grid grid-cols-2 gap-4">
+									<div className="fields-grid">
 										<div>
 											<Label>Publisher / Journal *</Label>
 											<Input

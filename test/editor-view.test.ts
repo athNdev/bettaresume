@@ -191,12 +191,26 @@ describe("the panes are proportioned for the task", () => {
 	});
 
 	it("does not let any pane collapse to nothing", () => {
-		for (const id of ["left-panel", "form-panel", "right-panel"]) {
+		/*
+		 * Pixel floors, not percentages.
+		 *
+		 * `minSize="12%"` was 92px on a 768px window and ~123px at 1024px: drag the rail
+		 * that narrow and the outline is a column of clipped words. A bare number is
+		 * pixels in `react-resizable-panels`, so the floor now means "the smallest size
+		 * at which the pane still does its job" instead of a share of whatever width
+		 * happens to exist.
+		 */
+		const floors: Record<string, number> = {
+			"left-panel": 200,
+			"form-panel": 280,
+			"right-panel": 300,
+		};
+		for (const [id, floor] of Object.entries(floors)) {
 			const min = editor.match(
-				new RegExp(`<Panel[^>]*?id="${id}"[^>]*?minSize="([^"]+)"`),
+				new RegExp(`<Panel[^>]*?id="${id}"[^>]*?minSize=\\{(\\d+)\\}`),
 			)?.[1];
-			expect(min, `${id} has no minSize`).toBeTruthy();
-			expect(Number.parseInt(min as string, 10)).toBeGreaterThanOrEqual(12);
+			expect(min, `${id} has no pixel minSize`).toBeTruthy();
+			expect(Number.parseInt(min as string, 10)).toBeGreaterThanOrEqual(floor);
 		}
 	});
 
