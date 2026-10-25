@@ -760,8 +760,9 @@ function DashboardContent() {
 										</Select>
 									</div>
 
-									{/* h-10 like every other control in this stack — the input
-									    spine. `sm` made it 36px beside 40px inputs. */}
+									{/* h-8 like every other control in this stack — the input
+									    spine. It used to pass `size="sm"` when that was
+									    36px beside 40px inputs. */}
 									<Button
 										className="w-full"
 										onClick={() => {
@@ -1073,6 +1074,11 @@ function DashboardContent() {
 						</Button>
 						<Button
 							disabled={!newResumeName.trim() || isCreating}
+							disabledReason={
+								!newResumeName.trim()
+									? "Name your resume to continue"
+									: undefined
+							}
 							onClick={handleCreateResume}
 						>
 							{isCreating ? (

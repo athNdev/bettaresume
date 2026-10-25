@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { cn } from "@/lib/utils";
+import { BrandLockup } from "@/components/brand/brand-lockup";
 
 /**
  * Marketing header and footer. Server component — no client JS.
@@ -58,11 +58,11 @@ export function SiteHeader() {
 				 */}
 				<div className="marketing-shell flex min-h-16 flex-wrap items-center justify-between gap-3 py-2 sm:gap-6">
 					<Link
-						className="flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold text-[var(--brand-text)] text-base"
+						aria-label="Betta Resume — home"
+						className="shrink-0 whitespace-nowrap text-[var(--brand-text)]"
 						href="/"
 					>
-						<BrandMark />
-						<span>Betta Resume</span>
+						<BrandLockup size="md" />
 					</Link>
 
 					{/*
@@ -120,8 +120,7 @@ export function SiteFooter() {
 				<div className="flex flex-col gap-12 md:flex-row md:justify-between">
 					<div className="max-w-xs">
 						<div className="flex items-center gap-2 text-[var(--brand-text-on-ink)]">
-							<BrandMark />
-							<span className="font-semibold">Betta Resume</span>
+							<BrandLockup size="md" />
 						</div>
 						<p className="mt-3 text-base">
 							One master record of your career, a variant for every role, and an
@@ -197,25 +196,9 @@ function FooterCol({
 }
 
 /**
- * Wordmark. Inline SVG so it inherits currentColor and costs no request.
- *
- * The tile uses `--brand-accent` at 7.3:1 against paper. The white glyph on that
- * tile is 5.9:1, and the mark is decorative — `aria-hidden` — so the figure is
- * reported here only so a future colour change is checked rather than assumed.
+ * The old placeholder mark (`BrandMark`) lived here as a rounded accent tile
+ * with a "B" in it. The brand is now a real system in `src/components/brand/`:
+ * two offset sheets, mono by default, with the accent used as an event rather
+ * than a fill. The filename stays exported for anything that linked to it.
  */
-export function BrandMark({ className = "" }: { className?: string }) {
-	return (
-		<svg
-			aria-hidden="true"
-			className={cn("h-7 w-7 shrink-0", className)}
-			fill="none"
-			viewBox="0 0 32 32"
-		>
-			<rect fill="var(--brand-accent)" height="32" rx="7" />
-			<path
-				d="M10 9h7.2c3.5 0 5.6 1.7 5.6 4.3 0 1.7-.9 3-2.4 3.6 1.9.6 3.1 2 3.1 4 0 2.9-2.4 4.8-6.2 4.8H10V9Zm3.4 6.6h3c1.3 0 2.1-.7 2.1-1.8s-.8-1.8-2.1-1.8h-3v3.6Zm0 6.8h3.4c1.5 0 2.4-.8 2.4-2s-.9-2-2.4-2h-3.4v4Z"
-				fill="var(--brand-card)"
-			/>
-		</svg>
-	);
-}
+export { BrandMark } from "@/components/brand/brand-mark";

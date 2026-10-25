@@ -140,21 +140,33 @@
 
 	/* Uppercase micro-labels: 12px / 600 / +0.04em. */
 	--br-tracking-micro: 0.04em;
+	/* Field labels: 12px / 600 / +0.02em (D5). A label is a role, not a size. */
+	--br-tracking-label: 0.02em;
+	/* Titles 16px and up: tight tracking so they read as machined (T9). */
+	--br-tracking-title: -0.01em;
 
-	/* Radius — 4/6/8/12/full. Controls sm, cards md, panels lg, chips full. */
+	/* Radius — 4/6/8/12/full. Controls sm, panels md, modals lg, chips full. */
 	--br-radius-xs: 0.25rem;
 	--br-radius-sm: 0.375rem;
 	--br-radius-md: 0.5rem;
 	--br-radius-lg: 0.75rem;
 	--br-radius-full: 9999px;
 
-	/* Elevation — surface + shadow pairs (see `--elev-*` roles). */
+	/* Elevation — two layers, always (tight contact + wide ambient). A single
+	   stock shadow is the tell that depth was not designed. The dark roles add
+	   the top highlight; these light values are the primitives it is built from. */
 	--br-elev-0: none;
-	--br-elev-1: 0 1px 2px oklch(0 0 0 / 0.06), 0 1px 1px oklch(0 0 0 / 0.04);
-	--br-elev-2: 0 2px 4px oklch(0 0 0 / 0.06), 0 4px 8px oklch(0 0 0 / 0.06);
+	--br-elev-1: 0 1px 1px oklch(0 0 0 / 0.04), 0 1px 2px oklch(0 0 0 / 0.06);
+	--br-elev-2: 0 1px 2px oklch(0 0 0 / 0.06), 0 4px 12px oklch(0 0 0 / 0.08);
 	--br-elev-3:
-		0 2px 4px oklch(0 0 0 / 0.05), 0 8px 16px oklch(0 0 0 / 0.08),
-		0 16px 32px oklch(0 0 0 / 0.1);
+		0 2px 4px oklch(0 0 0 / 0.05), 0 8px 24px oklch(0 0 0 / 0.1),
+		0 24px 48px oklch(0 0 0 / 0.08);
+	--br-elev-hover: 0 1px 2px oklch(0 0 0 / 0.06), 0 8px 20px oklch(0 0 0 / 0.1);
+	/* The paper stage is the one art-directed surface (ornament budget #1):
+	   a sheet floating on three layers, not a card. */
+	--br-elev-page:
+		0 1px 2px oklch(0 0 0 / 0.08), 0 8px 24px oklch(0 0 0 / 0.1),
+		0 24px 56px oklch(0 0 0 / 0.12);
 
 	/* Motion — 120/180/240ms, one easing family. */
 	--br-duration-fast: 120ms; /* hover/press state layers, colour changes */
@@ -215,9 +227,21 @@
 	--color-info-soft: var(--br-info-soft);
 	--color-link: var(--link);
 	--color-border: var(--border);
-	--color-border-strong: var(--border-strong);
+	/* D2 — the border role split. `border-border`/bare `border` draws structure;
+	   `border-control` draws interactable edges and is held to 3:1; a selected
+	   edge is the accent. `--border-strong` is retired: its two jobs are now
+	   done by roles that state which job they do. */
+	--color-control: var(--border-control);
+	--color-border-selected: var(--border-selected);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	/* D3 — the tone ladder. `fg-muted` is text; `fg-subtle` is icon/decorative
+	   tone only (it is 4.18:1 on dark and therefore below AA for text). */
+	--color-fg-muted: var(--muted-foreground);
+	--color-fg-subtle: var(--subtle);
+	/* Selection tint (ornament budget #2). */
+	--color-selected: var(--selected);
+	--color-sunken: var(--sunken);
 	--color-preview-paper: var(--preview-paper);
 	--color-preview-paper-shade: var(--preview-paper-shade);
 	/* Modal dimming layers. Static: a scrim dims toward ink in both themes. */
@@ -260,9 +284,13 @@
 	--shadow-elev-1: var(--elev-1);
 	--shadow-elev-2: var(--elev-2);
 	--shadow-elev-3: var(--elev-3);
+	--shadow-elev-hover: var(--elev-hover);
+	--shadow-elev-page: var(--elev-page);
 	--ease-enter: var(--br-ease-standard);
 	--ease-exit: var(--br-ease-standard);
 	--tracking-micro: var(--br-tracking-micro);
+	--tracking-label: var(--br-tracking-label);
+	--tracking-title: var(--br-tracking-title);
 	--color-chart-1: var(--chart-1);
 	--color-chart-2: var(--chart-2);
 	--color-chart-3: var(--chart-3);
@@ -292,12 +320,16 @@
 	--surface-raised: var(--br-neutral-0);
 	--surface-raised-foreground: var(--br-neutral-950);
 
-	/* Sunken fills: wells sit a step toward the page colour. */
-	--muted: var(--br-neutral-100);
-	--muted-foreground: var(--br-neutral-600);
-	--secondary: var(--br-neutral-100);
+	/* Sunken fills: wells sit a step toward the page colour (`--muted` and
+	   `--secondary` are shadcn-compatible aliases of the same role). */
+	--sunken: var(--br-neutral-100);
+	--muted: var(--sunken);
+	--secondary: var(--sunken);
 	--secondary-foreground: var(--br-neutral-800);
-	/* Icons and decorative meta only — text uses --muted-foreground (R6). */
+	/* The tone ladder (D3). Hierarchy is tone → weight → spacing → case, in
+	   that order; a new size is a system change. `--subtle` is icons and
+	   decorative meta only — text uses `--muted-foreground`. */
+	--muted-foreground: var(--br-neutral-600);
 	--subtle: var(--br-neutral-500);
 
 	/* Interaction. Hover/press are alpha state layers, never new solids (R9). */
@@ -307,6 +339,10 @@
 	--primary-foreground: var(--br-neutral-0);
 	--link: var(--br-accent-500);
 	--selection: color-mix(in oklab, var(--br-accent-500) 20%, transparent);
+	/* Selection language (rail rows, template rows, lists): a tint plus a
+	   2px rule in the selected-edge colour. The rule carries the 3:1; the
+	   tint only has to read as a change of state. */
+	--selected: color-mix(in oklab, var(--br-accent-500) 10%, transparent);
 
 	/* Status. Solid fills pair with their -foreground; text and icons use the
 	   status value directly. Derived tints stay derived (color-mix). */
@@ -321,12 +357,14 @@
 	--destructive: var(--danger);
 	--destructive-foreground: var(--danger-foreground);
 
-	/* Structure vs control boundary. `--border` is decorative structure and is
-	   not held to 3:1; `--input` carries the edge of every interactive control
-	   and clears 3:1 on every surface it may sit on (WCAG 1.4.11). */
+	/* Structure vs control boundary (D2). `--border` is a decorative hairline
+	   and is not held to 3:1; `--border-control` carries the edge of every
+	   interactive control (and is what `--input` aliases); `--border-selected`
+	   marks selection. */
 	--border: var(--br-neutral-300);
-	--border-strong: var(--br-neutral-400);
-	--input: var(--br-neutral-500);
+	--border-control: var(--br-neutral-500);
+	--input: var(--border-control);
+	--border-selected: var(--br-accent-600);
 	/*
 	 * The document preview's paper. Constant across themes on purpose: a preview
 	 * is a preview of the export, and paper does not dark-mode (open question Q2
@@ -354,12 +392,14 @@
 	 * Elevation: layered transparent shadows, never borders, for depth. A border is
 	 * structure — dividers, separators, selected and focus states — and using it for
 	 * depth is what makes nested cards look stacked out of paper. Pairs with the
-	 * surface roles: elev-1 = --surface, elev-2 = --surface, elev-3 = --surface-raised.
+	 * surface roles: elev-1 = --surface, elev-2/3 = --surface-raised.
 	 */
 	--elev-0: var(--br-elev-0);
 	--elev-1: var(--br-elev-1);
 	--elev-2: var(--br-elev-2);
 	--elev-3: var(--br-elev-3);
+	--elev-hover: var(--br-elev-hover);
+	--elev-page: var(--br-elev-page);
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
@@ -383,25 +423,23 @@
 .dark {
 	--background: var(--br-neutral-950);
 	--foreground: var(--br-neutral-50);
-	--surface: var(--br-neutral-900);
+	/* D1 — the dark ladder is settled at 950 / 900 / 800 / 700. The previous
+	   rungs (900 / 800) measured 1.11:1, which still read flat; these are
+	   1.35:1 (card off page) and 1.43:1 (overlay off card). */
+	--surface: var(--br-neutral-800);
 	--surface-foreground: var(--br-neutral-50);
-	--surface-raised: var(--br-neutral-800);
+	--surface-raised: var(--br-neutral-700);
 	--surface-raised-foreground: var(--br-neutral-50);
 
 	/* Wells sink a step toward the page instead of lifting off the card. */
-	--muted: color-mix(
-		in oklab,
-		var(--br-neutral-950) 50%,
-		var(--br-neutral-900)
-	);
-	--muted-foreground: var(--br-neutral-400);
-	--secondary: color-mix(
-		in oklab,
-		var(--br-neutral-950) 50%,
-		var(--br-neutral-900)
-	);
+	--sunken: var(--br-neutral-900);
+	--muted: var(--sunken);
+	--secondary: var(--sunken);
 	--secondary-foreground: var(--br-neutral-50);
-	--subtle: var(--br-neutral-500);
+	/* D3 — `neutral-500` is 4.18:1 on the page: fine for icons, below AA for
+	   text. Dark therefore uses 300 for text and 400 for icon tone. */
+	--muted-foreground: var(--br-neutral-300);
+	--subtle: var(--br-neutral-400);
 
 	--accent: color-mix(in oklab, var(--br-neutral-0) 10%, transparent);
 	--accent-foreground: var(--br-neutral-50);
@@ -409,23 +447,30 @@
 	--primary-foreground: var(--br-neutral-950);
 	--link: var(--br-accent-300);
 	--selection: color-mix(in oklab, var(--br-accent-500) 30%, transparent);
+	--selected: color-mix(in oklab, var(--br-accent-300) 14%, transparent);
 
 	/* Status fills lighten toward white and pair with ink text (on-* discipline).
-	   As text they clear 4.5:1 on every dark surface. */
-	--success: color-mix(in oklab, var(--br-success) 70%, white);
+	   The 50% mix is tuned so the *text* role still clears 4.5:1 on the overlay
+	   rung (700), not just on the page — a callout inside a dialog is the case
+	   a page-only check misses. */
+	--success: color-mix(in oklab, var(--br-success) 50%, white);
 	--success-foreground: var(--br-neutral-950);
-	--warning: color-mix(in oklab, var(--br-warning) 70%, white);
+	--warning: color-mix(in oklab, var(--br-warning) 50%, white);
 	--warning-foreground: var(--br-neutral-950);
-	--danger: color-mix(in oklab, var(--br-danger) 72%, white);
+	--danger: color-mix(in oklab, var(--br-danger) 52%, white);
 	--danger-foreground: var(--br-neutral-950);
-	--info: color-mix(in oklab, var(--br-info) 70%, white);
+	--info: color-mix(in oklab, var(--br-info) 50%, white);
 	--info-foreground: var(--br-neutral-950);
 	--destructive: var(--danger);
 	--destructive-foreground: var(--danger-foreground);
 
-	--border: var(--br-neutral-700);
-	--border-strong: var(--br-neutral-600);
-	--input: var(--br-neutral-500);
+	/* Hairlines read on a tonal ladder only if they step with it: 700 on an 800
+	   card is invisible, so the hairline is 600 and the control boundary 400
+	   (500 falls to 2.2:1 against the 700 overlay). */
+	--border: var(--br-neutral-600);
+	--border-control: var(--br-neutral-400);
+	--input: var(--border-control);
+	--border-selected: var(--br-accent-400);
 	/* Lighter than the light-mode ring: dark surfaces swallow a mid-tone blue. */
 	--ring: var(--br-accent-400);
 	--chart-1: oklch(0.488 0.243 264.376);
@@ -433,13 +478,25 @@
 	--chart-3: oklch(0.769 0.188 70.08);
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
-	/* Shadows need more alpha to read at all on a dark surface. */
+	/* Shadows need more alpha to read at all on a dark surface (×2.5 the light
+	   values), and every floating layer gets the 1px top highlight (T3) — the
+	   cheapest trick that makes dark chrome read as layered rather than flat. */
 	--elev-0: var(--br-elev-0);
-	--elev-1: 0 1px 2px oklch(0 0 0 / 0.35), 0 1px 1px oklch(0 0 0 / 0.25);
-	--elev-2: 0 2px 4px oklch(0 0 0 / 0.35), 0 4px 8px oklch(0 0 0 / 0.3);
+	--elev-1:
+		0 1px 1px oklch(0 0 0 / 0.2), 0 1px 2px oklch(0 0 0 / 0.16),
+		inset 0 1px 0 oklch(1 0 0 / 0.06);
+	--elev-2:
+		0 1px 2px oklch(0 0 0 / 0.25), 0 4px 12px oklch(0 0 0 / 0.2),
+		inset 0 1px 0 oklch(1 0 0 / 0.06);
 	--elev-3:
-		0 2px 4px oklch(0 0 0 / 0.3), 0 8px 16px oklch(0 0 0 / 0.4),
-		0 16px 32px oklch(0 0 0 / 0.45);
+		0 2px 4px oklch(0 0 0 / 0.25), 0 8px 24px oklch(0 0 0 / 0.25),
+		0 24px 48px oklch(0 0 0 / 0.2), inset 0 1px 0 oklch(1 0 0 / 0.08);
+	--elev-hover:
+		0 1px 2px oklch(0 0 0 / 0.25), 0 8px 20px oklch(0 0 0 / 0.25),
+		inset 0 1px 0 oklch(1 0 0 / 0.08);
+	--elev-page:
+		0 1px 2px oklch(0 0 0 / 0.35), 0 8px 24px oklch(0 0 0 / 0.4),
+		0 24px 56px oklch(0 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.1);
 	--sidebar: oklch(0.205 0 0);
 	--sidebar-foreground: oklch(0.985 0 0);
 	--sidebar-primary: oklch(0.488 0.243 264.376);
@@ -495,6 +552,245 @@ body {
 ::selection {
 	background: var(--selection);
 	color: var(--foreground);
+}
+
+/* ==========================================================================
+   COMPOSED LAYERS — the visual method, not just the scales.
+
+   These are the recipes from `docs/research/tool-visual-design.md` §3, in one
+   place so a component composes them instead of re-inventing them. Every
+   value reads a token; nothing here introduces a value the scales do not have.
+
+   Regions vs floating cards is the organising rule: a region is separated by
+   a hairline seam and never lifts; a card floats on hairline + elev-1; an
+   overlay floats on elev-2/3. A card is never nested inside a card.
+   ========================================================================== */
+@layer components {
+	/* 1 — Floating card: tone + hairline (edge drawing) + two-layer shadow (lift).
+	   D4 refines the old "border or shadow, never both": the hairline *draws*
+	   the edge and the shadow *lifts*. What stays banned is a shadow used as a
+	   divider and a border used as fake lift. */
+	.br-panel {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--br-radius-md);
+		box-shadow: var(--elev-1);
+	}
+
+	/* 2 — Region seam: rails and columns. No radius, no shadow. */
+	.br-region {
+		background: var(--background);
+		border-right: 1px solid var(--border);
+	}
+
+	/* 3 — Sunken well: inputs, toolbar strips, kbd fills. Interactive wells
+	   carry the control boundary; static strips carry none. */
+	.br-sunken {
+		background: var(--sunken);
+		border: 1px solid var(--border-control);
+		border-radius: var(--br-radius-sm);
+	}
+	.br-sunken-static {
+		background: var(--sunken);
+		border-radius: var(--br-radius-sm);
+	}
+
+	/* 4 — State layers: hover/press are alpha mixes, never new solids (R9). */
+	.br-state {
+		position: relative;
+	}
+	.br-state::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: color-mix(in oklab, var(--foreground) 6%, transparent);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity var(--br-duration-fast) var(--br-ease-standard);
+	}
+	.br-state:hover::after {
+		opacity: 1;
+	}
+	.br-state:active::after {
+		background: color-mix(in oklab, var(--foreground) 10%, transparent);
+		opacity: 1;
+	}
+
+	/* 5 — Selection language: 2px left rule on the selected row. The tint and
+	   the check live in the row component; the rule is what survives the
+	   squint test and what carries the 3:1. */
+	.br-selection-rule {
+		position: absolute;
+		left: 0;
+		top: 50%;
+		height: var(--br-space-4);
+		width: 2px;
+		transform: translateY(-50%);
+		border-radius: var(--br-radius-full);
+		background: var(--border-selected);
+	}
+
+	/* 6 — Status chip: 10–14% tint + same-hue border + hue text. Always paired
+	   with an icon or a word, so meaning survives greyscale. */
+	.br-chip {
+		--chip-hue: var(--br-info);
+		display: inline-flex;
+		align-items: center;
+		gap: var(--br-space-05);
+		padding: 2px var(--br-space-2);
+		border-radius: var(--br-radius-xs);
+		font-size: var(--br-text-xs);
+		line-height: var(--br-text-xs--line-height);
+		font-weight: 600;
+		background: color-mix(in oklab, var(--chip-hue) 12%, transparent);
+		border: 1px solid color-mix(in oklab, var(--chip-hue) 28%, transparent);
+		color: color-mix(in oklab, var(--chip-hue) 82%, black);
+	}
+	.br-chip[data-tone="success"] {
+		--chip-hue: var(--br-success);
+	}
+	.br-chip[data-tone="warning"] {
+		--chip-hue: var(--br-warning);
+	}
+	.br-chip[data-tone="danger"] {
+		--chip-hue: var(--br-danger);
+	}
+	.br-chip[data-tone="info"] {
+		--chip-hue: var(--br-info);
+	}
+	.dark .br-chip {
+		color: color-mix(in oklab, var(--chip-hue) 60%, white);
+	}
+
+	/* 7 — The paper stage: the one art-directed surface (T13). A vignetted
+	   field with the sheet floating on a three-layer page shadow. */
+	.br-stage {
+		background: radial-gradient(
+			120% 100% at 50% 0%,
+			color-mix(in oklab, var(--foreground) 4%, var(--background)),
+			var(--background)
+		);
+	}
+	.br-page {
+		background: var(--preview-paper);
+		border-radius: 2px;
+		box-shadow: var(--elev-page);
+	}
+
+	/* 8 — Skeleton that keeps the shape of what replaces it (T15). Shimmer is
+	   a dark-mode nicety and light mode stays static. */
+	.br-skeleton {
+		background: var(--sunken);
+		border-radius: var(--br-radius-xs);
+	}
+	@media (prefers-reduced-motion: no-preference) {
+		.dark .br-skeleton {
+			background: linear-gradient(
+				90deg,
+				var(--sunken) 25%,
+				color-mix(in oklab, var(--foreground) 6%, var(--sunken)) 50%,
+				var(--sunken) 75%
+			);
+			background-size: 200% 100%;
+			animation: br-shimmer 1.4s linear infinite;
+		}
+	}
+	@keyframes br-shimmer {
+		from {
+			background-position: 200% 0;
+		}
+		to {
+			background-position: -200% 0;
+		}
+	}
+
+	/* 9 — Kbd chip: the pro-tool affordance. 12px is the scale's floor; the
+	   research recipe said 11px, and nothing functional goes below 12. */
+	.br-kbd {
+		font-size: var(--br-text-xs);
+		line-height: var(--br-text-xs--line-height);
+		font-weight: 600;
+		letter-spacing: var(--br-tracking-label);
+		padding: 1px var(--br-space-1);
+		border-radius: var(--br-radius-xs);
+		background: var(--sunken);
+		border: 1px solid var(--border);
+		color: var(--muted-foreground);
+		box-shadow: 0 1px 0 var(--border);
+	}
+
+	/* 10 — Typographic roles. A label is 12/600 at +0.02em in muted tone (D5);
+	   micro is the same size capitalised (+0.04em) for rail/panel headers.
+	   These are roles, not new sizes. */
+	.br-label {
+		font-size: var(--br-text-xs);
+		line-height: var(--br-text-xs--line-height);
+		font-weight: 600;
+		letter-spacing: var(--br-tracking-label);
+		color: var(--muted-foreground);
+	}
+	.br-micro {
+		font-size: var(--br-text-xs);
+		line-height: var(--br-text-xs--line-height);
+		font-weight: 600;
+		letter-spacing: var(--br-tracking-micro);
+		text-transform: uppercase;
+		color: var(--muted-foreground);
+	}
+
+	/* 11 — The one gradient hairline (T20), spent on the active form group. */
+	.br-accent-edge {
+		position: relative;
+	}
+	.br-accent-edge::before {
+		content: "";
+		position: absolute;
+		inset: 0 0 auto 0;
+		height: 1px;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			var(--br-accent-400),
+			transparent
+		);
+		opacity: 0.6;
+		pointer-events: none;
+	}
+
+	/* 12 — Interactive card lift (T18, 180ms). */
+	.br-lift {
+		transition:
+			transform var(--br-duration-base) var(--br-ease-standard),
+			box-shadow var(--br-duration-base) var(--br-ease-standard);
+	}
+	.br-lift:hover {
+		transform: translateY(-2px);
+		box-shadow: var(--elev-hover);
+	}
+
+	/* 13 — Empty-state icon tile (T12): 40px tinted square + 20px glyph.
+	   The tone is the *state's* meaning, never decoration. */
+	.br-tile {
+		display: grid;
+		place-items: center;
+		width: calc(var(--spacing) * 10);
+		height: calc(var(--spacing) * 10);
+		border-radius: var(--br-radius-md);
+		background: color-mix(in oklab, var(--br-accent-500) 12%, transparent);
+		color: var(--br-accent-600);
+	}
+	.dark .br-tile {
+		color: var(--br-accent-300);
+	}
+	.br-tile[data-tone="success"] {
+		background: color-mix(in oklab, var(--br-success) 12%, transparent);
+		color: var(--success);
+	}
+	.br-tile[data-tone="danger"] {
+		background: color-mix(in oklab, var(--br-danger) 10%, transparent);
+		color: var(--danger);
+	}
 }
 
 /* React Flow dark mode */

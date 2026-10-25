@@ -22,6 +22,7 @@ import {
 	Award,
 	BookOpen,
 	Briefcase,
+	Check,
 	Eye,
 	EyeOff,
 	FileQuestion,
@@ -49,6 +50,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SelectionRule } from "@/components/ui/selection-rule";
 import { StateIcon } from "@/components/ui/state-icon";
 import { isSectionEmpty } from "@/features/resume-editor/section-state";
 import type {
@@ -180,13 +182,14 @@ export function SortableSectionItem({
 	return (
 		<div
 			className={cn(
-				"group flex items-center gap-1 rounded-md px-1 py-1 transition-colors",
-				isSelected ? "bg-accent" : "hover:bg-accent/50",
+				"group relative flex items-center gap-1 rounded-md px-1 py-1 transition-colors",
+				isSelected ? "bg-selected" : "hover:bg-accent/50",
 				!section.visible && "opacity-60",
 			)}
 			ref={setNodeRef}
 			style={style}
 		>
+			<SelectionRule selected={isSelected} />
 			<button
 				{...attributes}
 				{...listeners}
@@ -214,6 +217,9 @@ export function SortableSectionItem({
 					{SECTION_ICONS[section.type]}
 				</span>
 				<span className="flex-1 truncate text-sm">{title}</span>
+				{isSelected ? (
+					<Check aria-hidden className="size-4 shrink-0 text-border-selected" />
+				) : null}
 				{/*
 				 * Say which sections are actually empty.
 				 *
