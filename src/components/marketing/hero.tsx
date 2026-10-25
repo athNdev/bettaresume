@@ -1,29 +1,28 @@
 /**
  * Hero: what the product is, in one screen.
  *
- * The previous version led with a claim about competitors' rendering pipelines and a
- * three-way "None / None / Yours to read" stat row. It described an argument, not a
- * product. This one leads with the job the product does — write once, tailor per role —
- * and keeps the inspectable export as the *proof* underneath it.
- *
- * The artefact below is pure CSS and stays that way: `src/lib/typst/` pulls a WASM
- * compiler tens of megabytes large from a CDN, and a public page must prerender to real
- * HTML with no runtime dependency. But its *text* is not a mock-up — it is
- * `buildPlainText(SAMPLE_RESUME)`, the same function the app's export button calls. This
- * is a server component, so the call happens once at build time and ships no client JS.
+ * The page leads with the job the product does — write once, tailor per role — and
+ * keeps the inspectable export as the *proof* underneath it. The artefact's text is not
+ * a mock-up: it is `buildPlainText(SAMPLE_RESUME)`, the same function the app's export
+ * button calls. This is a server component, so the call happens once at build time and
+ * ships no client JS.
  *
  * That indirection is deliberate. The panel used to be a hand-written `key: value` list
  * asserting it matched the exporter, and it stopped matching the day the exporter was
  * fixed — leaving the most prominent panel on the site advertising `startDate: 2020-09`.
  * Rendering the real output is the only version of this that cannot drift.
  *
+ * The counts under the actions are derived where they can be. `TEMPLATE_COUNT` comes from
+ * the registry, so adding an archetype updates the hero and the page's own heading
+ * together; `test/marketing-claims.test.ts` holds the section and export counts against
+ * the schema and the exporter.
+ *
  * Type and spacing are the closed scales (`docs/design-system/README.md` §3.1–3.2): the
- * specimen reads at `text-lg` + `text-xs` — two sizes, with weight and tone carrying the
- * rest of its internal hierarchy — and the page's body copy is the one `text-base` step.
- * The audit's per-element rem values (22 sizes on this page, four of them within 0.8px)
- * are gone; nothing here may choose a size that is not on the scale.
+ * specimen reads at `text-lg` + `text-xs`, with weight and tone carrying its internal
+ * hierarchy, and the page's body copy is the one `text-base` step.
  */
 
+import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
 import { buildPlainText } from "@/lib/export/text";
 import { SAMPLE_RESUME } from "./sample-resume";
 
@@ -47,6 +46,9 @@ const EXPORTED_LINES = (() => {
 })();
 
 const SKILLS = ["Go", "TypeScript", "Postgres", "Terraform"];
+
+/** The registry is the count. "Six" is not typed anywhere in this file. */
+const TEMPLATE_COUNT = Object.keys(TEMPLATE_CONFIGS).length;
 
 export function Hero() {
 	return (
@@ -89,8 +91,8 @@ export function Hero() {
 						style={{ animationDelay: "140ms" }}
 					>
 						Keep one master record of your career. Fork a variant for each job
-						without retyping a word. And when you export, read the exact text
-						layer a parser will extract from the PDF — before you send it.
+						without retyping a word. Set a page target, read the meter, and
+						export a PDF whose text layer you can inspect before you send it.
 					</p>
 
 					<div
@@ -120,19 +122,18 @@ export function Hero() {
 						</div>
 
 						{/*
-						 * Three counts, each verifiable in the app in under a minute. These
-						 * replace "None / None / Yours to read", which were positions
-						 * rather than facts about the product.
+						 * Four counts, each verifiable in the app in under a minute. The
+						 * template count is derived from the registry so it cannot rot; the
+						 * section count is checked against the schema by the claims test.
 						 *
-						 * A strip of its own under the actions, divided by a hairline: the
-						 * audit found this row floating at button mid-height as the
-						 * second-largest cluster on the screen, competing with the CTA.
-						 * Numbers with no decision value are support, not peers.
+						 * A strip of its own under the actions, divided by a hairline:
+						 * numbers with no decision value are support, not peers of the CTA.
 						 */}
-						<dl className="mt-8 grid max-w-2xl grid-cols-3 gap-6 border-[var(--brand-rule)] border-t pt-6">
+						<dl className="mt-8 grid max-w-2xl grid-cols-2 gap-6 border-[var(--brand-rule)] border-t pt-6 sm:grid-cols-4">
 							<Stat label="Section types" value="13" />
+							<Stat label="Templates" value={String(TEMPLATE_COUNT)} />
 							<Stat label="Export formats" value="4" />
-							<Stat label="Templates" value="3" />
+							<Stat label="Density presets" value="3" />
 						</dl>
 					</div>
 				</div>
