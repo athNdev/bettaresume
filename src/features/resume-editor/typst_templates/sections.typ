@@ -1,3 +1,4 @@
+#let data = json("sample.json")
 // ──────────────────────────────────────────────
 // Variables (must be defined before helpers)
 // ──────────────────────────────────────────────
@@ -5,9 +6,14 @@
 #let default-settings = (
   colors: (accent: "#2563eb", heading: "#111827", secondary: "#6b7280", background: "#ffffff", text: "#1e293b", primary: "#2563eb", divider: "#e2e8f0"),
   typography: (name: 18, title: 11, small: 9.5, body: 10.5, itemTitle: 10.5, sectionHeading: 11),
-  margins: (top: 43, right: 50, bottom: 43, left: 50),
+  // Balanced — the shipped default (docs/research/space-efficiency.md §5): 0.5in margins,
+  // 1.25 leading. The 43/50pt comfort margins are the Relaxed preset now, not the default.
+  margins: (top: 36, right: 36, bottom: 36, left: 36),
+  lineHeight: 1.25,
   sectionSpacing: "normal",
-  accentStyle: "underline",
+  // No heading rule by default. The rule costs 2.6mm per section plus its 2pt gap, and
+  // uppercase + semibold already scans; it stays available as `accentStyle`.
+  accentStyle: "none",
 )
 
 // ──────────────────────────────────────────────
@@ -18,16 +24,20 @@
 // six documents (docs/research/template-research.md §7) are collected here so each
 // template declares its structure in one line instead of copying twelve renderers:
 //
-//   heading      rule | hairline | plain
-//                How a section heading is emphasised. `rule` is the accent rule the
-//                accentStyle setting also draws; `hairline` is a 0.5pt text-ink rule;
-//                `plain` is weight alone.
+//   heading      auto | rule | hairline | plain
+//                How a section heading is emphasised. `auto` follows `accentStyle` (the
+//                user's own control) and otherwise leaves the heading as weight and case;
+//                `rule` is the accent rule, `hairline` a 0.5pt text-ink rule, `plain` is
+//                weight alone. The default is `auto` with no rule drawn: the rule costs
+//                2.6mm per section and the scanned document does not need it.
 //   education    standard | full
 //                `full` adds the coursework, honours and achievements the payload has
 //                always carried and the standard renderer dropped.
-//   skills       labels | lines | inline
-//                `labels` is a chip cluster; `lines` is `Category: item, item`; `inline`
-//                is one comma-separated line with no category labels (core expertise).
+//   skills       auto | lines | chips | inline
+//                `auto` is `Category: item, item` lines, and chips only at Relaxed
+//                density; `lines` is always lines; `chips` is the label-over-cluster
+//                treatment (kept as an option, not a default); `inline` is one
+//                comma-separated line with no category labels (core expertise).
 //   projects     standard | detail
 //                `detail` adds the project's highlights and a labelled stack line.
 //   publications plain | numbered
@@ -38,9 +48,9 @@
 // Everything here is structure or typography. No field selects a colour, a fill or an
 // icon: the research deletes all three outright (§6).
 #let default-profile = (
-  heading: "rule",
+  heading: "auto",
   education: "standard",
-  skills: "labels",
+  skills: "auto",
   projects: "standard",
   publications: "plain",
   experience: "standard",
@@ -101,18 +111,80 @@
 // ──────────────────────────────────────────────
 //
 // One modular scale in points: 2/3/4/6/8/12/16. Every vertical gap in the document is
-// one of these named values — the old `spacing-val` switch (8pt/12pt/20pt) and the
-// scattered `v(4pt)`/`v(6pt)` literals ran three rhythms at once.
+// one of these named values; the density profile below maps each gap onto one of them, so
+// a preset moves the whole document rather than half of it.
 #let space-xs  = 2pt   // typographic fine-tuning: name → title, heading → its rule
-#let space-s   = 3pt   // between bullets in one entry; label → its labels
-#let space-m   = 4pt   // section heading → first entry; meta line → first bullet
-#let space-l   = 6pt   // between entries within a section; name block → contacts
-#let space-xl  = 8pt   // gap above a section heading — compact
-#let space-2xl = 12pt  // header block → hairline rule (half of the 16pt header gap)
-#let space-3xl = 16pt  // header → body (assembled in the templates)
-#let space-4xl = 20pt  // header → body, relaxed density
+#let space-s   = 3pt   // below a heading, above a heading at the tight setting
+#let space-m   = 4pt   // heading → first entry; meta line → first bullet
+#let space-l   = 6pt   // between entries; gap above a heading at the tight setting
+#let space-xl  = 8pt   // gap above a section heading — balanced
+#let space-2xl = 12pt  // gap above a section heading — relaxed
+#let space-3xl = 16pt  // header → body at the relaxed setting
 
 #let section-spacing = settings.at("sectionSpacing", default: "normal")
+
+// ──────────────────────────────────────────────
+// The density profile — every vertical gap in the document
+// ──────────────────────────────────────────────
+//
+// `sectionSpacing` used to reach three gaps (section, header, contact) while the two
+// highest-frequency ones — between entries and between bullets — were compile-time
+// constants. That is why moving the density preset changed the header and the section
+// boundaries and could not reclaim the ~23pt the entry and bullet gaps occupy: no preset
+// could reach them (docs/research/space-efficiency.md §3.4).
+//
+// Every gap below is now chosen by the setting, so one preset moves the whole document:
+//
+//   compact  → Tight     normal → Balanced     spacious → Relaxed
+//
+// The values are the density envelope in docs/research/space-efficiency.md §2. They are
+// mirrored in `src/lib/layout/density.ts` (`SPACING_GAPS`) and pinned by
+// `test/density-gaps.test.ts`, so this table and the one the HTML preview reads cannot
+// drift apart.
+#let gaps-for(spacing) = if spacing == "compact" {
+  (
+    section: space-l,      // 6pt above a heading
+    heading: space-s,      // 3pt heading → its first entry
+    entry: space-m,        // 4pt between entries
+    bullet: space-xs,      // 2pt between bullets in one entry
+    meta: space-xs,        // 2pt meta line → first bullet
+    header: space-l,       // 6pt header block → body
+    contact: space-s,      // 3pt name/title → contact line
+    header-rule: false,
+  )
+} else if spacing == "spacious" {
+  (
+    section: space-2xl,    // 12pt
+    heading: space-m,      // 4pt
+    entry: space-l,        // 6pt
+    bullet: space-s,       // 3pt
+    meta: space-m,         // 4pt
+    header: space-3xl,     // 16pt
+    contact: space-l,      // 6pt
+    header-rule: true,
+  )
+} else {
+  (
+    section: space-xl,     // 8pt
+    heading: space-m,      // 4pt
+    entry: space-m,        // 4pt
+    bullet: space-xs,      // 2pt
+    meta: space-s,         // 3pt
+    header: space-xl,      // 8pt
+    contact: space-m,      // 4pt
+    header-rule: true,
+  )
+}
+
+// The document's profile: what every helper reads unless a section overrides it.
+#let gaps = gaps-for(section-spacing)
+
+// A section may carry `layout.spacing: compact | normal | spacious` and move its own gaps
+// without touching the rest of the document. Absent means "follow the document" — which is
+// why the fallback is the document's own setting and not a literal.
+#let gaps-of(section) = gaps-for(
+  section.at("layout", default: (:)).at("spacing", default: section-spacing),
+)
 
 // Paper width in points, used only by the fit probe to measure the line length. It is
 // the same constant `src/lib/layout/page-fit.ts` uses; the probe is the only reader, so
@@ -136,27 +208,11 @@
 
 // Header spacing follows density.
 //
-// `header-gap` is the WHOLE header → body distance (16pt at Normal, which is what the
-// templates assemble today: 12pt below the block + a rule + 4pt). `header-gap-half` is
-// the part below the header block before the rule, and `contact-gap` is the name →
-// contact-line gap. Normal reproduces the values the templates used to hard-code; Compact
-// and Relaxed move them with the rest of the document instead of needing a second set of
-// controls.
-#let header-gap = if section-spacing == "compact" {
-  space-2xl
-} else if section-spacing == "spacious" {
-  space-4xl
-} else {
-  space-3xl
-}
-#let header-gap-half = header-gap - space-m
-#let contact-gap = if section-spacing == "compact" {
-  space-m
-} else if section-spacing == "spacious" {
-  space-xl
-} else {
-  space-l
-}
+// `gaps.header` is the WHOLE header → body distance and `gaps.contact` is the
+// name/title → contact-line gap. Both live in the density profile above, so Compact and
+// Relaxed move the header with the rest of the document instead of needing a second set of
+// controls. The header itself is assembled once, in `render-header` below, so all six
+// archetypes cannot disagree about it.
 
 // ──────────────────────────────────────────────
 // Leading (line spacing) — one mapping for every template
@@ -174,25 +230,13 @@
 // Each template used to hard-code its own factor (0.45em undergrad / 0.5em minimal
 // / 0.55em postgrad), so the same `lineHeight` setting produced three different
 // line rhythms and none of them matched the preview. One mapping, defined once.
-#let par-leading = calc.max(float(settings.at("lineHeight", default: 1.35)) - 0.7, 0) * 1em
+#let par-leading = calc.max(float(settings.at("lineHeight", default: 1.25)) - 0.7, 0) * 1em
 
-// Gap above a section heading: the research's 8–12pt band, picked by `sectionSpacing`
-// — compact 8pt, normal 10pt, spacious ("relaxed" in the brief) 12pt. 10pt is the one
-// value outside the modular steps; it is the band midpoint the brief fixes for normal.
-//
-// `section-gap-for` is the per-section override: a section may carry
-// `layout.spacing: compact | normal | spacious` and move its own gap without touching
-// the rest of the document. Absent means "follow the global density".
-#let section-gap-for(spacing) = if spacing == "compact" {
-  space-xl
-} else if spacing == "spacious" {
-  space-2xl
-} else {
-  10pt
-}
-#let section-gap-of(section) = section-gap-for(
-  section.at("layout", default: (:)).at("spacing", default: section-spacing),
-)
+// Gap above a section heading is `gaps.section` (6/8/12pt), and the gap from a heading to
+// its first entry is `gaps.heading` (3/4/4pt). The two are deliberately asymmetric:
+// more above than below, so a heading belongs to the content under it rather than
+// floating between two sections (docs/research/template-research.md §4, "avoid ambiguous
+// spacing"). The old single 10pt gap above and 4pt below could not say that.
 
 // ──────────────────────────────────────────────
 // Helpers
@@ -209,7 +253,7 @@
 // bundled compiler, so the marker is set here where the spacing is owned too.
 #let bullets(items) = {
   for i in range(items.len()) {
-    if i > 0 { v(space-s) }
+    if i > 0 { v(gaps.bullet) }
     par(hanging-indent: 10pt)[•#h(space-m)#text(size: typo.body)[#items.at(i)]]
   }
 }
@@ -232,16 +276,24 @@
 //   start on a new page      → pagebreak(weak: true)     ("Page break before")
 //
 // `auto` never reaches Typst: the serialiser resolves it from the entry's shape (an
-// entry short enough to move as one unit becomes "always"; a long one becomes "never"),
+// entry short enough to move as one unit becomes "always"; a long one becomes "head"),
 // because a measured guard would need `layout(measure(...))`, which forces a block
 // container and can itself change pagination.
-#let entry-block(mode, body) = {
+//
+// `head` is the answer to the "hole" problem. Today's all-or-nothing keep moves a whole
+// long entry to page 2 and leaves a 25–35mm hole at the bottom of page 1 — the page looks
+// half empty at the same time as content overflows (space-efficiency §3.3, waste #9).
+// A `head` entry protects only its heading and meta line from being orphaned, so the
+// worst hole it can leave is one heading block (~10mm), and the bullets flow on.
+#let entry-block(mode, head, rest) = {
   if mode == "always" {
-    block(breakable: false, body)
-  } else if mode == "never" {
-    block(breakable: true, body)
+    block(breakable: false)[#head #rest]
+  } else if mode == "head" {
+    block(breakable: false, head)
+    rest
   } else {
-    body
+    head
+    rest
   }
 }
 
@@ -269,18 +321,101 @@
 #let fit-end() = metadata((kind: "end"))
 
 // ──────────────────────────────────────────────
+// Header — one block for all six archetypes
+// ──────────────────────────────────────────────
+//
+// The header used to be copied into every template, and the five copies had drifted:
+// four different name→title gaps, two different separators, one template with no rule
+// and one with a short centred one. Copying is also why compressing the header (the
+// research's waste #4) would have been five edits and a fifth thing to forget.
+//
+// The treatment: name, the professional title, one contact line. Contacts are a single
+// wrapped line of ` | `-separated facts — not two columns and not a badge row, so the
+// reading order is unchanged and the ATS sees plain text. Archetypes choose structure
+// only:
+//
+//   title-style  line | inline | italic    how the professional title sits
+//   header-rule  hairline | short | none   the rule under the block
+//
+// Spacing is `gaps.header` in total: everything above the rule, the rule, then
+// `gaps.heading` below it. So the header moves with the density preset like every other
+// gap and no template can reintroduce a 16pt one.
+#let render-header(
+  content-align: left,
+  title-style: "line",
+  header-rule: "hairline",
+) = {
+  let title = personal.at("professionalTitle", default: "")
+  let contacts = ()
+  if personal.at("email", default: "") != "" { contacts.push(personal.email) }
+  if personal.at("phone", default: "") != "" { contacts.push(personal.phone) }
+  if personal.at("location", default: "") != "" { contacts.push(personal.location) }
+  if personal.at("linkedin", default: "") != "" { contacts.push("LinkedIn: " + personal.linkedin) }
+  if personal.at("github", default: "") != "" { contacts.push("GitHub: " + personal.github) }
+  if personal.at("website", default: "") != "" { contacts.push(personal.website) }
+
+  // The rule is opt-in by density: Tight draws none, Balanced and Relaxed draw it
+  // unless the archetype asks for a different one.
+  	let rule = if not gaps.header-rule { "none" } else { header-rule }
+  	let below-block = if rule == "none" { gaps.header } else { gaps.header - gaps.heading }
+  	let ink = if title-style == "italic" { "italic" } else { "normal" }
+
+  	block(width: 100%, below: below-block)[
+      #align(content-align)[
+        #text(
+          size: typo.name,
+          weight: "bold",
+          fill: rgb(colors.at("heading", default: "#111827")),
+        )[#personal.fullName]
+        #if title != "" {
+          let sep = if title-style == "inline" { h(space-l) } else { linebreak() }
+          [#sep#text(
+            size: typo.title,
+            fill: rgb(colors.at("secondary", default: "#6b7280")),
+            style: ink,
+          )[#title]]
+        }
+        #v(gaps.contact)
+        #text(size: typo.small, fill: rgb(colors.at("secondary", default: "#6b7280")))[
+          #contacts.join("  |  ")
+        ]
+      ]
+    ]
+
+    if rule == "hairline" {
+      // A 0.5pt filled block, not `line()`: a line inside a block's content sits in a
+      // *paragraph*, and an inline `line()` draws across what is left of the current line —
+      // which put this rule through the contact line instead of under it.
+      v(space-xs)
+      block(width: 100%, height: 0.5pt, fill: rgb(colors.at("divider", default: "#e2e8f0")))
+      v(gaps.heading)
+    } else if rule == "short" {
+      v(space-xs)
+      align(
+        center,
+        block(width: 60%, height: 0.6pt, fill: rgb(colors.at("divider", default: "#e2e8f0"))),
+      )
+      v(gaps.heading)
+    }
+  }
+
+// ──────────────────────────────────────────────
 // Section title
 // ──────────────────────────────────────────────
 
 #let section-title(content, section, profile: default-profile) = {
-  // `section-gap` is the gap ABOVE a heading between sections. The first section must
+  // `gaps.section` is the gap ABOVE a heading between sections. The first section must
   // not add it: the header block already separates the header from the body by
-  // `space-3xl` (16pt), and stacking the two would spend 26pt before the first word.
+  // `gaps.header`, and stacking the two would spend 24pt before the first word.
   if section != sections.at(0, default: (:)) {
-    v(section-gap-of(section))
+    v(gaps-of(section).section)
   }
   mark-section(section, section.at("title", default: ""))
-  let style = settings.at("accentStyle", default: "underline")
+  // UPPERCASE is the researched heading treatment: emphasis is weight and case, never
+  // colour or a fill (template-research §1.5, §6), and it is not *tracked* capitals — the
+  // letter-spaced variant is the parser risk (§2.5). Only a plain string is uppercased;
+  // a computed content value is drawn as given.
+  let label = if type(content) == str { upper(content) } else { content }
   // Headings are the text colour in every style: emphasis is weight and case, not
   // colour (docs/research/template-research.md §6). The accent appears only as the rule
   // (and the label ink in `badge`), never as heading text or a fill.
@@ -288,28 +423,32 @@
     size: typo.sectionHeading,
     weight: "semibold",
     fill: rgb(colors.text),
-  )[#content]
-  if profile.heading == "hairline" {
+  )[#label]
+  // `auto` means "follow the user's accentStyle", minus the rule unless they asked for
+  // one: the shipped default is `accentStyle: "none"`, so a default document spends no
+  // vertical space on chrome. The rule is opt-in and costs 2.6mm per section.
+  let style = settings.at("accentStyle", default: "none")
+  let mode = if profile.heading == "auto" {
+    if style == "underline" { "rule" } else if style == "border" { "border" } else { "plain" }
+  } else {
+    profile.heading
+  }
+  if mode == "hairline" {
     // The researched "optional hairline rule": 0.5pt, text ink, one style per
-    // document. Used by the executive archetype, which is deliberately quieter than
-    // the accent rule.
+    // document. Used by the executive and academic archetypes, which are deliberately
+    // quieter than the accent rule.
     stack(
       dir: ttb,
       head,
       v(space-xs),
       line(length: 100%, stroke: 0.5pt + rgb(colors.text)),
     )
-  } else if profile.heading == "plain" {
-    // Weight alone. `space-m` below still separates the heading from its first entry.
+  } else if mode == "plain" {
+    // Weight and case alone. `gaps.heading` below still separates the heading from its
+    // first entry — a heading must not cost more vertical space than its first line of
+    // content, and this one does not.
     head
-  } else if style == "underline" {
-    stack(
-      dir: ttb,
-      head,
-      v(space-xs),
-      line(length: 100%, stroke: 1.5pt + rgb(colors.accent)),
-    )
-  } else if style == "border" {
+  } else if mode == "border" {
     stack(
       dir: ltr,
       rect(width: 3pt, height: typo.sectionHeading + 4pt, fill: rgb(colors.accent)),
@@ -317,12 +456,17 @@
       head,
     )
   } else {
-    // "background" used to paint the heading on an accent-filled bar. Section
-    // background fills are advised against outright — they extract as graphics — so
-    // the setting stays valid and draws the same text-only heading as "none".
-    head
+    // "rule" — the accent rule, which `accentStyle: "underline"` opts into. "background"
+    // used to paint the heading on an accent-filled bar; section background fills are a
+    // named parse failure, so that setting draws this same text-only heading.
+    stack(
+      dir: ttb,
+      head,
+      v(space-xs),
+      line(length: 100%, stroke: 1.5pt + rgb(colors.accent)),
+    )
   }
-  v(space-m)
+  v(gaps-of(section).heading)
 }
 
 // ──────────────────────────────────────────────
@@ -347,10 +491,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Work Experience" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let exp = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, exp, exp.position + " at " + exp.company)
     entry-block(keep-mode(exp), {
       grid(
@@ -378,10 +523,10 @@
         v(space-xs)
         text(size: typo.body)[#exp.description]
       }
-
+    }, {
       let hl = exp.at("highlights", default: ())
       if hl.len() > 0 {
-        v(space-m)
+        v(g.meta)
         bullets(hl)
       }
 
@@ -390,7 +535,7 @@
       if profile.experience == "stack" {
         let techs = exp.at("technologies", default: ())
         if techs.len() > 0 {
-          v(space-s)
+          v(g.bullet)
           text(size: typo.small, fill: rgb(colors.secondary))[
             Technologies: #techs.join(", ")
           ]
@@ -408,10 +553,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Education" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let edu = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, edu, edu.degree + " — " + edu.institution)
     entry-block(keep-mode(edu), {
       grid(
@@ -436,7 +582,7 @@
           ]
         ],
       )
-
+    }, {
       // The payload has carried coursework, honors and achievements since the
       // serialiser was written; the standard renderer dropped all three, which is
       // exactly why a student CV looked thinner than its own data. The graduate and
@@ -444,21 +590,21 @@
       if profile.education == "full" {
         let coursework = edu.at("coursework", default: ())
         if coursework.len() > 0 {
-          v(space-s)
+          v(g.bullet)
           text(size: typo.small, fill: rgb(colors.secondary))[
             Coursework: #coursework.join(", ")
           ]
         }
         let honors = edu.at("honors", default: ())
         if honors.len() > 0 {
-          v(space-s)
+          v(g.bullet)
           text(size: typo.small, fill: rgb(colors.secondary))[
             Honors: #honors.join(", ")
           ]
         }
         let achievements = edu.at("achievements", default: ())
         if achievements.len() > 0 {
-          v(space-m)
+          v(g.meta)
           bullets(achievements)
         }
       }
@@ -474,8 +620,18 @@
   let cats = section.at("categories", default: ())
   if cats.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Skills" }, section, profile: profile)
+  let g = gaps-of(section)
+  // `auto` is the researched default (space-efficiency §3, waste #5): `Category: item,
+  // item` lines render the same information in half the rows a label-over-chips cluster
+  // needs. Chips stay available — Relaxed density turns them on, and an archetype may ask
+  // for them — but they are an option, not the shipped look.
+  let mode = if profile.skills == "auto" {
+    if section-spacing == "spacious" { "chips" } else { "lines" }
+  } else {
+    profile.skills
+  }
 
-  if profile.skills == "inline" {
+  if mode == "inline" {
     // Core expertise: one comma-separated line, no category labels (research §7.6).
     // Not a table and not a grid — both change extraction order.
     let names = ()
@@ -485,24 +641,10 @@
     if names.len() > 0 {
       text(size: typo.body)[#names.join(", ")]
     }
-  } else if profile.skills == "lines" {
-    // `Category: item, item` (research §7.3). One line per category rather than a
-    // label line plus a chip cluster, which is the density the technical CV wants.
+  } else if mode == "chips" {
     for i in range(cats.len()) {
       let cat = cats.at(i)
-      if cat.skills.len() == 0 { continue }
-      if i > 0 { v(space-s) }
-      mark-entry(section, cat, cat.name)
-      entry-block(keep-mode(cat), {
-        text(size: typo.body, weight: "semibold", fill: rgb(colors.text))[#cat.name]
-        text(size: typo.body)[: ]
-        text(size: typo.body)[#cat.skills.map(s => s.name).join(", ")]
-      })
-    }
-  } else {
-    for i in range(cats.len()) {
-      let cat = cats.at(i)
-      if i > 0 { v(space-l) }
+      if i > 0 { v(g.entry) }
       mark-entry(section, cat, cat.name)
       entry-block(keep-mode(cat), {
         text(
@@ -510,9 +652,23 @@
           weight: "semibold",
           fill: rgb(colors.text),
         )[#cat.name]
-        v(space-s)
+        v(space-xs)
         cat.skills.map(s => badge(s.name)).join(h(space-m))
-      })
+      }, {})
+    }
+  } else {
+    // `Category: item, item` (research §7.3). One line per category rather than a
+    // label line plus a chip cluster, which is the density the default document wants.
+    for i in range(cats.len()) {
+      let cat = cats.at(i)
+      if cat.skills.len() == 0 { continue }
+      if i > 0 { v(g.entry) }
+      mark-entry(section, cat, cat.name)
+      entry-block(keep-mode(cat), {
+        text(size: typo.body, weight: "semibold", fill: rgb(colors.text))[#cat.name]
+        text(size: typo.body)[: ]
+        text(size: typo.body)[#cat.skills.map(s => s.name).join(", ")]
+      }, {})
     }
   }
 }
@@ -525,10 +681,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Projects" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let proj = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, proj, proj.name)
     entry-block(keep-mode(proj), {
       grid(
@@ -551,6 +708,7 @@
         v(space-xs)
         text(size: typo.body)[#proj.description]
       }
+    }, {
       let techs = proj.at("technologies", default: ())
       if profile.projects == "detail" {
         // A project is evidence, so the technical and graduate archetypes draw the
@@ -558,18 +716,18 @@
         // rather than a chip cluster.
         let hl = proj.at("highlights", default: ())
         if hl.len() > 0 {
-          v(space-m)
+          v(g.meta)
           bullets(hl)
         }
         if techs.len() > 0 {
-          v(space-s)
+          v(g.bullet)
           text(size: typo.small, fill: rgb(colors.secondary))[
             Technologies: #techs.join(", ")
           ]
         }
       } else if techs.len() > 0 {
-        v(space-s)
-        techs.map(badge).join(h(space-m))
+        v(g.bullet)
+        text(size: typo.small, fill: rgb(colors.secondary))[#techs.join(", ")]
       }
     })
   }
@@ -583,10 +741,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Certifications" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let cert = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, cert, cert.name)
     entry-block(keep-mode(cert), {
       grid(
@@ -605,7 +764,7 @@
           #text(size: typo.small, fill: rgb(colors.secondary))[#cert.date]
         ],
       )
-    })
+    }, {})
   }
 }
 
@@ -617,10 +776,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Awards & Honors" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let award = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, award, award.title)
     entry-block(keep-mode(award), {
       grid(
@@ -639,6 +799,7 @@
           #text(size: typo.small, fill: rgb(colors.secondary))[#award.date]
         ],
       )
+    }, {
       if award.description != "" {
         v(space-xs)
         text(size: typo.body)[#award.description]
@@ -655,7 +816,10 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Languages" }, section, profile: profile)
-  items.map(l => badge(l.name + " (" + l.proficiency + ")")).join(h(space-m))
+  // One line, not a row of badges: emphasis is weight and case, and a coloured label is
+  // body text in the accent (template-research §6). A language list is short enough that
+  // the row it would save costs more vertical space than it buys.
+  items.map(l => l.name + " (" + l.proficiency + ")").join(", ")
 }
 
 // ──────────────────────────────────────────────
@@ -666,10 +830,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Volunteer Experience" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let vol = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, vol, vol.role + " at " + vol.organization)
     entry-block(keep-mode(vol), {
       grid(
@@ -696,9 +861,10 @@
         v(space-xs)
         text(size: typo.body)[#vol.description]
       }
+    }, {
       let hl = vol.at("highlights", default: ())
       if hl.len() > 0 {
-        v(space-m)
+        v(g.meta)
         bullets(hl)
       }
     })
@@ -713,10 +879,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Publications" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let pub = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, pub, pub.title)
     entry-block(keep-mode(pub), {
       // The academic CV convention: a numbered list, so a reviewer can cite "[7]".
@@ -740,6 +907,7 @@
           Authors: #authors.join(", ")
         ]
       }
+    }, {
       if pub.summary != "" {
         v(space-xs)
         text(size: typo.body)[#pub.summary]
@@ -756,10 +924,11 @@
   let items = section.at("items", default: ())
   if items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "References" }, section, profile: profile)
+  let g = gaps-of(section)
 
   for i in range(items.len()) {
     let ref = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, ref, ref.name)
     entry-block(keep-mode(ref), {
       text(
@@ -775,7 +944,7 @@
         linebreak()
         text(size: typo.small)[#ref.email]
       }
-    })
+    }, {})
   }
 }
 
@@ -792,16 +961,17 @@
   let items = section.at("items", default: ())
   if body == "" and items.len() == 0 { return }
   section-title(if section.title != "" { section.title } else { "Additional Information" }, section, profile: profile)
+  let g = gaps-of(section)
 
   if body != "" {
     // Markup for the same reason as `summaryText` in `render-summary`.
     text(size: typo.body)[#eval(body, mode: "markup")]
-    if items.len() > 0 { v(space-m) }
+    if items.len() > 0 { v(g.meta) }
   }
 
   for i in range(items.len()) {
     let item = items.at(i)
-    if i > 0 { v(space-l) }
+    if i > 0 { v(g.entry) }
     mark-entry(section, item, item.at("title", default: ""))
     entry-block(keep-mode(item), {
       if item.title != "" {
@@ -815,7 +985,7 @@
       if item.body != "" {
         text(size: typo.body)[#eval(item.body, mode: "markup")]
       }
-    })
+    }, {})
   }
 }
 
@@ -854,3 +1024,4 @@
     body
   }
 }
+
