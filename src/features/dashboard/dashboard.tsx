@@ -11,6 +11,7 @@ import type { Resume } from "@bettaresume/types";
 import { normalizeTemplateId } from "@bettaresume/types";
 import {
 	Archive,
+	BookOpen,
 	FileText,
 	Info,
 	Loader2,
@@ -68,6 +69,7 @@ import { useHashRouter } from "@/lib/hash-router";
 import { extractDocumentText } from "@/lib/import/extractors";
 import { toLibraryPayload } from "@/lib/import/library-item";
 import { sectionResumeText } from "@/lib/import/sectioner";
+import { findShowcase } from "@/lib/showcase";
 import { api } from "@/lib/trpc/react";
 
 export default function Dashboard() {
@@ -282,6 +284,16 @@ function DashboardContent() {
 	);
 
 	/*
+	 * The seeded example, found by tag rather than id so a re-seed cannot break the
+	 * entry point. Archived examples are ignored: "View the example" should open a
+	 * document that is actually in the library.
+	 */
+	const showcase = useMemo(
+		() => findShowcase(resumes.filter((r: Resume) => !r.isArchived)),
+		[resumes],
+	);
+
+	/*
 	 * Counts for the rail, derived from the same list the grid renders so they cannot
 	 * disagree with it. `variationCount` is also the first place in the product that
 	 * answers "how many of these are variants of something else" — which is the
@@ -365,6 +377,16 @@ function DashboardContent() {
 			console.error("Failed to create resume:", err);
 			toast.error("Could not create the resume.");
 		}
+	};
+
+	/**
+	 * The showcase entry point. The example is found by tag, not by id, so re-seeding
+	 * with fresh ids keeps working; nothing renders the button when no example exists.
+	 */
+	const handleViewShowcase = () => {
+		if (!showcase) return;
+		setActiveResumeId(showcase.id);
+		navigate(`/resume-editor/${showcase.id}`);
 	};
 
 	const handleDeleteResume = async () => {
@@ -807,6 +829,32 @@ function DashboardContent() {
 							</h1>
 						) : null}
 
+						{/*
+						 * The showcase entry point. A banner rather than a header action: it is a one-off
+						 * invitation, not a control used every session, and the header is already tight at
+						 * 390px. It renders only when the seeded example is in the library.
+						 */}
+						{showcase ? (
+							<div className="mb-6 flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+								<div className="min-w-0">
+									<p className="font-medium text-sm">See a completed example</p>
+									<p className="text-muted-foreground text-sm">
+										One resume that uses every feature — variants, the content
+										library, revision history and the fit meter.
+									</p>
+								</div>
+								<Button
+									className="shrink-0"
+									onClick={handleViewShowcase}
+									size="sm"
+									variant="outline"
+								>
+									<BookOpen className="mr-2 h-4 w-4" />
+									View the example
+								</Button>
+							</div>
+						) : null}
+
 						{/* Welcome Guide. Greyscale like everything else (R: colour is for
 						    state and action, not for making a callout look important), and
 						    it *is* the empty state while it is up — the generic EmptyState
@@ -957,6 +1005,7 @@ function DashboardContent() {
 						) : welcomeVisible ? null : (
 							<EmptyState
 								onCreateNew={() => setIsCreateDialogOpen(true)}
+								onViewExample={showcase ? handleViewShowcase : undefined}
 								searchQuery={searchQuery}
 								showArchived={showArchived}
 							/>
@@ -1076,12 +1125,15 @@ interface EmptyStateProps {
 	showArchived: boolean;
 	searchQuery: string;
 	onCreateNew: () => void;
+	/** Opens the seeded example. Absent when no example is in the library. */
+	onViewExample?: () => void;
 }
 
 function EmptyState({
 	showArchived,
 	searchQuery,
 	onCreateNew,
+	onViewExample,
 }: EmptyStateProps) {
 	return (
 		<div className="flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -1103,12 +1155,25 @@ function EmptyState({
 						? "You haven't archived any resumes yet."
 						: "Create your first resume to get started building your professional profile."}
 			</p>
-			{!showArchived && !searchQuery && (
-				<Button onClick={onCreateNew}>
-					<Plus className="mr-2 h-4 w-4" />
-					Create Your First Resume
-				</Button>
-			)}
+			<div className="flex flex-wrap items-center justify-center gap-2">
+				{!showArchived && !searchQuery && (
+					<Button onClick={onCreateNew}>
+						<Plus className="mr-2 h-4 w-4" />
+						Create Your First Resume
+					</Button>
+				)}
+				{/*
+				 * Also reachable from the empty state, not only the populated dashboard. It
+				 * renders only when the seeded example is in the library: a button that
+				 * navigates nowhere is worse than no button.
+				 */}
+				{onViewExample ? (
+					<Button onClick={onViewExample} variant="outline">
+						<BookOpen className="mr-2 h-4 w-4" />
+						View the example
+					</Button>
+				) : null}
+			</div>
 		</div>
 	);
 }

@@ -369,6 +369,13 @@ function serializeSection(
 		layout: {
 			keepSectionTogether: section.layout?.keepSectionTogether === true,
 			pageBreakBefore: section.layout?.pageBreakBefore === true,
+			/*
+			 * The per-section spacing override. It was stored and editable in
+			 * `section-break-controls.tsx`, and `sections.typ` read it -- but this serializer
+			 * never emitted it, so the control moved nothing in the PDF. Omitted when unset,
+			 * because `sections.typ` treats a missing key as "follow the document's density".
+			 */
+			...(section.layout?.spacing ? { spacing: section.layout.spacing } : {}),
 		},
 	};
 

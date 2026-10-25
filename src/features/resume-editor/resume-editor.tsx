@@ -99,6 +99,7 @@ import {
 import { useConfirm } from "@/hooks/use-confirm";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useHashRouter } from "@/lib/hash-router";
+import { isShowcase } from "@/lib/showcase";
 import { resolvePersonalInfo } from "@/lib/typst/serialize";
 import { flushPendingSaves } from "@/lib/ui/save-registry";
 import { cn } from "@/lib/utils";
@@ -1552,6 +1553,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 								{activeResume.name}
 							</h1>
 							<p className="truncate text-muted-foreground text-xs">
+								{isShowcase(activeResume) ? "Showcase · " : ""}
 								{activeResume.domain ? `${activeResume.domain} · ` : ""}
 								{TEMPLATE_CONFIGS[
 									normalizeTemplateId(
