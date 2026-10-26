@@ -25,7 +25,7 @@ const ScrollArea = React.forwardRef<
 		 * and amputated the label and both row actions, with the document itself still
 		 * "fitting" so a viewport-width check could not see it.
 		 */}
-		<ScrollAreaPrimitive.Viewport className="[&>div]:block! h-full w-full rounded-[inherit]">
+		<ScrollAreaPrimitive.Viewport className="[&>div]:block! h-full max-h-[inherit] w-full rounded-[inherit]">
 			{children}
 		</ScrollAreaPrimitive.Viewport>
 		<ScrollBar />

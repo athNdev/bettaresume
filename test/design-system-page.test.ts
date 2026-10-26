@@ -219,8 +219,14 @@ describe("the design-system page is a real route and renders", () => {
 	});
 
 	it("never leaks into the marketing nav", () => {
-		const nav = codeOf("src/components/marketing/site-chrome.tsx");
-		expect(nav).not.toContain("/design-system");
+		// A footer link is the only entry point (see `marketing-claims.test.ts`); the
+		// header nav must stay the five product links.
+		const chrome = codeOf("src/components/marketing/site-chrome.tsx");
+		const header = chrome.slice(
+			0,
+			chrome.indexOf("export function SiteFooter"),
+		);
+		expect(header).not.toContain("/design-system");
 	});
 
 	it("renders every numbered rule with its enforcer", () => {

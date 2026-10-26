@@ -42,7 +42,8 @@ describe("the dashboard marks the example and links to it", () => {
 	it("offers the example from the populated dashboard", () => {
 		expect(dashboard).toMatch(/findShowcase/);
 		expect(dashboard).toMatch(/handleViewShowcase/);
-		expect(dashboard).toMatch(/View the example/);
+		expect(dashboard).toMatch(/Example resume/);
+		expect(dashboard).toMatch(/Open the example resume/);
 		expect(dashboard).toMatch(/onClick=\{handleViewShowcase\}/);
 	});
 
@@ -58,12 +59,21 @@ describe("the dashboard marks the example and links to it", () => {
 
 	it("says the same thing in both places", () => {
 		// Two labels for one destination is how an entry point becomes a puzzle.
-		const labels = dashboard.match(/View the example/g) ?? [];
+		const labels = dashboard.match(/Open the example resume/g) ?? [];
 		expect(labels.length).toBeGreaterThanOrEqual(2);
 	});
 
 	it("names the showcase in the editor header too", () => {
 		expect(editor).toMatch(/isShowcase\(activeResume\)/);
 		expect(editor).toMatch(/Showcase · /);
+	});
+
+	it("is reachable from the editor, not only the dashboard", () => {
+		// The report was "I don't see the example resume anywhere". Someone who works
+		// in the editor never returns to the dashboard, so the entry point has to be
+		// there too — found by tag, and quietly labelled in the same words.
+		expect(editor).toMatch(/findShowcase/);
+		expect(editor).toMatch(/aria-label="Open the example resume"/);
+		expect(editor).toMatch(/showcaseResume\.id !== activeResume\.id/);
 	});
 });

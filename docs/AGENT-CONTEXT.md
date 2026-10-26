@@ -638,6 +638,25 @@ should read as one; `beforeAll` failing the file with the install instructions i
 intended behaviour. If a future check needs a *different* engine, pin it explicitly
 rather than loosening this one.
 
+## 2.28 A `flex-1` panel inside a block root has no height, and `-mt-6` can cover the control above it
+
+Three UI defects shipped together because none of them is visible in a screenshot:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| The Review sheet had no scrollbar; 2,251px of rows overflowed a 900px dialog. | Radix `Tabs.Root` is a plain `div`, so `<Tabs className="min-h-0 flex-1">`'s children were block-level. `flex-1` did nothing, so `TabsContent` was auto-height, and `ScrollArea h-full` resolved against an auto parent. | The root must be `flex flex-col`: `<Tabs className="flex min-h-0 flex-1 flex-col">`. `forceMount` panels also need `data-[state=inactive]:hidden`. |
+| "Page breaks" was visible and every click timed out. | Each section form starts with a `sticky top-0 -mt-6` toolbar. The negative margin bleeds into the container's `py-6`, but when `SectionBreakControls` is the preceding sibling it bleeds over *that* by 24px. | `mb-6` on the `<details>` cancels the `-mt-6`; the toolbar then starts at the details' bottom. |
+| Bounded lists (`max-h-72`) clipped instead of scrolling. | `ScrollArea`'s viewport is `h-full`; against a root whose only constraint is `max-height`, the percentage resolves to `auto`. | `max-h-[inherit]` on the viewport, so the viewport inherits the root's cap and overflows internally. |
+
+**The gate is behavioural, not geometric.** `test/responsive-matrix.test.ts` measures
+rects and would have passed all three: the content fits the *document*, it just has no
+scroller. `test/behavioural-ui.test.ts` drives the controls and asserts the outcome
+(`scrollTop` moved, `<details>.open === true`, the topmost element at a summary's centre
+is inside it), and `scripts/probe/behaviour.cjs` is the same audit as a runnable report.
+Neither runs in the Node suite: the matrix is gated on `RESPONSIVE_MATRIX=1`, the
+behavioural suite on `BEHAVIOURAL_UI=1`, and both run in `responsive.yml` against the
+dev stack.
+
 ## 2.x Never hand-write a list of what to substitute, read it from the file
 
 This one took production down twice, and the second outage was caused by the fix for

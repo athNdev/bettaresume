@@ -143,7 +143,7 @@ export function SiteFooter() {
 								["Readability", "/#readability"],
 								["Tagged PDF", "/#tagged-pdf"],
 								["Example resume", "/#example"],
-								["How it's built", "/#craft"],
+								["Design system", "/design-system"],
 								["What we won't build", "/#principles"],
 								["FAQ", "/#faq"],
 							]}

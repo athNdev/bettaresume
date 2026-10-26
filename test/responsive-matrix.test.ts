@@ -491,7 +491,9 @@ describe.skipIf(!ENABLED)("the responsive viewport matrix", () => {
 
 	afterAll(async () => {
 		await browser?.close();
-	});
+		// Chrome on a loaded Windows host can take longer than Vitest's 20s default to
+		// tear down; a timeout here fails a suite whose nine assertions all passed.
+	}, 60_000);
 
 	async function pageAt(
 		options: MatrixContextOptions,
@@ -540,7 +542,7 @@ describe.skipIf(!ENABLED)("the responsive viewport matrix", () => {
 					"Review resume for parser fit",
 					"Resume variations",
 				]) {
-					const control = page.locator(`[aria-label="${label}"]`).first();
+					const control = page.locator(`[aria-label^="${label}"]`).first();
 					expect(
 						await control.isVisible(),
 						`${label} is missing at ${width}px`,
@@ -587,7 +589,7 @@ describe.skipIf(!ENABLED)("the responsive viewport matrix", () => {
 
 				// ── Review sheet ─────────────────────────────────────────────
 				await page
-					.getByRole("button", { name: "Review resume for parser fit" })
+					.getByRole("button", { name: /^Review resume for parser fit/ })
 					.click();
 				await page.waitForSelector('[role="tablist"]', { timeout: 30_000 });
 
