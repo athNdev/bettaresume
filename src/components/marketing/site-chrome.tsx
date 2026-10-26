@@ -8,10 +8,14 @@ import { BrandLockup } from "@/components/brand/brand-lockup";
  * The CTA points at `/app`, which is where the hash-routed SPA now lives.
  * Hash fragments are invisible to crawlers, so the app cannot own `/`.
  *
- * The nav carries the five sections a visitor will want to jump to; the two
- * remaining anchors (`#example`, `#principles`) live in the footer so the header row
+ * The nav carries the five sections a visitor will want to jump to; the
+ * remaining anchor (`#principles`) lives in the footer so the header row
  * still fits at 768px. Every section on the page is linked from one of the two, and
  * `test/marketing-claims.test.ts` fails if a section id has no anchor.
+ *
+ * The worked example is deliberately absent. It is a feature users meet in the app,
+ * with an entry point on the dashboard and in the editor — not something the
+ * homepage sells, and its old section read as implementation notes.
  */
 const NAV = [
 	{ href: "/#features", label: "Features" },
@@ -142,7 +146,6 @@ export function SiteFooter() {
 							links={[
 								["Readability", "/#readability"],
 								["Tagged PDF", "/#tagged-pdf"],
-								["Example resume", "/#example"],
 								["Design system", "/design-system"],
 								["What we won't build", "/#principles"],
 								["FAQ", "/#faq"],

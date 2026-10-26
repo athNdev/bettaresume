@@ -1,9 +1,5 @@
 import type { Metadata } from "next";
-import {
-	Example,
-	PageFit,
-	Readability,
-} from "@/components/marketing/capabilities";
+import { PageFit, Readability } from "@/components/marketing/capabilities";
 import { Hero } from "@/components/marketing/hero";
 import {
 	ClosingCta,
@@ -78,7 +74,6 @@ export default function MarketingHome() {
 				<PageFit />
 				<Readability />
 				<TaggedPdf />
-				<Example />
 				<Principles />
 				<Faq />
 				<ClosingCta />
