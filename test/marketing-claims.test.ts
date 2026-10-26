@@ -592,21 +592,30 @@ describe("the page shows the brand, not a text heading", () => {
 	});
 });
 
-describe("the design system is linked, and stays out of the product nav", () => {
-	it("links to the page from the brand band", () => {
-		const craft = read("src/components/marketing/craft.tsx");
-		expect(craft).toContain('href="/design-system"');
-		expect(html).toContain('href="/design-system"');
-		expect(visible).toContain("See the design system");
+describe("the design system is linked from the footer, and stays out of the product nav", () => {
+	it("links to the page from the footer", () => {
+		// The design system is a reference for the people building the product, not a
+		// product section. It used to be a whole landing-page band; that was removed and
+		// the link moved here, where a reference belongs.
+		expect(read("src/components/marketing/site-chrome.tsx")).toContain(
+			"/design-system",
+		);
+		expect(html).toContain("/design-system");
+		expect(visible).toContain("Design system");
+	});
+
+	it("is not a landing-page section any more", () => {
+		expect(html).not.toContain('id="craft"');
+		expect(read("src/app/page.tsx")).not.toMatch(/<Craft\s*\/>/);
 	});
 
 	it("does not put it in the marketing nav", () => {
 		// The design system is a reference for the people building the product, not a
 		// sixth product link. `test/design-system-page.test.ts` pins the same boundary
 		// from the other side.
-		expect(read("src/components/marketing/site-chrome.tsx")).not.toContain(
-			"/design-system",
-		);
+		const chrome = read("src/components/marketing/site-chrome.tsx");
+		const nav = chrome.slice(0, chrome.indexOf("export function SiteFooter"));
+		expect(nav).not.toContain("/design-system");
 	});
 });
 
@@ -649,9 +658,10 @@ describe("the design CV is the exporter's design CV", () => {
 	});
 });
 
-describe("the responsive claim is the implemented range", () => {
-	it("says 360px, and the CSS and editor own that width", () => {
-		expect(visible).toContain("360px");
+describe("the responsive range is the implemented one", () => {
+	it("the CSS and the editor own 360px", () => {
+		// The landing-page band that stated this used to sit in the removed design-system
+		// section. The implementation is the half that was load-bearing.
 		expect(read("src/styles/globals.css")).toContain("360px");
 		const editor = read("src/features/resume-editor/resume-editor.tsx");
 		expect(editor).toContain('useMediaQuery("(min-width: 1024px)")');

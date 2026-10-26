@@ -81,8 +81,11 @@ export function SectionBreakControls({
 		onChange({ ...layout, ...patch });
 
 	return (
-		<details className="group rounded-md border bg-muted/20">
-			<summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs [&::-webkit-details-marker]:hidden">
+		<details
+			className="group mb-6 rounded-md border bg-muted/20"
+			data-section-breaks=""
+		>
+			<summary className="flex cursor-pointer list-none items-center gap-2 rounded-t-md px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
 				<MoveVertical
 					aria-hidden
 					className="h-3.5 w-3.5 text-muted-foreground"
@@ -107,7 +110,12 @@ export function SectionBreakControls({
 				 */}
 				<div className="flex items-center justify-between gap-3">
 					<div className="min-w-0">
-						<Label className="text-xs">Spacing above this section</Label>
+						<Label
+							className="text-xs"
+							htmlFor={`section-spacing-${section.id}`}
+						>
+							Spacing above this section
+						</Label>
 						<p className="text-muted-foreground text-xs">
 							Follows the document's density unless you override it here.
 						</p>
@@ -121,7 +129,10 @@ export function SectionBreakControls({
 						}}
 						value={layout.spacing ?? "inherit"}
 					>
-						<SelectTrigger className="h-8 w-40 shrink-0 text-xs">
+						<SelectTrigger
+							className="h-8 w-40 shrink-0 text-xs"
+							id={`section-spacing-${section.id}`}
+						>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -135,7 +146,9 @@ export function SectionBreakControls({
 
 				<div className="flex items-start justify-between gap-3">
 					<div className="min-w-0">
-						<Label className="text-xs">Keep entries together</Label>
+						<Label className="text-xs" htmlFor={`keep-entries-${section.id}`}>
+							Keep entries together
+						</Label>
 						<p className="text-muted-foreground text-xs">
 							Auto keeps an entry on one page only when it is small enough to
 							move as a unit — a three-bullet role moves, an eight-bullet one is
@@ -148,7 +161,10 @@ export function SectionBreakControls({
 						}
 						value={keep}
 					>
-						<SelectTrigger className="h-8 w-44 shrink-0 text-xs">
+						<SelectTrigger
+							className="h-8 w-44 shrink-0 text-xs"
+							id={`keep-entries-${section.id}`}
+						>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>

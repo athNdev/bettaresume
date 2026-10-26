@@ -74,8 +74,12 @@ describe("accessibility", () => {
 		expect(editor).toMatch(/<ArrowLeft aria-hidden="true"/);
 	});
 
-	it("the review trigger button has an accessible name", () => {
-		expect(panelUi).toMatch(/aria-label="Review resume for parser fit"/);
+	it("the review trigger announces its finding count", () => {
+		// The visible badge is a child of the button, but `aria-label` overrides the
+		// accessible name, so the number has to be in the label or it is lost to a
+		// screen reader.
+		expect(panelUi).toMatch(/Review resume for parser fit/);
+		expect(panelUi).toMatch(/Review resume for parser fit, \$\{count\}/);
 	});
 
 	it("the sheet has a title and a description", () => {

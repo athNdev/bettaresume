@@ -201,7 +201,7 @@ export function ReviewPanel({
 					</SheetDescription>
 				</SheetHeader>
 
-				<Tabs className="min-h-0 flex-1" defaultValue="checklist">
+				<Tabs className="flex min-h-0 flex-1 flex-col" defaultValue="checklist">
 					{/*
 					 * The strip wraps (it was 579px of pills in a 342px column at 390px,
 					 * with History and Bullets past the viewport and unclickable) and the
@@ -209,7 +209,10 @@ export function ReviewPanel({
 					 * clipped "Bullets 10" at the sheet edge even at 1440px. The counts now
 					 * lead their own panels instead.
 					 */}
-					<TabsList className="mx-4 mt-4 h-auto flex-wrap justify-start sm:mx-6">
+					<TabsList
+						aria-label="Review sections"
+						className="mx-4 mt-4 h-auto flex-wrap justify-start sm:mx-6"
+					>
 						{/*
 						 * The checklist is first and default: it is the one surface that
 						 * answers "what should I do next", which is the question a user opens
@@ -406,7 +409,11 @@ export function ReviewTrigger({
 	return (
 		<>
 			<Button
-				aria-label="Review resume for parser fit"
+				aria-label={
+					count > 0
+						? `Review resume for parser fit, ${count} finding${count === 1 ? "" : "s"}`
+						: "Review resume for parser fit"
+				}
 				className="text-fg-muted"
 				onClick={() => setOpen(true)}
 				size="sm"

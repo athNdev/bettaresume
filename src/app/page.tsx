@@ -4,7 +4,7 @@ import {
 	PageFit,
 	Readability,
 } from "@/components/marketing/capabilities";
-import { Craft, TaggedPdf } from "@/components/marketing/craft";
+import { TaggedPdf } from "@/components/marketing/craft";
 import { Hero } from "@/components/marketing/hero";
 import {
 	ClosingCta,
@@ -57,13 +57,13 @@ export const metadata: Metadata = {
  * what does it do (features), what will my document look like (templates), will it
  * fit (page fit), can I trust the review (readability), is the file itself a
  * document (tagged PDF), what does a finished document look like (example), how is
- * the product made (brand and design system), what are the boundaries (principles),
- * details (FAQ), close.
+ * the product made (principles), details (FAQ), close.
  *
- * The brand band and the tagged-PDF section are the material that shipped after the
- * previous pass. The design-system page is linked from the brand band, not from the
- * nav: `test/design-system-page.test.ts` keeps it out of the product nav, and its own
- * copy says it is a reference for the people building the product.
+ * The tagged-PDF section is the material that shipped after the previous pass. The
+ * design-system page is a footer link, not a page section: it is a reference for the
+ * people building the product, not part of it. `test/design-system-page.test.ts` keeps
+ * it out of the product nav, and `test/marketing-claims.test.ts` pins that the footer
+ * link resolves.
  *
  * The app itself lives at `/app`.
  */
@@ -79,7 +79,6 @@ export default function MarketingHome() {
 				<Readability />
 				<TaggedPdf />
 				<Example />
-				<Craft />
 				<Principles />
 				<Faq />
 				<ClosingCta />

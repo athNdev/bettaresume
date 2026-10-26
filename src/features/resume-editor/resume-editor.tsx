@@ -9,6 +9,7 @@ import { normalizeTemplateId } from "@bettaresume/types";
 import {
 	AlertTriangle,
 	ArrowLeft,
+	BookOpen,
 	ChevronDown,
 	Eye,
 	Layers,
@@ -99,7 +100,7 @@ import {
 import { useConfirm } from "@/hooks/use-confirm";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useHashRouter } from "@/lib/hash-router";
-import { isShowcase } from "@/lib/showcase";
+import { findShowcase, isShowcase } from "@/lib/showcase";
 import { resolvePersonalInfo } from "@/lib/typst/serialize";
 import { flushPendingSaves } from "@/lib/ui/save-registry";
 import { cn } from "@/lib/utils";
@@ -167,7 +168,19 @@ function metaLine({ resume, pageCount }: HeaderMetaProps): string {
 		pageCount === null
 			? null
 			: `${pageCount} ${pageCount === 1 ? "page" : "pages"}`;
-	return [resume.domain ?? null, templateName, density, pages]
+	/*
+	 * The archetype and the density band can be the same word — the Compact template
+	 * *is* the tight density profile — and the header used to print "Compact · Compact".
+	 * The dashboard card already suppresses the duplicate; this is the same rule, one
+	 * surface over, so the two cannot disagree about the document's identity.
+	 */
+	const showDensity = density !== null && density !== templateName;
+	return [
+		resume.domain ?? null,
+		templateName,
+		showDensity ? density : null,
+		pages,
+	]
 		.filter((part): part is string => Boolean(part))
 		.join(" · ");
 }
@@ -198,6 +211,16 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		refetch,
 	} = useResume(resumeId);
 	const { data: allResumes = [] } = useResumes({ includeArchived: true });
+	/*
+	 * The example is reachable from the editor too, not only from the dashboard. The
+	 * maintainer's report was "I don't see the example resume anywhere": the dashboard
+	 * row existed, but someone who spends their time in the editor had no entry point at
+	 * all. Found by tag, like the dashboard, so a re-seed keeps working.
+	 */
+	const showcaseResume = useMemo(
+		() => findShowcase(allResumes.filter((resume) => !resume.isArchived)),
+		[allResumes],
+	);
 	const {
 		updateResume,
 		deleteResume,
@@ -1688,6 +1711,30 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
 					{/* Right: Actions */}
 					<div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+						{/*
+						 * The example is reachable from here, not only from the dashboard.
+						 * The maintainer's report was "I don't see the example resume
+						 * anywhere": the dashboard row existed, but someone who works in the
+						 * editor never goes back to it. Found by tag, like the dashboard, so a
+						 * re-seed keeps working; absent on the example itself.
+						 */}
+						{showcaseResume && showcaseResume.id !== activeResume.id ? (
+							<Button
+								aria-label="Open the example resume"
+								className="text-fg-muted"
+								onClick={() => {
+									setActiveResumeId(showcaseResume.id);
+									navigate(`/resume-editor/${showcaseResume.id}`);
+								}}
+								size="sm"
+								variant="ghost"
+							>
+								<BookOpen aria-hidden className="h-4 w-4 sm:mr-2" />
+								<span className="hidden sm:inline" data-collapse-label="">
+									Example
+								</span>
+							</Button>
+						) : null}
 						{/*
 						 * Import sits in the editor header, beside Review and Export, and not
 						 * inside the left rail with the Library.

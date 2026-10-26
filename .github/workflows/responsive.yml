@@ -21,6 +21,7 @@ on:
     paths:
       - "src/**"
       - "test/responsive-*"
+      - "test/behavioural-ui.test.ts"
       - "scripts/probe/**"
       - "api/src/db/seed.sql"
       - ".github/workflows/responsive.yml"
@@ -141,6 +142,15 @@ jobs:
           RESPONSIVE_MATRIX: "1"
           PROBE_BASE: http://localhost:3000
           PROBE_RESUME: resume-1
+
+      - name: Run the behavioural UI suite
+        # The gate for the class of bug a screenshot cannot see: a scrollable region
+        # that never receives a height, a disclosure covered by a sticky toolbar, a
+        # control that is visible and unclickable. Same stack, same browser.
+        run: npx vitest run test/behavioural-ui.test.ts
+        env:
+          BEHAVIOURAL_UI: "1"
+          PROBE_BASE: http://localhost:3000
 
       - name: Upload the dev-server logs
         if: failure()

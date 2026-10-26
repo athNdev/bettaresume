@@ -820,35 +820,45 @@ function DashboardContent() {
 
 					<div className="min-w-0 lg:order-1">
 						{/*
-						 * The showcase entry point. A quiet sunken row, not a bordered banner: it is
-						 * an invitation, and as a card it was the same weight as a resume.
+						 * The showcase entry point. A labelled region, not an unlabelled
+						 * sunken row: the maintainer's report was "I don't see the example
+						 * resume anywhere". The control now says *example resume* — the
+						 * phrase someone actually looks for — and the action is an outlined
+						 * button rather than a text link at the far edge of the row.
 						 */}
 						{showcase ? (
-							<div className="mb-6 flex flex-col gap-2 rounded-md bg-sunken-static px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+							<section
+								aria-labelledby="example-resume-heading"
+								className="mb-6 flex flex-col gap-3 rounded-md border bg-sunken-static px-4 py-3 sm:flex-row sm:items-center"
+							>
 								<div className="flex min-w-0 flex-1 items-start gap-3">
 									<BookOpen
 										aria-hidden
 										className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle"
 									/>
 									<div className="min-w-0">
-										<p className="font-medium text-sm">
-											See a completed example
-										</p>
-										<p className="text-fg-muted text-sm">
-											One resume that uses every feature — variants, the content
-											library, revision history and the fit meter.
+										<h2
+											className="font-medium text-sm"
+											id="example-resume-heading"
+										>
+											Example resume
+										</h2>
+										<p className="max-w-[52ch] text-fg-muted text-sm">
+											A finished one-pager that uses every feature — variants,
+											the content library, revision history and the fit meter.
+											Open it to see what done looks like.
 										</p>
 									</div>
 								</div>
 								<Button
-									className="shrink-0 self-start text-link sm:self-auto"
+									className="shrink-0 self-start sm:self-auto"
 									onClick={handleViewShowcase}
 									size="sm"
-									variant="ghost"
+									variant="outline"
 								>
-									View the example
+									Open the example resume
 								</Button>
-							</div>
+							</section>
 						) : null}
 
 						{/* Welcome Guide. Greyscale like everything else (R: colour is for
@@ -1170,7 +1180,7 @@ function EmptyState({
 				{onViewExample ? (
 					<Button onClick={onViewExample} variant="outline">
 						<BookOpen className="mr-2 h-4 w-4" />
-						View the example
+						Open the example resume
 					</Button>
 				) : null}
 			</div>
