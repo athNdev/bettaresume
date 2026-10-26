@@ -435,16 +435,20 @@ VALUES (
 -- SHOWCASE — a complete, fictional example resume
 -- ============================================
 --
--- Priya Raman is a FICTIONAL persona. Nothing here describes a real
--- person, employer or publication. The record exists so the app has one
--- document that exercises every feature, and so a reviewer can see what
--- "done" looks like. `docs/SHOWCASE.md` explains how to keep it current.
+-- Priya Raman is a FICTIONAL persona. Nothing here describes a real person,
+-- employer or publication. The record exists so the app has one document that
+-- exercises every feature, and so a reviewer can see what "done" looks like.
+-- `docs/SHOWCASE.md` explains how to keep it current.
+--
+-- GENERATED from `api/src/db/showcase.json` by `npm run showcase:render`. Edit the
+-- JSON and re-run; do not hand-edit the statements below. The same fixture seeds
+-- every new user on first sign-in (`user.upsert`), so this block and that copy can
+-- never describe different documents.
 --
 -- The `showcase` tag is the UI contract: the dashboard badge and the
 -- "View the example" entry point both key off it.
 
--- Content library: one item placed (and diverged in the variant), one unplaced
--- so the library's "additions" offer has something to show.
+-- BEGIN GENERATED SHOWCASE — edit api/src/db/showcase.json, then run `npm run showcase:render`
 INSERT INTO "content_items" (id, userId, type, title, payload, archivedAt, createdAt, updatedAt)
 VALUES (
     'showcase-item-projects',
@@ -469,7 +473,6 @@ VALUES (
     CAST(strftime('%s', 'now') AS INTEGER) - 172800
 );
 
--- The one-pager (compact template, page target 1).
 INSERT INTO "Resume" (
     id, userId, name, variationType, baseResumeId, domain, template, tags,
     isArchived, metadata, createdAt, updatedAt
@@ -487,6 +490,25 @@ VALUES (
     '{"personalInfo":{"fullName":"Priya Raman","email":"priya.raman@example.com","phone":"+61 400 000 018","location":"Melbourne, VIC","linkedin":"linkedin.com/in/priyaraman","github":"github.com/priyaraman","website":"priyaraman.dev","portfolio":"","professionalTitle":"Staff Software Engineer, Payments Platform"},"settings":{"pageSize":"A4","margins":{"top":36,"right":36,"bottom":36,"left":36},"fontScale":1,"typography":{"name":18,"title":11,"sectionHeading":11,"itemTitle":10.5,"body":10.5,"small":9.5},"lineHeight":1.2,"fontFamily":"Inter","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"sectionSpacing":"compact","dateFormat":"MMM YYYY","accentStyle":"underline","pageTarget":1},"exportHistory":[{"id":"showcase-export-1","format":"pdf","timestamp":"2026-08-20T04:12:00.000Z","fileName":"Priya-Raman-Staff-Platform-Engineer.pdf","fileSize":84211}],"jobTarget":{"title":"Staff Platform Engineer","company":"Northwind Payments","description":"Own the payments platform''s reliability and developer experience. You will lead cross-team design, set SLOs, and build the tooling that lets product teams ship safely. Experience with Go, Kubernetes and PostgreSQL required.","keywords":["Go","Kubernetes","PostgreSQL","payments","distributed systems","SLO","Terraform","incident response","mentoring"],"url":"https://northwind-payments.example/jobs/staff-platform-engineer","addedAt":"2026-09-14T09:00:00.000Z"}}',
     CAST(strftime('%s', 'now') AS INTEGER) - 7776000,
     CAST(strftime('%s', 'now') AS INTEGER) - -120
+);
+
+INSERT INTO "Resume" (
+    id, userId, name, variationType, baseResumeId, domain, template, tags,
+    isArchived, metadata, createdAt, updatedAt
+)
+VALUES (
+    'showcase-variant',
+    'user-1',
+    'Showcase — Full CV (Priya Raman)',
+    'variation',
+    'showcase-base',
+    'Payments platform',
+    'academic',
+    '["showcase","academic","payments"]',
+    0,
+    '{"personalInfo":{"fullName":"Priya Raman","email":"priya.raman@example.com","phone":"+61 400 000 018","location":"Melbourne, VIC","linkedin":"linkedin.com/in/priyaraman","github":"github.com/priyaraman","website":"priyaraman.dev","portfolio":"","professionalTitle":"Staff Software Engineer, Payments Platform"},"settings":{"pageSize":"A4","margins":{"top":54,"right":54,"bottom":54,"left":54},"fontScale":1,"typography":{"name":18,"title":11,"sectionHeading":11,"itemTitle":10.5,"body":10.5,"small":9.5},"lineHeight":1.2,"fontFamily":"Times New Roman","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"sectionSpacing":"normal","dateFormat":"MMMM YYYY","accentStyle":"none","pageTarget":2},"exportHistory":[{"id":"showcase-export-2","format":"pdf","timestamp":"2026-09-30T02:40:00.000Z","fileName":"Priya-Raman-Full-CV.pdf","fileSize":96104}],"jobTarget":{"title":"Principal Engineer, Payments","company":"Southern Cross Bank","description":"Set the technical direction for a core payments estate. You will own ledger and settlement architecture, regulatory reporting trade-offs, and the engineering standards across four teams.","keywords":["payments","ledger","distributed systems","event sourcing","Go","regulatory reporting","technical strategy"],"url":"https://southern-cross.example/jobs/principal-payments","addedAt":"2026-09-28T09:00:00.000Z"}}',
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
 );
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
@@ -697,27 +719,6 @@ VALUES (
     CAST(strftime('%s', 'now') AS INTEGER) - -120
 );
 
--- The two-page full CV (academic template, page target 2). Seven sections
--- have been taken over; the rest still follow the one-pager.
-INSERT INTO "Resume" (
-    id, userId, name, variationType, baseResumeId, domain, template, tags,
-    isArchived, metadata, createdAt, updatedAt
-)
-VALUES (
-    'showcase-variant',
-    'user-1',
-    'Showcase — Full CV (Priya Raman)',
-    'variation',
-    'showcase-base',
-    'Payments platform',
-    'academic',
-    '["showcase","academic","payments"]',
-    0,
-    '{"personalInfo":{"fullName":"Priya Raman","email":"priya.raman@example.com","phone":"+61 400 000 018","location":"Melbourne, VIC","linkedin":"linkedin.com/in/priyaraman","github":"github.com/priyaraman","website":"priyaraman.dev","portfolio":"","professionalTitle":"Staff Software Engineer, Payments Platform"},"settings":{"pageSize":"A4","margins":{"top":54,"right":54,"bottom":54,"left":54},"fontScale":1,"typography":{"name":18,"title":11,"sectionHeading":11,"itemTitle":10.5,"body":10.5,"small":9.5},"lineHeight":1.2,"fontFamily":"Times New Roman","colors":{"primary":"#1e293b","secondary":"#64748b","text":"#0f172a","heading":"#0f172a","background":"#ffffff","accent":"#2563eb","divider":"#e2e8f0"},"sectionSpacing":"normal","dateFormat":"MMMM YYYY","accentStyle":"none","pageTarget":2},"exportHistory":[{"id":"showcase-export-2","format":"pdf","timestamp":"2026-09-30T02:40:00.000Z","fileName":"Priya-Raman-Full-CV.pdf","fileSize":96104}],"jobTarget":{"title":"Principal Engineer, Payments","company":"Southern Cross Bank","description":"Set the technical direction for a core payments estate. You will own ledger and settlement architecture, regulatory reporting trade-offs, and the engineering standards across four teams.","keywords":["payments","ledger","distributed systems","event sourcing","Go","regulatory reporting","technical strategy"],"url":"https://southern-cross.example/jobs/principal-payments","addedAt":"2026-09-28T09:00:00.000Z"}}',
-    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
-    CAST(strftime('%s', 'now') AS INTEGER) - -60
-);
-
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
 VALUES (
     'showcase-var-personal',
@@ -800,6 +801,22 @@ VALUES (
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
 VALUES (
+    'showcase-var-publications',
+    'showcase-variant',
+    'publications',
+    5,
+    1,
+    '{"title":"Publications & talks","data":[{"id":"showcase-pub-reconciliation","title":"Reconciling money at scale","publisher":"priyaraman.dev","date":"2024-09","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/ledger-reconciliation"},{"id":"showcase-pub-contract-tests","title":"Contract tests for payment APIs","publisher":"priyaraman.dev","date":"2023-04","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/contract-tests"}]}',
+    '{"pageBreakBefore":true}',
+    NULL,
+    'showcase-base-publications',
+    1,
+    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
+    CAST(strftime('%s', 'now') AS INTEGER) - -60
+);
+
+INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
+VALUES (
     'showcase-var-projects',
     'showcase-variant',
     'projects',
@@ -864,22 +881,6 @@ VALUES (
 
 INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
 VALUES (
-    'showcase-var-publications',
-    'showcase-variant',
-    'publications',
-    5,
-    1,
-    '{"title":"Publications & talks","data":[{"id":"showcase-pub-reconciliation","title":"Reconciling money at scale","publisher":"priyaraman.dev","date":"2024-09","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/ledger-reconciliation"},{"id":"showcase-pub-contract-tests","title":"Contract tests for payment APIs","publisher":"priyaraman.dev","date":"2023-04","authors":["Priya Raman"],"url":"https://priyaraman.dev/writing/contract-tests"}]}',
-    '{"pageBreakBefore":true}',
-    NULL,
-    'showcase-base-publications',
-    1,
-    CAST(strftime('%s', 'now') AS INTEGER) - 2592000,
-    CAST(strftime('%s', 'now') AS INTEGER) - -60
-);
-
-INSERT INTO "Section" (id, resumeId, type, "order", visible, content, layout, contentItemId, baseSectionId, linkedToBase, createdAt, updatedAt)
-VALUES (
     'showcase-var-volunteer',
     'showcase-variant',
     'volunteer',
@@ -926,9 +927,6 @@ VALUES (
     CAST(strftime('%s', 'now') AS INTEGER) - -60
 );
 
--- Revision history: three automatic snapshots and three named versions.
--- The newest snapshot is byte-identical to the live document, so its diff reads
--- "No differences" and Restore is correctly disabled.
 INSERT INTO "resume_revisions" (id, resumeId, seq, snapshotJson, contentHash, label, createdAt)
 VALUES (
     'showcase-base-rev-1',
@@ -1016,4 +1014,4 @@ VALUES (
     NULL,
     CAST(strftime('%s', 'now') AS INTEGER) - 259200
 );
-
+-- END GENERATED SHOWCASE
