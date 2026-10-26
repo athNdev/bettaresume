@@ -222,8 +222,10 @@ export function SectionBreakControls({
 				</div>
 
 				{entries.length > 0 ? (
-					<div className="space-y-2 border-t pt-3">
-						<Label className="text-xs">Per entry</Label>
+					<fieldset className="space-y-2 border-t pt-3">
+						<legend className="mb-1 text-muted-foreground text-xs">
+							Per entry
+						</legend>
 						{entries.slice(0, 12).map((entry) => (
 							<div
 								className="flex items-center justify-between gap-2"
@@ -239,7 +241,16 @@ export function SectionBreakControls({
 									}}
 									value={layout.entries?.[entry.id] ?? BREAK_EMPTY}
 								>
-									<SelectTrigger className="h-7 w-36 shrink-0 text-xs">
+									{/*
+									 * The row's entry name is the control's accessible name.
+									 * It used to be adjacent text only, so every one of these
+									 * selects announced as "Section default, combobox" and a
+									 * screen-reader user could not tell which entry they were on.
+									 */}
+									<SelectTrigger
+										aria-label={`Page breaks for ${entry.label}`}
+										className="h-7 w-36 shrink-0 text-xs"
+									>
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -250,7 +261,7 @@ export function SectionBreakControls({
 								</Select>
 							</div>
 						))}
-					</div>
+					</fieldset>
 				) : null}
 			</div>
 		</details>

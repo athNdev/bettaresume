@@ -4,7 +4,6 @@ import {
 	PageFit,
 	Readability,
 } from "@/components/marketing/capabilities";
-import { TaggedPdf } from "@/components/marketing/craft";
 import { Hero } from "@/components/marketing/hero";
 import {
 	ClosingCta,
@@ -14,6 +13,7 @@ import {
 	Templates,
 } from "@/components/marketing/sections";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
+import { TaggedPdf } from "@/components/marketing/tagged-pdf";
 import { OG_IMAGE } from "@/lib/site";
 
 const TITLE = "Betta Resume — one master resume, tailored per role";

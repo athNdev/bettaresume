@@ -164,7 +164,13 @@ const HIT_TEST = `() => {
 	await check("showcase: opening the example lands in the editor", async () => {
 		await page.getByRole("button", { name: /^Open the example resume$/i }).first().click();
 		await waitForEditor(page);
-		await page.waitForTimeout(4000);
+		// Wait for the identity line to have text: the header renders before the
+		// document query resolves, and a fixed wait races it on a cold compile.
+		await page.waitForFunction(
+			() => (document.querySelector("[data-editor-meta]")?.innerText || "").trim().length > 0,
+			null,
+			{ timeout: 30000 },
+		);
 		const meta = await page.evaluate(
 			() => document.querySelector("[data-editor-meta]")?.innerText || "",
 		);
@@ -186,12 +192,21 @@ const HIT_TEST = `() => {
 		await james.waitFor({ state: "visible", timeout: 30000 });
 		await james.first().click();
 		await waitForEditor(page);
-		await page.waitForTimeout(2500);
+		// The library is a second request now (it waits for the document), so the
+		// entry point arrives shortly after the header rather than with it.
 		const trigger = page.getByRole("button", { name: "Open the example resume" });
+		await page
+			.locator('button[aria-label="Open the example resume"]')
+			.first()
+			.waitFor({ state: "visible", timeout: 30000 });
 		if ((await trigger.count()) === 0)
 			throw new Error("no example entry point in the editor header");
 		await trigger.first().click();
-		await page.waitForTimeout(3500);
+		await page.waitForFunction(
+			() => /showcase/i.test(document.querySelector("[data-editor-meta]")?.innerText || ""),
+			null,
+			{ timeout: 30000 },
+		);
 		const meta = await page.evaluate(
 			() => document.querySelector("[data-editor-meta]")?.innerText || "",
 		);
@@ -577,13 +592,326 @@ const HIT_TEST = `() => {
 		return `${info.dsLinks.length} link(s), no section`;
 	});
 
-	// ── Every visible control in the dashboard takes its own click ───────────
+	// ── Every visible control in the dashboard takes its own click ────────
 	await goto(page, "/app/", { wait: 7000 });
 	await check("dashboard: no visible control is covered by an overlay", async () => {
 		const covered = await page.evaluate((probe) => eval(probe)(), HIT_TEST);
 		if (covered.length > 0)
 			throw new Error(JSON.stringify(covered.slice(0, 4)));
 		return "every in-view control takes the click";
+	});
+
+	/*
+	 * ── Round 3B: the library reads as one artefact ──────────────────────
+	 *
+	 * The critique was about composition, but composition fails behaviourally: a card
+	 * first on screen is the one people open, and a count on the far side of the page
+	 * is not connected to what it counts. Both are measured here.
+	 */
+	await check("library: the one-pager leads and the showcase pair is adjacent", async () => {
+		const titles = await page.evaluate(() =>
+			[...document.querySelectorAll("[data-card-title]")].map((el) =>
+				(el.textContent || "").trim(),
+			),
+		);
+		if (titles.length < 2) throw new Error(`only ${titles.length} cards`);
+		if (!/^Showcase — One-pager/.test(titles[0]))
+			throw new Error(`the library leads with "${titles[0]}"`);
+		if (!/^Showcase — Full CV/.test(titles[1]))
+			throw new Error(`the full CV is not second: "${titles[1]}"`);
+		return `${titles[0]} → ${titles[1]}`;
+	});
+
+	await check("library: the count is anchored to the grid it counts", async () => {
+		const info = await page.evaluate(() => {
+			const count = document.querySelector("[data-grid-count]");
+			const first = document.querySelector("[data-card-title]");
+			if (!count || !first) return null;
+			const card = first.closest("div[class*=rounded-md]") || first;
+			const countBox = count.getBoundingClientRect();
+			const cardBox = card.getBoundingClientRect();
+			return {
+				text: (count.textContent || "").trim(),
+				leftGap: Math.round(countBox.left - cardBox.left),
+				above: countBox.bottom <= cardBox.top + 1,
+			};
+		});
+		if (!info) throw new Error("no count or grid");
+		if (Math.abs(info.leftGap) > 2)
+			throw new Error(`the count is ${info.leftGap}px from the grid's edge`);
+		if (!info.above) throw new Error("the count is not above the cards");
+		return `"${info.text}" at the grid's left edge`;
+	});
+
+	await check("example: the invitation's action sits beside its copy", async () => {
+		const info = await page.evaluate(() => {
+			const section = document.querySelector(
+				"section[aria-labelledby=example-resume-heading]",
+			);
+			const copy = section && section.querySelector("p");
+			const button =
+				section &&
+				[...section.querySelectorAll("button")].find(
+					(b) => (b.textContent || "").trim() === "Open the example resume",
+				);
+			if (!section || !copy || !button) return null;
+			const copyBox = copy.getBoundingClientRect();
+			const buttonBox = button.getBoundingClientRect();
+			return {
+				gap: Math.round(buttonBox.left - copyBox.right),
+				aboveFold: buttonBox.top < innerHeight,
+			};
+		});
+		if (!info) throw new Error("the example invitation is missing");
+		if (info.gap > 32) throw new Error(`${info.gap}px between the copy and its action`);
+		if (!info.aboveFold) throw new Error("the invitation is below the fold");
+		return `${info.gap}px gap`;
+	});
+
+	await check("card badge: the tooltip opens on focus, not only hover", async () => {
+		const focused = await page.evaluate(() => {
+			const badge = [...document.querySelectorAll("[data-card-meta] div")].find(
+				(el) => (el.textContent || "").trim() === "Showcase",
+			);
+			if (!badge) return false;
+			badge.focus();
+			return document.activeElement === badge;
+		});
+		if (!focused) throw new Error("the Showcase badge cannot take focus");
+		await page.waitForTimeout(1200);
+		const text = await page.evaluate(
+			() => document.querySelector("[role=tooltip]")?.textContent || "",
+		);
+		if (!/complete example resume/i.test(text))
+			throw new Error(`no tooltip on focus (got "${text}")`);
+		return text.trim().slice(0, 40);
+	});
+
+	// ── Every section form's sticky toolbar, not just Experience's ──────────
+	await goto(page, "/app/#/resume-editor/showcase-base", { wait: 7000 });
+	await waitForEditor(page);
+	await page.waitForTimeout(2500);
+	const ENTRY_FORMS = [
+		"experience",
+		"education",
+		"skills",
+		"projects",
+		"certifications",
+		"awards",
+		"languages",
+		"publications",
+		"volunteer",
+		"references",
+	];
+	for (const type of ENTRY_FORMS) {
+		await check(`forms: ${type} — toolbar and page-break panel both take a click`, async () => {
+			const row = page.locator(`[data-section-type="${type}"] button`).nth(1);
+			if ((await row.count()) === 0) throw new Error("no section row");
+			await row.click();
+			await page.waitForSelector("[data-entry-toolbar]", {
+				state: "visible",
+				timeout: 20000,
+			});
+			await page.waitForTimeout(500);
+			const info = await page.evaluate(() => {
+				const toolbar = document.querySelector("[data-entry-toolbar]");
+				const details = document.querySelector("[data-section-breaks]");
+				const summary = details && details.querySelector("summary");
+				const hit = (el) => {
+					if (!el) return "missing";
+					const r = el.getBoundingClientRect();
+					const top = document.elementFromPoint(
+						r.left + r.width / 2,
+						r.top + r.height / 2,
+					);
+					return top === el || el.contains(top) || (top && top.contains(el))
+						? "ok"
+						: `${top && top.tagName} covers it`;
+				};
+				const toolbarBox = toolbar && toolbar.getBoundingClientRect();
+				const detailsBox = details && details.getBoundingClientRect();
+				return {
+					toolbar: hit(toolbar),
+					summary: hit(summary),
+					stacked: !!toolbarBox && !!detailsBox && toolbarBox.top >= detailsBox.bottom - 1,
+				};
+			});
+			if (info.toolbar !== "ok") throw new Error(`toolbar: ${info.toolbar}`);
+			if (info.summary !== "ok")
+				throw new Error(`page-break summary: ${info.summary}`);
+			if (!info.stacked) throw new Error("toolbar overlaps the page-break panel");
+			return "toolbar and summary are both clickable";
+		});
+	}
+
+	await check("per-entry break select: named after its entry", async () => {
+		await page.locator('[data-section-type="experience"] button').nth(1).click();
+		await page.waitForSelector("[data-section-breaks]", {
+			state: "visible",
+			timeout: 20000,
+		});
+		if (!(await page.evaluate(() => document.querySelector("[data-section-breaks]")?.open))) {
+			await page.locator("[data-section-breaks] > summary").first().click();
+		}
+		await page.waitForTimeout(500);
+		const rows = await page.evaluate(() =>
+			[
+				...document.querySelectorAll(
+					'[data-section-breaks] button[aria-label^="Page breaks for "]',
+				),
+			].map((select) => ({
+				label: select.getAttribute("aria-label") || "",
+				entry: (select.parentElement.firstElementChild.textContent || "").trim(),
+			})),
+		);
+		if (rows.length === 0) throw new Error("no per-entry controls");
+		const unnamed = rows.filter((r) => r.label !== `Page breaks for ${r.entry}`);
+		if (unnamed.length > 0) throw new Error(JSON.stringify(unnamed.slice(0, 2)));
+		return `${rows.length} rows, each named`;
+	});
+
+	await check("documents: the editor switcher lists the library and changes document", async () => {
+		await goto(page, "/app/#/resume-editor/resume-1", { wait: 7000 });
+		await waitForEditor(page);
+		await page
+			.locator('button[aria-label="Open the example resume"]')
+			.first()
+			.waitFor({ state: "attached", timeout: 30000 });
+		await page.locator("[data-document-switcher]").first().click();
+		await page.waitForSelector("[data-document-id]", {
+			state: "attached",
+			timeout: 30000,
+		});
+		const menu = await page.evaluate(() => {
+			const items = [...document.querySelectorAll("[data-document-id]")];
+			return {
+				count: items.length,
+				current: items
+					.filter((el) => el.getAttribute("aria-current") === "true")
+					.map((el) => el.getAttribute("data-document-id")),
+				other: items
+					.map((el) => el.getAttribute("data-document-id"))
+					.find((id) => id && id !== "resume-1"),
+			};
+		});
+		if (menu.count < 2) throw new Error(`only ${menu.count} documents listed`);
+		if (menu.current.length !== 1 || menu.current[0] !== "resume-1")
+			throw new Error(`current marker: ${JSON.stringify(menu.current)}`);
+		await page.locator(`[data-document-id="${menu.other}"]`).click();
+		await page.waitForTimeout(4000);
+		const heading = await page.evaluate(
+			() => document.querySelector("header h1")?.textContent || "",
+		);
+		if (/Harvard Application/.test(heading))
+			throw new Error(`still on ${heading}`);
+		return `${menu.count} listed → ${heading.trim().slice(0, 40)}`;
+	});
+
+	// ── The failure state, driven rather than assumed ──────────────────────
+	await check("example: an unavailable library says so, and retry recovers", async () => {
+		/*
+		 * The library query is aborted at the network, so the failed state is driven rather
+		 * than inferred. The page is reloaded first: React Query keeps the answer in memory,
+		 * and without a reload the editor would serve the cached library and never reach the
+		 * network at all.
+		 */
+		let blocking = true;
+		await page.route("**/trpc/**", (route) => {
+			if (blocking && route.request().url().includes("resume.list"))
+				return route.abort("failed");
+			return route.continue();
+		});
+		try {
+			await goto(page, "/app/#/resume-editor/resume-1", { wait: 6000 });
+			await page.reload({ waitUntil: "load", timeout: 60000 });
+			await waitForEditor(page, 60000);
+			await page.waitForSelector("[data-example-unavailable]", {
+				state: "attached",
+				timeout: 45000,
+			});
+			const state = await page.evaluate(() => {
+				const box = document.querySelector("[data-example-unavailable]");
+				return {
+					text: (box.textContent || "").trim(),
+					retry: [...box.querySelectorAll("button")].some(
+						(b) => (b.textContent || "").trim() === "Retry",
+					),
+				};
+			});
+			if (!/Example unavailable/.test(state.text))
+				throw new Error(`the failure says "${state.text}"`);
+			if (!state.retry) throw new Error("no retry beside the failure");
+			blocking = false;
+			await page.getByRole("button", { name: "Retry" }).first().click();
+			await page.waitForSelector('button[aria-label="Open the example resume"]', {
+				state: "attached",
+				timeout: 30000,
+			});
+			return "unavailable → retry → open";
+		} finally {
+			blocking = false;
+			await page.unroute("**/trpc/**");
+		}
+	});
+
+	// ── The narrow end ────────────────────────────────────────────────────
+	await check("mobile: the card meta and header meta are designed, not clipped", async () => {
+		/* Resize the warm page rather than opening a context: a cold context re-downloads
+		 * the 27 MB compiler, and this check is about layout, not boot time. */
+		await page.setViewportSize({ width: 390, height: 844 });
+		try {
+			await goto(page, "/app/", { wait: 6000 });
+			await page.waitForSelector("[data-card-meta]", {
+				state: "attached",
+				timeout: 30000,
+			});
+			const cardMeta = await page.evaluate(() => {
+				const el = document.querySelector("[data-card-meta]");
+				if (!el) return null;
+				const secondary = [...el.querySelectorAll("[data-meta-secondary]")];
+				return {
+					lines: Math.round(el.getBoundingClientRect().height / 16),
+					visibleSecondary: secondary.filter(
+						(n) => getComputedStyle(n).display !== "none",
+					).length,
+				};
+			});
+			if (!cardMeta) throw new Error("no card meta at 390px");
+			if (cardMeta.visibleSecondary !== 0)
+				throw new Error(`${cardMeta.visibleSecondary} secondary facts still shown`);
+			if (cardMeta.lines > 2)
+				throw new Error(`the card meta is ${cardMeta.lines} lines`);
+			await goto(page, "/app/#/resume-editor/showcase-variant", { wait: 6000 });
+			await waitForEditor(page, 60000);
+			await page.waitForSelector("[data-editor-meta]", {
+				state: "attached",
+				timeout: 30000,
+			});
+			await page.waitForFunction(
+				() =>
+					(document.querySelector("[data-editor-meta]")?.innerText || "").trim()
+						.length > 0,
+				null,
+				{ timeout: 30000 },
+			);
+			const headerMeta = await page.evaluate(() => {
+				const el = document.querySelector("[data-editor-meta]");
+				return el
+					? {
+							text: (el.textContent || "").trim(),
+							clipped: el.scrollWidth > el.clientWidth + 1,
+						}
+					: null;
+			});
+			if (!headerMeta) {
+				throw new Error("no editor meta at 390px");
+			}
+			if (headerMeta.clipped)
+				throw new Error(`the header meta is truncated: "${headerMeta.text}"`);
+			return `card ${cardMeta.lines} line(s); header "${headerMeta.text}"`;
+		} finally {
+			await page.setViewportSize({ width: 1440, height: 900 });
+		}
 	});
 
 	if (errors.length > 0) {

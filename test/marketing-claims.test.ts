@@ -81,7 +81,7 @@ describe("the page renders", () => {
 			"src/components/marketing/hero.tsx",
 			"src/components/marketing/sections.tsx",
 			"src/components/marketing/capabilities.tsx",
-			"src/components/marketing/craft.tsx",
+			"src/components/marketing/tagged-pdf.tsx",
 			"src/components/marketing/site-chrome.tsx",
 		]) {
 			expect(read(file), `${file} opts into the client`).not.toMatch(

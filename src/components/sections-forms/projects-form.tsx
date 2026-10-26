@@ -141,7 +141,10 @@ export function ProjectsForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-6 mb-6 flex h-10 items-center justify-between gap-3 border-b bg-surface px-4">
+			<div
+				className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-6 mb-6 flex h-10 items-center justify-between gap-3 border-b bg-surface px-4"
+				data-entry-toolbar=""
+			>
 				<div className="flex items-center gap-3">
 					<SaveStatusIndicator
 						error={error}
