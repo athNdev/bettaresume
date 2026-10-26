@@ -105,6 +105,30 @@ function renderFirstPage(template: TemplateType, dir: string): string {
 
 const TEMPLATE_IDS = Object.keys(TEMPLATE_CONFIGS) as TemplateType[];
 
+/**
+ * A platform-independent signature of a rendered page.
+ *
+ * Byte equality is **not** portable and never was — it only looked portable because this
+test skipped in CI (it has no `typst` binary), so the committed files had only ever been
+compared against a render on the machine that produced them. Typst emits every glyph as
+an SVG `<symbol>` whose path data is computed with floating point, and a Linux and a
+Windows build of the same 0.14.2 disagree in the last digits; the symbol id is a hash of
+that path, so every `<use>` reference changes too. The geometry does not: every
+`transform` and every glyph advance is identical (verified against the failing CI run —
+same positions, different outlines).
+
+The gallery's purpose is to be a faithful, current picture of each template, and what a
+template edit changes is *layout*. So the comparison keeps the whole transform tree, the
+fills, and every glyph's advance, and drops only the glyph outlines and their hashed ids.
+ */
+function layoutSignature(svg: string): string {
+	return svg
+		.replace(/<symbol[\s\S]*?<\/symbol>/g, "<symbol/>")
+		.replace(/xlink:href="#[^"]*"/g, 'xlink:href="#"')
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
 describe("the template gallery is rendered by the real pipeline", () => {
 	const dir = mkdtempSync(join(tmpdir(), "br-gallery-"));
 	if (UPDATE) mkdirSync(OUT_DIR, { recursive: true });
@@ -130,13 +154,13 @@ describe("the template gallery is rendered by the real pipeline", () => {
 				`public/templates/${template}.svg is missing. Run: npm run templates:render`,
 			).toBe(true);
 
-			// Regenerating is deterministic for a given compiler version, so this is an
-			// equality check rather than a fuzzy one. When Typst is upgraded the gallery
-			// is expected to change, and this test is what says so.
+			// Same compiler, same document, same layout. Comparing the signature rather than
+			// the bytes keeps the gate portable; see `layoutSignature` for why byte equality
+			// cannot be.
 			expect(
-				readFileSync(file, "utf8"),
+				layoutSignature(readFileSync(file, "utf8")),
 				`public/templates/${template}.svg is stale. Run: npm run templates:render`,
-			).toBe(actual);
+			).toBe(layoutSignature(actual));
 		},
 		120_000,
 	);
