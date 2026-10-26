@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { Resume } from "../src/features/resume-editor/types";
-import { exportFileName } from "../src/lib/export/filename";
+import {
+	designExportFileName,
+	exportFileName,
+} from "../src/lib/export/filename";
 
 /**
  * Export file naming.
@@ -56,6 +59,18 @@ describe("export filenames", () => {
 				true,
 			);
 		}
+	});
+
+	it("marks the design CV so it cannot overwrite the standard PDF", () => {
+		// Both are PDFs of the same person and role in the same downloads folder. The
+		// suffix is the only thing that stops "design" from being mistaken for the
+		// parser-safe file, or the other way round.
+		expect(
+			designExportFileName(resume("Sarah Chen", "Product Manager"), "pdf"),
+		).toBe("Sarah-Chen-Product-Manager-design.pdf");
+		expect(
+			designExportFileName(resume("Sarah Chen", "Product Manager"), "txt"),
+		).toBe("Sarah-Chen-Product-Manager-design.txt");
 	});
 
 	it("still produces a usable name when the resume is unnamed", () => {

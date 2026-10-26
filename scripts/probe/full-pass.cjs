@@ -89,7 +89,7 @@ const overflow = (page) =>
 			await page.waitForTimeout(250);
 			const [download] = await Promise.all([
 				page.waitForEvent("download", { timeout: 60000 }),
-				page.getByRole("menuitem", { name: /as Text/i }).click(),
+				page.getByRole("menuitem", { name: /Plain text/i }).click(),
 			]);
 			const file = path.join(DL, download.suggestedFilename());
 			await download.saveAs(file);
@@ -106,7 +106,7 @@ const overflow = (page) =>
 		await page.waitForTimeout(250);
 		const [download] = await Promise.all([
 			page.waitForEvent("download", { timeout: 60000 }),
-			page.getByRole("menuitem", { name: /as JSON/i }).click(),
+			page.getByRole("menuitem", { name: /^JSON/ }).click(),
 		]);
 		const file = path.join(DL, download.suggestedFilename());
 		await download.saveAs(file);

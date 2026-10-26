@@ -20,6 +20,10 @@ import { codeOf } from "./helpers/code-source";
 
 const SURFACE_B = [
 	"src/features/resume-editor/typst_templates",
+	// The design CV is a separate export target, but it is still a document rendered on
+	// paper. Keeping it inside the same wall stops the app's screen tokens from leaking
+	// into the one layout that is already the hardest to reproduce.
+	"src/features/resume-editor/design-export",
 	"src/lib/typst",
 	"src/components/export",
 ];

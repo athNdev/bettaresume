@@ -120,8 +120,10 @@ function ExperienceForm({ data, onChange }) {
 - `formatting-toolbar.tsx` - Style controls
 
 ### Export (`src/components/export/`)
-- `pdf-document.tsx` - React PDF template
-- `export-buttons.tsx` - Download PDF/DOCX
+- `export-buttons.tsx` — the standard PDF/DOCX/JSON/plain-text exports, plus the separate
+  **Design CV** target (PDF + labelled visual-order text) and its permanent warning.
+  The design template lives in `src/features/resume-editor/design-export/`, not in
+  `typst_templates/`, and is never a template toggle. See `docs/DESIGN-CV.md`.
 
 ## Views (`src/views/`)
 

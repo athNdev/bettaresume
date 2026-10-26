@@ -138,8 +138,9 @@ If the demand ever materialises, the honest form is a separate, loudly-labelled 
 ("Design CV — not ATS-safe"), never a setting inside the normal editor. Note that even Typst's
 `columns(2)` keeps *logical* reading order in tagged output (`place` docs: AT reads placed content
 where it logically appears) — but plain extraction of two-column flow interleaves or reorders
-depending on the extractor, and that gamble is the thing the product sells against. Leave the
-capability documented (§5.6) and unshipped.
+depending on the extractor, and that gamble is the thing the product sells against. That target
+now ships as W5's `design-column.typ` (`docs/DESIGN-CV.md`), outside `TEMPLATE_CONFIGS` and with a
+permanent warning at the point of export. The standard path remains single-column.
 
 ### 1.7 Templates: layout contracts, not themes
 
@@ -441,16 +442,21 @@ matters for the tagged PDF:
 
 (Or `figure(image(…, alt: …))` if a caption is ever wanted — 0.14 tags figures with their alt.)
 
-### 5.6 Documented-but-unshipped: the columns mode (for the record)
+### 5.6 The columns mode (for the record)
+
+Shipped as the separate design CV target in W5:
+`src/features/resume-editor/design-export/design-column.typ`. It is not an archetype, not in
+`TEMPLATE_CONFIGS`, not in the gallery, and its text companion is explicitly labelled
+visual-reading-order. The six standard templates still contain no `columns()` or `colbreak()`.
 
 ```typst
-// ONLY in a future "Design CV" target, never in the default path:
+// ONLY in the separate "Design CV" target, never in the default path:
 #columns(2, gutter: 12pt)[ …sections… ]
 #place(top + center, scope: "parent", float: true)[ …full-width header… ]
 ```
 
 `place(scope: "parent")` lets the header span columns; tagged output keeps logical order, plain
-extraction does not. This is why the mode stays off (§1.6).
+extraction does not. This is why the mode stays out of the normal editor (§1.6).
 
 ### 5.7 Typst 0.15 upgrade (separate, tracked work)
 
