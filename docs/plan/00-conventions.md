@@ -20,6 +20,19 @@ Everything ships as a PR to `main`. This is not negotiable — CI is the only ga
 7. **Merge**: `gh pr merge <n> --merge --admin`.
 8. **Move the Plane item** to Done and add a resolution comment.
 
+## Worktrees — the shared parent is shared
+
+Several agents run in this repo at once, each in its own worktree under `.worktrees/`.
+**Never delete `.worktrees/` itself.** An agent did (`rm -rf .worktrees`, thinking it was
+its own scratch directory) and it destroyed two concurrent agents' checkouts. Always:
+
+create your own:  `git worktree add .worktrees/<your-unique-name> -b <branch> origin/main`
+clean up only it: `git worktree remove .worktrees/<your-unique-name>`
+never:            `rm -rf .worktrees`, `git worktree prune`, `git clean -fdx` at the parent
+
+Also: `git worktree prune` and a `reset --hard` in the main checkout can invalidate a
+sibling's worktree mid-run. Leave other worktrees alone entirely.
+
 ## Local verification checklist
 
 ```
