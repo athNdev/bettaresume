@@ -104,6 +104,19 @@ export const variationTypeSchema = z.enum(["base", "variation"]);
 // Personal Info Schema
 // ============================================
 
+/**
+ * Personal info, as stored in `Resume.metadata.personalInfo` and in a `personal-info`
+ * section's `content.data`.
+ *
+ * `photoUrl` was removed deliberately (D5, `docs/research/template-research.md` §6): the
+ * field was serialised for export and drawn by no template, every credible source advises
+ * against a photograph on an ATS-read resume, and it is a discrimination risk. No template
+ * ever read it.
+ *
+ * Rows written before the removal still load. This object is **non-strict**, so Zod
+ * discards the now-unknown `photoUrl` key on parse and every other field comes through
+ * unchanged — no migration, no backfill, and an old row is not an error.
+ */
 export const personalInfoSchema = z.object({
 	fullName: z.string().optional().or(z.literal("")),
 	email: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -114,7 +127,6 @@ export const personalInfoSchema = z.object({
 	website: z.string().optional().or(z.literal("")),
 	portfolio: z.string().optional().or(z.literal("")),
 	professionalTitle: z.string().optional(),
-	photoUrl: z.string().optional().or(z.literal("")),
 });
 
 // ============================================

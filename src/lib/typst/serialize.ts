@@ -119,7 +119,6 @@ function serializePersonalInfo(pi: PersonalInfo) {
 		website: safeStr(pi.website),
 		portfolio: safeStr(pi.portfolio),
 		professionalTitle: safeStr(pi.professionalTitle),
-		photoUrl: safeStr(pi.photoUrl),
 	};
 }
 
@@ -143,7 +142,6 @@ const PERSONAL_INFO_FIELDS = [
 	"website",
 	"portfolio",
 	"professionalTitle",
-	"photoUrl",
 ] as const;
 
 /**
