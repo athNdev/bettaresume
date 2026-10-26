@@ -77,6 +77,11 @@ const FEATURES = [
 		detail: "PDF · DOCX · TXT · JSON",
 	},
 	{
+		title: "A design CV, labelled",
+		body: "A second PDF target for the copy you hand to a person: two columns, sidebar first, a plain-text layer in the page's visual reading order. It is not a template and not a layout setting, the menu says it is not parser-safe, and DOCX is refused rather than faked.",
+		detail: "PDF only · permanent warning · visual reading order",
+	},
+	{
 		title: "A parser-fit review",
 		body: "Checks the document against documented parser constraints: section headings against a parser dictionary, date formats, single-column reading order, and bullets that make a claim without evidence. Each finding names the setting to change. It does not choose a number for you.",
 		detail: "Line-anchored findings, not a score",
@@ -142,7 +147,7 @@ const TEMPLATES = [
 	{
 		id: "compact",
 		name: "Compact",
-		note: "The Standard layout at the tight end of the spacing scale: 0.5 in margins, 1.25 leading, compact section gaps.",
+		note: "The Standard layout at the tight end of the spacing scale: 0.5 in margins, 1.22 leading, compact section gaps.",
 		best: "One page with a lot to say",
 		alt: "The Compact template: the standard layout with tighter section gaps and narrower margins for Avery Chen.",
 	},
@@ -240,7 +245,7 @@ export function Templates() {
 				 * is visible with room to spare, and the ~300pt of blank paper that made these
 				 * cards read as half-empty is gone.
 				 */}
-				<div className="mt-12 grid gap-6 md:grid-cols-3">
+				<div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 					{TEMPLATES.map((template) => (
 						<article
 							className="flex flex-col overflow-hidden rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)]"
@@ -364,7 +369,15 @@ const FAQ = [
 	},
 	{
 		q: "Can I get everything out?",
-		a: "Yes — PDF, DOCX, plain text, or JSON of the whole document, at any time. Import accepts the same JSON, plus PDF, DOCX, Markdown and plain text.",
+		a: "Yes — PDF, DOCX, plain text, or JSON of the whole document, at any time. Import accepts the same JSON, plus PDF, DOCX, Markdown and plain text. The design CV is a second PDF target, not a fifth format.",
+	},
+	{
+		q: "Is the PDF tagged?",
+		a: "Yes. Typst 0.14 emits a tagged PDF: the file carries a structure tree, a marked-content dictionary and a document language. That is what makes the text a structure rather than positioned glyphs. It is not a conformance claim; tagging is the mechanism PDF/UA-1 builds on, and conformance is a separate audit.",
+	},
+	{
+		q: "What is the design CV?",
+		a: "A two-column PDF for a person, not a parser. It is a separate export target with a permanent warning in the menu and again in the confirmation. The standard export stays single-column and parser-safe; DOCX is not offered for the design CV at all.",
 	},
 	{
 		q: "Is this an AI resume generator?",

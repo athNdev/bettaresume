@@ -9,6 +9,7 @@ import {
 	FIT_EXAMPLE,
 	FIT_EXAMPLE_CHIP,
 } from "../src/components/marketing/capabilities";
+import { DESIGN_EXPORT_WARNING } from "../src/features/resume-editor/design-export";
 import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import {
 	PREFERRED_WEIGHT,
@@ -80,6 +81,7 @@ describe("the page renders", () => {
 			"src/components/marketing/hero.tsx",
 			"src/components/marketing/sections.tsx",
 			"src/components/marketing/capabilities.tsx",
+			"src/components/marketing/craft.tsx",
 			"src/components/marketing/site-chrome.tsx",
 		]) {
 			expect(read(file), `${file} opts into the client`).not.toMatch(
@@ -266,7 +268,12 @@ describe("no unsubstantiated numbers or outcome claims", () => {
 	const copy = visible
 		.replace(/13 section types/gi, "")
 		.replace(/at most once every five minutes/gi, "")
-		.replace(/41%/g, "");
+		.replace(/41%/g, "")
+		// The fill ratio is a measurement of the document, not an outcome claim. It is
+		// pinned to `test/fill-ratio.test.ts` by the page-fit assertions below; these
+		// two replacements are what stop the blanket percentage ban from swallowing it.
+		.replace(/83% of one page/gi, "")
+		.replace(/78–85%/g, "");
 
 	it("contains no percentages", () => {
 		const matches = [...copy.matchAll(/\b\d+(?:\.\d+)?\s*%/g)].map((m) => m[0]);
@@ -406,6 +413,23 @@ describe("the page-fit suite is the shipped one", () => {
 		expect(visible).toContain(FIT_EXAMPLE_CHIP);
 	});
 
+	it("states the measured fill of the seeded one-pager", () => {
+		// The only percentage on the page that is not sample content. It is a property
+		// of the document — ink height over printable height — and the band around it is
+		// what `test/fill-ratio.test.ts` enforces by compiling the seeded showcase at all
+		// three densities. If a template edit moves the number, that test fails before
+		// this sentence can quietly become false.
+		expect(visible).toContain("83% of one page");
+		expect(visible).toContain("78–85%");
+
+		const fill = read("test/fill-ratio.test.ts");
+		expect(fill).toContain("BALANCED_BAND = { min: 0.78, max: 0.85 }");
+		expect(fill).toContain("expect(normal?.pages).toBe(1)");
+		expect(fill).toContain(
+			'for (const preset of ["compact", "normal", "relaxed"]',
+		);
+	});
+
 	it("names the three density presets the module ships", () => {
 		const density = read("src/lib/layout/density.ts");
 		expect(density).toMatch(/DENSITY_PRESETS/);
@@ -538,6 +562,113 @@ describe("the counts are derived where they can be", () => {
 		expect(sections).toMatch(/COUNT_WORDS\[TEMPLATE_COUNT\]/);
 		expect(sections).toMatch(
 			/TEMPLATE_COUNT = Object\.keys\(TEMPLATE_CONFIGS\)/,
+		);
+	});
+});
+
+/* ------------------------------------------------------------------------
+ * The final wave: the page now describes the finished product.
+ * ---------------------------------------------------------------------- */
+
+describe("the page shows the brand, not a text heading", () => {
+	it("uses the brand lockup in the hero", () => {
+		const hero = read("src/components/marketing/hero.tsx");
+		expect(hero).toMatch(
+			/import \{ BrandLockup \} from "@\/components\/brand\/brand-lockup"/,
+		);
+		expect(hero).toContain('<BrandLockup size="xl" variant="accent" />');
+		expect(html).toContain('aria-label="Betta Resume"');
+	});
+
+	it("does not announce the product name as a heading", () => {
+		// The brand is a mark and a wordmark. If the name becomes an <h2>, a screen
+		// reader hears the brand as a section of the page and the one-h1 rule above
+		// starts to look like a technicality rather than a hierarchy choice.
+		const headings = [...html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/g)]
+			.map((m) => (m[1] ?? "").trim())
+			.join(" | ");
+		expect(headings).not.toContain("Betta Resume");
+		expect(html).toContain('viewBox="0 0 32 32"');
+	});
+});
+
+describe("the design system is linked, and stays out of the product nav", () => {
+	it("links to the page from the brand band", () => {
+		const craft = read("src/components/marketing/craft.tsx");
+		expect(craft).toContain('href="/design-system"');
+		expect(html).toContain('href="/design-system"');
+		expect(visible).toContain("See the design system");
+	});
+
+	it("does not put it in the marketing nav", () => {
+		// The design system is a reference for the people building the product, not a
+		// sixth product link. `test/design-system-page.test.ts` pins the same boundary
+		// from the other side.
+		expect(read("src/components/marketing/site-chrome.tsx")).not.toContain(
+			"/design-system",
+		);
+	});
+});
+
+describe("the tagged PDF claim is the file's markers", () => {
+	it("names each marker, and the probe that reads it back", () => {
+		for (const marker of ["/StructTreeRoot", "/MarkInfo", "/Lang"]) {
+			expect(visible, `${marker} is not on the page`).toContain(marker);
+			expect(
+				read("scripts/probe/export.cjs"),
+				`${marker} is not probed`,
+			).toContain(marker);
+		}
+		expect(visible).toContain("Tagged PDF");
+	});
+
+	it("states what it is not", () => {
+		// "Accessible" and "compliant" are legal claims with an audit behind them. The
+		// page describes the dictionaries in the file instead of borrowing either word.
+		expect(visible).not.toMatch(
+			/accessible|accessibility|compliant|conformant/i,
+		);
+		expect(visible).toContain("not a conformance claim");
+	});
+});
+
+describe("the design CV is the exporter's design CV", () => {
+	it("carries the exporter's own warning", () => {
+		expect(visible).toMatch(/design cv/i);
+		expect(visible).toContain(DESIGN_EXPORT_WARNING);
+		const design = read("src/features/resume-editor/design-export/index.ts");
+		expect(design).toContain("DESIGN_EXPORT_WARNING");
+		expect(design).toContain("DESIGN_DOCX_REFUSAL");
+	});
+
+	it("says it is PDF-only and labels it for people", () => {
+		expect(visible).toContain("PDF only");
+		expect(read("src/components/export/export-buttons.tsx")).toContain(
+			"Design CV — for people, not parsers",
+		);
+	});
+});
+
+describe("the responsive claim is the implemented range", () => {
+	it("says 360px, and the CSS and editor own that width", () => {
+		expect(visible).toContain("360px");
+		expect(read("src/styles/globals.css")).toContain("360px");
+		const editor = read("src/features/resume-editor/resume-editor.tsx");
+		expect(editor).toContain('useMediaQuery("(min-width: 1024px)")');
+		for (const mode of ["Sections", "Form", "Preview"]) {
+			expect(editor).toContain(mode);
+		}
+	});
+});
+
+describe("the example is seeded for every account", () => {
+	it("says first sign-in, and user.upsert is where it happens", () => {
+		expect(visible).toContain("first sign-in");
+		expect(read("api/src/trpc/procedures/user.ts")).toMatch(
+			/buildShowcaseRows/,
+		);
+		expect(read("api/src/db/showcase.ts")).toMatch(
+			/export function buildShowcaseRows/,
 		);
 	});
 });

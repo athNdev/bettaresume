@@ -74,6 +74,10 @@ const FIT_FACTS = [
 		body: "Each lever is priced with a what-if compile: a density step or a smaller type scale says how many millimetres it buys. Measured, not extrapolated.",
 	},
 	{
+		title: "A preset moves every gap",
+		body: "Margins and leading are only half of it. The gap above a section, between entries, between bullets, between a meta line and its first bullet, and between the header and the body all belong to the preset. Compact is a different composition, not a smaller page.",
+	},
+	{
 		title: "Content is never spent for you",
 		body: "Layout rows apply behind a diff-confirm with one-click undo. Content rows have no Apply button: we will not hide a section or cut a bullet on your behalf.",
 	},
@@ -163,6 +167,45 @@ export function PageFit() {
 					</div>
 				</div>
 
+				{/*
+				 * The number this page is allowed to print: a measurement of the document.
+				 *
+				 * `test/fill-ratio.test.ts` compiles the seeded showcase at all three densities
+				 * and asserts the default lands in 78–85 % of one page. The 83 % is the reading
+				 * from that compile; the band is what the test enforces, so a template edit that
+				 * moves it fails CI rather than leaving the sentence true only until someone
+				 * looks. It is not an outcome claim — it is the height of ink on paper.
+				 */}
+				<div className="mt-12 rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)] p-6">
+					<div className="flex flex-wrap items-start justify-between gap-8">
+						<div className="max-w-md">
+							<p className="font-semibold text-[var(--brand-text-faint)] text-xs uppercase tracking-wide">
+								Measured from the compiled PDF
+							</p>
+							<p className="tnum mt-3 font-semibold text-3xl text-[var(--brand-text)]">
+								83% of one page
+							</p>
+							<p className="mt-2 text-[var(--brand-text-muted)] text-base">
+								The seeded one-pager, compiled at the shipped default density,
+								with seven visible sections and a one-page target. It fits, and
+								it leaves room for another two lines before the page breaks.
+							</p>
+						</div>
+						<dl className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
+							<Metric label="Band a test enforces" value="78–85%" />
+							<Metric label="Pages at every density" value="1" />
+							<Metric label="Density presets" value="3" />
+						</dl>
+					</div>
+					<p className="mt-6 border-[var(--brand-rule)] border-t pt-4 text-[var(--brand-text-faint)] text-xs">
+						<span className="font-mono">test/fill-ratio.test.ts</span> compiles
+						the seeded showcase at Compact, Normal and Relaxed. It requires the
+						default to land in 78–85% of one page and every preset to stay on
+						one page. These are measurements of the document, not a prediction
+						about a hiring outcome.
+					</p>
+				</div>
+
 				<div className="mt-12 grid gap-6 lg:grid-cols-2">
 					<div className="rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)] p-6">
 						<h3 className="font-semibold text-[var(--brand-text)] text-lg">
@@ -211,6 +254,19 @@ export function PageFit() {
 				</div>
 			</div>
 		</section>
+	);
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+	return (
+		<div>
+			<dt className="font-semibold text-[var(--brand-text-faint)] text-xs uppercase leading-tight tracking-wide">
+				{label}
+			</dt>
+			<dd className="tnum mt-1 font-semibold text-[var(--brand-text)] text-lg">
+				{value}
+			</dd>
+		</div>
 	);
 }
 
@@ -346,6 +402,10 @@ const EXAMPLE_FACTS = [
 		title: "A job target",
 		body: "A description with required and preferred terms, so the match panel has something to read.",
 	},
+	{
+		title: "Seeded on first sign-in",
+		body: "The fixture is inserted in the same batch as the user row, so every new account starts with both documents. The example is yours to edit, delete or re-seed.",
+	},
 ] as const;
 
 export function Example() {
@@ -360,15 +420,21 @@ export function Example() {
 						and a two-page CV in Academic, forked from it.
 					</p>
 					<p className="mt-4 max-w-(--marketing-measure) text-[var(--brand-text-muted)] text-base">
-						Between them they exercise every feature on this page. The dashboard
-						finds the example by the{" "}
+						Both documents come from one fixture,{" "}
+						<span className="font-mono text-[var(--brand-text)]">
+							api/src/db/showcase.json
+						</span>
+						. The dev database renders it into{" "}
+						<span className="font-mono text-[var(--brand-text)]">seed.sql</span>
+						;{" "}
+						<span className="font-mono text-[var(--brand-text)]">
+							user.upsert
+						</span>{" "}
+						inserts the same rows on a first sign-in, so every account starts
+						with the example. The dashboard finds it by the{" "}
 						<span className="font-mono text-[var(--brand-text)]">Showcase</span>{" "}
 						tag rather than by an id, and offers the one-pager above the grid
-						when it is in your library. The seed lives in{" "}
-						<span className="font-mono text-[var(--brand-text)]">
-							api/src/db/seed.sql
-						</span>
-						.
+						when it is in your library.
 					</p>
 				</div>
 
