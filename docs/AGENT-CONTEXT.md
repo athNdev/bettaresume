@@ -593,6 +593,51 @@ harness, not the product:
 red. If a test can only run on one OS, skip it explicitly and say why — never leave it
 failing.
 
+## 2.27 The Typst text-layer gate could not fail, and then ran the wrong compiler
+
+The five tests that compile the real templates and read the PDF back
+(`typst-compile`, `page-breaks`, `typst-marks`, `fill-ratio`, `template-gallery`)
+carried `describe.skipIf(!hasTypst)`. The CI runner has never had the `typst` binary,
+so the single-column reading-order guarantee — the product's core promise — was
+skipped on every merge, and the suite was green because nothing ran.
+
+Worse, on a machine that *did* have it, presence was not the same as correctness: an
+npm-installed **Typst 0.10** resolved through `npx --no-install`, so the committed
+template gallery had been rendered by 0.10 while the app ships the 0.14.2 engine. A
+0.14 compiler reports every specimen as stale; the tests were validating a document
+nobody ships.
+
+**Rules**
+
+| Rule | Where |
+|---|---|
+| The CLI is installed in CI, checksum-pinned | `.github/workflows/ci.yml`, `responsive.yml` — "Install the Typst compiler" |
+| A missing CLI is a **failure**, not a skip | `test/helpers/typst-cli.ts` |
+| The CLI's **minor version** must match the engine typst.ts wraps | same file; `TYPST_VERSION` |
+| Bumping `@myriaddreamin/typst.ts` means bumping that constant, re-rendering the gallery and re-measuring the showcase | `npm run templates:render`, `test/fill-ratio.test.ts` |
+
+**Local install.** CI downloads `typst-x86_64-unknown-linux-musl` from the GitHub
+release and verifies its SHA-256. Locally, install 0.14.x and check the version:
+
+```bash
+winget install --id Typst.Typst --version 0.14.2   # Windows
+brew install typst                                 # macOS — verify it is 0.14.x
+# or download the release asset for your platform:
+# https://github.com/typst/typst/releases/tag/v0.14.2
+typst --version                                    # must print 0.14.x
+```
+
+**Why the CLI version tracks the WASM.** `@myriaddreamin/typst.ts` 0.7.0 bundles
+Typst 0.14.2, and that is what renders the preview and the exported PDF. The golden
+tests are only evidence about the shipped document if they compile with the same
+engine. When the CLI and the bundle disagree the tests are measuring a different
+program, which is how the gallery above rotted.
+
+**Don't reintroduce the skip.** An absent compiler is an environment fault and
+should read as one; `beforeAll` failing the file with the install instructions is the
+intended behaviour. If a future check needs a *different* engine, pin it explicitly
+rather than loosening this one.
+
 ## 2.x Never hand-write a list of what to substitute, read it from the file
 
 This one took production down twice, and the second outage was caused by the fix for
@@ -761,6 +806,7 @@ also wiring it to the tRPC client and a Clerk token getter.
 | `npm run typecheck` (frontend) | **required in CI** (added #118) |
 | `npm run typecheck -w api` | **required in CI** (added #118) |
 | `npm test` (root + api) | **required in CI** (added #125/#127) — **1031 tests**: 812 root, 219 api |
+| Typst CLI (`0.14.x`) | **required in CI** — installed by a checksum-pinned step; the compile-and-extract tests fail rather than skip when it is absent (§2.27) |
 | `npm run build` | required |
 | `npm run check` (biome) | **307 diagnostics**, ratcheted in CI (baseline 307, down from 376) — **not** gated. Tighten it whenever the count falls, or the improvement is spendable again. The seven findings that were load-bearing are now closed at the rendering layer — see §2.20. |
 | `dev-server` | required in CI |

@@ -5,8 +5,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import { DENSITY_PRESETS, type DensityPreset } from "../src/lib/layout/density";
 import { resumeToTypstJson } from "../src/lib/typst/serialize";
-import { hasTypst, type Measurement, measurePdf } from "./helpers/measure-pdf";
+import { type Measurement, measurePdf } from "./helpers/measure-pdf";
 import { loadShowcase } from "./helpers/showcase-resume";
+import { TYPST, TYPST_PROBLEM } from "./helpers/typst-cli";
 
 /**
  * The fill ratio of the shipped showcase, measured from the real PDF.
@@ -19,10 +20,10 @@ import { loadShowcase } from "./helpers/showcase-resume";
  * visible sections) at each of the three densities and asserts where the content lands.
  *
  * The measurement is the PDF itself, read back with `pdfjs`: page count from the file,
- * and the deepest text baseline on the last page as the bottom of the content. The in-app
- * fit meter uses an invisible Typst `metadata` probe instead, but that needs `context`
- * (Typst ≥ 0.11) and this suite compiles with the 0.10 CLI, so the PDF is the honest
- * measurement available here — and it is the artefact the user actually sends.
+ * and the deepest text baseline on the last page as the bottom of the content. The PDF is
+ * the honest measurement — it is the artefact the user actually sends.
+ *
+ * A missing `typst` CLI is a failure, not a skip (`test/helpers/typst-cli.ts`).
  *
  * The fixture is loaded from `api/src/db/seed.sql` through SQLite, not copied, so it is
  * the same document `npm run db:reset-seed` puts in the app (`docs/SHOWCASE.md`).
@@ -78,54 +79,52 @@ async function measureAt(preset: DensityPreset): Promise<Measurement> {
 
 const measured: Partial<Record<DensityPreset, Measurement>> = {};
 
-describe.skipIf(!hasTypst)(
-	"the showcase lands in the researched fill band",
-	() => {
-		beforeAll(async () => {
-			for (const preset of ["compact", "normal", "relaxed"] as const) {
-				measured[preset] = await measureAt(preset);
-			}
-		}, 180_000);
+describe("the showcase lands in the researched fill band", () => {
+	beforeAll(async () => {
+		expect(TYPST, TYPST_PROBLEM).not.toBeNull();
+		for (const preset of ["compact", "normal", "relaxed"] as const) {
+			measured[preset] = await measureAt(preset);
+		}
+	}, 180_000);
 
-		const pct = (value: number) => `${(value * 100).toFixed(1)} %`;
+	const pct = (value: number) => `${(value * 100).toFixed(1)} %`;
 
-		it("Balanced — the shipped default — fills 78–85 % of one page", () => {
-			const normal = measured.normal;
-			expect(normal, "the normal-density compile failed").toBeDefined();
-			expect(normal?.pages).toBe(1);
-			expect(
-				normal?.fill,
-				`Balanced filled ${pct(normal?.fill ?? 0)} of the page; the researched band is ${pct(BALANCED_BAND.min)}–${pct(BALANCED_BAND.max)}`,
-			).toBeGreaterThanOrEqual(BALANCED_BAND.min);
-			expect(normal?.fill).toBeLessThanOrEqual(BALANCED_BAND.max);
-		});
+	it("Balanced — the shipped default — fills 78–85 % of one page", () => {
+		const normal = measured.normal;
+		expect(normal, "the normal-density compile failed").toBeDefined();
+		expect(normal?.pages).toBe(1);
+		expect(
+			normal?.fill,
+			`Balanced filled ${pct(normal?.fill ?? 0)} of the page; the researched band is ${pct(BALANCED_BAND.min)}–${pct(BALANCED_BAND.max)}`,
+		).toBeGreaterThanOrEqual(BALANCED_BAND.min);
+		expect(normal?.fill).toBeLessThanOrEqual(BALANCED_BAND.max);
+	});
 
-		it("fits on one page at every density", () => {
-			// The showcase is a one-page document by its own page target. Two pages means a
-			// second page that is a few lines tall — the paradox this work removes.
-			for (const preset of ["compact", "normal", "relaxed"] as const) {
-				expect(measured[preset]?.pages, `${preset} spilled`).toBe(1);
-			}
-		});
+	it("fits on one page at every density", () => {
+		// The showcase is a one-page document by its own page target. Two pages means a
+		// second page that is a few lines tall — the paradox this work removes.
+		for (const preset of ["compact", "normal", "relaxed"] as const) {
+			expect(measured[preset]?.pages, `${preset} spilled`).toBe(1);
+		}
+	});
 
-		it("spends less of the page as the density tightens", () => {
-			// The same content, three compositions: Compact must be the smallest and Relaxed
-			// the largest, or a preset is not moving the whole document. This is the assertion
-			// the old hard-coded entry and bullet gaps would have failed for Compact.
-			const compact = measured.compact?.fill ?? 0;
-			const normal = measured.normal?.fill ?? 0;
-			const relaxed = measured.relaxed?.fill ?? 0;
-			expect(compact).toBeLessThan(normal);
-			expect(normal).toBeLessThan(relaxed);
-		});
+	it("spends less of the page as the density tightens", () => {
+		// The same content, three compositions: Compact must be the smallest and Relaxed
+		// the largest, or a preset is not moving the whole document. This is the assertion
+		// the old hard-coded entry and bullet gaps would have failed for Compact.
+		const compact = measured.compact?.fill ?? 0;
+		const normal = measured.normal?.fill ?? 0;
+		const relaxed = measured.relaxed?.fill ?? 0;
+		expect(compact).toBeLessThan(normal);
+		expect(normal).toBeLessThan(relaxed);
+	});
 
-		it("leaves the default with slack for another line or two", () => {
-			// 78–85 % is the band precisely because a resume is edited: two more wrapped lines
-			// (~2 × 4.6 mm at Balanced) must not force a page-flow crisis.
-			const normal = measured.normal;
-			const freePt = (normal?.usablePt ?? 0) * (1 - (normal?.fill ?? 0));
-			const linePitchPt = 10.5 * 1.25;
-			expect(freePt).toBeGreaterThan(2 * linePitchPt);
-		});
-	},
-);
+	it("leaves the default with slack for another line or two", () => {
+		// 78–85 % is the band precisely because a resume is edited: two more wrapped lines
+		// (~2 × 4.6 mm at Balanced) must not force a page-flow crisis.
+		const normal = measured.normal;
+		const freePt = (normal?.usablePt ?? 0) * (1 - (normal?.fill ?? 0));
+		const linePitchPt = 10.5 * 1.25;
+		expect(freePt).toBeGreaterThan(2 * linePitchPt);
+	});
+});

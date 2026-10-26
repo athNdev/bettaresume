@@ -1,8 +1,9 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { TYPST, TYPST_COMPILE_FLAGS, TYPST_PROBLEM } from "./helpers/typst-cli";
 
 /**
  * Semantic page breaks, compiled.
@@ -16,31 +17,12 @@ import { describe, expect, it } from "vitest";
  * page, which is the case the flag exists for: with `never` it splits at the boundary
  * (heading above, last bullet below), and with `always` it moves to page 2 whole.
  *
- * Runs only when the `typst` binary is available, like `typst-compile.test.ts`; the
- * source-level mapping is asserted unconditionally in `typst-templates.test.ts`.
+ * A missing compiler is a **failure**, not a skip — the same rule as
+ * `typst-compile.test.ts`. See `test/helpers/typst-cli.ts`.
  */
 
 const ROOT = resolve(process.cwd());
 const TEMPLATE_DIR = join(ROOT, "src/features/resume-editor/typst_templates");
-
-const TYPST = (() => {
-	for (const [command, prefix] of [
-		["typst", []],
-		["typst.exe", []],
-		["npx", ["--no-install", "typst"]],
-	] as Array<[string, string[]]>) {
-		const probe = spawnSync(command, [...prefix, "--version"], {
-			encoding: "utf8",
-			shell: process.platform === "win32",
-		});
-		if (probe.status === 0 && (probe.stdout ?? "").includes("typst")) {
-			return [command, prefix] as const;
-		}
-	}
-	return null;
-})();
-
-const hasTypst = TYPST !== null;
 
 const HEADING = "Boundary Keeper";
 const LAST_BULLET = "Bullet thirty is the last one in this entry";
@@ -155,7 +137,11 @@ async function pageTexts(path: string): Promise<string[]> {
 const pageOf = (pages: string[], needle: string) =>
 	pages.findIndex((text) => text.includes(needle)) + 1;
 
-describe.skipIf(!hasTypst)("semantic page breaks", () => {
+describe("semantic page breaks", () => {
+	beforeAll(() => {
+		expect(TYPST, TYPST_PROBLEM).not.toBeNull();
+	});
+
 	const dir = mkdtempSync(join(tmpdir(), "typst-breaks-"));
 	const sections = readFileSync(join(TEMPLATE_DIR, "sections.typ"), "utf8");
 	const body = readFileSync(join(TEMPLATE_DIR, "standard.typ"), "utf8");
@@ -170,11 +156,15 @@ describe.skipIf(!hasTypst)("semantic page breaks", () => {
 			`#let data = json("${keepTogether}.json")\n${sections}\n\n${body}`,
 		);
 		const [command, prefix] = TYPST as readonly [string, string[]];
-		execFileSync(command, [...prefix, "compile", sourcePath, pdfPath], {
-			cwd: dir,
-			stdio: "pipe",
-			shell: process.platform === "win32",
-		});
+		execFileSync(
+			command,
+			[...prefix, "compile", ...TYPST_COMPILE_FLAGS, sourcePath, pdfPath],
+			{
+				cwd: dir,
+				stdio: "pipe",
+				shell: process.platform === "win32",
+			},
+		);
 		return pageTexts(pdfPath);
 	}
 

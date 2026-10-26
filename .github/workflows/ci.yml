@@ -155,6 +155,29 @@ jobs:
         # exist until built. `npm test` alone therefore fails on a clean runner.
         run: npm run build:types
 
+      - name: Install the Typst compiler
+        # The text-layer guarantee is compiled, not asserted in prose. `typst-compile`,
+        # `page-breaks`, `typst-marks`, `fill-ratio` and the template gallery all run the
+        # real templates through the real compiler, and they **fail** (they used to skip)
+        # when it is absent — so this step is what makes them a gate.
+        #
+        # Version matters as much as presence: 0.14.2 is the engine
+        # `@myriaddreamin/typst.ts` 0.7.0 bundles, so this binary and the browser's WASM
+        # render the same document. `test/helpers/typst-cli.ts` asserts the minor version,
+        # because this host had an npm-installed 0.10 CLI that validated a document
+        # nobody ships (docs/AGENT-CONTEXT.md §2.27).
+        #
+        # Downloaded and checksum-verified rather than `cargo install` (~10 min) or a
+        # third-party action: the pin is auditable in this file.
+        run: |
+          curl -fsSL -o /tmp/typst.tar.xz \
+            https://github.com/typst/typst/releases/download/v0.14.2/typst-x86_64-unknown-linux-musl.tar.xz
+          echo "a6044cbad2a954deb921167e257e120ac0a16b20339ec01121194ff9d394996d  /tmp/typst.tar.xz" \
+            | sha256sum -c -
+          tar -xJf /tmp/typst.tar.xz -C /tmp
+          sudo install -m 0755 /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst
+          typst --version
+
       - name: Test (root + api)
         # One job rather than two: both suites need the same install and the same
         # types build, so splitting them duplicated ~40s of setup for no isolation
