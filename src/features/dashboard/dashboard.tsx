@@ -70,7 +70,7 @@ import { useHashRouter } from "@/lib/hash-router";
 import { extractDocumentText } from "@/lib/import/extractors";
 import { toLibraryPayload } from "@/lib/import/library-item";
 import { sectionResumeText } from "@/lib/import/sectioner";
-import { findShowcase } from "@/lib/showcase";
+import { findShowcase, orderShowcaseFirst } from "@/lib/showcase";
 import { api } from "@/lib/trpc/react";
 
 export default function Dashboard() {
@@ -229,9 +229,9 @@ function DashboardContent() {
 	const confirm = useConfirm();
 
 	const firstName = greetingName(user);
-	// Filtered resumes
+	// Filtered resumes, in reading order
 	const filteredResumes = useMemo(() => {
-		return resumes.filter((resume: Resume) => {
+		const matched = resumes.filter((resume: Resume) => {
 			if (!showArchived && resume.isArchived) return false;
 			if (showArchived && !resume.isArchived) return false;
 			if (searchQuery) {
@@ -247,6 +247,13 @@ function DashboardContent() {
 				return false;
 			return true;
 		});
+		/*
+		 * The example leads, then its variations, then the rest of the library in the
+		 * query's order. Sorting after filtering rather than in the query keeps the API
+		 * free of presentation rules, and keeps the order stable while a filter narrows
+		 * the list.
+		 */
+		return orderShowcaseFirst(matched);
 	}, [resumes, searchQuery, showArchived, selectedTemplate]);
 
 	const totalPages = useMemo(
@@ -705,24 +712,19 @@ function DashboardContent() {
 				 * The rail is FIRST in the DOM and ordered second at lg, so a narrow screen
 				 * shows filters before the list they filter.
 				 */}
-				<div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-					{/*
-					 * The heading names the person, and yields to the welcome guide for a new
-					 * account: two headings competing above one empty grid is one too many.
-					 */}
-					{user && totalResumes > 0 ? (
-						<h1 className="font-semibold text-xl tracking-title">
-							{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
-						</h1>
-					) : null}
-					<p aria-live="polite" className="text-fg-muted text-xs" role="status">
-						{resultSummary({
-							matched: filteredResumes.length,
-							query: searchQuery,
-							total: totalResumes,
-						})}
-					</p>
-				</div>
+				{/*
+				 * The heading names the person, and yields to the welcome guide for a new
+				 * account: two headings competing above one empty grid is one too many.
+				 *
+				 * The result count is **not** here. Set against the right edge of the page it
+				 * floated above the rail, unconnected to anything it counted; it now sits
+				 * immediately over the card grid, which is the thing it describes.
+				 */}
+				{user && totalResumes > 0 ? (
+					<h1 className="mb-6 font-semibold text-xl tracking-title">
+						{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+					</h1>
+				) : null}
 
 				<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_15rem]">
 					<aside className="lg:order-2">
@@ -825,16 +827,22 @@ function DashboardContent() {
 						 * resume anywhere". The control now says *example resume* — the
 						 * phrase someone actually looks for — and the action is an outlined
 						 * button rather than a text link at the far edge of the row.
+						 *
+						 * The action sits beside the copy, not pinned to the far edge. As a
+						 * full-width row with the button on the right, a 52ch paragraph left
+						 * ~400px of nothing between the sentence and the thing it invited
+						 * you to do. The region is now as wide as its content at `sm`, so
+						 * there is no gap to strand the button in at any width.
 						 */}
 						{showcase ? (
 							<section
 								aria-labelledby="example-resume-heading"
-								className="mb-6 flex flex-col gap-3 rounded-md border bg-sunken-static px-4 py-3 sm:flex-row sm:items-center"
+								className="mb-6 flex flex-col gap-3 rounded-md border bg-sunken-static px-4 py-3 sm:w-fit sm:flex-row sm:items-center sm:gap-4"
 							>
-								<div className="flex min-w-0 flex-1 items-start gap-3">
+								<div className="flex min-w-0 items-start gap-3 sm:items-center">
 									<BookOpen
 										aria-hidden
-										className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle"
+										className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle sm:mt-0"
 									/>
 									<div className="min-w-0">
 										<h2
@@ -930,11 +938,22 @@ function DashboardContent() {
 						{filteredResumes.length > 0 ? (
 							<>
 								{/*
-								 * The result count lives in the meta line under the page title, and is
-								 * announced there when the filter changes. It used to be its own
-								 * paragraph directly above the grid, which put a second full-width
-								 * line of chrome between the title and the documents.
+								 * The grid's count, directly above the grid and left-aligned with it.
+								 * Live and announced: the search filters on every keystroke without
+								 * moving focus, so the change has to be spoken somewhere.
 								 */}
+								<p
+									aria-live="polite"
+									className="mb-3 text-fg-muted text-xs"
+									data-grid-count=""
+									role="status"
+								>
+									{resultSummary({
+										matched: filteredResumes.length,
+										query: searchQuery,
+										total: totalResumes,
+									})}
+								</p>
 								<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 									{pagedResumes.map((resume: Resume) => (
 										<ResumeCard

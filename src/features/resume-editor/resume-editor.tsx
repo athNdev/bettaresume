@@ -10,8 +10,10 @@ import {
 	AlertTriangle,
 	ArrowLeft,
 	BookOpen,
+	Check,
 	ChevronDown,
 	Eye,
+	Files,
 	Layers,
 	Layout,
 	Library,
@@ -51,6 +53,14 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
 	PanelEmpty,
 	PanelError,
@@ -100,7 +110,7 @@ import {
 import { useConfirm } from "@/hooks/use-confirm";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useHashRouter } from "@/lib/hash-router";
-import { findShowcase, isShowcase } from "@/lib/showcase";
+import { findShowcase, isShowcase, orderShowcaseFirst } from "@/lib/showcase";
 import { resolvePersonalInfo } from "@/lib/typst/serialize";
 import { flushPendingSaves } from "@/lib/ui/save-registry";
 import { cn } from "@/lib/utils";
@@ -151,8 +161,22 @@ interface HeaderMetaProps {
  * The page count comes from the compiled preview, so it is absent until the first
  * compile lands rather than showing "0". Zoom and fit deliberately live on the preview's
  * own instruments (the toolbar stepper, the fit chip), where they can be changed.
+ *
+ * ## The narrow variant
+ *
+ * The full sentence needs about 380px. Below `sm` the document name's column is ~290px,
+ * so `truncate` cut it mid-word — the header read "Showcase · Payments platform · Com…".
+ * Truncating a *sentence* is not a design decision the way truncating a name is: the
+ * ellipsis landed on whichever fact happened to be third, and it changed as the preview
+ * compiled. The narrow variant therefore drops the two secondary facts (domain, density)
+ * and keeps the two that identify the document — archetype and length. Fewer facts, not
+ * half a word.
  */
-function metaLine({ resume, pageCount }: HeaderMetaProps): string {
+function metaLine({
+	resume,
+	pageCount,
+	compact = false,
+}: HeaderMetaProps & { compact?: boolean }): string {
 	const settings = resume.metadata?.settings;
 	const templateName =
 		TEMPLATE_CONFIGS[normalizeTemplateId(resume.template)]?.name ?? null;
@@ -175,18 +199,99 @@ function metaLine({ resume, pageCount }: HeaderMetaProps): string {
 	 * surface over, so the two cannot disagree about the document's identity.
 	 */
 	const showDensity = density !== null && density !== templateName;
-	return [
-		resume.domain ?? null,
-		templateName,
-		showDensity ? density : null,
-		pages,
-	]
-		.filter((part): part is string => Boolean(part))
-		.join(" · ");
+	const parts = compact
+		? [templateName, pages]
+		: [
+				resume.domain ?? null,
+				templateName,
+				showDensity ? density : null,
+				pages,
+			];
+	return parts.filter((part): part is string => Boolean(part)).join(" · ");
 }
 
 interface ResumeEditorPageProps {
 	id: string;
+}
+
+/**
+ * Move between documents without leaving the editor.
+ *
+ * The editor had exactly one cross-document control — the example — so switching to the
+ * resume you were working on ten minutes ago meant Back, wait for the dashboard, find
+ * the card, open it. The rail owns *sections* and the header owns *this document*;
+ * nothing owned the library. This is that missing control, kept quiet: a ghost icon
+ * beside the name, one menu, the library in the same order the dashboard shows it.
+ *
+ * It is a menu rather than a picker in the rail because it is navigation, not an
+ * authoring choice — and because the rail is already the longest list on the screen.
+ */
+function DocumentSwitcher({
+	documents,
+	currentId,
+	onSelect,
+	onViewAll,
+	onRetry,
+	unavailable,
+}: {
+	documents: Resume[];
+	currentId: string;
+	onSelect: (id: string) => void;
+	onViewAll: () => void;
+	onRetry: () => void;
+	unavailable: boolean;
+}) {
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					aria-label="Switch document"
+					className="shrink-0 text-fg-subtle"
+					data-document-switcher=""
+					size="icon-sm"
+					static
+					variant="ghost"
+				>
+					<Files aria-hidden className="h-4 w-4" />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent
+				align="start"
+				className="max-h-80 w-72 overflow-y-auto"
+			>
+				<DropdownMenuLabel>Documents</DropdownMenuLabel>
+				{documents.map((document) => {
+					const current = document.id === currentId;
+					return (
+						<DropdownMenuItem
+							aria-current={current ? "true" : undefined}
+							data-document-id={document.id}
+							key={document.id}
+							onSelect={() => onSelect(document.id)}
+						>
+							<span className="min-w-0 flex-1 truncate">{document.name}</span>
+							{current ? (
+								<Check
+									aria-label="Current document"
+									className="ml-2 size-4 shrink-0"
+								/>
+							) : null}
+						</DropdownMenuItem>
+					);
+				})}
+				{unavailable ? (
+					<>
+						<DropdownMenuItem disabled>
+							The document list could not be loaded
+						</DropdownMenuItem>
+						<DropdownMenuItem onSelect={onRetry}>Retry</DropdownMenuItem>
+					</>
+				) : null}
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onSelect={onViewAll}>All documents</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
 }
 
 export default function ResumeEditor({ id: resumeId }: ResumeEditorPageProps) {
@@ -210,7 +315,20 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		isError,
 		refetch,
 	} = useResume(resumeId);
-	const { data: allResumes = [] } = useResumes({ includeArchived: true });
+	const {
+		data: allResumes = [],
+		isError: documentsUnavailable,
+		refetch: refetchDocuments,
+	} = useResumes({
+		includeArchived: true,
+		/*
+		 * The library is supporting material here — the variation list and the document
+		 * switcher — so it waits for the document being edited. It also keeps the two
+		 * requests independent: a failed library load then has somewhere to say so,
+		 * instead of taking the editor down with it.
+		 */
+		enabled: Boolean(activeResume),
+	});
 	/*
 	 * The example is reachable from the editor too, not only from the dashboard. The
 	 * maintainer's report was "I don't see the example resume anywhere": the dashboard
@@ -219,6 +337,15 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	 */
 	const showcaseResume = useMemo(
 		() => findShowcase(allResumes.filter((resume) => !resume.isArchived)),
+		[allResumes],
+	);
+	/*
+	 * The switcher's list, in the dashboard's order. Archived documents are excluded: this
+	 * is navigation to something you are working on, and the dashboard is where archived
+	 * things are deliberately brought back.
+	 */
+	const switchableDocuments = useMemo(
+		() => orderShowcaseFirst(allResumes.filter((resume) => !resume.isArchived)),
 		[allResumes],
 	);
 	const {
@@ -432,6 +559,12 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	 * after the effect that closes over it.
 	 */
 	const isWideEditor = useMediaQuery("(min-width: 1024px)");
+	/*
+	 * Below `sm` the identity line has ~290px and the full sentence needs ~380px. The
+	 * variant drops the secondary facts rather than taking an ellipsis to the middle of
+	 * one (see `metaLine`).
+	 */
+	const isNarrowHeader = !useMediaQuery("(min-width: 640px)");
 	const [previewScale, setPreviewScale] = useState(1);
 	/*
 	 * Zoom the document to the panel on first paint.
@@ -1375,7 +1508,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	 * pane, so a dragged-wide column does not stretch every input into a survey row.
 	 */
 	const formPane = (
-		<div className="@container flex h-full min-h-0 flex-col border-r bg-surface">
+		<div
+			className="@container flex h-full min-h-0 flex-col border-r bg-surface"
+			data-active-section-type={selectedSection?.type ?? ""}
+		>
 			{selectedSection ? (
 				<div className="flex h-11 shrink-0 items-center border-b px-4">
 					<div className="mx-auto flex w-full max-w-[40rem] items-center justify-between gap-3">
@@ -1634,11 +1770,29 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							<p className="truncate text-fg-muted text-xs" data-editor-meta="">
 								{isShowcase(activeResume) ? "Showcase · " : ""}
 								{metaLine({
+									compact: isNarrowHeader,
 									pageCount,
 									resume: draftResume ?? activeResume,
 								})}
 							</p>
 						</div>
+
+						{/*
+						 * The library, one gesture away. It sits with the document's identity
+						 * because that is what it changes, and it is quiet because
+						 * switching files is not the work.
+						 */}
+						<DocumentSwitcher
+							currentId={activeResume.id}
+							documents={switchableDocuments}
+							onRetry={() => void refetchDocuments()}
+							onSelect={(id) => {
+								setActiveResumeId(id);
+								navigate(`/resume-editor/${id}`);
+							}}
+							onViewAll={() => navigate("/dashboard")}
+							unavailable={documentsUnavailable}
+						/>
 
 						{/*
 						 * Save state, compact below `lg`.
@@ -1734,6 +1888,37 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									Example
 								</span>
 							</Button>
+						) : documentsUnavailable ? (
+							/*
+							 * The example entry point used to disappear when the library query
+							 * failed — the same nothing as an account with no example, which made
+							 * "we could not load it" indistinguishable from "there is not one".
+							 * This is the designed failure instead: it names the missing thing,
+							 * it is announced, and the retry re-runs the query that failed.
+							 */
+							<div
+								className="flex items-center gap-1"
+								data-example-unavailable=""
+							>
+								<AlertTriangle
+									aria-hidden
+									className="h-4 w-4 shrink-0 text-destructive"
+								/>
+								<span
+									className="sr-only text-fg-muted text-xs sm:not-sr-only"
+									role="status"
+								>
+									Example unavailable
+								</span>
+								<Button
+									className="text-fg-muted"
+									onClick={() => void refetchDocuments()}
+									size="sm"
+									variant="ghost"
+								>
+									Retry
+								</Button>
+							</div>
 						) : null}
 						{/*
 						 * Import sits in the editor header, beside Review and Export, and not

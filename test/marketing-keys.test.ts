@@ -53,7 +53,7 @@ const files = [
 	"site-chrome.tsx",
 	"hero.tsx",
 	"capabilities.tsx",
-	"craft.tsx",
+	"tagged-pdf.tsx",
 ];
 
 /** `[1, 1, 1]` / `['a', 'a']` — a literal array whose values are not all distinct. */

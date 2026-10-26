@@ -35,5 +35,30 @@ export function findShowcase<
 	);
 }
 
+/**
+ * The showcase pinned to the front of the library, deliberately ordered.
+ *
+ * Two things were wrong with leaving this to the API's `updatedAt desc`:
+ *
+ * - The full CV led and the one-pager came second. The one-pager is the stronger
+ *   artefact — the same person, every feature, one page — so it should greet someone
+ *   opening the library.
+ * - The two showcase cards could be separated by anything updated between them. They
+ *   are one example in two shapes; they read as a pair or as a mistake.
+ *
+ * Rank, not a sort key: base first, then its variations, then everything else in the
+ * order the query returned. `Array.prototype.sort` is stable, so "everything else"
+ * keeps the recency order the API chose.
+ */
+export function orderShowcaseFirst<
+	T extends { tags?: readonly string[] | null; variationType?: string },
+>(resumes: readonly T[]): T[] {
+	const rank = (resume: T) => {
+		if (!isShowcase(resume)) return 2;
+		return resume.variationType === "base" ? 0 : 1;
+	};
+	return [...resumes].sort((a, b) => rank(a) - rank(b));
+}
+
 /** Narrow helper for call sites that only have a `Resume`. */
 export type ShowcaseResume = Pick<Resume, "id" | "tags" | "variationType">;

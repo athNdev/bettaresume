@@ -186,6 +186,7 @@ export function SortableSectionItem({
 				isSelected ? "bg-selected" : "hover:bg-accent/50",
 				!section.visible && "opacity-60",
 			)}
+			data-section-type={section.type}
 			ref={setNodeRef}
 			style={style}
 		>

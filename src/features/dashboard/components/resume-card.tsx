@@ -135,6 +135,7 @@ export function ResumeCard({
 				 */}
 				<button
 					className="min-w-0 flex-1 truncate rounded-sm text-left font-semibold text-base tracking-title hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					data-card-title=""
 					onClick={onEdit}
 					type="button"
 				>
@@ -207,23 +208,54 @@ export function ResumeCard({
 			 * under the title and a footer whose date floated against a phantom second
 			 * column whenever the card had no variations.
 			 */}
-			<div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-4 text-fg-muted text-xs">
+			<div
+				className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-4 text-fg-muted text-xs"
+				data-card-meta=""
+			>
 				<span>{templateName}</span>
-				<span className="whitespace-nowrap">· {pageSize}</span>
+				{/*
+				 * Page size and density are secondary facts: they describe a document you
+				 * have already chosen a template for. On a phone they cost a line each
+				 * and turn one meta line into five, so the small-screen variant shows
+				 * only the two facts that identify the card — archetype and recency —
+				 * plus its badges. Nothing is clipped and nothing is truncated.
+				 */}
+				<span
+					className="hidden whitespace-nowrap sm:inline"
+					data-meta-secondary=""
+					data-responsive-duplicate="page size is in the editor's formatting toolbar"
+				>
+					· {pageSize}
+				</span>
 				{density && showDensity ? (
-					<span className="whitespace-nowrap">· {density}</span>
+					<span
+						className="hidden whitespace-nowrap sm:inline"
+						data-meta-secondary=""
+						data-responsive-duplicate="density is in the editor's formatting toolbar"
+					>
+						· {density}
+					</span>
 				) : null}
 				<span className="whitespace-nowrap">· Updated {updated}</span>
 				{variations.length > 0 ? (
-					<span className="whitespace-nowrap">
+					<span
+						className="hidden whitespace-nowrap sm:inline"
+						data-meta-secondary=""
+						data-responsive-duplicate="the variation count is in the rail's Variants figure"
+					>
 						· {variations.length} variation{variations.length > 1 ? "s" : ""}
 					</span>
 				) : null}
 				{isShowcase(resume) && (
 					<Tooltip>
 						<TooltipTrigger asChild>
-							{/* The `showcase` tag is the UI contract; see `showcase.ts`. */}
-							<Badge className="text-xs" variant="outline">
+							{/*
+							 * The `showcase` tag is the UI contract; see `showcase.ts`.
+							 * `tabIndex` is the fix for a hover-only explanation: a `div`
+							 * is not focusable, so the tooltip opened for a mouse and for
+							 * nobody else.
+							 */}
+							<Badge className="text-xs" tabIndex={0} variant="outline">
 								<BookOpen className="mr-1 h-3 w-3" />
 								Showcase
 							</Badge>
@@ -236,7 +268,7 @@ export function ResumeCard({
 				{resume.variationType === "variation" && (
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<Badge className="text-xs" variant="outline">
+							<Badge className="text-xs" tabIndex={0} variant="outline">
 								<GitBranch className="mr-1 h-3 w-3" />
 								Variation
 							</Badge>

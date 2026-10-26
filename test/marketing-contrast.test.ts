@@ -65,7 +65,7 @@ const COMPONENTS = [
 	"src/components/marketing/hero.tsx",
 	"src/components/marketing/sections.tsx",
 	"src/components/marketing/capabilities.tsx",
-	"src/components/marketing/craft.tsx",
+	"src/components/marketing/tagged-pdf.tsx",
 	"src/components/marketing/site-chrome.tsx",
 	"src/app/page.tsx",
 ];
