@@ -355,48 +355,48 @@
 
   // The rule is opt-in by density: Tight draws none, Balanced and Relaxed draw it
   // unless the archetype asks for a different one.
-  	let rule = if not gaps.header-rule { "none" } else { header-rule }
-  	let below-block = if rule == "none" { gaps.header } else { gaps.header - gaps.heading }
-  	let ink = if title-style == "italic" { "italic" } else { "normal" }
+  let rule = if not gaps.header-rule { "none" } else { header-rule }
+  let below-block = if rule == "none" { gaps.header } else { gaps.header - gaps.heading }
+  let ink = if title-style == "italic" { "italic" } else { "normal" }
 
-  	block(width: 100%, below: below-block)[
-      #align(content-align)[
-        #text(
-          size: typo.name,
-          weight: "bold",
-          fill: rgb(colors.at("heading", default: "#111827")),
-        )[#personal.fullName]
-        #if title != "" {
-          let sep = if title-style == "inline" { h(space-l) } else { linebreak() }
-          [#sep#text(
-            size: typo.title,
-            fill: rgb(colors.at("secondary", default: "#6b7280")),
-            style: ink,
-          )[#title]]
-        }
-        #v(gaps.contact)
-        #text(size: typo.small, fill: rgb(colors.at("secondary", default: "#6b7280")))[
-          #contacts.join("  |  ")
-        ]
+  block(width: 100%, below: below-block)[
+    #align(content-align)[
+      #text(
+        size: typo.name,
+        weight: "bold",
+        fill: rgb(colors.at("heading", default: "#111827")),
+      )[#personal.fullName]
+      #if title != "" {
+        let sep = if title-style == "inline" { h(space-l) } else { linebreak() }
+        [#sep#text(
+          size: typo.title,
+          fill: rgb(colors.at("secondary", default: "#6b7280")),
+          style: ink,
+        )[#title]]
+      }
+      #v(gaps.contact)
+      #text(size: typo.small, fill: rgb(colors.at("secondary", default: "#6b7280")))[
+        #contacts.join("  |  ")
       ]
     ]
+  ]
 
-    if rule == "hairline" {
-      // A 0.5pt filled block, not `line()`: a line inside a block's content sits in a
-      // *paragraph*, and an inline `line()` draws across what is left of the current line —
-      // which put this rule through the contact line instead of under it.
-      v(space-xs)
-      block(width: 100%, height: 0.5pt, fill: rgb(colors.at("divider", default: "#e2e8f0")))
-      v(gaps.heading)
-    } else if rule == "short" {
-      v(space-xs)
-      align(
-        center,
-        block(width: 60%, height: 0.6pt, fill: rgb(colors.at("divider", default: "#e2e8f0"))),
-      )
-      v(gaps.heading)
-    }
+  if rule == "hairline" {
+    // A 0.5pt filled block, not `line()`: a line inside a block content sits in a
+    // *paragraph*, and an inline `line()` draws across what is left of the current line —
+    // which put this rule through the contact line instead of under it.
+    v(space-xs)
+    block(width: 100%, height: 0.5pt, fill: rgb(colors.at("divider", default: "#e2e8f0")))
+    v(gaps.heading)
+  } else if rule == "short" {
+    v(space-xs)
+    align(
+      center,
+      block(width: 60%, height: 0.6pt, fill: rgb(colors.at("divider", default: "#e2e8f0"))),
+    )
+    v(gaps.heading)
   }
+}
 
 // ──────────────────────────────────────────────
 // Section title
