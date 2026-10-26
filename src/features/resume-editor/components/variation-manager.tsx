@@ -11,7 +11,6 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -87,51 +86,49 @@ export function VariationManager({
 	};
 
 	return (
-		<div className="flex items-center gap-2">
-			{/* Current Resume Indicator */}
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<Badge
-						className="gap-1"
-						variant={
-							currentResume?.variationType === "base" ? "default" : "secondary"
-						}
-					>
-						<GitBranch className="h-3 w-3" />
-						{currentResume?.variationType === "base" ? "Base" : "Variation"}
-					</Badge>
-				</TooltipTrigger>
-				<TooltipContent>
-					{currentResume?.variationType === "base"
-						? "This is the base resume that variations are created from"
-						: `Variation of "${baseResume.name}"`}
-				</TooltipContent>
-			</Tooltip>
-
-			{/* Variation Selector Dropdown */}
+		<div className="flex items-center gap-1">
+			{/*
+			 * One quiet control that says which file you are in and opens the switcher.
+			 *
+			 * This used to be two: a solid accent "Base" badge beside a bordered
+			 * "Variations" button. Together they were the loudest pair in the top bar, and
+			 * both were about *which copy of the resume* rather than about the resume
+			 * itself. The badge's meaning survives in the trigger's label and tooltip.
+			 */}
 			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button
-						aria-label="Resume variations"
-						className="gap-2"
-						size="sm"
-						variant="outline"
-					>
-						{/* The document name is the header's h1; this trigger names the
-						 * control instead, so the name is on screen exactly once.
-						 *
-						 * Below `md` only the label is hidden (it is marked
-						 * `data-collapse-label`), never the control: the trigger becomes an
-						 * icon button with an accessible name. The editor used to wrap the
-						 * whole manager in `hidden md:flex`, which made variants — a
-						 * load-bearing feature — absent rather than compact on a phone. */}
-						<GitBranch aria-hidden className="h-4 w-4 md:hidden" />
-						<span className="hidden md:inline" data-collapse-label="">
-							Variations
-						</span>
-						<ChevronDown className="h-4 w-4" />
-					</Button>
-				</DropdownMenuTrigger>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<DropdownMenuTrigger asChild>
+							<Button
+								aria-label="Resume variations"
+								className="gap-2 text-fg-muted"
+								size="sm"
+								variant="ghost"
+							>
+								{/* The document name is the header's h1; this trigger names the
+								 * control instead, so the name is on screen exactly once.
+								 *
+								 * Below `sm` the label is hidden (it is marked `data-collapse-label`),
+								 * never the control: the trigger becomes an icon button with an
+								 * accessible name. The editor used to wrap the whole manager in
+								 * `hidden md:flex`, which made variants — a load-bearing feature —
+								 * absent rather than compact on a phone. */}
+								<GitBranch aria-hidden className="h-3.5 w-3.5" />
+								<span className="hidden sm:inline" data-collapse-label="">
+									{currentResume?.variationType === "base"
+										? "Base"
+										: "Variation"}
+								</span>
+								<ChevronDown aria-hidden className="h-3.5 w-3.5" />
+							</Button>
+						</DropdownMenuTrigger>
+					</TooltipTrigger>
+					<TooltipContent>
+						{currentResume?.variationType === "base"
+							? "This is the base resume that variations are created from"
+							: `Variation of "${baseResume.name}"`}
+					</TooltipContent>
+				</Tooltip>
 				<DropdownMenuContent align="start" className="w-64">
 					{/* Base Resume */}
 					<DropdownMenuItem

@@ -134,6 +134,44 @@ const SMALL_SCREEN_MODES = [
 
 type SmallScreenMode = (typeof SMALL_SCREEN_MODES)[number]["id"];
 
+interface HeaderMetaProps {
+	resume: Resume;
+	pageCount: number | null;
+}
+
+/**
+ * The one meta line under the document name.
+ *
+ * A resume's identity is the archetype, the density band and how many pages it makes —
+ * one sentence, not a labelled grid. The name is printed once, above it, at 20/600;
+ * this line is what stops the top bar repeating itself (the preview strip printed the
+ * template name and the page count a second time, 40px below the same facts).
+ *
+ * The page count comes from the compiled preview, so it is absent until the first
+ * compile lands rather than showing "0". Zoom and fit deliberately live on the preview's
+ * own instruments (the toolbar stepper, the fit chip), where they can be changed.
+ */
+function metaLine({ resume, pageCount }: HeaderMetaProps): string {
+	const settings = resume.metadata?.settings;
+	const templateName =
+		TEMPLATE_CONFIGS[normalizeTemplateId(resume.template)]?.name ?? null;
+	const density =
+		settings?.sectionSpacing === "compact"
+			? "Compact"
+			: settings?.sectionSpacing === "spacious"
+				? "Spacious"
+				: settings
+					? "Balanced"
+					: null;
+	const pages =
+		pageCount === null
+			? null
+			: `${pageCount} ${pageCount === 1 ? "page" : "pages"}`;
+	return [resume.domain ?? null, templateName, density, pages]
+		.filter((part): part is string => Boolean(part))
+		.join(" · ");
+}
+
 interface ResumeEditorPageProps {
 	id: string;
 }
@@ -568,6 +606,21 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			) || null
 		);
 	}, [activeResume, selectedSectionId]);
+
+	/**
+	 * Where this section sits in the outline, 1-based.
+	 *
+	 * The form header used to print the section's *type* under its title, which was "Personal
+	 * Info" under "Contact Information" — the audit's repeated-label defect in miniature, and
+	 * the second time the pane had said the same thing. Position is information the header did
+	 * not already carry, and it answers "how far through this resume am I?".
+	 */
+	const sectionPosition = useMemo(() => {
+		if (!activeResume || !selectedSection) return 0;
+		return (
+			activeResume.sections.findIndex((s) => s.id === selectedSection.id) + 1
+		);
+	}, [activeResume, selectedSection]);
 
 	// Handlers
 	/**
@@ -1186,25 +1239,31 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 	 * second copy of the form, the outline or the preview to forget to update.
 	 */
 	const sectionsPane = (
-		<ScrollArea className="h-full border-r">
+		/*
+		 * The rail is a *region*: page tone, one hairline seam, no radius and no shadow.
+		 * Its three group headers are micro rows (12/600 uppercase, muted) because they
+		 * are the quietest thing in the pane — the section titles under them carry the
+		 * weight. The old headers were 12/600 sentence-case with pill count chips, which
+		 * made the chrome as loud as the content it framed.
+		 */
+		<ScrollArea className="h-full border-r bg-background">
 			<div className="flex flex-col">
-				{/* CONTENT Section */}
 				<Collapsible onOpenChange={setContentOpen} open={contentOpen}>
-					<CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
-						<div className="flex items-center gap-2">
+					<CollapsibleTrigger className="br-micro flex h-10 w-full items-center justify-between gap-2 px-3 transition-colors hover:bg-accent/60">
+						<div className="flex min-w-0 items-center gap-2">
 							<ChevronDown
-								className={`h-4 w-4 transition-transform ${contentOpen ? "" : "-rotate-90"}`}
+								className={`h-3.5 w-3.5 shrink-0 transition-transform ${contentOpen ? "" : "-rotate-90"}`}
 							/>
-							<Layers className="h-4 w-4" />
+							<Layers aria-hidden className="h-3.5 w-3.5 shrink-0" />
 							<span>Sections</span>
-							{isAnyPending && <Loader2 className="h-3 w-3 animate-spin" />}
+							{isAnyPending && (
+								<Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+							)}
 						</div>
-						<span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
-							{activeResume.sections.length}
-						</span>
+						<span className="tabular-nums">{activeResume.sections.length}</span>
 					</CollapsibleTrigger>
 					<CollapsibleContent>
-						<div className="px-2 pb-2">
+						<div className="px-2 pt-1 pb-3">
 							<SectionsManager
 								isLoading={isAnyPending}
 								onAddSection={handleAddSection}
@@ -1231,17 +1290,17 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				 * shared its open flag with the preview's toolbar.
 				 */}
 				<Collapsible onOpenChange={setTypeOpen} open={typeOpen}>
-					<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
-						<div className="flex items-center gap-2">
+					<CollapsibleTrigger className="br-micro flex h-10 w-full items-center justify-between gap-2 border-t px-3 transition-colors hover:bg-accent/60">
+						<div className="flex min-w-0 items-center gap-2">
 							<ChevronDown
-								className={`h-4 w-4 transition-transform ${typeOpen ? "" : "-rotate-90"}`}
+								className={`h-3.5 w-3.5 shrink-0 transition-transform ${typeOpen ? "" : "-rotate-90"}`}
 							/>
-							<Layout className="h-4 w-4" />
+							<Layout aria-hidden className="h-3.5 w-3.5 shrink-0" />
 							<span>Templates</span>
 						</div>
 					</CollapsibleTrigger>
 					<CollapsibleContent>
-						<div className="px-2 pb-2">
+						<div className="px-2 pt-1 pb-3">
 							<TemplateSelector
 								currentTemplate={normalizeTemplateId(
 									draftResume?.template ?? activeResume.template,
@@ -1264,17 +1323,17 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 				 * keyboard could put it. It is content, so it sits with content.
 				 */}
 				<Collapsible onOpenChange={setLibraryOpen} open={libraryOpen}>
-					<CollapsibleTrigger className="flex w-full items-center justify-between border-t px-4 py-2 font-semibold text-xs uppercase tracking-wider transition-colors hover:bg-accent/50">
-						<div className="flex items-center gap-2">
+					<CollapsibleTrigger className="br-micro flex h-10 w-full items-center justify-between gap-2 border-t px-3 transition-colors hover:bg-accent/60">
+						<div className="flex min-w-0 items-center gap-2">
 							<ChevronDown
-								className={`h-4 w-4 transition-transform ${libraryOpen ? "" : "-rotate-90"}`}
+								className={`h-3.5 w-3.5 shrink-0 transition-transform ${libraryOpen ? "" : "-rotate-90"}`}
 							/>
-							<Library className="h-4 w-4" />
+							<Library aria-hidden className="h-3.5 w-3.5 shrink-0" />
 							<span>Library</span>
 						</div>
 					</CollapsibleTrigger>
 					<CollapsibleContent>
-						<div className="px-2 pb-2">
+						<div className="px-2 pt-1 pb-3">
 							<ContentLibraryPanel resume={draftResume ?? activeResume} />
 						</div>
 					</CollapsibleContent>
@@ -1283,66 +1342,80 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		</ScrollArea>
 	);
 
+	/*
+	 * The form column is the one *floating* surface in the workbench: L1 tone, hairline
+	 * seam, no radius (it is a column, not a card). That single tonal step is what
+	 * separates "where I type" from "where I look" — before this pass all three panes
+	 * were `--background`, so the editor read as one flat field with two dividers.
+	 *
+	 * The body is capped at the 640px measure the system specifies and centred in the
+	 * pane, so a dragged-wide column does not stretch every input into a survey row.
+	 */
 	const formPane = (
-		/*
-		 * `@container`: the pane is the width that matters. The section forms' shared
-		 * `fields-grid` collapses on *container* width, so a form column dragged to
-		 * 280px stacks its field pairs instead of clipping the date inputs, while the
-		 * same viewport at 576px keeps them side by side.
-		 */
-		<div className="@container flex h-full min-h-0 flex-col border-r">
+		<div className="@container flex h-full min-h-0 flex-col border-r bg-surface">
+			{selectedSection ? (
+				<div className="flex h-11 shrink-0 items-center border-b px-4">
+					<div className="mx-auto flex w-full max-w-[40rem] items-center justify-between gap-3">
+						<div className="min-w-0">
+							<p className="br-micro" data-form-position="">
+								Section {sectionPosition} of {activeResume.sections.length}
+							</p>
+							<h2 className="truncate font-semibold text-base tracking-title">
+								{/*
+								 * For the personal-info block the stored `content.title` is a *contact
+								 * block* heading ("Contact Information"), which the form then prints
+								 * again as a group overline 200px below. The section's own name is the
+								 * honest label for the pane, so that is what it uses.
+								 */}
+								{selectedSection.type === "personal-info"
+									? SECTION_CONFIGS[selectedSection.type].defaultTitle
+									: String(selectedSection.content.title ?? "") ||
+										SECTION_CONFIGS[selectedSection.type].defaultTitle}
+							</h2>
+						</div>
+
+						{/*
+						 * The link control, beside the fields it affects. It was a bordered 28px
+						 * button reading "Linked — click to take over" — the second-loudest thing
+						 * in the column. The sentence survives as the accessible name; the row
+						 * shows its state and the icon carries the rest.
+						 */}
+						{selectedSection.baseSectionId && handleSetSectionLink ? (
+							<Button
+								aria-label={
+									selectedSection.linkedToBase
+										? "Linked — click to take over"
+										: "Detached — click to re-link"
+								}
+								className="shrink-0 text-fg-muted"
+								onClick={() =>
+									handleSetSectionLink(
+										selectedSection.id,
+										!selectedSection.linkedToBase,
+									)
+								}
+								size="sm"
+								static
+								variant="ghost"
+							>
+								{selectedSection.linkedToBase ? (
+									<Unlink2 aria-hidden className="h-3.5 w-3.5" />
+								) : (
+									<Link2 aria-hidden className="h-3.5 w-3.5" />
+								)}
+								<span className="@[28rem]:inline hidden">
+									{selectedSection.linkedToBase ? "Linked" : "Detached"}
+								</span>
+							</Button>
+						) : null}
+					</div>
+				</div>
+			) : null}
+
 			<ScrollArea className="flex-1">
-				<div className="p-4">
+				<div className="mx-auto w-full max-w-[40rem] px-4 py-6">
 					{selectedSection ? (
 						<>
-							{/*
-							 * The form's own header: what you are editing, and whether
-							 * it still follows the base resume.
-							 *
-							 * The link state used to live only in the outline's overflow
-							 * menu, which meant the answer to "is this section still
-							 * shared with my other resumes?" was two clicks away from
-							 * the field you were about to edit. It sits here now,
-							 * because editing is what changes the answer.
-							 */}
-							<div className="mb-4 flex items-start justify-between gap-3">
-								<div className="min-w-0">
-									<h2 className="truncate font-semibold text-base">
-										{String(selectedSection.content.title ?? "") ||
-											SECTION_CONFIGS[selectedSection.type].defaultTitle}
-									</h2>
-									<p className="text-muted-foreground text-xs">
-										{SECTION_CONFIGS[selectedSection.type].label}
-									</p>
-								</div>
-
-								{selectedSection.baseSectionId && handleSetSectionLink ? (
-									<Button
-										onClick={() =>
-											handleSetSectionLink(
-												selectedSection.id,
-												!selectedSection.linkedToBase,
-											)
-										}
-										size="sm"
-										static
-										variant="outline"
-									>
-										{selectedSection.linkedToBase ? (
-											<>
-												<Unlink2 className="mr-2 h-3.5 w-3.5" />
-												Linked — click to take over
-											</>
-										) : (
-											<>
-												<Link2 className="mr-2 h-3.5 w-3.5" />
-												Detached — click to re-link
-											</>
-										)}
-									</Button>
-								) : null}
-							</div>
-
 							{/*
 							 * Break semantics per section. Layout, not content: everything here is
 							 * stored on `section.layout` and survives a variant copy.
@@ -1377,7 +1450,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 								)
 							}
 							hint="Your form appears here, beside a live preview of the document."
-							icon={<Layout aria-hidden className="h-8 w-8 opacity-40" />}
+							icon={<Layout aria-hidden className="h-5 w-5" />}
 							title={
 								activeResume.sections.length > 0
 									? "Nothing selected"
@@ -1409,8 +1482,14 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 			 */}
 			{activeResume.metadata ? (
 				<Collapsible onOpenChange={setTypeControlsOpen} open={typeControlsOpen}>
-					<div className="flex items-center gap-2 border-b bg-background px-3 py-1">
-						<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent/50">
+					{/*
+					 * A 40px sunken strip: the preview pane's toolbar, not a second header.
+					 * It names only what the disclosure *is* — the archetype, page count and
+					 * zoom now live in the top bar's one meta line, and saying them twice in
+					 * 40px was the top bar's main source of noise.
+					 */}
+					<div className="flex h-10 shrink-0 items-center gap-2 border-b bg-sunken-static px-3">
+						<CollapsibleTrigger className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-sm px-1 text-left text-xs transition-colors hover:text-foreground">
 							<ChevronDown
 								aria-hidden
 								className={cn(
@@ -1418,22 +1497,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 									!typeControlsOpen && "-rotate-90",
 								)}
 							/>
-							<span className="font-medium">Typography &amp; layout</span>
-							<span className="truncate text-muted-foreground">
-								{TEMPLATE_CONFIGS[
-									normalizeTemplateId(
-										draftResume?.template ?? activeResume.template,
-									)
-								]?.name ?? TEMPLATE_CONFIGS.standard.name}
-								{" · "}
-								{Math.round(previewScale * 100)}%
-								{pageCount !== null ? (
-									<span>
-										{" · "}
-										{pageCount} {pageCount === 1 ? "page" : "pages"}
-									</span>
-								) : null}
-							</span>
+							<span className="br-micro truncate">Typography &amp; layout</span>
 						</CollapsibleTrigger>
 						{/*
 						 * The fit meter sits outside the trigger, not inside it: a button inside a
@@ -1513,22 +1577,17 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 		 * editor is on screen, whichever mode is showing.
 		 */
 		<div className="flex h-dvh flex-col bg-background" data-editor-shell="">
-			{/* Header */}
-			<header className="z-(--br-z-sticky) border-b bg-background/95 backdrop-blur">
-				{/*
-				 * `min-h-14` + wrap, for the same reason as the dashboard header and worse:
-				 * at 390px this row measured Back, the resume identity, Import, Review and
-				 * Export — 558px of content in a 390px viewport, so the page scrolled
-				 * sideways and Export sat 168px off the edge where it could not be reached
-				 * without scrolling the whole document.
-				 *
-				 * Wrapping is containment, not design: the row now stays inside the viewport
-				 * at any width. Below `sm` the three actions collapse to icons (each keeps
-				 * an `aria-label` and a `title`), and the variations control becomes an
-				 * icon-only trigger below `md` rather than disappearing: variants are a
-				 * load-bearing feature and `hidden md:flex` made them unreachable on a
-				 * phone.
-				 */}
+			{/*
+			 * Top bar. One line, 56px, a hairline under it: the instrument's nameplate.
+			 *
+			 * No `backdrop-blur` and no translucent fill — there is nothing to see through
+			 * a header that sits on an opaque page, and the design system bans blur on work
+			 * surfaces. The name is the loudest thing in the chrome (20/600) and appears
+			 * once; everything under it is one muted meta sentence (archetype · density ·
+			 * pages). The old bar printed the template name and page count in the preview
+			 * strip as well, so the screen said the same facts twice.
+			 */}
+			<header className="z-(--br-z-sticky) shrink-0 border-b bg-background">
 				<div className="flex min-h-14 flex-wrap items-center justify-between gap-2 px-4 py-2">
 					{/* Left: Back + Resume Info */}
 					<div className="flex min-w-0 items-center gap-4">
@@ -1542,24 +1601,19 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 						</Button>
 						{/*
 						 * The document name is the largest thing in the chrome (20px): it is
-						 * the thing being edited. The audit measured it at 14px — smaller than
-						 * the form's own headings — so nothing on screen led.
-						 *
-						 * The subtitle prints the archetype's display name ("Academic CV"), not the
-						 * raw key ("academic"), and the resume's domain when it has one.
+						 * the thing being edited. The meta line beneath it carries the four
+						 * facts that used to be scattered across the bar and the preview strip.
 						 */}
 						<div className="min-w-0">
 							<h1 className="truncate font-semibold text-lg">
 								{activeResume.name}
 							</h1>
-							<p className="truncate text-muted-foreground text-xs">
+							<p className="truncate text-fg-muted text-xs" data-editor-meta="">
 								{isShowcase(activeResume) ? "Showcase · " : ""}
-								{activeResume.domain ? `${activeResume.domain} · ` : ""}
-								{TEMPLATE_CONFIGS[
-									normalizeTemplateId(
-										draftResume?.template || activeResume.template,
-									)
-								]?.name ?? TEMPLATE_CONFIGS.standard.name}
+								{metaLine({
+									pageCount,
+									resume: draftResume ?? activeResume,
+								})}
 							</p>
 						</div>
 
@@ -1589,6 +1643,12 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					 * below 768px. Its trigger is now icon-only below `md` (the label is
 					 * `data-collapse-label`), so the feature is one tap away at any width
 					 * instead of absent.
+					 *
+					 * It sits beside the document identity, not with the actions, and it is
+					 * quiet: a ghost control naming the current kind. It used to be a solid
+					 * accent badge plus a second bordered button, so the top bar carried four
+					 * button styles and the loudest two were about *which file you are in*
+					 * rather than about the document itself.
 					 */}
 					{baseResume && (
 						<div className="flex items-center">
@@ -1627,7 +1687,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 					</div>
 
 					{/* Right: Actions */}
-					<div className="flex flex-wrap items-center justify-end gap-2">
+					<div className="ml-auto flex flex-wrap items-center justify-end gap-2">
 						{/*
 						 * Import sits in the editor header, beside Review and Export, and not
 						 * inside the left rail with the Library.
@@ -1730,7 +1790,18 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							{sectionsPane}
 						</Panel>
 
-						<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
+						<PanelResizeHandle
+							/*
+							 * A persistent grip, not a hover-only target.
+							 *
+							 * The handle used to be a 6px `bg-border` strip: a hairline tone at
+							 * 1.3:1, invisible until it was hovered, which meant the one control
+							 * that resizes the editor had no rest state at all. The hit area stays
+							 * 8px; the drawn grip is a 2px `--border-control` line (≥3:1) that steps
+							 * up to the accent on hover and while dragging.
+							 */
+							className="relative w-2 bg-transparent after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-control after:transition-colors after:duration-(--br-duration-fast) hover:after:bg-border-selected active:after:bg-border-selected"
+						/>
 
 						{/* Middle Panel - Form Editor */}
 						<Panel
@@ -1742,7 +1813,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							{formPane}
 						</Panel>
 
-						<PanelResizeHandle className="w-1.5 bg-border transition-colors hover:bg-primary/50 active:bg-primary" />
+						<PanelResizeHandle className="relative w-2 bg-transparent after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-control after:transition-colors after:duration-(--br-duration-fast) hover:after:bg-border-selected active:after:bg-border-selected" />
 
 						{/* Right Panel - Preview */}
 						<Panel defaultSize="38%" id="right-panel" minSize={300}>
@@ -1791,17 +1862,23 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 							className="small-screen-nav shrink-0 border-t bg-background"
 							style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
 						>
-							<div className="small-screen-nav-list grid grid-cols-3 gap-1 p-1">
+							{/*
+							 * A segmented control, not three tinted tabs: a sunken track with the
+							 * active mode on a raised surface thumb. The old active state was a flat
+							 * `bg-accent` fill that read as a pressed button rather than as the
+							 * selected segment of an instrument.
+							 */}
+							<div className="small-screen-nav-list grid grid-cols-3 gap-1 rounded-md bg-sunken-static p-1">
 								{SMALL_SCREEN_MODES.map((mode) => {
 									const active = smallScreenMode === mode.id;
 									return (
 										<button
 											aria-current={active ? "true" : undefined}
 											className={cn(
-												"flex min-h-14 flex-col items-center justify-center gap-1 rounded-md text-xs transition-colors",
+												"flex min-h-14 flex-col items-center justify-center gap-1 rounded-sm text-xs transition-[color,background-color,box-shadow] duration-(--br-duration-fast) ease-enter",
 												active
-													? "bg-accent font-medium text-foreground"
-													: "text-muted-foreground hover:bg-accent/50",
+													? "bg-surface font-medium text-foreground shadow-elev-1"
+													: "text-fg-muted hover:text-foreground",
 											)}
 											data-touch-primary=""
 											key={mode.id}

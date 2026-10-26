@@ -134,29 +134,42 @@ export function ImportPanel({
 				</SheetHeader>
 
 				<div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-					<div className="mb-4 flex flex-wrap items-center gap-3">
-						<label className="inline-flex cursor-pointer items-center gap-2">
-							<FileUp aria-hidden className="size-4" />
-							<span className="font-medium text-sm">
-								Choose a PDF or .docx file
-							</span>
-							<input
-								accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-								className="sr-only"
-								data-import-file-input=""
-								onChange={(event) => {
-									const file = event.target.files?.[0];
-									if (file) void onFile(file);
-								}}
-								type="file"
-							/>
-						</label>
+					<div className="mb-4">
 						{outcome ? (
 							<Button onClick={reset} size="sm" variant="ghost">
 								<Pencil aria-hidden />
 								Choose a different file
 							</Button>
-						) : null}
+						) : (
+							/*
+							 * The file control is the one thing on this screen before a file is
+							 * chosen, so it is a full drop-shaped target rather than a line of
+							 * text that happens to be a label. Once a file is in, it collapses to
+							 * a ghost action and the review leads.
+							 */
+							<label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-sunken-static px-6 py-8 text-center transition-colors hover:bg-accent">
+								<span className="br-tile">
+									<FileUp aria-hidden className="h-5 w-5" />
+								</span>
+								<span className="font-medium text-sm">
+									Choose a PDF or .docx file
+								</span>
+								<span className="max-w-xs text-fg-muted text-xs">
+									We read the text, not the layout. Nothing is saved until you
+									review what was found.
+								</span>
+								<input
+									accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+									className="sr-only"
+									data-import-file-input=""
+									onChange={(event) => {
+										const file = event.target.files?.[0];
+										if (file) void onFile(file);
+									}}
+									type="file"
+								/>
+							</label>
+						)}
 					</div>
 
 					{busy ? (
@@ -251,9 +264,15 @@ export function ImportTrigger() {
 		<>
 			<Button
 				aria-label="Import a resume from a PDF or Word document"
+				className="text-fg-muted"
 				onClick={() => setOpen(true)}
 				size="sm"
-				variant="outline"
+				/**
+				 * Ghost, not outline. Import is an occasional way in, not an alternative to
+				 * Export; as a bordered button it was the third of four button treatments in
+				 * one 56px row, and every one of them competed with the document name.
+				 */
+				variant="ghost"
 			>
 				<Upload aria-hidden />
 				<span className="hidden sm:inline" data-collapse-label="">

@@ -187,26 +187,30 @@ function ConfidenceRow({
 		<li
 			className={
 				low
-					? "space-y-1 rounded-md border border-warning/70 border-dashed bg-warning-soft p-2 pl-3"
-					: "space-y-1 rounded-md border p-2 pl-3"
+					? "relative space-y-1 overflow-hidden rounded-md border border-warning/60 border-dashed bg-surface p-2 pl-3"
+					: "relative space-y-1 overflow-hidden rounded-md border bg-surface p-2 pl-3"
 			}
 			data-confidence={low ? "low" : "high"}
 			data-field-name={name}
 		>
+			{low ? (
+				<span
+					aria-hidden="true"
+					className="absolute inset-y-0 left-0 w-0.5 bg-warning"
+				/>
+			) : null}
 			<div className="flex flex-wrap items-center gap-2">
-				<span className="font-medium text-muted-foreground text-xs">
-					{name}
-				</span>
+				<span className="font-medium text-fg-muted text-xs">{name}</span>
 				{low ? (
-					<Badge variant="secondary">
-						<AlertTriangle aria-hidden className="mr-1 size-3" />
+					<span className="br-chip" data-tone="warning">
+						<AlertTriangle aria-hidden className="size-3" />
 						Needs checking
-					</Badge>
+					</span>
 				) : (
-					<Badge variant="outline">
-						<CheckCircle2 aria-hidden className="mr-1 size-3" />
+					<span className="br-chip" data-tone="success">
+						<CheckCircle2 aria-hidden className="size-3" />
 						Extracted
-					</Badge>
+					</span>
 				)}
 			</div>
 			{onChange ? (
@@ -220,9 +224,7 @@ function ConfidenceRow({
 				<p className="text-sm">{value}</p>
 			)}
 			<p
-				className={
-					low ? "text-warning text-xs" : "text-muted-foreground text-xs"
-				}
+				className={low ? "text-warning text-xs" : "text-fg-muted text-xs"}
 				id={reasonId}
 			>
 				{low ? "Guessed: " : ""}
@@ -294,7 +296,7 @@ export function ImportReviewView({
 				  actionable; "82% confidence" is not, and there is no path in this file
 				  that produces one.
 				*/}
-				<p className="text-muted-foreground text-sm">
+				<p className="text-fg-muted text-sm">
 					Found {result.sections.length} section
 					{result.sections.length === 1 ? "" : "s"} and{" "}
 					{fields.length + contactFields.length} field
@@ -309,39 +311,39 @@ export function ImportReviewView({
 						<span>Every field was read directly off the page.</span>
 					)}
 				</p>
-				<p className="text-muted-foreground text-xs">
-					Nothing has been saved yet. Sections you add go to your content
-					library marked unreviewed. They do not appear in any resume until you
-					choose to add them there.
-				</p>
 			</div>
 
-			{source.notes.length > 0 ? (
-				<ul className="space-y-1">
-					{source.notes.map((note) => (
-						<li
-							className="text-muted-foreground text-xs"
-							data-import-note=""
-							key={note}
-						>
-							{note}
-						</li>
-					))}
-				</ul>
-			) : null}
-
-			{result.warnings.length > 0 ? (
-				<ul className="space-y-1">
-					{result.warnings.map((warning) => (
-						<li
-							className="text-warning text-xs"
-							data-import-warning=""
-							key={warning}
-						>
-							{warning}
-						</li>
-					))}
-				</ul>
+			{/*
+			 * One callout, not a run of amber paragraphs.
+			 *
+			 * Warnings and notes used to be two separate lists printed between the header
+			 * and the first field, so the screen led with prose about problems and the
+			 * data you came to check started below the fold. They are one callout now, and
+			 * it is *context* above the fields rather than the headline: the fields lead.
+			 */}
+			{result.warnings.length > 0 || source.notes.length > 0 ? (
+				<div className="rounded-md border border-warning/40 bg-warning-soft p-3">
+					<p className="flex items-center gap-2 text-warning">
+						<AlertTriangle aria-hidden className="size-4 shrink-0" />
+						<span className="font-medium text-sm">
+							{result.warnings.length + source.notes.length === 1
+								? "One thing to know before saving"
+								: `${result.warnings.length + source.notes.length} things to know before saving`}
+						</span>
+					</p>
+					<ul className="mt-1 list-disc space-y-0.5 pl-6 text-xs">
+						{result.warnings.map((warning) => (
+							<li className="text-warning" data-import-warning="" key={warning}>
+								{warning}
+							</li>
+						))}
+						{source.notes.map((note) => (
+							<li className="text-fg-muted" data-import-note="" key={note}>
+								{note}
+							</li>
+						))}
+					</ul>
+				</div>
 			) : null}
 
 			{error ? (
@@ -475,7 +477,7 @@ export function ImportReviewView({
 						  future change points this at a resume, the assertion fails.
 						*/}
 						<p
-							className="text-muted-foreground text-xs"
+							className="text-fg-muted text-xs"
 							data-import-target="content-library"
 						>
 							Will be saved to your library as unreviewed.
@@ -483,6 +485,17 @@ export function ImportReviewView({
 					</section>
 				);
 			})}
+
+			{/*
+			 * The "nothing is saved" statement closes the sheet, where it is a footer
+			 * for the decision the user is about to make — not an opening paragraph
+			 * standing between them and the first field.
+			 */}
+			<p className="border-t pt-4 text-fg-muted text-xs">
+				Nothing has been saved yet. Sections you add go to your content library
+				marked unreviewed. They do not appear in any resume until you choose to
+				add them there.
+			</p>
 		</div>
 	);
 }

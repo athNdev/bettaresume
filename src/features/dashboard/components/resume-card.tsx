@@ -3,18 +3,28 @@
 /**
  * Resume Card Component
  *
- * Displays a resume card with actions.
+ * A tile in the library. It is composed as a *document*, top to bottom: the sheet
+ * first (the thing you recognise), then its name, then one meta line. The order is
+ * deliberate — a shelf of pages reads as a library, a shelf of headings reads as a
+ * settings list.
  *
- * Anatomy (the audit's #5): the title owns its own row and the overflow menu is
- * pinned to the card's top-right corner, so a long name truncates against
- * reserved padding instead of colliding with the "…" button ("Harvard Appli…
- * …"). The card is a tile in flow — border at rest (elev-0 pair), and on hover
- * it lifts: the border goes transparent and `shadow-elev-1` takes over, so one
- * depth signal is ever doing the work (inventory #20: elev-1 *or* border, never
- * both).
+ * Anatomy:
+ *   - thumbnail: a page-shaped frame in a sunken well, so the white paper reads as
+ *     paper *on* a surface rather than as a hole in the card;
+ *   - title row: the name owns the row and truncates against a reserved gutter; the
+ *     28px overflow menu is the only thing beside it;
+ *   - meta row: one 12px muted line — archetype · page size · density · recency —
+ *     with state badges (Showcase / Variation / Archived) at its end. The archetype
+ *     used to be a badge of its own above the thumbnail, which gave every card two
+ *     rows of chips before the document appeared.
+ *
+ * The card is interactive: hover lifts it 2px at 180ms (`br-lift`), and the whole
+ * card is not a button — the title and the thumbnail are, so the menu inside it
+ * stays valid HTML.
  */
 
 import { normalizeTemplateId } from "@bettaresume/types";
+import { formatDistanceToNow } from "date-fns";
 import {
 	Archive,
 	ArchiveRestore,
@@ -29,14 +39,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -69,6 +72,13 @@ interface ResumeCardProps {
 	onDelete: () => void;
 }
 
+/** A quiet separator inside the meta line. Decorative, so it is hidden from AT. */
+const DENSITY_LABEL: Record<string, string> = {
+	compact: "Compact",
+	normal: "Balanced",
+	spacious: "Spacious",
+};
+
 export function ResumeCard({
 	resume,
 	variations,
@@ -81,28 +91,63 @@ export function ResumeCard({
 	onRestore,
 	onDelete,
 }: ResumeCardProps) {
+	const settings = resume.metadata?.settings;
 	const templateName =
-		TEMPLATE_CONFIGS[normalizeTemplateId(resume.template)].name;
+		TEMPLATE_CONFIGS[normalizeTemplateId(resume.template)]?.name ??
+		resume.template;
+	const pageSize = settings?.pageSize ?? "Letter";
+	const density = DENSITY_LABEL[settings?.sectionSpacing ?? "normal"] ?? null;
+	/*
+	 * The archetype and the density band can be the same word — the Compact template
+	 * *is* the tight density profile — and printing "Compact · A4 · Compact" described
+	 * one document twice.
+	 */
+	const showDensity = density !== null && density !== templateName;
+	const updated = formatDistanceToNow(new Date(resume.updatedAt), {
+		addSuffix: true,
+	});
 
 	return (
 		<Card
-			// min-w-0 so the card can shrink below its own max-content. A grid item defaults
-			// to min-width:auto, which floors it at the widest child — and the widest child here
-			// is a document preview with a pixel width.
-			className={`group relative min-w-0 transition-[box-shadow,border-color] duration-(--br-duration-fast) ease-enter hover:border-transparent hover:shadow-elev-1 ${resume.isArchived ? "opacity-60" : ""}`}
+			// min-w-0 so the card can shrink below its own max-content. A grid item
+			// defaults to min-width:auto, which floors it at the widest child — and the
+			// widest child here is a document preview with a pixel width.
+			//
+			// The hover is the system's 2px lift at 180ms (`--br-duration-base`),
+			// written out rather than composed from `.br-lift` because the class
+			// sorter would otherwise split `group relative min-w-0`, which
+			// `test/responsive-overflow.test.ts` pins as the shrink contract.
+			className={`group relative min-w-0 overflow-hidden p-0 transition-[box-shadow,border-color,transform] duration-(--br-duration-base) ease-enter hover:-translate-y-0.5 hover:border-transparent hover:shadow-elev-2 ${
+				resume.isArchived ? "opacity-60" : ""
+			}`}
 		>
-			<CardHeader className="relative pb-2">
+			{/* The sheet. */}
+			<div className="px-3 pt-3">
+				<ResumeThumbnail onClick={onEdit} resume={resume} />
+			</div>
+
+			{/* Title row. The menu is pinned and the title reserves its gutter. */}
+			<div className="mt-3 flex items-start justify-between gap-2 px-4">
 				{/*
-				 * Pinned to the card's corner, not the title's row: the title gets
-				 * the full width minus a reserved `pr-8`, so truncation can never
-				 * collide with this button.
+				 * The card's real control. Its own text is the accessible name, so a
+				 * screen reader says "Harvard Application, button" — once — and the
+				 * redundant preview target beside it stays out of the tab order.
 				 */}
+				<button
+					className="min-w-0 flex-1 truncate rounded-sm text-left font-semibold text-base tracking-title hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					onClick={onEdit}
+					type="button"
+				>
+					{resume.name}
+				</button>
+
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button
 							aria-label={`Actions for ${resume.name}`}
-							className="absolute top-6 right-6 h-8 w-8"
-							size="icon"
+							className="-mt-1 shrink-0 text-fg-subtle"
+							size="icon-sm"
+							static
 							variant="ghost"
 						>
 							<MoreHorizontal className="h-4 w-4" />
@@ -152,79 +197,62 @@ export function ResumeCard({
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
+			</div>
 
-				<CardTitle className="pr-8 text-lg">
-					{/*
-					 * The card's real control. Its own text is the accessible name, so a screen
-					 * reader says "Harvard Application, button" — once — and the redundant
-					 * preview target beside it stays out of the tab order.
-					 */}
-					<button
-						className="block max-w-full truncate rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-						onClick={onEdit}
-						type="button"
-					>
-						{resume.name}
-					</button>
-				</CardTitle>
-				<CardDescription className="mt-1 flex flex-wrap items-center gap-2">
-					<Badge className="text-xs" variant="secondary">
-						{templateName ?? resume.template}
-					</Badge>
-					{isShowcase(resume) && (
-						<Tooltip>
-							<TooltipTrigger>
-								{/* The `showcase` tag is the UI contract; see `showcase.ts`. */}
-								<Badge className="text-xs" variant="default">
-									<BookOpen className="mr-1 h-3 w-3" />
-									Showcase
-								</Badge>
-							</TooltipTrigger>
-							<TooltipContent>
-								A complete example resume that exercises every feature
-							</TooltipContent>
-						</Tooltip>
-					)}
-					{resume.variationType === "variation" && (
-						<Tooltip>
-							<TooltipTrigger>
-								<Badge className="text-xs" variant="outline">
-									<GitBranch className="mr-1 h-3 w-3" />
-									Variation
-								</Badge>
-							</TooltipTrigger>
-							<TooltipContent>
-								This is a tailored copy of another resume
-							</TooltipContent>
-						</Tooltip>
-					)}
-					{resume.isArchived && (
-						<Badge className="text-xs" variant="outline">
-							<Archive className="mr-1 h-3 w-3" />
-							Archived
-						</Badge>
-					)}
-				</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<ResumeThumbnail onClick={onEdit} resume={resume} />
-			</CardContent>
 			{/*
-			 * One meta group, left-aligned: the old `justify-between` row floated a
-			 * single date against a phantom second column whenever there were no
-			 * variations to put on the right.
+			 * One meta line, wrapping by *fact*: each fact carries its own leading dot and
+			 * `whitespace-nowrap`, so a narrow card wraps between facts and never leaves a
+			 * dot stranded at the end of a line. The facts are archetype · page size ·
+			 * density · recency, then state badges. It used to be two rows — a chip row
+			 * under the title and a footer whose date floated against a phantom second
+			 * column whenever the card had no variations.
 			 */}
-			<CardFooter className="flex-wrap gap-2 text-muted-foreground text-xs">
-				<span>Updated {new Date(resume.updatedAt).toLocaleDateString()}</span>
-				{variations.length > 0 && (
-					<>
-						<span aria-hidden="true">·</span>
-						<span>
-							{variations.length} variation{variations.length > 1 ? "s" : ""}
-						</span>
-					</>
+			<div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-4 text-fg-muted text-xs">
+				<span>{templateName}</span>
+				<span className="whitespace-nowrap">· {pageSize}</span>
+				{density && showDensity ? (
+					<span className="whitespace-nowrap">· {density}</span>
+				) : null}
+				<span className="whitespace-nowrap">· Updated {updated}</span>
+				{variations.length > 0 ? (
+					<span className="whitespace-nowrap">
+						· {variations.length} variation{variations.length > 1 ? "s" : ""}
+					</span>
+				) : null}
+				{isShowcase(resume) && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							{/* The `showcase` tag is the UI contract; see `showcase.ts`. */}
+							<Badge className="text-xs" variant="outline">
+								<BookOpen className="mr-1 h-3 w-3" />
+								Showcase
+							</Badge>
+						</TooltipTrigger>
+						<TooltipContent>
+							A complete example resume that exercises every feature
+						</TooltipContent>
+					</Tooltip>
 				)}
-			</CardFooter>
+				{resume.variationType === "variation" && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Badge className="text-xs" variant="outline">
+								<GitBranch className="mr-1 h-3 w-3" />
+								Variation
+							</Badge>
+						</TooltipTrigger>
+						<TooltipContent>
+							This is a tailored copy of another resume
+						</TooltipContent>
+					</Tooltip>
+				)}
+				{resume.isArchived && (
+					<Badge className="text-xs" variant="outline">
+						<Archive className="mr-1 h-3 w-3" />
+						Archived
+					</Badge>
+				)}
+			</div>
 		</Card>
 	);
 }

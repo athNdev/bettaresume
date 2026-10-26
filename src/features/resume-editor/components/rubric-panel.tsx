@@ -2,7 +2,6 @@
 
 import { Check, Copy, Minus, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePreviewPages } from "@/features/resume-editor/lib/preview-pages";
 import type { Resume } from "@/features/resume-editor/types";
@@ -42,7 +41,20 @@ const STATUS_ICON = {
 const STATUS_STYLE = {
 	pass: "text-success",
 	fail: "text-destructive",
-	advice: "text-muted-foreground",
+	advice: "text-warning",
+} as const;
+
+const STATUS_TONE = {
+	pass: "success",
+	fail: "danger",
+	advice: "warning",
+} as const;
+
+/** The 2px leading rule: "what is this row" at a glance, like the rail's selection. */
+const STATUS_RULE = {
+	pass: "bg-success",
+	fail: "bg-destructive",
+	advice: "bg-warning",
 } as const;
 
 const STATUS_LABEL = {
@@ -51,26 +63,33 @@ const STATUS_LABEL = {
 	advice: "Worth considering",
 } as const;
 
+/**
+ * One check, verdict first.
+ *
+ * The verdict was an outline badge on the right, after a sentence of finding text —
+ * so reading a list meant finding the end of every line before you knew whether it
+ * was good news. It leads now, in the status-chip formula, with the same 2px rule on
+ * the leading edge that marks selection elsewhere in the editor.
+ */
 function CheckRow({ check }: { check: RubricCheck }) {
 	return (
-		<li className="flex gap-3 rounded-md border p-3">
+		<li className="relative overflow-hidden rounded-md border bg-surface p-3 pl-4">
 			<span
-				aria-hidden
-				className={`mt-0.5 shrink-0 ${STATUS_STYLE[check.status]}`}
-			>
-				{STATUS_ICON[check.status]}
-			</span>
-			<div className="min-w-0">
-				<div className="flex flex-wrap items-center gap-2">
-					<p className="font-medium text-sm">{check.title}</p>
-					{/* The category chip is gone: every row sits under its own group
-					 * heading, so the chip repeated that heading on every line. */}
-					<Badge variant="outline">{STATUS_LABEL[check.status]}</Badge>
-				</div>
-				<p className="mt-1 text-muted-foreground text-xs leading-relaxed">
-					{check.detail}
-				</p>
+				aria-hidden="true"
+				className={`absolute inset-y-0 left-0 w-0.5 ${STATUS_RULE[check.status]}`}
+			/>
+			<div className="flex flex-wrap items-center gap-2">
+				<span className="br-chip" data-tone={STATUS_TONE[check.status]}>
+					<span aria-hidden="true" className={STATUS_STYLE[check.status]}>
+						{STATUS_ICON[check.status]}
+					</span>
+					{STATUS_LABEL[check.status]}
+				</span>
+				<p className="min-w-0 flex-1 font-medium text-sm">{check.title}</p>
 			</div>
+			<p className="mt-1 text-fg-muted text-xs leading-relaxed">
+				{check.detail}
+			</p>
 		</li>
 	);
 }
@@ -94,14 +113,40 @@ export function RubricChecklist({ resume }: { resume: Resume }) {
 	}, [report]);
 
 	return (
-		<div className="space-y-4">
-			<div>
-				{/* The summary line is the most useful sentence in the panel, so it is
-				 * not the smallest text in it (the audit measured it at 12px muted). */}
-				<p className="font-medium text-sm">
-					{report.counts.fail} to fix · {report.counts.advice} worth considering
-					· {report.counts.pass} holding. There is no score here: each line is a
-					named check with a verdict and a fix.
+		<div className="space-y-6">
+			{/*
+			 * The verdict leads. It is the one sentence someone opens Review to read, so it
+			 * takes the panel-title step (16/600) and the explanation drops to a meta line
+			 * underneath. The counts keep their status dots, which are redundant with the
+			 * words — the colour is never the only signal.
+			 */}
+			<div className="space-y-1">
+				<p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-semibold text-base tracking-title">
+					<span className="inline-flex items-center gap-1">
+						<span
+							aria-hidden="true"
+							className="h-1.5 w-1.5 rounded-full bg-destructive"
+						/>
+						{report.counts.fail} to fix
+					</span>
+					<span className="inline-flex items-center gap-1">
+						<span
+							aria-hidden="true"
+							className="h-1.5 w-1.5 rounded-full bg-warning"
+						/>
+						{report.counts.advice} worth considering
+					</span>
+					<span className="inline-flex items-center gap-1">
+						<span
+							aria-hidden="true"
+							className="h-1.5 w-1.5 rounded-full bg-success"
+						/>
+						{report.counts.pass} holding
+					</span>
+				</p>
+				<p className="text-fg-muted text-xs">
+					There is no score here: each line is a named check with a verdict and
+					a fix.
 				</p>
 			</div>
 
@@ -111,9 +156,7 @@ export function RubricChecklist({ resume }: { resume: Resume }) {
 					if (checks.length === 0) return null;
 					return (
 						<section key={group}>
-							<h4 className="mb-2 font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-								{GROUP_LABELS[group]}
-							</h4>
+							<h4 className="br-micro mb-2">{GROUP_LABELS[group]}</h4>
 							<ul className="space-y-2">
 								{checks.map((c) => (
 									<CheckRow check={c} key={c.id} />

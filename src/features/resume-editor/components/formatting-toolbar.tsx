@@ -170,13 +170,13 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 	};
 
 	return (
-		<div className="flex flex-wrap items-center gap-2 border-b bg-background px-4 py-2">
+		<div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b bg-background px-4 py-2">
 			{/* Font Family */}
 			<Select
 				onValueChange={(v) => onSettingsChange({ fontFamily: v as FontFamily })}
 				value={settings.fontFamily}
 			>
-				<SelectTrigger className="h-8 w-30 text-xs">
+				<SelectTrigger aria-label="Typeface" className="h-8 w-30 text-xs">
 					<Type className="mr-2 h-3.5 w-3.5 shrink-0" />
 					<SelectValue />
 				</SelectTrigger>
@@ -200,8 +200,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 			 * identical "%" pills meaning different things.
 			 */}
 			<div className="flex items-center gap-2">
-				<span className="font-medium text-xs">Type scale</span>
-				<div className="flex items-center gap-0.5 rounded-md border">
+				<span className="br-label">Type scale</span>
+				<div className="flex items-center gap-0.5 rounded-sm bg-sunken-static p-0.5">
 					<Button
 						aria-label="Decrease type scale"
 						className="h-8 w-8 rounded-r-none"
@@ -239,25 +239,29 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 
 			{/* Density — one named composition of the spacing knobs. */}
 			<div className="flex items-center gap-2">
-				<span className="font-medium text-xs">Density</span>
-				<div className="flex items-center gap-0.5 rounded-md border p-0.5">
+				<span className="br-label">Density</span>
+				<div className="flex items-center gap-0.5 rounded-sm bg-sunken-static p-0.5">
 					{DENSITY_PRESETS_ORDER.map((preset) => (
 						<Button
 							aria-label={`${DENSITY_LABELS[preset]} density`}
 							aria-pressed={density === preset}
-							className="h-7 px-2 text-xs"
+							className={
+								density === preset
+									? "h-7 bg-surface px-2 text-foreground text-xs shadow-elev-1"
+									: "h-7 px-2 text-fg-muted text-xs"
+							}
 							key={preset}
 							onClick={() => onSettingsChange(densityPatch(preset))}
 							size="sm"
 							static
 							title={DENSITY_DESCRIPTIONS[preset]}
-							variant={density === preset ? "secondary" : "ghost"}
+							variant="ghost"
 						>
 							{DENSITY_LABELS[preset]}
 						</Button>
 					))}
 					{density === "custom" ? (
-						<span className="px-2 text-muted-foreground text-xs">Custom</span>
+						<span className="px-2 text-fg-muted text-xs">Custom</span>
 					) : null}
 				</div>
 			</div>
@@ -756,8 +760,8 @@ export const FormattingToolbar = memo(function FormattingToolbar({
 			 * border, muted label. The type scale stepper above is the bordered one.
 			 */}
 			<div className="flex items-center gap-2">
-				<span className="text-muted-foreground text-xs">Preview zoom</span>
-				<div className="flex items-center gap-0.5 rounded-md bg-muted">
+				<span className="br-label">Zoom</span>
+				<div className="flex items-center gap-0.5 rounded-sm bg-sunken-static p-0.5">
 					<Button
 						aria-label="Zoom out"
 						className="h-8 w-8 rounded-r-none"

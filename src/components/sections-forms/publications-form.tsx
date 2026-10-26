@@ -114,7 +114,7 @@ export function PublicationsForm({
 
 	return (
 		<div className="space-y-4">
-			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-4 mb-4 flex min-h-10 items-center justify-between border-b bg-background/95 px-4 py-2 backdrop-blur">
+			<div className="sticky top-0 z-(--br-z-sticky) -mx-4 -mt-6 mb-6 flex h-10 items-center justify-between gap-3 border-b bg-surface px-4">
 				<div className="flex items-center gap-3">
 					<SaveStatusIndicator
 						error={error}
@@ -126,22 +126,22 @@ export function PublicationsForm({
 					<p className="text-muted-foreground text-sm">
 						{localData.length} publication{localData.length !== 1 ? "s" : ""}
 					</p>
-					<Button
-						onClick={addPublication}
-						size="sm"
-						variant={localData.length === 0 ? "outline" : "default"}
-					>
+					<Button onClick={addPublication} size="sm" variant="outline">
 						<Plus className="mr-2 h-4 w-4" /> Add Publication
 					</Button>
 				</div>
 			</div>
 
 			{localData.length === 0 ? (
-				<Card className="border-dashed">
+				<Card className="border-0 bg-sunken shadow-none">
 					<CardContent className="flex flex-col items-center justify-center py-8">
-						<BookOpen className="mb-4 h-12 w-12 text-muted-foreground/50" />
-						<h3 className="mb-2 font-medium">No publications added</h3>
-						<p className="mb-4 text-muted-foreground text-sm">
+						<span className="br-tile mb-3">
+							<BookOpen className="h-5 w-5" />
+						</span>
+						<h3 className="mb-1 font-semibold text-base tracking-title">
+							No publications added
+						</h3>
+						<p className="mb-4 max-w-xs text-center text-fg-muted text-sm">
 							Add your research papers, articles, and other publications.
 						</p>
 						<Button onClick={addPublication}>
@@ -151,19 +151,19 @@ export function PublicationsForm({
 				</Card>
 			) : (
 				<Accordion
-					className="space-y-3"
+					className="space-y-4"
 					onValueChange={setExpandedItems}
 					type="multiple"
 					value={expandedItems}
 				>
 					{localData.map((pub, index) => (
 						<AccordionItem
-							className="overflow-hidden rounded-lg border"
+							className="overflow-hidden rounded-md border bg-surface"
 							key={pub.id}
 							value={pub.id}
 						>
 							<div className="flex items-center">
-								<AccordionTrigger className="flex-1 px-4 py-3 hover:bg-muted/50 hover:no-underline">
+								<AccordionTrigger className="flex-1 px-3 py-2 hover:bg-accent/50 hover:no-underline">
 									<div className="flex w-full items-center gap-3">
 										<GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
 										<div className="flex-1 text-left">
