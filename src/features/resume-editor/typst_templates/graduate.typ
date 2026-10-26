@@ -38,38 +38,12 @@
 ))
 
 // ──────────────────────────────────────────────
-// HEADER — name, role and contacts, no rule
+// HEADER — name, role and contacts
 // ──────────────────────────────────────────────
 
-// Without a rule the whole `header-gap` sits below the block. The rule was doing two jobs
-// (identity and separation); a student document spends the line on content instead.
-#block(width: 100%, below: header-gap)[
-  #text(
-    size: typo.at("name", default: 18pt),
-    weight: "bold",
-    fill: rgb(colors.at("heading", default: "#111827")),
-  )[#personal.fullName]
-
-  #if personal.professionalTitle != "" {
-    linebreak()
-    text(
-      size: typo.at("title", default: 11pt),
-      fill: rgb(colors.at("secondary", default: "#6b7280")),
-    )[#personal.professionalTitle]
-  }
-
-  #v(contact-gap)
-  #let contacts = ()
-  #if personal.email    != "" { contacts.push(personal.email) }
-  #if personal.phone    != "" { contacts.push(personal.phone) }
-  #if personal.location != "" { contacts.push(personal.location) }
-  #if personal.linkedin != "" { contacts.push("LinkedIn: " + personal.linkedin) }
-  #if personal.github   != "" { contacts.push("GitHub: " + personal.github) }
-  #if personal.website  != "" { contacts.push(personal.website) }
-  #text(size: typo.at("small", default: 9.5pt), fill: rgb(colors.at("secondary", default: "#6b7280")))[
-    #contacts.join("  |  ")
-  ]
-]
+// Weight and case do the separating: no rule and no second column, so the document spends
+// its vertical budget on the work history instead.
+#render-header(content-align: left, title-style: "line", header-rule: "none")
 
 // ──────────────────────────────────────────────
 // BODY — sections

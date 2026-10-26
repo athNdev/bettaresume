@@ -34,47 +34,18 @@
 // the preview and the PDF cannot disagree about line spacing.
 #set par(leading: par-leading, justify: false)
 
-// The standard structure: accent rule headings, chip-cluster skills, standard entries.
+// The standard structure: rule-by-choice headings, `Category: items` skills, standard
+// entries. `render-header()` draws the one header every archetype shares: name, the
+// professional title, and a single contact line.
 #let profile = default-profile
 
 // ──────────────────────────────────────────────
 // HEADER — personal info
 // ──────────────────────────────────────────────
 
-// `header-gap-half` below the block plus `space-m` below the hairline rule is the
-// header → body gap (`header-gap`, 16pt at Normal); the first section heading does not
-// add its `section-gap` on top of it (see `section-title`).
-#block(width: 100%, below: header-gap-half)[
-  #text(
-    size:   typo.at("name", default: 18pt),
-    weight: "bold",
-    fill:   rgb(colors.at("heading", default: "#111827")),
-  )[#personal.fullName]
-
-  #if personal.professionalTitle != "" {
-    linebreak()
-    text(
-      size: typo.at("title", default: 11pt),
-      fill: rgb(colors.at("secondary", default: "#6b7280")),
-    )[#personal.professionalTitle]
-  }
-
-  // Contact row
-  #v(contact-gap)
-  #let contacts = ()
-  #if personal.email    != "" { contacts.push(personal.email) }
-  #if personal.phone    != "" { contacts.push(personal.phone) }
-  #if personal.location != "" { contacts.push(personal.location) }
-  #if personal.linkedin != "" { contacts.push("LinkedIn: " + personal.linkedin) }
-  #if personal.github   != "" { contacts.push("GitHub: " + personal.github) }
-  #if personal.website  != "" { contacts.push(personal.website) }
-  #text(size: typo.at("small", default: 9.5pt), fill: rgb(colors.at("secondary", default: "#6b7280")))[
-    #contacts.join("  |  ")
-  ]
-]
-
-#line(length: 100%, stroke: 0.5pt + rgb(colors.at("divider", default: "#e2e8f0")))
-#v(space-m)
+// `gaps.header` is the whole header → body distance; the first section heading does not
+// add its own section gap on top of it (see `section-title`).
+#render-header(content-align: left, title-style: "line", header-rule: "hairline")
 
 // ──────────────────────────────────────────────
 // BODY — sections

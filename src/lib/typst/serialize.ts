@@ -53,12 +53,13 @@ function normalizeFont(name: string): string {
 }
 
 // Default settings mirroring preview.tsx defaults. Typography and margins are true
-// points (see `TYPE_SCALE_DEFAULTS`); body renders at 10.5pt and the old px-era 8.25pt
-// body is gone with `px-to-pt`.
+// points (see `TYPE_SCALE_DEFAULTS`) and the composition is the shipped **Balanced**
+// density profile: 0.5in margins, 1.25 leading, no heading rule
+// (`docs/research/space-efficiency.md` §5).
 const defaultSettings: ResumeSettings = {
 	fontFamily: "Inter",
 	fontScale: 1,
-	lineHeight: 1.35,
+	lineHeight: 1.25,
 	margins: { ...MARGIN_DEFAULTS },
 	pageSize: "Letter",
 	colors: {
@@ -73,7 +74,9 @@ const defaultSettings: ResumeSettings = {
 	typography: { ...TYPE_SCALE_DEFAULTS },
 	sectionSpacing: "normal",
 	dateFormat: "MMM YYYY",
-	accentStyle: "underline",
+	// The heading rule is opt-in. Uppercase + semibold scans on its own, and the rule
+	// costs 2.6mm per section plus its 2pt gap (space-efficiency §3, waste #3).
+	accentStyle: "none",
 };
 
 /**
@@ -250,23 +253,31 @@ function serializeSettings(settings: ResumeSettings) {
 /**
  * Resolve an entry's break behaviour.
  *
- * `auto` is the documented default: keep an entry together *when it is small enough to
- * move as a unit*. Measuring the rendered height would need `measure(...)` in the
- * template, and that call's signature differs between the bundled Typst 0.14 and the
- * 0.10 CLI used by the test suite, so the shape heuristic lives here instead: an entry
- * with no description and at most three bullets is a few lines and moves as one;
- * anything longer is allowed to split rather than push half a page of whitespace onto
- * the previous page.
+ * `auto` is the documented default, and it now has two outcomes rather than two
+ * extremes. An entry *small enough to move as a unit* (no description, at most three
+ * bullets — a title block and a few lines, ~25–30mm) is kept whole: moving it costs a
+ * hole the size of the entry, which is small. A longer entry is `head`: its heading and
+ * meta line cannot be orphaned at the bottom of a page, and its bullets flow on. That is
+ * the fix for the "hole" the maintainer described — the entry that used to jump whole to
+ * page 2 and leave 25–35mm of whitespace at the bottom of page 1
+ * (`docs/research/space-efficiency.md` §3.3, waste #9). The worst hole `head` can leave
+ * is one heading block, ~10mm.
+ *
+ * Measuring the rendered height would need `measure(...)` in the template, and that
+ * call's signature differs between the bundled Typst 0.14 and the 0.10 CLI used by the
+ * test suite, so the shape heuristic lives here instead.
  *
  * `always` is the user's explicit choice, with one safety rail: an entry estimated to be
- * taller than a whole page is downgraded to `never`. A `breakable: false` block that
- * cannot fit on a page is clipped by Typst rather than moved, so honouring the flag
- * literally would silently delete bullets. A split entry is a layout flaw; a truncated
- * one is lost content.
+ * taller than a whole page becomes `head`. A `breakable: false` block that cannot fit on
+ * a page is clipped by Typst rather than moved, so honouring the flag literally would
+ * silently delete bullets. A split entry is a layout flaw; a truncated one is lost
+ * content.
  *
  * These are layout decisions, never content ones: nothing is hidden, shortened or
  * reflowed by them.
  */
+export type ResolvedKeep = "always" | "head" | "never";
+
 export interface LayoutSettings {
 	pageSize?: "A4" | "Letter";
 	margins?: Partial<{
@@ -284,20 +295,20 @@ export function resolveKeepTogether(
 	layout: SectionLayout | undefined,
 	item: { id?: unknown; description?: unknown; highlights?: unknown[] },
 	settings?: LayoutSettings,
-): "always" | "never" {
+): ResolvedKeep {
 	const id = typeof item.id === "string" ? item.id : "";
 	const mode: KeepTogether = (layout?.entries?.[id] ??
 		layout?.keepTogether ??
 		"auto") as KeepTogether;
-	if (mode === "always") {
-		return entryFitsOnOnePage(item, settings) ? "always" : "never";
-	}
 	if (mode === "never") return "never";
+	if (mode === "always") {
+		return entryFitsOnOnePage(item, settings) ? "always" : "head";
+	}
 
 	const hasDescription =
 		typeof item.description === "string" && item.description.trim() !== "";
 	const bullets = Array.isArray(item.highlights) ? item.highlights.length : 0;
-	return !hasDescription && bullets <= 3 ? "always" : "never";
+	return !hasDescription && bullets <= 3 ? "always" : "head";
 }
 
 /**
@@ -315,9 +326,9 @@ export function entryFitsOnOnePage(
 		1,
 		(settings?.typography?.body ?? 10.5) * (settings?.fontScale ?? 1),
 	);
-	const leading = settings?.lineHeight ?? 1.35;
+	const leading = settings?.lineHeight ?? 1.25;
 	const paperHeight = settings?.pageSize === "A4" ? 841.89 : 792;
-	const margins = { top: 43, bottom: 43, ...settings?.margins };
+	const margins = { ...MARGIN_DEFAULTS, ...settings?.margins };
 	const usable = paperHeight - margins.top - margins.bottom;
 
 	const description =
@@ -461,13 +472,20 @@ function serializeSection(
 						documentSettings,
 					),
 					name: safeStr(cat.name),
-					skills: safeArr<{ id: string; name: string; level?: string }>(
-						cat.skills,
-					).map((s) => ({
-						id: safeStr(s.id),
-						name: safeStr(s.name),
-						level: safeStr(s.level),
-					})),
+					skills: safeArr<
+						{ id?: string; name?: string; level?: string } | string
+					>(cat.skills).map((s) =>
+						typeof s === "string"
+							? // A plain string is a shape the type does not allow but old documents and
+								// the marketing fixtures carry. Dropping it silently exported an empty
+								// `Languages: , ,` line; reading it costs one branch.
+								{ id: "", name: s, level: "" }
+							: {
+									id: safeStr(s.id),
+									name: safeStr(s.name),
+									level: safeStr(s.level),
+								},
+					),
 				})),
 			};
 		}
@@ -642,7 +660,7 @@ function serializeSection(
 				id: string;
 				title: string;
 				body: string;
-				keepTogether: "always" | "never";
+				keepTogether: ResolvedKeep;
 			}> = [];
 
 			if (Array.isArray(raw)) {

@@ -70,9 +70,13 @@ describe("every archetype is a real document", () => {
 			.filter((ids) => ids.length > 1)
 			.map((ids) => [...ids].sort());
 		expect(shared).toEqual([["compact", "standard"]]);
-		// And the variant is not accidentally identical to the base.
+		// And the variant is not accidentally identical to the base: compact applies the
+		// Tight density and standard the Balanced one, so one file produces two documents.
 		expect(TEMPLATE_CONFIGS.compact.defaults).not.toEqual({});
-		expect(TEMPLATE_CONFIGS.standard.defaults).toEqual({});
+		expect(TEMPLATE_CONFIGS.standard.defaults).not.toEqual({});
+		expect(TEMPLATE_CONFIGS.compact.defaults).not.toEqual(
+			TEMPLATE_CONFIGS.standard.defaults,
+		);
 	});
 
 	it.each(TEMPLATES)("%s has content", (file) => {
@@ -157,7 +161,9 @@ describe("semantic page breaks reach Typst", () => {
 		const dispatcher = read("sections.typ");
 		// Keep an entry together / keep a section together / start on a new page.
 		expect(dispatcher).toContain("block(breakable: false");
-		expect(dispatcher).toContain("block(breakable: true");
+		// A long entry protects its heading only — the "clean hanging continuation" that
+		// caps the hole at one heading block instead of a whole entry.
+		expect(dispatcher).toMatch(/mode == "head"/);
 		expect(dispatcher).toContain("pagebreak(weak: true)");
 		// The section flags the serialiser emits, read by the dispatcher.
 		expect(dispatcher).toMatch(/layout\.at\("keepSectionTogether"/);
@@ -178,14 +184,34 @@ describe("semantic page breaks reach Typst", () => {
 		}
 	});
 
-	it("takes the header gaps from density, with Normal unchanged", () => {
-		// `header-gap-half + space-m` and `header-gap` are today's 12+4 and 16 at Normal;
-		// the regression test in `page-fit.test.ts` pins the settings side.
+	it("takes every gap from the density profile", () => {
+		// The header was five copies that had drifted apart, and the entry and bullet gaps
+		// were compile-time constants no preset could reach (`space-efficiency` §3.4).
+		// Now the gaps come from `gaps-for`, one table for the whole document, and the
+		// header is one helper every archetype calls.
 		const dispatcher = read("sections.typ");
-		expect(dispatcher).toContain("#let header-gap = if section-spacing");
+		expect(dispatcher).toContain("#let gaps-for(spacing)");
+		for (const gap of [
+			"section",
+			"heading",
+			"entry",
+			"bullet",
+			"meta",
+			"header",
+			"contact",
+		]) {
+			expect(dispatcher, `the density profile has no ${gap} gap`).toMatch(
+				new RegExp(`\\b${gap}: space-`),
+			);
+		}
+		expect(dispatcher).toContain("#let render-header(");
 		for (const file of TEMPLATES) {
-			expect(read(file), `${file} has no density-aware header gap`).toMatch(
-				/below: header-gap(-half)?\b/,
+			expect(
+				read(file),
+				`${file} draws its own header instead of calling render-header`,
+			).toMatch(/#render-header\(/);
+			expect(read(file), `${file} hand-rolls a header block`).not.toMatch(
+				/below: header-gap/,
 			);
 		}
 	});

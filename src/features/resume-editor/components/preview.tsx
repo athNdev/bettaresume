@@ -24,6 +24,7 @@ import type {
 } from "@/features/resume-editor/types";
 import { keyedByContent } from "@/lib/collections";
 import { formatDateRange, formatResumeDate } from "@/lib/format-date";
+import { gapsFor } from "@/lib/layout/density";
 import { richTextToPlain } from "@/lib/rich-text";
 import { resolveTypstFont } from "@/lib/typst/fonts";
 
@@ -35,11 +36,13 @@ interface PreviewProps {
 }
 
 // Default settings for when metadata is null. Type sizes and margins are true points,
-// converted to CSS px at the one place they enter the DOM (see `pt` below).
+// converted to CSS px at the one place they enter the DOM (see `pt` below). The
+// composition is the shipped Balanced profile (0.5in margins, 1.25 leading, no heading
+// rule), matching `defaultSettings` in `src/lib/typst/serialize.ts`.
 const defaultSettings: ResumeSettings = {
 	fontFamily: "Inter",
 	fontScale: 1,
-	lineHeight: 1.35,
+	lineHeight: 1.25,
 	margins: { ...MARGIN_DEFAULTS },
 	pageSize: "Letter",
 	colors: {
@@ -54,7 +57,7 @@ const defaultSettings: ResumeSettings = {
 	typography: { ...TYPE_SCALE_DEFAULTS },
 	sectionSpacing: "normal",
 	dateFormat: "MMM YYYY",
-	accentStyle: "underline",
+	accentStyle: "none",
 };
 
 const defaultPersonalInfo: PersonalInfo = {
@@ -209,86 +212,97 @@ export function Preview({
 			"0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
 	};
 
-	const renderPersonalInfo = () => (
-		<div
-			style={{
-				borderBottom: `1px solid ${colors.divider}`,
-				// 12pt above the hairline rule, 4pt below it: 16pt header → body,
-				// matching `space-2xl + space-m` in `sections.typ`.
-				paddingBottom: pt(12) * scale,
-				marginBottom: pt(4) * scale,
-			}}
-		>
-			<h1
-				style={{
-					fontSize: typography.name * scale,
-					fontWeight: 700,
-					color: colors.heading,
-					marginBottom: pt(2) * scale,
-				}}
-			>
-				{personalInfo.fullName || "Your Name"}
-			</h1>
-			{personalInfo.professionalTitle && (
-				<p
-					style={{
-						fontSize: typography.title * scale,
-						color: colors.secondary,
-						marginBottom: pt(6) * scale,
-					}}
-				>
-					{personalInfo.professionalTitle}
-				</p>
-			)}
+	// Every vertical gap the document uses, in px. One table for the HTML preview and the
+	// PDF (`SPACING_GAPS` in `src/lib/layout/density.ts`, mirrored by `gaps-for` in
+	// `sections.typ`) so a density preset moves both and neither can drift.
+	const gaps = gapsFor(settings);
+	const gap = (value: number) => pt(value) * scale;
+
+	const renderPersonalInfo = () => {
+		const rule = settings.accentStyle === "underline";
+		return (
 			<div
 				style={{
-					display: "flex",
-					flexWrap: "wrap",
-					gap: 12 * scale,
-					fontSize: typography.small * scale,
+					borderBottom: rule ? `1px solid ${colors.divider}` : "none",
+					// The whole header → body distance is `gaps.header`; when a rule is drawn the
+					// block stops `gaps.heading` short of it and the rule fills the rest, exactly
+					// as `render-header` in `sections.typ` does.
+					paddingBottom: gap(rule ? gaps.header - gaps.heading : gaps.header),
+					marginBottom: rule ? gap(gaps.heading) : 0,
 				}}
 			>
-				{personalInfo.email && <span>{personalInfo.email}</span>}
-				{personalInfo.phone && <span>{personalInfo.phone}</span>}
-				{personalInfo.location && <span>{personalInfo.location}</span>}
-				{personalInfo.linkedin && (
-					<a href={personalInfo.linkedin} style={{ color: colors.accent }}>
-						LinkedIn
-					</a>
+				<h1
+					style={{
+						fontSize: typography.name * scale,
+						fontWeight: 700,
+						color: colors.heading,
+						marginBottom: pt(2) * scale,
+					}}
+				>
+					{personalInfo.fullName || "Your Name"}
+				</h1>
+				{personalInfo.professionalTitle && (
+					<p
+						style={{
+							fontSize: typography.title * scale,
+							color: colors.secondary,
+							marginBottom: gap(gaps.contact),
+						}}
+					>
+						{personalInfo.professionalTitle}
+					</p>
 				)}
-				{personalInfo.github && (
-					<a href={personalInfo.github} style={{ color: colors.accent }}>
-						GitHub
-					</a>
-				)}
-				{personalInfo.website && (
-					<a href={personalInfo.website} style={{ color: colors.accent }}>
-						Portfolio
-					</a>
-				)}
+				<div
+					style={{
+						display: "flex",
+						flexWrap: "wrap",
+						gap: 12 * scale,
+						fontSize: typography.small * scale,
+					}}
+				>
+					{personalInfo.email && <span>{personalInfo.email}</span>}
+					{personalInfo.phone && <span>{personalInfo.phone}</span>}
+					{personalInfo.location && <span>{personalInfo.location}</span>}
+					{personalInfo.linkedin && (
+						<a href={personalInfo.linkedin} style={{ color: colors.accent }}>
+							LinkedIn
+						</a>
+					)}
+					{personalInfo.github && (
+						<a href={personalInfo.github} style={{ color: colors.accent }}>
+							GitHub
+						</a>
+					)}
+					{personalInfo.website && (
+						<a href={personalInfo.website} style={{ color: colors.accent }}>
+							Portfolio
+						</a>
+					)}
+				</div>
 			</div>
-		</div>
-	);
+		);
+	};
 
-	// Gap above a section heading — the 8–12pt band, picked by `sectionSpacing`,
-	// mirroring `section-gap` in `sections.typ`.
-	const sectionSpacingPx =
-		settings.sectionSpacing === "compact"
-			? pt(8)
-			: settings.sectionSpacing === "spacious"
-				? pt(12)
-				: pt(10);
+	// Gap above a section heading and below it — `gaps.section` / `gaps.heading`, mirrored
+	// from `sections.typ`. Asymmetric on purpose: more above than below, so a heading
+	// belongs to the content under it.
+	const sectionSpacingPx = gap(gaps.section);
 
 	const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 		<h2
 			style={{
 				fontSize: typography.sectionHeading * scale,
 				fontWeight: 600,
+				// UPPERCASE is the heading treatment: emphasis is weight and case, never
+				// colour or a fill (docs/research/template-research.md §1.5, §6).
+				textTransform: "uppercase",
 				// Headings are the text colour: emphasis is weight and case, not
 				// colour (docs/research/template-research.md §6).
 				color: colors.text,
-				marginBottom: pt(4) * scale,
-				paddingBottom: pt(2) * scale,
+				marginBottom: gap(gaps.heading),
+				// The rule is opt-in (`accentStyle`), not the default: it costs 2.6mm per
+				// section plus its 2pt gap.
+				paddingBottom: settings.accentStyle === "underline" ? pt(2) * scale : 0,
 				borderBottom:
 					settings.accentStyle === "underline"
 						? `2px solid ${colors.accent}`
@@ -329,7 +343,7 @@ export function Preview({
 					{section.content.title || "Work Experience"}
 				</SectionTitle>
 				{experiences.map((exp) => (
-					<div key={exp.id} style={{ marginBottom: pt(6) * scale }}>
+					<div key={exp.id} style={{ marginBottom: gap(gaps.entry) }}>
 						<div
 							style={{
 								display: "flex",
@@ -377,14 +391,16 @@ export function Preview({
 							</p>
 						)}
 						{exp.highlights && exp.highlights.length > 0 && (
-							<ul style={{ paddingLeft: 16 * scale, marginTop: pt(4) * scale }}>
+							<ul
+								style={{ paddingLeft: 16 * scale, marginTop: gap(gaps.meta) }}
+							>
 								{keyedByContent(exp.highlights, (h) => h).map(
 									({ key, item: h }) => (
 										<li
 											key={`${exp.id}-${key}`}
 											style={{
 												fontSize: typography.body * scale,
-												marginBottom: pt(3) * scale,
+												marginBottom: gap(gaps.bullet),
 											}}
 										>
 											{h}
@@ -405,7 +421,7 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Education"}</SectionTitle>
 				{education.map((edu) => (
-					<div key={edu.id} style={{ marginBottom: pt(6) * scale }}>
+					<div key={edu.id} style={{ marginBottom: gap(gaps.entry) }}>
 						<div
 							style={{
 								display: "flex",
@@ -450,36 +466,24 @@ export function Preview({
 
 	const renderSkills = (section: ResumeSection) => {
 		const categories = section.content.data as SkillCategory[];
+		// `Category: item, item` lines, not a label over a chip cluster: the same facts in
+		// half the rows (docs/research/space-efficiency.md §3, waste #5), and no accent
+		// ink. Chips are a Relaxed-density option in the PDF; the preview draws the default.
 		return (
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Skills"}</SectionTitle>
 				{categories.map((cat) => (
-					<div key={cat.id} style={{ marginBottom: pt(6) * scale }}>
-						<div
-							style={{
-								fontSize: typography.itemTitle * scale,
-								fontWeight: 600,
-								color: colors.text,
-								marginBottom: pt(3) * scale,
-							}}
-						>
+					<div
+						key={cat.id}
+						style={{
+							fontSize: typography.body * scale,
+							marginBottom: gap(gaps.entry),
+						}}
+					>
+						<span style={{ fontWeight: 600, color: colors.text }}>
 							{cat.name}
-						</div>
-						<div
-							style={{ display: "flex", flexWrap: "wrap", gap: pt(4) * scale }}
-						>
-							{cat.skills.map((skill) => (
-								<span
-									key={skill.id}
-									style={{
-										fontSize: typography.small * scale,
-										color: colors.accent,
-									}}
-								>
-									{skill.name}
-								</span>
-							))}
-						</div>
+						</span>
+						<span>: {cat.skills.map((skill) => skill.name).join(", ")}</span>
 					</div>
 				))}
 			</div>
@@ -492,7 +496,7 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Projects"}</SectionTitle>
 				{projects.map((proj) => (
-					<div key={proj.id} style={{ marginBottom: pt(6) * scale }}>
+					<div key={proj.id} style={{ marginBottom: gap(gaps.entry) }}>
 						<div
 							style={{
 								display: "flex",
@@ -531,25 +535,12 @@ export function Preview({
 						{proj.technologies && proj.technologies.length > 0 && (
 							<div
 								style={{
-									display: "flex",
-									flexWrap: "wrap",
-									gap: pt(4) * scale,
-									marginTop: pt(3) * scale,
+									fontSize: typography.small * scale,
+									color: colors.secondary,
+									marginTop: gap(gaps.bullet),
 								}}
 							>
-								{keyedByContent(proj.technologies, (tech) => tech).map(
-									({ key, item: tech }) => (
-										<span
-											key={`${proj.id}-${key}`}
-											style={{
-												fontSize: typography.small * scale,
-												color: colors.accent,
-											}}
-										>
-											{tech}
-										</span>
-									),
-								)}
+								{proj.technologies.join(", ")}
 							</div>
 						)}
 					</div>
@@ -564,7 +555,7 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Certifications"}</SectionTitle>
 				{certs.map((cert) => (
-					<div key={cert.id} style={{ marginBottom: pt(6) * scale }}>
+					<div key={cert.id} style={{ marginBottom: gap(gaps.entry) }}>
 						<div
 							style={{
 								display: "flex",
@@ -611,18 +602,10 @@ export function Preview({
 		return (
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Languages"}</SectionTitle>
-				<div style={{ display: "flex", flexWrap: "wrap", gap: pt(4) * scale }}>
-					{languages.map((lang) => (
-						<span
-							key={lang.id}
-							style={{
-								fontSize: typography.small * scale,
-								color: colors.accent,
-							}}
-						>
-							{lang.name} ({lang.proficiency})
-						</span>
-					))}
+				<div style={{ fontSize: typography.body * scale }}>
+					{languages
+						.map((lang) => `${lang.name} (${lang.proficiency})`)
+						.join(", ")}
 				</div>
 			</div>
 		);
@@ -636,7 +619,7 @@ export function Preview({
 					{section.content.title || "Awards & Honors"}
 				</SectionTitle>
 				{awards.map((award) => (
-					<div key={award.id} style={{ marginBottom: pt(6) * scale }}>
+					<div key={award.id} style={{ marginBottom: gap(gaps.entry) }}>
 						<div
 							style={{
 								display: "flex",
@@ -696,7 +679,7 @@ export function Preview({
 					{section.content.title || "Volunteer Experience"}
 				</SectionTitle>
 				{volunteers.map((vol) => (
-					<div key={vol.id} style={{ marginBottom: pt(6) * scale }}>
+					<div key={vol.id} style={{ marginBottom: gap(gaps.entry) }}>
 						<div
 							style={{
 								display: "flex",
@@ -747,7 +730,7 @@ export function Preview({
 							<ul
 								style={{
 									paddingLeft: 16 * scale,
-									marginTop: pt(4) * scale,
+									marginTop: gap(gaps.meta),
 								}}
 							>
 								{keyedByContent(vol.highlights, (h) => h).map(
@@ -756,7 +739,7 @@ export function Preview({
 											key={`${vol.id}-${key}`}
 											style={{
 												fontSize: typography.body * scale,
-												marginBottom: pt(3) * scale,
+												marginBottom: gap(gaps.bullet),
 											}}
 										>
 											{h}
@@ -777,7 +760,7 @@ export function Preview({
 			<div style={{ marginBottom: sectionSpacingPx * scale }}>
 				<SectionTitle>{section.content.title || "Publications"}</SectionTitle>
 				{pubs.map((pub) => (
-					<div key={pub.id} style={{ marginBottom: pt(6) * scale }}>
+					<div key={pub.id} style={{ marginBottom: gap(gaps.entry) }}>
 						<div
 							style={{
 								fontSize: typography.itemTitle * scale,
@@ -830,7 +813,7 @@ export function Preview({
 				{refs
 					.filter((r) => !r.isHidden)
 					.map((ref) => (
-						<div key={ref.id} style={{ marginBottom: pt(6) * scale }}>
+						<div key={ref.id} style={{ marginBottom: gap(gaps.entry) }}>
 							<div
 								style={{
 									fontSize: typography.itemTitle * scale,

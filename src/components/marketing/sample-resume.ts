@@ -60,7 +60,7 @@ export const SAMPLE_RESUME: Resume = {
 			},
 			sectionSpacing: "normal",
 			dateFormat: "MMM YYYY",
-			accentStyle: "underline",
+			accentStyle: "none",
 		},
 	},
 	sections: [
@@ -96,7 +96,12 @@ export const SAMPLE_RESUME: Resume = {
 					{
 						id: "marketing-skills-1",
 						name: "Backend",
-						skills: ["Go", "TypeScript", "Postgres", "Terraform"],
+						skills: [
+							{ id: "sample-skill-1", name: "Go" },
+							{ id: "sample-skill-2", name: "TypeScript" },
+							{ id: "sample-skill-3", name: "Postgres" },
+							{ id: "sample-skill-4", name: "Terraform" },
+						],
 					},
 				],
 			},
@@ -221,10 +226,29 @@ export const GALLERY_SAMPLE_RESUME: Resume = {
 					{
 						id: "gs1",
 						name: "Languages",
-						skills: ["Go", "TypeScript", "Python"],
+						skills: [
+							{ id: "gs1-1", name: "Go" },
+							{ id: "gs1-2", name: "TypeScript" },
+							{ id: "gs1-3", name: "Python" },
+						],
 					},
-					{ id: "gs2", name: "Data", skills: ["Postgres", "Redis", "Kafka"] },
-					{ id: "gs3", name: "Infrastructure", skills: ["Terraform", "AWS"] },
+					{
+						id: "gs2",
+						name: "Data",
+						skills: [
+							{ id: "gs2-1", name: "Postgres" },
+							{ id: "gs2-2", name: "Redis" },
+							{ id: "gs2-3", name: "Kafka" },
+						],
+					},
+					{
+						id: "gs3",
+						name: "Infrastructure",
+						skills: [
+							{ id: "gs3-1", name: "Terraform" },
+							{ id: "gs3-2", name: "AWS" },
+						],
+					},
 				],
 			},
 		},

@@ -53,43 +53,7 @@
 // HEADER — centred, academic
 // ──────────────────────────────────────────────
 
-// `header-gap-half` below the block plus `space-m` below the rule is the header → body
-// gap (`header-gap`).
-#block(width: 100%, below: header-gap-half)[
-  #align(center)[
-    #text(
-      size: typo.at("name", default: 18pt),
-      weight: "bold",
-      fill: rgb(colors.at("heading", default: "#111827")),
-    )[#personal.fullName]
-
-    #if personal.professionalTitle != "" {
-      linebreak()
-      text(
-        size: typo.at("title", default: 11pt),
-        fill: rgb(colors.at("secondary", default: "#6b7280")),
-        style: "italic",
-      )[#personal.professionalTitle]
-    }
-
-    #v(contact-gap)
-    #let contacts = ()
-    #if personal.email    != "" { contacts.push(personal.email) }
-    #if personal.phone    != "" { contacts.push(personal.phone) }
-    #if personal.location != "" { contacts.push(personal.location) }
-    #if personal.linkedin != "" { contacts.push("LinkedIn: " + personal.linkedin) }
-    #if personal.github   != "" { contacts.push("GitHub: " + personal.github) }
-    #if personal.website  != "" { contacts.push(personal.website) }
-    #text(size: typo.at("small", default: 9.5pt), fill: rgb(colors.at("secondary", default: "#6b7280")))[
-      #contacts.join("  ·  ")
-    ]
-  ]
-]
-
-#align(center)[
-  #line(length: 60%, stroke: 0.6pt + rgb(colors.at("divider", default: "#e2e8f0")))
-]
-#v(space-m)
+#render-header(content-align: center, title-style: "italic", header-rule: "short")
 
 // ──────────────────────────────────────────────
 // BODY — sections

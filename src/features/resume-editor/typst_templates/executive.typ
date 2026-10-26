@@ -46,39 +46,7 @@
 // HEADER — the name block carries the document
 // ──────────────────────────────────────────────
 
-// `header-gap-half` below the block plus `space-m` below the rule is the header → body
-// gap (`header-gap`).
-#block(width: 100%, below: header-gap-half)[
-  #text(
-    size: typo.at("name", default: 18pt),
-    weight: "bold",
-    fill: rgb(colors.at("heading", default: "#111827")),
-  )[#personal.fullName]
-
-  #if personal.professionalTitle != "" {
-    linebreak()
-    v(space-xs)
-    text(
-      size: typo.at("title", default: 11pt),
-      fill: rgb(colors.at("secondary", default: "#6b7280")),
-    )[#personal.professionalTitle]
-  }
-
-  #v(contact-gap)
-  #let contacts = ()
-  #if personal.email    != "" { contacts.push(personal.email) }
-  #if personal.phone    != "" { contacts.push(personal.phone) }
-  #if personal.location != "" { contacts.push(personal.location) }
-  #if personal.linkedin != "" { contacts.push("LinkedIn: " + personal.linkedin) }
-  #if personal.github   != "" { contacts.push("GitHub: " + personal.github) }
-  #if personal.website  != "" { contacts.push(personal.website) }
-  #text(size: typo.at("small", default: 9.5pt), fill: rgb(colors.at("secondary", default: "#6b7280")))[
-    #contacts.join("  |  ")
-  ]
-]
-
-#line(length: 100%, stroke: 0.5pt + rgb(colors.at("divider", default: "#e2e8f0")))
-#v(space-m)
+#render-header(content-align: left, title-style: "line", header-rule: "hairline")
 
 // ──────────────────────────────────────────────
 // BODY — sections

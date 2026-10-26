@@ -190,7 +190,12 @@ export const TEMPLATE_CONFIGS: Record<TemplateType, TemplatePreset> = {
 		supportedSections: ALL_SECTIONS,
 		layout: "single-column",
 		sourceFile: "standard",
-		defaults: {},
+		// Balanced: 0.5in margins, 1.25 leading (`docs/research/space-efficiency.md` §5).
+		defaults: {
+			sectionSpacing: "normal",
+			lineHeight: 1.25,
+			margins: { top: 36, right: 36, bottom: 36, left: 36 },
+		},
 	},
 	compact: {
 		id: "compact",
@@ -203,9 +208,10 @@ export const TEMPLATE_CONFIGS: Record<TemplateType, TemplatePreset> = {
 		supportedSections: ALL_SECTIONS,
 		layout: "single-column",
 		sourceFile: "standard",
+		// Tight: 1.22 leading on the margin floor, gaps at their narrowest.
 		defaults: {
 			sectionSpacing: "compact",
-			lineHeight: 1.25,
+			lineHeight: 1.22,
 			margins: { top: 36, right: 36, bottom: 36, left: 36 },
 		},
 	},
@@ -221,8 +227,9 @@ export const TEMPLATE_CONFIGS: Record<TemplateType, TemplatePreset> = {
 		layout: "single-column",
 		sourceFile: "technical",
 		defaults: {
-			lineHeight: 1.3,
-			margins: { top: 36, right: 43, bottom: 36, left: 43 },
+			sectionSpacing: "normal",
+			lineHeight: 1.25,
+			margins: { top: 36, right: 36, bottom: 36, left: 36 },
 		},
 	},
 	graduate: {
@@ -236,7 +243,11 @@ export const TEMPLATE_CONFIGS: Record<TemplateType, TemplatePreset> = {
 		supportedSections: ALL_SECTIONS,
 		layout: "single-column",
 		sourceFile: "graduate",
-		defaults: { lineHeight: 1.3 },
+		defaults: {
+			sectionSpacing: "normal",
+			lineHeight: 1.25,
+			margins: { top: 36, right: 36, bottom: 36, left: 36 },
+		},
 	},
 	academic: {
 		id: "academic",
