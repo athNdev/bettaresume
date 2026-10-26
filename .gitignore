@@ -73,3 +73,6 @@ proxmox-jobs.sqlite3-wal
 
 # Local scratch file for PR descriptions
 .pr-body.md
+
+# throwaway agent scratch
+scripts/probe/_*.cjs

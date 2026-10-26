@@ -198,11 +198,10 @@ export function PageFit() {
 						</dl>
 					</div>
 					<p className="mt-6 border-[var(--brand-rule)] border-t pt-4 text-[var(--brand-text-faint)] text-xs">
-						<span className="font-mono">test/fill-ratio.test.ts</span> compiles
-						the seeded showcase at Compact, Normal and Relaxed. It requires the
-						default to land in 78–85% of one page and every preset to stay on
-						one page. These are measurements of the document, not a prediction
-						about a hiring outcome.
+						Every document is measured at Compact, Normal and Relaxed before it
+						ships. The default has to land in 78–85% of one page, and every
+						preset has to stay on one page. These are measurements of the
+						document, not a prediction about a hiring outcome.
 					</p>
 				</div>
 
@@ -359,117 +358,6 @@ export function Readability() {
 							</li>
 						))}
 					</ul>
-				</div>
-			</div>
-		</section>
-	);
-}
-
-/* --------------------------------------------------------------------------
- * 3. The worked example
- * -------------------------------------------------------------------------- */
-
-/**
- * Facts about the seeded showcase.
- *
- * `docs/SHOWCASE.md` is the narrative and `api/test/showcase.test.ts` is the gate that
- * keeps it exercising every feature. The page states only what they assert, and
- * `test/marketing-claims.test.ts` checks the seed still carries the persona and both
- * documents.
- */
-const EXAMPLE_FACTS = [
-	{
-		title: "Thirteen section types",
-		body: "Across the two documents, including the sections a one-page application usually leaves out.",
-	},
-	{
-		title: "Seven linked, six taken over",
-		body: "The CV is a variant of the one-pager: seven sections still follow the base, six have been edited on their own.",
-	},
-	{
-		title: "Six revisions",
-		body: "Three captured automatically and three named on the one-pager, with the newest snapshot matching the live document.",
-	},
-	{
-		title: "Two page targets",
-		body: "One page for the summary, two for the CV, so the fit meter has a real job in both documents.",
-	},
-	{
-		title: "A placed library item",
-		body: "One placement still matches its master and one has diverged, which is what the library panel reports.",
-	},
-	{
-		title: "A job target",
-		body: "A description with required and preferred terms, so the match panel has something to read.",
-	},
-	{
-		title: "Seeded on first sign-in",
-		body: "The fixture is inserted in the same batch as the user row, so every new account starts with both documents. The example is yours to edit, delete or re-seed.",
-	},
-] as const;
-
-export function Example() {
-	return (
-		<section className="rule-soft" id="example">
-			<div className="marketing-shell py-16 lg:py-24">
-				<div className="max-w-3xl">
-					<h2 className="text-title">A worked example, not a mock-up</h2>
-					<p className="mt-4 text-[var(--brand-text-muted)] text-lede">
-						Priya Raman is a fictional staff payments engineer. The seeded
-						library holds two documents for her — a one-page summary in Compact
-						and a two-page CV in Academic, forked from it.
-					</p>
-					<p className="mt-4 max-w-(--marketing-measure) text-[var(--brand-text-muted)] text-base">
-						Both documents come from one fixture,{" "}
-						<span className="font-mono text-[var(--brand-text)]">
-							api/src/db/showcase.json
-						</span>
-						. The dev database renders it into{" "}
-						<span className="font-mono text-[var(--brand-text)]">seed.sql</span>
-						;{" "}
-						<span className="font-mono text-[var(--brand-text)]">
-							user.upsert
-						</span>{" "}
-						inserts the same rows on a first sign-in, so every account starts
-						with the example. The dashboard finds it by the{" "}
-						<span className="font-mono text-[var(--brand-text)]">Showcase</span>{" "}
-						tag rather than by an id, and offers the one-pager above the grid
-						when it is in your library.
-					</p>
-				</div>
-
-				<dl className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{EXAMPLE_FACTS.map((fact) => (
-						<div
-							className="rounded-lg border border-[var(--brand-rule)] bg-[var(--brand-card)] p-6"
-							key={fact.title}
-						>
-							<dt className="font-semibold text-[var(--brand-text)] text-lg">
-								{fact.title}
-							</dt>
-							<dd className="mt-2 text-[var(--brand-text-muted)] text-base">
-								{fact.body}
-							</dd>
-						</div>
-					))}
-				</dl>
-
-				<div className="mt-8 flex flex-wrap items-center gap-3">
-					<a
-						className="group inline-flex items-center gap-2 rounded-lg bg-[var(--brand-ink)] px-6 py-3 font-medium text-[var(--brand-text-on-ink)] transition-[color,background-color,box-shadow,transform] duration-(--br-duration-fast) ease-enter hover:-translate-y-0.5 hover:bg-[var(--brand-ink-soft)] hover:shadow-elev-1"
-						href="/app"
-					>
-						Open the app
-						<span
-							aria-hidden="true"
-							className="transition-transform group-hover:translate-x-0.5"
-						>
-							→
-						</span>
-					</a>
-					<span className="text-[var(--brand-text-faint)] text-sm">
-						The dashboard shows it with a Showcase badge.
-					</span>
 				</div>
 			</div>
 		</section>

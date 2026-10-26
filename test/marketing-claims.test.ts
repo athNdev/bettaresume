@@ -531,12 +531,23 @@ describe("the example resume is the seeded one", () => {
 		expect(seed).toContain("showcase-variant");
 	});
 
-	it("the page names the persona, and the UI finds it by tag", () => {
+	it("the app finds it by tag, and the homepage leaves it out", () => {
 		const showcase = read("src/lib/showcase.ts");
 		expect(showcase).toMatch(/SHOWCASE_TAG = "showcase"/);
 		expect(showcase).toMatch(/export function findShowcase/);
-		expect(visible).toContain("Priya Raman");
-		expect(visible).toContain("Showcase");
+
+		/*
+		 * The homepage is for customers, not for us.
+		 *
+		 * A section describing the worked example — naming the fixture file, the seeding
+		 * path, how many revisions it has — is implementation documentation, and it was
+		 * on the landing page. The example is a product feature users meet in the app;
+		 * it is not a reason to buy. This asserts it stays out, and that the conversational
+		 * detail that came with it never returns.
+		 */
+		expect(visible).not.toContain("Priya Raman");
+		expect(visible).not.toContain("A worked example");
+		expect(visible).not.toMatch(/showcase\.json|user\.upsert|seed\.sql/);
 	});
 });
 
@@ -672,8 +683,12 @@ describe("the responsive range is the implemented one", () => {
 });
 
 describe("the example is seeded for every account", () => {
-	it("says first sign-in, and user.upsert is where it happens", () => {
-		expect(visible).toContain("first sign-in");
+	/*
+	 * The homepage no longer says this, and should not: "the fixture is inserted in
+	 * the same batch as the user row" is how it is built, not why anyone should care.
+	 * What is worth asserting is that it still happens.
+	 */
+	it("user.upsert is where it happens", () => {
 		expect(read("api/src/trpc/procedures/user.ts")).toMatch(
 			/buildShowcaseRows/,
 		);

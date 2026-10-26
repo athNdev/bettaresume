@@ -114,11 +114,8 @@ export function TaggedPdf() {
 								It means the file carries the document's structure. It is not a
 								conformance claim: tagging is the mechanism PDF/UA-1 builds on,
 								and conformance is a separate audit. What is claimed here is
-								exactly what the file contains — and{" "}
-								<span className="font-mono text-[var(--brand-text)]">
-									scripts/probe/export.cjs
-								</span>{" "}
-								reads the three markers back out of a real export.
+								exactly what the file contains — and it is checked on every build,
+								against a real export.
 							</p>
 						</div>
 
