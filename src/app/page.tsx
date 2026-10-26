@@ -4,6 +4,7 @@ import {
 	PageFit,
 	Readability,
 } from "@/components/marketing/capabilities";
+import { Craft, TaggedPdf } from "@/components/marketing/craft";
 import { Hero } from "@/components/marketing/hero";
 import {
 	ClosingCta,
@@ -17,7 +18,7 @@ import { OG_IMAGE } from "@/lib/site";
 
 const TITLE = "Betta Resume — one master resume, tailored per role";
 const DESCRIPTION =
-	"Keep one master record of your career, fork a variant for each application, and export a PDF whose text layer you can read before you send it. Six templates, a page-fit meter and named readability checks — never a score.";
+	"Keep one master record of your career, fork a variant for each application, and export a PDF whose text layer you can read before you send it. Six templates, a page-fit meter, named readability checks and a tagged PDF — never a score.";
 
 export const metadata: Metadata = {
 	title: TITLE,
@@ -54,9 +55,15 @@ export const metadata: Metadata = {
  *
  * Section order is the order a visitor's questions arrive in: what is it (hero),
  * what does it do (features), what will my document look like (templates), will it
- * fit (page fit), can I trust the review (readability), what does a finished
- * document look like (example), what are the boundaries (principles), details (FAQ),
- * close.
+ * fit (page fit), can I trust the review (readability), is the file itself a
+ * document (tagged PDF), what does a finished document look like (example), how is
+ * the product made (brand and design system), what are the boundaries (principles),
+ * details (FAQ), close.
+ *
+ * The brand band and the tagged-PDF section are the material that shipped after the
+ * previous pass. The design-system page is linked from the brand band, not from the
+ * nav: `test/design-system-page.test.ts` keeps it out of the product nav, and its own
+ * copy says it is a reference for the people building the product.
  *
  * The app itself lives at `/app`.
  */
@@ -70,7 +77,9 @@ export default function MarketingHome() {
 				<Templates />
 				<PageFit />
 				<Readability />
+				<TaggedPdf />
 				<Example />
+				<Craft />
 				<Principles />
 				<Faq />
 				<ClosingCta />

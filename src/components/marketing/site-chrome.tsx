@@ -141,7 +141,9 @@ export function SiteFooter() {
 							heading="Resources"
 							links={[
 								["Readability", "/#readability"],
+								["Tagged PDF", "/#tagged-pdf"],
 								["Example resume", "/#example"],
+								["How it's built", "/#craft"],
 								["What we won't build", "/#principles"],
 								["FAQ", "/#faq"],
 							]}

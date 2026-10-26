@@ -22,6 +22,7 @@
  * hierarchy, and the page's body copy is the one `text-base` step.
  */
 
+import { BrandLockup } from "@/components/brand/brand-lockup";
 import { TEMPLATE_CONFIGS } from "@/features/resume-editor/types";
 import { buildPlainText } from "@/lib/export/text";
 import { SAMPLE_RESUME } from "./sample-resume";
@@ -65,17 +66,16 @@ export function Hero() {
 
 			<div className="marketing-shell relative py-12 lg:py-16">
 				<div className="max-w-4xl">
-					<p
-						className="flex items-center gap-2 font-semibold text-[var(--brand-accent)] text-xs uppercase tracking-[0.16em]"
+					<div
+						className="flex flex-wrap items-center gap-x-4 gap-y-3"
 						data-animate
 						style={{ animationDelay: "0ms" }}
 					>
-						<span
-							aria-hidden="true"
-							className="h-px w-6 bg-[var(--brand-accent)]"
-						/>
-						Resume workbench
-					</p>
+						<BrandLockup size="xl" variant="accent" />
+						<span className="font-semibold text-[var(--brand-accent)] text-xs uppercase tracking-[0.16em]">
+							Resume workbench
+						</span>
+					</div>
 
 					<h1
 						className="mt-4 text-display"
