@@ -1,9 +1,10 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
+import { TYPST, TYPST_COMPILE_FLAGS, TYPST_PROBLEM } from "./helpers/typst-cli";
 
 /**
  * Every template must actually compile.
@@ -18,37 +19,13 @@ import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
  * back out of the PDF. It asserts the layer, not the pixels: reading order and presence are
  * what this product is about.
  *
- * Runs only when the `typst` binary is available. CI may not have it; a missing compiler is a
- * skip with a named reason, not a failure. The source-level checks in
- * `typst-templates.test.ts` always run.
+ * A missing compiler is a **failure**, not a skip. CI installs the pinned binary; when it
+ * did not, this test skipped on every run, so the text-layer guarantee was never verified
+ * on a merge. See `test/helpers/typst-cli.ts`.
  */
 
 const ROOT = resolve(process.cwd());
 const TEMPLATE_DIR = join(ROOT, "src/features/resume-editor/typst_templates");
-
-const TYPST = (() => {
-	const candidates: Array<[string, string[]]> = [
-		["typst", []],
-		["typst.exe", []],
-		// `npx --no-install` finds a globally installed typst without touching the
-		// network, which is how it resolves on a host where it is not on PATH.
-		["npx", ["--no-install", "typst"]],
-	];
-	for (const [command, prefix] of candidates) {
-		// `spawnSync`, not `execFileSync`: a missing binary should be a quiet `status !== 0`,
-		// not a thrown error whose message we then have to swallow.
-		const probe = spawnSync(command, [...prefix, "--version"], {
-			encoding: "utf8",
-			shell: process.platform === "win32",
-		});
-		if (probe.status === 0 && (probe.stdout ?? "").includes("typst")) {
-			return [command, prefix] as const;
-		}
-	}
-	return null;
-})();
-
-const hasTypst = TYPST !== null;
 
 /**
  * A document exercising the shapes the serializer emits, including `custom`, which used to
@@ -133,52 +110,51 @@ async function pdfText(path: string) {
 	return text.replace(/\s+/g, " ");
 }
 
-describe.skipIf(!hasTypst)(
-	"every template compiles and keeps its text layer",
-	() => {
-		const dir = mkdtempSync(join(tmpdir(), "typst-"));
-		const sections = readFileSync(join(TEMPLATE_DIR, "sections.typ"), "utf8");
-		writeFileSync(join(dir, "sample.json"), JSON.stringify(SAMPLE));
+describe("every template compiles and keeps its text layer", () => {
+	beforeAll(() => {
+		expect(TYPST, TYPST_PROBLEM).not.toBeNull();
+	});
 
-		it.each(TEMPLATES)(
-			"%s produces a readable PDF",
-			async (template) => {
-				const body = readFileSync(
-					join(TEMPLATE_DIR, `${TEMPLATE_CONFIGS[template].sourceFile}.typ`),
-					"utf8",
-				);
-				const source = `#let data = json("sample.json")\n${sections}\n\n${body}`;
-				const sourcePath = join(dir, `${template}.typ`);
-				const pdfPath = join(dir, `${template}.pdf`);
-				writeFileSync(sourcePath, source);
+	const dir = mkdtempSync(join(tmpdir(), "typst-"));
+	const sections = readFileSync(join(TEMPLATE_DIR, "sections.typ"), "utf8");
+	writeFileSync(join(dir, "sample.json"), JSON.stringify(SAMPLE));
 
-				// `execFileSync` throws on a non-zero exit, which is the assertion for syntax.
-				const [command, prefix] = TYPST as readonly [string, string[]];
-				execFileSync(command, [...prefix, "compile", sourcePath, pdfPath], {
+	it.each(TEMPLATES)(
+		"%s produces a readable PDF",
+		async (template) => {
+			const body = readFileSync(
+				join(TEMPLATE_DIR, `${TEMPLATE_CONFIGS[template].sourceFile}.typ`),
+				"utf8",
+			);
+			const source = `#let data = json("sample.json")\n${sections}\n\n${body}`;
+			const sourcePath = join(dir, `${template}.typ`);
+			const pdfPath = join(dir, `${template}.pdf`);
+			writeFileSync(sourcePath, source);
+
+			// `execFileSync` throws on a non-zero exit, which is the assertion for syntax.
+			const [command, prefix] = TYPST as readonly [string, string[]];
+			execFileSync(
+				command,
+				[...prefix, "compile", ...TYPST_COMPILE_FLAGS, sourcePath, pdfPath],
+				{
 					cwd: dir,
 					stdio: "pipe",
 					shell: process.platform === "win32",
-				});
+				},
+			);
 
-				const bytes = readFileSync(pdfPath);
-				expect(bytes.byteLength).toBeGreaterThan(2000);
+			const bytes = readFileSync(pdfPath);
+			expect(bytes.byteLength).toBeGreaterThan(2000);
 
-				const text = await pdfText(pdfPath);
-				expect(text, "the header is the candidate").toContain("Avery Chen");
-				expect(text, "an experience bullet survived").toContain(
-					"Cut latency 41%",
-				);
-				expect(text, "a custom section was drawn, not dropped").toContain(
-					"Some text",
-				);
-			},
-			60_000,
-		);
-	},
-);
-
-describe.skipIf(hasTypst)("typst is unavailable", () => {
-	it("says so, rather than silently passing", () => {
-		expect(TYPST).toBeNull();
-	});
+			const text = await pdfText(pdfPath);
+			expect(text, "the header is the candidate").toContain("Avery Chen");
+			expect(text, "an experience bullet survived").toContain(
+				"Cut latency 41%",
+			);
+			expect(text, "a custom section was drawn, not dropped").toContain(
+				"Some text",
+			);
+		},
+		60_000,
+	);
 });

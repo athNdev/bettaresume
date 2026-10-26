@@ -1,11 +1,12 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import type { Resume } from "../src/features/resume-editor/types";
 import { TEMPLATE_CONFIGS } from "../src/features/resume-editor/types";
 import { resumeToTypstJson } from "../src/lib/typst/serialize";
+import { TYPST, TYPST_COMPILE_FLAGS, TYPST_PROBLEM } from "./helpers/typst-cli";
 
 /**
  * Marks → Typst markup → compiled PDF → extracted text.
@@ -17,34 +18,14 @@ import { resumeToTypstJson } from "../src/lib/typst/serialize";
  * summary or a bullet must render as those characters and not as a bold run.
  *
  * The round trip is compiled with the real `typst` CLI and read back with
- * `pdfjs-dist`, the same harness `typst-compile.test.ts` uses (including its skip
- * rule: a missing compiler is a named skip, not a failure). The mark itself cannot
+ * `pdfjs-dist`, the same harness `typst-compile.test.ts` uses (including its rule: a
+ * missing compiler is a failure, not a skip). The mark itself cannot
  * be asserted from extracted text — a text layer carries words — so the source-level
  * assertions above the compile pin the emission and the compile pins the text.
  */
 
 const ROOT = resolve(process.cwd());
 const TEMPLATE_DIR = join(ROOT, "src/features/resume-editor/typst_templates");
-
-const TYPST = (() => {
-	const candidates: Array<[string, string[]]> = [
-		["typst", []],
-		["typst.exe", []],
-		["npx", ["--no-install", "typst"]],
-	];
-	for (const [command, prefix] of candidates) {
-		const probe = spawnSync(command, [...prefix, "--version"], {
-			encoding: "utf8",
-			shell: process.platform === "win32",
-		});
-		if (probe.status === 0 && (probe.stdout ?? "").includes("typst")) {
-			return [command, prefix] as const;
-		}
-	}
-	return null;
-})();
-
-const hasTypst = TYPST !== null;
 
 /** Every mark the editor palette can produce and the export keeps. */
 const MARKED_SUMMARY_DOC = {
@@ -179,7 +160,11 @@ async function pdfText(path: string) {
 	return text.replace(/\s+/g, " ");
 }
 
-describe.skipIf(!hasTypst)("marks survive to the PDF text layer", () => {
+describe("marks survive to the PDF text layer", () => {
+	beforeAll(() => {
+		expect(TYPST, TYPST_PROBLEM).not.toBeNull();
+	});
+
 	const dir = mkdtempSync(join(tmpdir(), "typst-marks-"));
 	const resume = resumeWith([
 		{
@@ -236,11 +221,15 @@ describe.skipIf(!hasTypst)("marks survive to the PDF text layer", () => {
 			);
 
 			const [command, prefix] = TYPST as readonly [string, string[]];
-			execFileSync(command, [...prefix, "compile", sourcePath, pdfPath], {
-				cwd: dir,
-				stdio: "pipe",
-				shell: process.platform === "win32",
-			});
+			execFileSync(
+				command,
+				[...prefix, "compile", ...TYPST_COMPILE_FLAGS, sourcePath, pdfPath],
+				{
+					cwd: dir,
+					stdio: "pipe",
+					shell: process.platform === "win32",
+				},
+			);
 
 			const text = await pdfText(pdfPath);
 			// Every marked word survives, in reading order.
@@ -263,10 +252,4 @@ describe.skipIf(!hasTypst)("marks survive to the PDF text layer", () => {
 		},
 		60_000,
 	);
-});
-
-describe.skipIf(hasTypst)("typst is unavailable", () => {
-	it("says so, rather than silently passing", () => {
-		expect(TYPST).toBeNull();
-	});
 });

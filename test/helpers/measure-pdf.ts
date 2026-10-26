@@ -9,9 +9,10 @@
  * read from the file the user would actually download, and the page count is the file's
  * own page count. No assumed arithmetic.
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { TYPST_COMPILE_FLAGS, typstCli } from "./typst-cli";
 
 export const PT_PER_MM = 72 / 25.4;
 
@@ -19,26 +20,6 @@ export const PAPER_PT = {
 	Letter: { width: 612, height: 792 },
 	A4: { width: 595.28, height: 841.89 },
 } as const;
-
-const TYPST = (() => {
-	const candidates: Array<[string, string[]]> = [
-		["typst", []],
-		["typst.exe", []],
-		["npx", ["--no-install", "typst"]],
-	];
-	for (const [command, prefix] of candidates) {
-		const probe = spawnSync(command, [...prefix, "--version"], {
-			encoding: "utf8",
-			shell: process.platform === "win32",
-		});
-		if (probe.status === 0 && (probe.stdout ?? "").includes("typst")) {
-			return [command, prefix] as const;
-		}
-	}
-	return null;
-})();
-
-export const hasTypst = TYPST !== null;
 
 export interface Measurement {
 	/** Pages the compiler produced. */
@@ -113,12 +94,16 @@ export async function measurePdf({
 	const sourcePath = join(dir, `${name}.typ`);
 	const pdfPath = join(dir, `${name}.pdf`);
 	writeFileSync(sourcePath, `#let data = json("${name}.json")\n${source}\n`);
-	const [command, prefix] = TYPST as readonly [string, string[]];
-	execFileSync(command, [...prefix, "compile", sourcePath, pdfPath], {
-		cwd: dir,
-		stdio: "pipe",
-		shell: process.platform === "win32",
-	});
+	const [command, prefix] = typstCli();
+	execFileSync(
+		command,
+		[...prefix, "compile", ...TYPST_COMPILE_FLAGS, sourcePath, pdfPath],
+		{
+			cwd: dir,
+			stdio: "pipe",
+			shell: process.platform === "win32",
+		},
+	);
 
 	const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
 	// pdf.js rejects a Node `Buffer`; it wants a plain `Uint8Array` view.

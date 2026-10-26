@@ -91,7 +91,6 @@ function normalizePersonalInfo(value: unknown): PersonalInfo {
 		website: str(info.website),
 		portfolio: str(info.portfolio),
 		professionalTitle: str(info.professionalTitle),
-		photoUrl: str(info.photoUrl),
 	};
 }
 
@@ -1086,7 +1085,6 @@ export const resumeRouter = router({
 						website: "averychen.dev",
 						portfolio: "",
 						professionalTitle: "Senior / Staff Software Engineer",
-						photoUrl: "",
 					},
 					sections: [
 						{
@@ -1141,7 +1139,6 @@ export const resumeRouter = router({
 						website: "",
 						portfolio: "",
 						professionalTitle: "Product Engineer",
-						photoUrl: "",
 					},
 					sections: [
 						{
@@ -1196,7 +1193,6 @@ export const resumeRouter = router({
 						website: "",
 						portfolio: "",
 						professionalTitle: "Consultant",
-						photoUrl: "",
 					},
 					sections: [
 						{

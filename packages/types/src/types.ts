@@ -213,7 +213,6 @@ export interface PersonalInfo {
 	website?: string;
 	portfolio?: string;
 	professionalTitle?: string;
-	photoUrl?: string;
 }
 
 // Alias for backward compatibility

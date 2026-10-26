@@ -80,6 +80,19 @@ fs.mkdirSync(OUT, { recursive: true });
 			),
 		);
 		console.log("has /ToUnicode:", text.includes("/ToUnicode"));
+		/*
+		 * Is the PDF tagged? Typst 0.14 emits a tagged document by default, which is what
+		 * makes the text layer a structure a parser can read rather than a bag of
+		 * positioned glyphs. The markers are the evidence: a structure tree root, the
+		 * MarkInfo dictionary, a document language, and one /StructElem per tagged
+		 * element.
+		 */
+		console.log("tagged:", {
+			MarkInfo: text.includes("/MarkInfo"),
+			StructTreeRoot: text.includes("/StructTreeRoot"),
+			Lang: /\/Lang\s*\(/.test(text),
+			StructElems: (text.match(/\/StructElem/g) || []).length,
+		});
 	}
 
 	console.log("\nassets fetched at runtime:");

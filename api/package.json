@@ -16,7 +16,8 @@
 		"db:reset": "shx echo 'Y' | wrangler d1 migrations apply bettaresume_d1 --local --config wrangler.dev.jsonc",
 		"db:seed": "wrangler d1 execute bettaresume_d1 --local --config wrangler.dev.jsonc --file=src/db/seed.sql",
 		"db:reset-seed": "shx echo 'Y' | wrangler d1 migrations apply bettaresume_d1 --local --config wrangler.dev.jsonc && wrangler d1 execute bettaresume_d1 --local --config wrangler.dev.jsonc --file=src/db/seed.sql && shx echo 'OK: Database reset and seeded with dummy data'",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"showcase:render": "tsx scripts/render-showcase-seed.ts"
 	},
 	"keywords": [],
 	"author": "",

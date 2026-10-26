@@ -11,12 +11,27 @@ at the top of the block, and `api/test/showcase.test.ts` asserts that it does.
 
 ## Where it lives
 
-Both records are in `api/src/db/seed.sql`, owned by the seeded dev user `user-1`:
+The data is in **`api/src/db/showcase.json`** — one fixture, two consumers:
 
-| Record | Id | What it is |
+| Consumer | How it uses the fixture |
+|---|---|
+| `api/src/db/seed.sql` (local dev) | the showcase section of the file is **generated** from the JSON by `npm run showcase:render` |
+| `user.upsert` (first sign-in) | inserts the same rows, ids prefixed with the user id (`api/src/db/showcase.ts`) |
+
+`api/test/showcase-seed.test.ts` fails when the generated SQL block is stale, and also
+compiles both paths and asserts they materialise the same rows. That is what stops the
+two copies drifting; two hand-written copies would keep passing the fixture tests while
+new users received an older document.
+
+In the seeded dev database the rows are owned by `user-1`:
+
+| Record | Key | What it is |
 |---|---|---|
 | One-pager | `showcase-base` | `compact` template, page target 1, seven visible sections, one page |
 | Full CV | `showcase-variant` | `academic` template, page target 2, eleven visible sections, two pages, a variation of the one-pager |
+
+(The dev seed uses the global prefix `showcase-`; a real user's copy is
+`<userId>-showcase-base`, so two accounts in one database cannot collide.)
 
 Both carry the tag **`showcase`**. That tag is the UI contract: `src/lib/showcase.ts`
 exports `SHOWCASE_TAG`, `isShowcase()` and `findShowcase()`, and the dashboard badge,
@@ -62,6 +77,24 @@ visibility toggle.
 - **Marketing copy.** `test/marketing-claims.test.ts` is pinned and owned by a later
   wave. The showcase changes no marketing strings.
 
+## Every user gets a copy on first sign-in
+
+The landing page says "view the example", so an account that has never had one would
+make that a sentence about the dev seed. `user.upsert` therefore inserts the fixture in
+the branch that **creates** the user — in one D1 `batch`, together with the user row, so a
+first sign-in cannot leave a half-seeded account.
+
+The decisions, because they are the ones a future change would get wrong:
+
+| Question | Answer | Why |
+|---|---|---|
+| Created once? | **Yes**, on the first sign-in only | `user.upsert` runs on every sign-in. Seeding outside the create branch would resurrect a deleted example on the next visit — a delete button that undoes itself. |
+| Can the user delete it? | **Yes**, it is an ordinary resume | A `protected` flag would have to be honoured by every mutation, and its revision history already makes it restore-able. Protection is surface area for a fixture. |
+| Does it come back? | **No** | See above. If the seed fails it is logged and the account is created anyway — an unavailable example is a missing feature, an unavailable account is a broken product. |
+
+The dashboard badge, the banner and the empty-state button key off the `showcase` **tag**,
+not an id, so a per-user copy works without changing the UI contract.
+
 ## Editable, not protected
 
 The showcase is **editable**, and that is deliberate (the full CV is a variation, so it is
@@ -77,7 +110,8 @@ editable the same way):
 
 Protecting it would mean adding a `protected` flag to the schema and teaching every
 mutation to honour it — real surface area for a fixture that already has two recovery
-paths. If someone deletes it, re-seeding brings it back.
+paths. If someone deletes it, re-seeding (for the dev user) or the builder in
+`api/src/db/showcase.ts` (for a real user) brings it back.
 
 ## Re-seeding
 
@@ -95,14 +129,23 @@ Seeding alone, without resetting, also works: the seed deletes the existing rows
 
 When a feature lands, **the showcase is part of the definition of done**, in this order:
 
-1. Add the content, setting, flag or record to the showcase block in
-   `api/src/db/seed.sql`. Keep it realistic: invented metrics, action verbs, no duty
-   phrasing, one date format throughout.
-2. If it is a new section type, setting or layout flag, the showcase test fails with a
+1. Add the content, setting, flag or record to **`api/src/db/showcase.json`**. Keep it
+   realistic: invented metrics, action verbs, no duty phrasing, one date format
+   throughout. Ids are the part after the prefix (`base`, `base-personal`, …); ids
+   *inside* `content` and `metadata` are opaque and are not rewritten.
+2. Regenerate the SQL the dev seed uses:
+
+   ```bash
+   npm run showcase:render
+   ```
+
+   Do not hand-edit the block in `seed.sql`; `api/test/showcase-seed.test.ts` fails when
+   it disagrees with the JSON.
+3. If it is a new section type, setting or layout flag, the showcase test fails with a
    message naming it. That failure is the reminder.
-3. Update the table in this file.
-4. Re-seed and look at the document. The showcase is a review fixture; a screenshot
-   nobody opened is not a review.
+4. Update the table in this file.
+5. Re-seed (`npm run db:reset-seed`) and look at the document. The showcase is a review
+   fixture; a screenshot nobody opened is not a review.
 
 `api/test/showcase.test.ts` derives its expectations from the schemas rather than a
 hand-written list:

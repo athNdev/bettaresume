@@ -15,9 +15,9 @@ import { FIT_PROBE_SOURCE } from "../src/lib/typst/probe";
  * This is the only test in the suite that runs the **bundled** compiler, and it runs it
  * in Node: the same WASM the browser loads (`typst-ts-web-compiler`, Typst 0.14.2), the
  * same vendored fonts, and the same probe source that `compileFitProbe` appends. The
- * `typst` CLI used by `typst-compile.test.ts` is 0.10 and rejects `context`, so it cannot
- * run this probe — which is exactly why the probe lives in a TS module and is added at
- * compile time rather than written into the `.typ` files.
+ * `typst` CLI the golden text-layer gates use is pinned to 0.14.2 as well, but this probe
+ * must be validated against the bundle the browser actually runs, which is why it is
+ * compiled here rather than through the CLI.
  *
  * What is asserted is geometry, not a golden file:
  *
