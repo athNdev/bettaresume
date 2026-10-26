@@ -6,6 +6,7 @@ import {
 	FileJson,
 	FileText,
 	FileType,
+	type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -14,6 +15,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Resume } from "@/features/resume-editor/types";
@@ -63,6 +65,47 @@ export function toDownloadBlob(
 		return new Blob([content.slice().buffer as ArrayBuffer], { type });
 	}
 	return new Blob([content], { type });
+}
+
+/**
+ * The inside of one format row: a 32px icon tile, the format's name, and one line
+ * saying what it is *for*.
+ *
+ * The menu used to be four identical rows with four generic file glyphs and the words
+ * "Export as …" four times. It answered "what file types exist?" but not "which one do
+ * I want?" — and the payoff moment of a resume tool should not make the user guess.
+ * PDF is the only tile that carries accent, because it is the only one most people
+ * want.
+ */
+function FormatBody({
+	icon: Icon,
+	label,
+	description,
+	primary = false,
+}: {
+	icon: LucideIcon;
+	label: string;
+	description: string;
+	primary?: boolean;
+}) {
+	return (
+		<span className="flex items-center gap-3">
+			<span
+				aria-hidden="true"
+				className={
+					primary
+						? "br-tile size-8 shrink-0"
+						: "grid size-8 shrink-0 place-items-center rounded-sm bg-sunken text-fg-muted"
+				}
+			>
+				<Icon className="h-4 w-4" />
+			</span>
+			<span className="min-w-0">
+				<span className="block font-medium text-sm">{label}</span>
+				<span className="block text-fg-muted text-xs">{description}</span>
+			</span>
+		</span>
+	);
 }
 
 export function ExportButtons({
@@ -192,32 +235,48 @@ export function ExportButtons({
 						)}
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end">
+				<DropdownMenuContent align="end" className="w-72 p-2">
 					{/*
 					 * A live region inside the menu: opening the menu with unsaved work
 					 * tells you the file will contain edits the server has not seen.
 					 */}
 					{hasUnsavedChanges ? (
-						<p className="max-w-56 px-2 py-1 text-muted-foreground text-xs">
+						<p className="mb-1 rounded-sm bg-warning-soft px-2 py-1 text-warning text-xs">
 							Exports include your unsaved changes. Reload or switch away and
 							they will be lost.
 						</p>
 					) : null}
+					<p className="br-micro px-2 pt-1 pb-2">Export</p>
 					<DropdownMenuItem onClick={exportPDF}>
-						<FileText className="mr-2 h-4 w-4" />
-						Export as PDF
+						<FormatBody
+							description="Typeset, for sending"
+							icon={FileText}
+							label="PDF"
+							primary
+						/>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={exportDocx}>
-						<FileType className="mr-2 h-4 w-4" />
-						Export as DOCX (parse-optimised)
+						<FormatBody
+							description="Same content, parse-optimised for applicant systems"
+							icon={FileType}
+							label="DOCX"
+						/>
 					</DropdownMenuItem>
+					<DropdownMenuSeparator className="my-1" />
+					<p className="br-micro px-2 pt-1 pb-2">Backup</p>
 					<DropdownMenuItem onClick={exportJSON}>
-						<FileJson className="mr-2 h-4 w-4" />
-						Export as JSON
+						<FormatBody
+							description="Every field, re-importable"
+							icon={FileJson}
+							label="JSON"
+						/>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={exportText}>
-						<AlignLeft className="mr-2 h-4 w-4" />
-						Export as Text
+						<FormatBody
+							description="Exactly what a parser reads"
+							icon={AlignLeft}
+							label="Plain text"
+						/>
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

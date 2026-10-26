@@ -155,11 +155,15 @@ function TypstPage({ svg, scale, isLoading }: TypstPageProps) {
 				width: cssWidth,
 				height: cssHeight,
 				/* The sheet. Surface B owns its paper colour: the document is an
-				   export preview, and it must not read a chrome token (R15). The
-				   *shadow* is chrome finish around the sheet, so it comes from the
-				   elevation scale. */
+				   export preview, and it must not read a *palette* token (R15). The
+				   *shadow* and the *edge* are chrome finish around the sheet, so they
+				   come from the elevation scale and the hairline role. */
 				backgroundColor: "#ffffff",
+				borderRadius: 2,
 				boxShadow: "var(--elev-page)",
+				/* The dark sheet edge: in dark the page is the only white object, and
+				   without an edge it reads as a hole punched in the stage. */
+				outline: "1px solid var(--border)",
 				marginBottom: 16 * scale,
 				// Dim slightly while a new compile is in progress
 				opacity: isLoading ? 0.7 : 1,

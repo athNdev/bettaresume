@@ -56,44 +56,58 @@ const SEVERITY_STYLE = {
 	error: {
 		Icon: XCircle,
 		iconClass: "text-destructive",
-		badge: "destructive",
+		tone: "danger",
+		rule: "bg-destructive",
 		label: "Fix",
 	},
 	warning: {
 		Icon: AlertTriangle,
 		iconClass: "text-warning",
-		badge: "secondary",
+		tone: "warning",
+		rule: "bg-warning",
 		label: "Check",
 	},
 	info: {
 		Icon: Info,
-		iconClass: "text-muted-foreground",
-		badge: "outline",
+		iconClass: "text-fg-muted",
+		tone: "info",
+		rule: "bg-info",
 		label: "Note",
 	},
 } as const;
 
+/**
+ * One finding, verdict first.
+ *
+ * The verdict used to trail the finding as a badge on the right, so the eye read the
+ * check icon, then a sentence, then had to travel to the edge to learn whether the
+ * sentence was a problem. Findings are now composed as a verdict chip + title, with a
+ * 2px status rule on the leading edge — the same "what is this row" language the
+ * section rail uses for selection.
+ */
 function DiagnosticRow({ diagnostic }: { diagnostic: ParseDiagnostic }) {
-	const { Icon, iconClass, badge, label } = SEVERITY_STYLE[diagnostic.severity];
+	const { Icon, iconClass, tone, rule, label } =
+		SEVERITY_STYLE[diagnostic.severity];
 	return (
-		<li className="flex gap-3 rounded-md border p-3">
-			<Icon
+		<li className="relative overflow-hidden rounded-md border bg-surface p-3 pl-4">
+			<span
 				aria-hidden="true"
-				className={`mt-0.5 h-4 w-4 shrink-0 ${iconClass}`}
+				className={`absolute inset-y-0 left-0 w-0.5 ${rule}`}
 			/>
-			<div className="min-w-0 flex-1 space-y-1">
-				<div className="flex flex-wrap items-center gap-2">
-					<p className="font-medium text-sm">{diagnostic.title}</p>
-					<Badge variant={badge}>{label}</Badge>
-				</div>
-				<p className="text-muted-foreground text-sm">{diagnostic.detail}</p>
-				{diagnostic.fix ? (
-					<p className="text-muted-foreground text-sm">
-						<span className="font-medium">Fix: </span>
-						{diagnostic.fix}
-					</p>
-				) : null}
+			<div className="mb-1 flex flex-wrap items-center gap-2">
+				<span className="br-chip" data-tone={tone}>
+					<Icon aria-hidden="true" className={`h-3 w-3 ${iconClass}`} />
+					{label}
+				</span>
+				<p className="min-w-0 flex-1 font-medium text-sm">{diagnostic.title}</p>
 			</div>
+			<p className="text-fg-muted text-sm">{diagnostic.detail}</p>
+			{diagnostic.fix ? (
+				<p className="mt-1 text-fg-muted text-sm">
+					<span className="font-medium">Fix: </span>
+					{diagnostic.fix}
+				</p>
+			) : null}
 		</li>
 	);
 }
@@ -383,21 +397,31 @@ export function ReviewTrigger({
 	onJobTargetChange: (next: JobTargetDraft) => void;
 }) {
 	const [open, setOpen] = React.useState(false);
+	/*
+	 * `reviewIssueCount` rather than a second `reviewFindings` call: the trigger and the
+	 * sheet must never disagree, and one entry point is how that is guaranteed.
+	 */
 	const count = useMemo(() => reviewIssueCount(resume), [resume]);
 
 	return (
 		<>
 			<Button
 				aria-label="Review resume for parser fit"
+				className="text-fg-muted"
 				onClick={() => setOpen(true)}
 				size="sm"
-				variant="outline"
+				/*
+				 * Ghost. Review is a diagnostic you open beside the document, not a peer of
+				 * Export; the bordered treatment made three outlined buttons and one solid
+				 * fight for the same corner.
+				 */
+				variant="ghost"
 			>
 				<span className="hidden sm:inline" data-collapse-label="">
 					Review
 				</span>
 				{count > 0 ? (
-					<Badge className="ml-2" variant={count > 0 ? "secondary" : "outline"}>
+					<Badge className="ml-2" variant="secondary">
 						{count}
 					</Badge>
 				) : null}

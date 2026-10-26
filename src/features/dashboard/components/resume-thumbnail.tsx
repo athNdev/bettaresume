@@ -114,8 +114,17 @@ export function ResumeThumbnail({
 		const ro = new ResizeObserver(() => {
 			const width = el.clientWidth;
 			// Fit the page width into the container with a bit of padding.
-			const computed = Math.max(0, width - 12) / pagePx.width;
-			const clamped = Math.min(0.28, Math.max(0.12, computed));
+			const computed = Math.max(0, width - 16) / pagePx.width;
+			/*
+			 * The ceiling is 0.6, not 0.28.
+			 *
+			 * 0.28 was tuned for a four-column grid; at three columns (and at 390px,
+			 * where the card is nearly full width) it capped the sheet at 228px inside
+			 * a 320px frame, so every thumbnail sat in a well with a dead band under
+			 * it. The clamp still stops a tiny pane from upscaling a page past its
+			 * container.
+			 */
+			const clamped = Math.min(0.6, Math.max(0.12, computed));
 			setScale(clamped);
 		});
 
@@ -131,8 +140,14 @@ export function ResumeThumbnail({
 				<button
 					aria-hidden="true"
 					className={cn(
-						"relative flex aspect-[8.5/11] w-full cursor-pointer items-start justify-center overflow-hidden rounded-md border bg-muted/50",
-						"transition-colors hover:bg-muted/70",
+						/*
+						 * The well, not the page: a sunken fill with a hairline edge holds the
+						 * sheet, so the white paper reads as paper *on* a surface. It used to be
+						 * `bg-muted/50`, which in dark was almost the card tone and left the page
+						 * floating with no frame at all.
+						 */
+						"relative flex aspect-[8.5/11] w-full cursor-pointer items-start justify-center overflow-hidden rounded-sm border bg-sunken p-2",
+						"transition-colors hover:bg-accent",
 						"focus-visible:outline-none",
 						className,
 					)}
@@ -151,7 +166,7 @@ export function ResumeThumbnail({
 			) : (
 				<div
 					className={cn(
-						"relative flex aspect-[8.5/11] w-full items-start justify-center overflow-hidden rounded-md border bg-muted/50",
+						"relative flex aspect-[8.5/11] w-full items-start justify-center overflow-hidden rounded-sm border bg-sunken p-2",
 						className,
 					)}
 					ref={containerRef as React.RefObject<HTMLDivElement>}
@@ -180,14 +195,16 @@ function ThumbnailBody({
 	pagePx: { width: number; height: number };
 }) {
 	return (
-		<div className="absolute inset-0 flex items-start justify-center p-1">
+		<div className="absolute inset-0 flex items-start justify-center p-2">
 			{shouldRenderPreview ? (
-				<Preview
-					className="pointer-events-none select-none"
-					paginate={false}
-					resume={resume}
-					scale={scale}
-				/>
+				<div className="shadow-elev-1">
+					<Preview
+						className="pointer-events-none select-none"
+						paginate={false}
+						resume={resume}
+						scale={scale}
+					/>
+				</div>
 			) : (
 				<ThumbnailSkeleton
 					height={pagePx.height * scale}

@@ -10,7 +10,6 @@
 import type { Resume } from "@bettaresume/types";
 import { normalizeTemplateId } from "@bettaresume/types";
 import {
-	Archive,
 	BookOpen,
 	FileText,
 	Info,
@@ -23,6 +22,7 @@ import {
 import { Suspense, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { ProtectedRoute } from "@/app/protected-route";
+import { BrandWordmark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -51,6 +51,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { ResumeCard } from "@/features/dashboard/components/resume-card";
@@ -87,8 +88,8 @@ export default function Dashboard() {
 function DashboardSkeleton() {
 	return (
 		<div className="min-h-dvh bg-background">
-			<header className="border-b bg-card">
-				<div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-2">
+			<header className="border-b bg-background">
+				<div className="mx-auto flex min-h-16 w-full max-w-[96rem] flex-wrap items-center justify-between gap-2 px-6 py-2">
 					<div className="flex items-center gap-4">
 						<Skeleton className="h-7 w-32" />
 						<Skeleton
@@ -111,7 +112,7 @@ function DashboardSkeleton() {
 					</div>
 				</div>
 			</header>
-			<main className="container mx-auto px-4 py-8">
+			<main className="mx-auto w-full max-w-[96rem] px-6 py-8">
 				<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex flex-1 items-center gap-4">
 						<Skeleton className="h-10 flex-1 sm:max-w-xs" />
@@ -133,11 +134,11 @@ function DashboardSkeleton() {
 				 * `repeat(1, minmax(0, 1fr))` is what lets the track shrink below its content. The
 				 * `minmax(0, …)` is the part that matters; a bare `1fr` still floors at min-content.
 				 *
+				{/*
 				 * Columns match the real grid exactly (skeleton → content, audit §7): one at
-				 * phone, two at `sm`, three at `xl` — bigger cards that fill the width rather
-				 * than four cramped ones with a dead lower half (audit #5).
+				 * phone, two at `sm`, three at `xl`, four at `2xl`.
 				 */}
-				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 					{Array.from({ length: 8 }).map((_, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: a fixed-length row of placeholders
 						<ResumeCardSkeleton key={i} />
@@ -150,23 +151,24 @@ function DashboardSkeleton() {
 
 function ResumeCardSkeleton() {
 	return (
-		<div className="rounded-lg border bg-card p-6">
-			{/* The real card's anatomy: title row with the menu pinned top-right,
-			    meta row, sheet-shaped thumbnail, one meta line. */}
-			<div className="relative pb-2">
-				<Skeleton className="absolute top-0 right-0 h-8 w-8 rounded-md" />
-				<Skeleton className="h-5 w-3/4" />
-				<div className="mt-1 flex gap-2">
-					<Skeleton className="h-5 w-16 rounded-full" />
-				</div>
-			</div>
-			<div className="relative flex aspect-[8.5/11] w-full items-start justify-center overflow-hidden rounded-md border bg-muted/50">
-				<div className="absolute inset-0 flex items-start justify-center p-1">
+		<div className="rounded-md border bg-card">
+			{/* The real card's anatomy, in order: the sheet, the title row with the
+			    menu pinned, one meta line. A skeleton in a different order jumps twice. */}
+			<div className="px-3 pt-3">
+				<div className="relative flex aspect-[8.5/11] w-full items-start justify-center overflow-hidden rounded-sm border bg-sunken p-2">
 					<ThumbnailSkeleton height={296} width={228} />
 				</div>
 			</div>
-			<div className="mt-6">
-				<Skeleton className="h-3 w-24" />
+			<div className="mt-3 px-4">
+				<div className="flex items-start justify-between gap-2">
+					<Skeleton className="h-4 w-3/4" />
+					<Skeleton className="h-7 w-7 shrink-0 rounded-md" />
+				</div>
+				<div className="mt-2 flex flex-wrap gap-2 pb-4">
+					<Skeleton className="h-3 w-16" />
+					<Skeleton className="h-3 w-12" />
+					<Skeleton className="h-3 w-24" />
+				</div>
 			</div>
 		</div>
 	);
@@ -637,46 +639,42 @@ function DashboardContent() {
 
 	return (
 		<div className="min-h-dvh bg-background">
-			{/* Header */}
-			<header className="border-b bg-card">
-				{/*
-				 * `min-h-16` + `flex-wrap`, not a fixed `h-16`.
-				 *
-				 * At 390px this row held the wordmark plus Import, New Resume, the theme
-				 * toggle and the avatar: 575px of content in a 390px viewport, so the avatar
-				 * hung 49px off the right edge and the page scrolled sideways. Nothing
-				 * shrank and nothing wrapped, because a fixed height gives wrapping nowhere
-				 * to go. Wrapping is the backstop; the labels collapsing below is what
-				 * actually fixes it.
-				 */}
-				<div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-2 px-4 py-2">
-					<div className="flex items-center gap-4">
-						<button
-							className="font-semibold text-lg"
-							onClick={() => navigate("/")}
-							type="button"
-						>
-							Betta Resume
-						</button>
-					</div>
-					<div className="flex items-center gap-2">
+			{/*
+			 * The nameplate. 56px, a hairline under it, and no fill: a page tone header
+			 * on a card tone body made the chrome read as a strip bolted on top. Only one
+			 * solid control is in this row (New resume) — Import is a ghost, and the two
+			 * utilities (theme, account) sit quiet at the end of the row.
+			 */}
+			<header className="border-b bg-background">
+				<div className="mx-auto flex min-h-16 w-full max-w-[96rem] flex-wrap items-center justify-between gap-2 px-6 py-2">
+					<button
+						className="rounded-sm text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						onClick={() => navigate("/")}
+						type="button"
+					>
+						<BrandWordmark />
+					</button>
+					<div className="flex items-center gap-1">
 						<Button
 							aria-label="Import resume"
+							className="text-fg-muted"
 							onClick={handleImportResume}
 							size="sm"
 							title="Import resume"
-							variant="outline"
+							variant="ghost"
 						>
 							<Upload className="h-4 w-4 sm:mr-2" />
 							<span className="hidden sm:inline" data-collapse-label="">
 								Import
 							</span>
 						</Button>
+						<ThemeToggle />
+						<UserMenu />
+						<span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
 						<Button
 							aria-label="New resume"
 							disabled={isCreating}
 							onClick={() => setIsCreateDialogOpen(true)}
-							size="sm"
 							title="New resume"
 						>
 							{isCreating ? (
@@ -688,169 +686,166 @@ function DashboardContent() {
 								New Resume
 							</span>
 						</Button>
-						<ThemeToggle />
-						<UserMenu />
 					</div>
 				</div>
 			</header>
 
 			{/* Main content */}
-			<main className="container mx-auto px-4 py-8">
+			<main className="mx-auto w-full max-w-[96rem] px-6 py-8">
 				{/*
-				 * Two columns at lg: the document list gets the room, filters and account
-				 * actions move into a rail beside it.
+				 * Two columns at lg: the documents get the room, the controls that act on
+				 * them are a quiet rail beside it.
 				 *
-				 * This was one column at every width: search, the archived toggle, the
-				 * greeting and the grid all shared the same measure, so nothing had
-				 * hierarchy and the controls a user reaches for constantly were stacked
-				 * with the content they act on. The rail is `lg:sticky` so it stays put
-				 * while the list scrolls.
+				 * The rail is *not* a card any more. Two stacked cards ("Filters", "Your
+				 * library") put two more floating surfaces beside eight document cards, so
+				 * the page had eleven objects of nearly equal weight. A rail separated by
+				 * space and one hairline is the system's answer for chrome (D8: regions are
+				 * seams, cards float), and it leaves the cards as the only things that lift.
 				 *
-				 * The rail is FIRST in the DOM and ordered second at lg, so a narrow
-				 * screen shows filters before the list they filter — which is the order
-				 * that makes sense when they cannot sit side by side.
+				 * The rail is FIRST in the DOM and ordered second at lg, so a narrow screen
+				 * shows filters before the list they filter.
 				 */}
-				<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,17rem)]">
+				<div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+					{/*
+					 * The heading names the person, and yields to the welcome guide for a new
+					 * account: two headings competing above one empty grid is one too many.
+					 */}
+					{user && totalResumes > 0 ? (
+						<h1 className="font-semibold text-xl tracking-title">
+							{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+						</h1>
+					) : null}
+					<p aria-live="polite" className="text-fg-muted text-xs" role="status">
+						{resultSummary({
+							matched: filteredResumes.length,
+							query: searchQuery,
+							total: totalResumes,
+						})}
+					</p>
+				</div>
+
+				<div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_15rem]">
 					<aside className="lg:order-2">
-						<div className="space-y-4 lg:sticky lg:top-8">
-							<Card>
-								<CardHeader className="pb-3">
-									<CardTitle className="text-base">Filters</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<div className="relative">
-										<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-										<Input
-											aria-label="Search resumes"
-											className="pl-8"
-											onChange={(e) => {
-												setSearchQuery(e.target.value);
-												setPage(1);
-											}}
-											placeholder="Search resumes..."
-											value={searchQuery}
-										/>
-									</div>
-
-									<div>
-										<Label htmlFor="template-filter">Template</Label>
-										<Select
-											onValueChange={(value) => {
-												setSelectedTemplate(value as TemplateType | "all");
-												setPage(1);
-											}}
-											value={selectedTemplate}
-										>
-											<SelectTrigger
-												className="mt-1 w-full"
-												id="template-filter"
-											>
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="all">All templates</SelectItem>
-												{(Object.keys(TEMPLATE_CONFIGS) as TemplateType[]).map(
-													(template) => (
-														<SelectItem key={template} value={template}>
-															{TEMPLATE_CONFIGS[template].name}
-														</SelectItem>
-													),
-												)}
-											</SelectContent>
-										</Select>
-									</div>
-
-									{/* h-8 like every other control in this stack — the input
-									    spine. It used to pass `size="sm"` when that was
-									    36px beside 40px inputs. */}
-									<Button
-										className="w-full"
-										onClick={() => {
-											setShowArchived(!showArchived);
+						<div className="space-y-6 lg:sticky lg:top-8">
+							<div className="space-y-3">
+								<h2 className="br-micro">Filters</h2>
+								<div className="relative">
+									<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+									<Input
+										aria-label="Search resumes"
+										className="pl-8"
+										onChange={(e) => {
+											setSearchQuery(e.target.value);
 											setPage(1);
 										}}
-										variant={showArchived ? "default" : "outline"}
+										placeholder="Search resumes..."
+										value={searchQuery}
+									/>
+								</div>
+
+								<div>
+									<Label className="br-label" htmlFor="template-filter">
+										Template
+									</Label>
+									<Select
+										onValueChange={(value) => {
+											setSelectedTemplate(value as TemplateType | "all");
+											setPage(1);
+										}}
+										value={selectedTemplate}
 									>
-										<Archive className="mr-2 h-4 w-4" />
-										{showArchived ? "Showing archived" : "Show archived"}
-									</Button>
-								</CardContent>
-							</Card>
+										<SelectTrigger className="mt-1 w-full" id="template-filter">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">All templates</SelectItem>
+											{(Object.keys(TEMPLATE_CONFIGS) as TemplateType[]).map(
+												(template) => (
+													<SelectItem key={template} value={template}>
+														{TEMPLATE_CONFIGS[template].name}
+													</SelectItem>
+												),
+											)}
+										</SelectContent>
+									</Select>
+								</div>
+
+								{/*
+								 * Archived is a *state of the list*, so it is a switch, not a button.
+								 * As a full-width button it was the third solid/outlined slab in the
+								 * rail and it announced itself as an action ("Show archived") that
+								 * then had to become a different action ("Showing archived").
+								 */}
+								<label
+									className="flex min-h-10 cursor-pointer items-center justify-between gap-3"
+									htmlFor="show-archived"
+								>
+									<span className="text-fg-muted text-sm">Show archived</span>
+									<Switch
+										aria-label="Show archived resumes"
+										checked={showArchived}
+										id="show-archived"
+										onCheckedChange={(next) => {
+											setShowArchived(next);
+											setPage(1);
+										}}
+									/>
+								</label>
+							</div>
 
 							{totalResumes > 0 ? (
-								<Card>
-									<CardHeader className="pb-3">
-										<CardTitle className="text-base">Your library</CardTitle>
-									</CardHeader>
-									<CardContent>
-										{/*
-										 * The counts this card is *for*. "Resumes" is not here on
-										 * purpose: the result line above the grid already says
-										 * "N resumes" (and "N of M" under a filter), live and
-										 * announced — the audit found the two disagreeing by design.
-										 * What is left here is what the result line does not say.
-										 */}
-										<dl className="space-y-2 text-sm">
-											<div className="flex items-baseline justify-between gap-2">
-												<dt className="text-muted-foreground">Variants</dt>
-												<dd className="font-medium tabular-nums">
-													{variationCount}
-												</dd>
-											</div>
-											<div className="flex items-baseline justify-between gap-2">
-												<dt className="text-muted-foreground">Archived</dt>
-												<dd className="font-medium tabular-nums">
-													{archivedCount}
-												</dd>
-											</div>
-										</dl>
-									</CardContent>
-								</Card>
+								/*
+								 * The counts this rail is *for*. "Resumes" is not here on purpose: the
+								 * meta line under the page title already says "N resumes" (and "N of M"
+								 * under a filter), live and announced. Below `lg` the rail sits
+								 * above the grid, so it stays one compact block rather than disappearing.
+								 */
+								<dl className="space-y-2 border-t pt-4 text-sm">
+									<div className="flex items-baseline justify-between gap-2">
+										<dt className="text-fg-muted">Variants</dt>
+										<dd className="font-medium tabular-nums">
+											{variationCount}
+										</dd>
+									</div>
+									<div className="flex items-baseline justify-between gap-2">
+										<dt className="text-fg-muted">Archived</dt>
+										<dd className="font-medium tabular-nums">
+											{archivedCount}
+										</dd>
+									</div>
+								</dl>
 							) : null}
 						</div>
 					</aside>
 
 					<div className="min-w-0 lg:order-1">
 						{/*
-
-				{/*
-				 * A page heading that says who is signed in.
-				 *
-				 * This was a live `useAuthStore()` subscription that nothing read: `UserMenu`
-				 * opens the same store itself, so the name only ever appeared as an avatar
-				 * initial and as text inside a dropdown you had to open to find. The page you
-				 * land on after signing in had no heading at all and never named you.
-				 *
-				 * Shown only once there is something to come back to. With no resumes the
-				 * welcome guide below is the heading, and two of them would compete.
-				 */}
-						{user && totalResumes > 0 ? (
-							<h1 className="mb-6 font-bold text-xl">
-								{firstName ? `Welcome back, ${firstName}` : "Welcome back"}
-							</h1>
-						) : null}
-
-						{/*
-						 * The showcase entry point. A banner rather than a header action: it is a one-off
-						 * invitation, not a control used every session, and the header is already tight at
-						 * 390px. It renders only when the seeded example is in the library.
+						 * The showcase entry point. A quiet sunken row, not a bordered banner: it is
+						 * an invitation, and as a card it was the same weight as a resume.
 						 */}
 						{showcase ? (
-							<div className="mb-6 flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-								<div className="min-w-0">
-									<p className="font-medium text-sm">See a completed example</p>
-									<p className="text-muted-foreground text-sm">
-										One resume that uses every feature — variants, the content
-										library, revision history and the fit meter.
-									</p>
+							<div className="mb-6 flex flex-col gap-2 rounded-md bg-sunken-static px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+								<div className="flex min-w-0 flex-1 items-start gap-3">
+									<BookOpen
+										aria-hidden
+										className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle"
+									/>
+									<div className="min-w-0">
+										<p className="font-medium text-sm">
+											See a completed example
+										</p>
+										<p className="text-fg-muted text-sm">
+											One resume that uses every feature — variants, the content
+											library, revision history and the fit meter.
+										</p>
+									</div>
 								</div>
 								<Button
-									className="shrink-0"
+									className="shrink-0 self-start text-link sm:self-auto"
 									onClick={handleViewShowcase}
 									size="sm"
-									variant="outline"
+									variant="ghost"
 								>
-									<BookOpen className="mr-2 h-4 w-4" />
 									View the example
 								</Button>
 							</div>
@@ -925,28 +920,12 @@ function DashboardContent() {
 						{filteredResumes.length > 0 ? (
 							<>
 								{/*
-								 * Says what the filter did, and is announced when it changes.
-								 *
-								 * The search filters client-side on every keystroke, so the grid changes
-								 * without focus ever moving. Nothing said so: the input reported the query
-								 * and the list silently shrank, which a screen-reader user cannot detect
-								 * and a sighted user has to count for themselves.
-								 *
-								 * Visually this is also the answer to "why is only one card showing" when
-								 * the filter is narrow or the list is paginated.
+								 * The result count lives in the meta line under the page title, and is
+								 * announced there when the filter changes. It used to be its own
+								 * paragraph directly above the grid, which put a second full-width
+								 * line of chrome between the title and the documents.
 								 */}
-								<p
-									aria-live="polite"
-									className="mb-4 text-muted-foreground text-sm"
-									role="status"
-								>
-									{resultSummary({
-										matched: filteredResumes.length,
-										query: searchQuery,
-										total: totalResumes,
-									})}
-								</p>
-								<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+								<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 									{pagedResumes.map((resume: Resume) => (
 										<ResumeCard
 											isArchiving={archivingId === resume.id}
@@ -983,11 +962,11 @@ function DashboardContent() {
 											disabled={page <= 1}
 											onClick={() => setPage((p) => Math.max(1, p - 1))}
 											size="sm"
-											variant="outline"
+											variant="ghost"
 										>
 											Previous
 										</Button>
-										<span className="text-muted-foreground text-sm">
+										<span className="text-fg-muted text-xs tabular-nums">
 											Page {page} of {totalPages}
 										</span>
 										<Button
@@ -996,7 +975,7 @@ function DashboardContent() {
 												setPage((p) => Math.min(totalPages, p + 1))
 											}
 											size="sm"
-											variant="outline"
+											variant="ghost"
 										>
 											Next
 										</Button>
@@ -1085,6 +1064,11 @@ function DashboardContent() {
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 							) : null}
 							Create Resume
+							{!isCreating && newResumeName.trim() ? (
+								<span aria-hidden="true" className="br-kbd ml-2">
+									⏎
+								</span>
+							) : null}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -1094,11 +1078,17 @@ function DashboardContent() {
 			<Dialog onOpenChange={setIsDeleteDialogOpen} open={isDeleteDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Delete Resume</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete this resume? This action cannot be
-							undone.
-						</DialogDescription>
+						<DialogTitle className="pr-8">
+							{/*
+							 * The confirmation names its target. The card menu says "Delete" on one of
+							 * six rows; "Delete Resume" made the user re-read the card behind the
+							 * scrim to be sure which document they were about to lose.
+							 */}
+							{resumes?.find((r: Resume) => r.id === resumeToDelete)?.name
+								? `Delete “${resumes.find((r: Resume) => r.id === resumeToDelete)?.name}”?`
+								: "Delete this resume?"}
+						</DialogTitle>
+						<DialogDescription>This action cannot be undone.</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
 						<Button
@@ -1143,18 +1133,22 @@ function EmptyState({
 }: EmptyStateProps) {
 	return (
 		<div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-			<FileText
-				aria-hidden="true"
-				className="mb-4 h-8 w-8 text-muted-foreground"
-			/>
-			<h3 className="mb-2 font-semibold text-lg">
+			{/*
+			 * The system's empty-state anatomy: a 40px tinted tile, a panel-title headline,
+			 * one muted line, and the action(s) that fix it. It was a bare 32px glyph with an
+			 * 18px heading, which read as "nothing here" rather than as guidance.
+			 */}
+			<span className="br-tile mb-3">
+				<FileText aria-hidden="true" className="h-5 w-5" />
+			</span>
+			<h3 className="mb-1 font-semibold text-base tracking-title">
 				{searchQuery
 					? "No resumes found"
 					: showArchived
 						? "No archived resumes"
 						: "No resumes yet"}
 			</h3>
-			<p className="mb-6 max-w-sm text-muted-foreground text-sm">
+			<p className="mb-6 max-w-sm text-fg-muted text-sm">
 				{searchQuery
 					? `No resumes match "${searchQuery}". Try a different search term.`
 					: showArchived
