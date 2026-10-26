@@ -41,6 +41,10 @@ Also true as of `main`:
 - `layout: "two-column" | "sidebar"` was accepted by the schema and drawn by the
   preview, but **no Typst template read it**. Removed from the UI in #153; kept in the
   schema so existing stored resumes still load.
+- A two-column **Design CV** ships as a separate, permanently warned export target
+  (`docs/DESIGN-CV.md`), never as a template or a setting. It is outside
+  `TEMPLATE_CONFIGS`, its text companion is labelled visual-reading-order, and the six
+  standard exports remain single-column.
 - The "offline-first local persistence layer" (`src/lib/api.ts`,
   `src/features/resume-editor/resume.store.ts`, ~1,800 lines) never executed — nothing
   imported it. Deleted in #152. Real persistence is and always was the tRPC path.

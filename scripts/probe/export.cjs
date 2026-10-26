@@ -48,7 +48,7 @@ fs.mkdirSync(OUT, { recursive: true });
 	try {
 		const [download] = await Promise.all([
 			page.waitForEvent("download", { timeout: 180000 }),
-			page.getByRole("menuitem", { name: /Export as PDF/i }).click(),
+			page.getByRole("menuitem", { name: /^PDF/ }).click(),
 		]);
 		const target = path.join(OUT, download.suggestedFilename());
 		await download.saveAs(target);

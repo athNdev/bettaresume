@@ -63,7 +63,15 @@ function inline(value: unknown): string {
 	if (!Array.isArray(value)) return String(value ?? "");
 	return value
 		.filter((v) => isEmittedValue(v))
-		.map((v) => String(v).trim())
+		.map((v) => {
+			// Skills are `{id, name, level}` objects, not strings. Coercing them directly
+			// printed `[object Object]` in every plain-text export that had a skills
+			// section — including the standard one and the marketing hero.
+			if (v && typeof v === "object" && "name" in v) {
+				return String((v as { name: unknown }).name ?? "").trim();
+			}
+			return String(v).trim();
+		})
 		.join(", ");
 }
 
@@ -96,9 +104,6 @@ export function buildPlainText(resume: Resume): string {
 
 	const { personalInfo } = metadata;
 	const dateFormat = metadata.settings?.dateFormat;
-	const date = (value: unknown) => formatResumeDate(safeStr(value), dateFormat);
-	const range = (start: unknown, end: unknown, current: unknown) =>
-		formatDateRange(safeStr(start), safeStr(end), current === true, dateFormat);
 
 	let text = `${personalInfo.fullName}\n`;
 	if (personalInfo.professionalTitle)
@@ -116,7 +121,7 @@ export function buildPlainText(resume: Resume): string {
 		// The letterhead is already printed above.
 		if (section.type === "personal-info") continue;
 
-		const body = sectionBody(section, date, range);
+		const body = sectionLines(section, dateFormat);
 		if (body.length === 0) continue;
 
 		const title = headingOf(section);
@@ -125,6 +130,23 @@ export function buildPlainText(resume: Resume): string {
 	}
 
 	return text;
+}
+
+/**
+ * One section's lines, in the order its Typst template draws them.
+ *
+ * Exported because the design export's text layer is the same document in a different
+ * reading order. Two body builders would drift; this one is the words, and only the
+ * order of the sections around it changes.
+ */
+export function sectionLines(
+	section: ResumeSection,
+	dateFormat?: string,
+): string[] {
+	const date = (value: unknown) => formatResumeDate(safeStr(value), dateFormat);
+	const range = (start: unknown, end: unknown, current: unknown) =>
+		formatDateRange(safeStr(start), safeStr(end), current === true, dateFormat);
+	return sectionBody(section, date, range);
 }
 
 /** One section's lines, in the order its Typst template draws them. */

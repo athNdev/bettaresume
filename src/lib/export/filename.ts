@@ -20,11 +20,34 @@ function slug(value: string): string {
 		.replace(/^-+|-+$/g, "");
 }
 
-export function exportFileName(resume: Resume, extension: string): string {
+export function exportFileName(
+	resume: Resume,
+	extension: string,
+	/**
+	 * An optional distinguisher between two exports of the same document.
+	 *
+	 * The design CV shares a resume and a format with the standard PDF but is a
+	 * different document, so a filename that does not say which one it is would download
+	 * over the other. `-design` is the whole contract; nothing else passes one.
+	 */
+	qualifier?: string,
+): string {
 	const name = slug(resume.name || "resume") || "resume";
 	const title = slug(resume.metadata?.personalInfo?.professionalTitle ?? "");
 	const today = new Date().toISOString().split("T")[0];
 
 	const stem = title ? `${name}-${title}` : `${name}-${today}`;
-	return `${stem}.${extension}`;
+	const suffix = qualifier ? `-${slug(qualifier)}` : "";
+	return `${stem}${suffix}.${extension}`;
+}
+
+/**
+ * The design CV shares `Name-Role` with the standard export, so it must not be able to
+ * overwrite it in a downloads folder. One qualifier, one word, stated here.
+ */
+export function designExportFileName(
+	resume: Resume,
+	extension: string,
+): string {
+	return exportFileName(resume, extension, "design");
 }
